@@ -362,7 +362,7 @@ CAnimationSet::~CAnimationSet()
 	if (m_ppxmf4x4KeyFrameTransforms) delete[] m_ppxmf4x4KeyFrameTransforms;
 #endif
 
-	DebugOutput("Delete AnimationSet: ", m_pstrAnimationSetName);
+	DebugOutput("\nDelete AnimationSet: ", m_pstrAnimationSetName);
 }
 
 XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
@@ -420,13 +420,13 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 CAnimationSets::CAnimationSets(int nAnimationSets)
 {
 	m_nAnimationSets = nAnimationSets;
-	m_pAnimationSets = new CAnimationSet*[nAnimationSets];
+	m_pAnimationSet_list = new CAnimationSet*[nAnimationSets];
 }
 
 CAnimationSets::~CAnimationSets()
 {
-	for (int i = 0; i < m_nAnimationSets; i++) if (m_pAnimationSets[i]) delete m_pAnimationSets[i];
-	if (m_pAnimationSets) delete[] m_pAnimationSets;
+	for (int i = 0; i < m_nAnimationSets; i++) if (m_pAnimationSet_list[i]) delete m_pAnimationSet_list[i];
+	if (m_pAnimationSet_list) delete[] m_pAnimationSet_list;
 
 	if (m_ppBoneFrameCaches) delete[] m_ppBoneFrameCaches;
 }
@@ -624,8 +624,8 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3d
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];
-		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i];
+		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];  // 애니메이션 컨트롤러에 저장된 뼈 정보 리소스 포인터를 스킨 메시에 전달
+		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 애니메이션 컨트롤러에 저장된 뼈 변환 행렬을 스킨 메시에 전달
 	}
 }
 
@@ -635,10 +635,11 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 	if (m_pAnimationTracks)
 	{
-		// Bone 초기화
+		// Bone 정보 초기화
+		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
-			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent = Matrix4x4::Zero();
+			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
 		// 활성화된 트랙의 전체 가중치 크기 -> 가중치 정규화에 사용
@@ -656,20 +657,20 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		{
 			if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
 			{
-				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
+				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
 				// 각 bone 마다 변환행렬 업데이트
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
-					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent;
+					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
 					
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
 
-					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent = blendedTransform;
+					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 				}
 
 				m_pAnimationTracks[k].HandleCallback();
@@ -677,7 +678,11 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		}
 
 		// 4. Transform 업데이트
+		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)이므로, 
+		// 자식 객체에 부모 객체의 변환 정보를 상속하면서 뼈 객체마다 업데이트 된 m_xmf4x4Parent가 반영되어, 각 뼈의 정보 반영
+		// == 각 뼈들의 변환 행렬 정보 업데이트
 		pRootGameObject->UpdateTransform(NULL);
+
 
 		// 5. 추가 애니메이션 처리
 		OnRootMotion(pRootGameObject);
@@ -690,42 +695,6 @@ void CAnimationController::Bone_Info()
 	m_pAnimationSets->Bone_Info();
 	
 }
-
-//void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
-//{
-//	m_fTime += fTimeElapsed;
-//
-//	if (m_pAnimationTracks)
-//	{
-//		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++) 
-//			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent = Matrix4x4::Zero();
-//
-//		for (int k = 0; k < m_nAnimationTracks; k++)
-//		{
-//			if (m_pAnimationTracks[k].m_bEnable)
-//			{
-//				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSets[m_pAnimationTracks[k].m_nAnimationSet];
-//				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
-//
-//				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-//				{
-//					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent;
-//					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
-//
-//					xmf4x4Transform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, m_pAnimationTracks[k].m_fWeight));
-//					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4ToParent = xmf4x4Transform;
-//				}
-//
-//				m_pAnimationTracks[k].HandleCallback();
-//			}
-//		}
-//
-//		pRootGameObject->UpdateTransform(NULL);
-//
-//		OnRootMotion(pRootGameObject);
-//		OnAnimationIK(pRootGameObject);
-//	}
-//}
 
 
 //*/
@@ -743,14 +712,15 @@ void CLoadedModelInfo::PrepareSkinning()
 	m_ppSkinnedMeshes = new CSkinnedMesh*[m_nSkinnedMeshes];
 	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
-	for (int i = 0; i < m_nSkinnedMeshes; i++) m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
+	for (int i = 0; i < m_nSkinnedMeshes; i++) 
+		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CGameObject::CGameObject()
 {
-	m_xmf4x4ToParent = Matrix4x4::Identity();
+	m_xmf4x4Parent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 }
 
@@ -916,7 +886,7 @@ CGameObject *CGameObject::FindFrame(char *pstrFrameName)
 
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
 {
-	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4ToParent, *pxmf4x4Parent) : m_xmf4x4ToParent;
+	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Parent, *pxmf4x4Parent) : m_xmf4x4Parent;
 
 	if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
 	if (m_pChild) m_pChild->UpdateTransform(&m_xmf4x4World);
@@ -941,10 +911,12 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
-	XMFLOAT3 pos = GetPosition();
-	TCHAR pstrDebug[256] = { 0 };
-	_stprintf_s(pstrDebug, 256, _T("pos: %f %f %f\n"), pos.x, pos.y, pos.z);
-	OutputDebugString(pstrDebug);
+
+
+	//XMFLOAT3 pos = GetPosition();
+	//TCHAR pstrDebug[256] = { 0 };
+	//_stprintf_s(pstrDebug, 256, _T("pos: %f %f %f\n"), pos.x, pos.y, pos.z);
+	//OutputDebugString(pstrDebug);
 
 	if (m_pSibling) 
 		m_pSibling->Animate(fTimeElapsed);
@@ -1021,9 +993,9 @@ void CGameObject::ReleaseUploadBuffers()
 
 void CGameObject::SetPosition(float x, float y, float z)
 {
-	m_xmf4x4ToParent._41 = x;
-	m_xmf4x4ToParent._42 = y;
-	m_xmf4x4ToParent._43 = z;
+	m_xmf4x4Parent._41 = x;
+	m_xmf4x4Parent._42 = y;
+	m_xmf4x4Parent._43 = z;
 
 	UpdateTransform(NULL);
 }
@@ -1035,9 +1007,9 @@ void CGameObject::SetPosition(XMFLOAT3 xmf3Position)
 
 void CGameObject::Move(XMFLOAT3 xmf3Offset)
 {
-	m_xmf4x4ToParent._41 += xmf3Offset.x;
-	m_xmf4x4ToParent._42 += xmf3Offset.y;
-	m_xmf4x4ToParent._43 += xmf3Offset.z;
+	m_xmf4x4Parent._41 += xmf3Offset.x;
+	m_xmf4x4Parent._42 += xmf3Offset.y;
+	m_xmf4x4Parent._43 += xmf3Offset.z;
 
 	UpdateTransform(NULL);
 }
@@ -1045,7 +1017,7 @@ void CGameObject::Move(XMFLOAT3 xmf3Offset)
 void CGameObject::SetScale(float x, float y, float z)
 {
 	XMMATRIX mtxScale = XMMatrixScaling(x, y, z);
-	m_xmf4x4ToParent = Matrix4x4::Multiply(mtxScale, m_xmf4x4ToParent);
+	m_xmf4x4Parent = Matrix4x4::Multiply(mtxScale, m_xmf4x4Parent);
 
 	UpdateTransform(NULL);
 }
@@ -1057,7 +1029,7 @@ XMFLOAT3 CGameObject::GetPosition()
 
 XMFLOAT3 CGameObject::GetToParentPosition()
 {
-	return(XMFLOAT3(m_xmf4x4ToParent._41, m_xmf4x4ToParent._42, m_xmf4x4ToParent._43));
+	return(XMFLOAT3(m_xmf4x4Parent._41, m_xmf4x4Parent._42, m_xmf4x4Parent._43));
 }
 
 XMFLOAT3 CGameObject::GetLook()
@@ -1102,7 +1074,7 @@ void CGameObject::MoveForward(float fDistance)
 void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationRollPitchYaw(XMConvertToRadians(fPitch), XMConvertToRadians(fYaw), XMConvertToRadians(fRoll));
-	m_xmf4x4ToParent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParent);
+	m_xmf4x4Parent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Parent);
 
 	UpdateTransform(NULL);
 }
@@ -1110,7 +1082,7 @@ void CGameObject::Rotate(float fPitch, float fYaw, float fRoll)
 void CGameObject::Rotate(XMFLOAT3 *pxmf3Axis, float fAngle)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationAxis(XMLoadFloat3(pxmf3Axis), XMConvertToRadians(fAngle));
-	m_xmf4x4ToParent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParent);
+	m_xmf4x4Parent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Parent);
 
 	UpdateTransform(NULL);
 }
@@ -1118,7 +1090,7 @@ void CGameObject::Rotate(XMFLOAT3 *pxmf3Axis, float fAngle)
 void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 {
 	XMMATRIX mtxRotate = XMMatrixRotationQuaternion(XMLoadFloat4(pxmf4Quaternion));
-	m_xmf4x4ToParent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4ToParent);
+	m_xmf4x4Parent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Parent);
 
 	UpdateTransform(NULL);
 }
@@ -1309,7 +1281,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		}
 		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
 		{
-			nReads = (UINT)::fread(&pGameObject->m_xmf4x4ToParent, sizeof(float), 16, pInFile);
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
@@ -1417,14 +1389,14 @@ void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoaded
 			int nFramesPerSecond = ::ReadIntegerFromFile(pInFile);
 			int nKeyFrames = ::ReadIntegerFromFile(pInFile);
 
-			pLoadedModel->m_pAnimationSets->m_pAnimationSets[nAnimationSet] = new CAnimationSet(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
+			pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet] = new CAnimationSet(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
 
 			for (int i = 0; i < nKeyFrames; i++)
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
 				if (!strcmp(pstrToken, "<Transforms>:"))
 				{
-					CAnimationSet *pAnimationSet = pLoadedModel->m_pAnimationSets->m_pAnimationSets[nAnimationSet];
+					CAnimationSet *pAnimationSet = pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet];
 
 					int nKey = ::ReadIntegerFromFile(pInFile); //i
 					float fKeyTime = ::ReadFloatFromFile(pInFile);
@@ -1596,12 +1568,12 @@ void CSuperCobraObject::Animate(float fTimeElapsed)
 	if (m_pMainRotorFrame)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationY(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pMainRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4ToParent);
+		m_pMainRotorFrame->m_xmf4x4Parent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4Parent);
 	}
 	if (m_pTailRotorFrame)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationX(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pTailRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4ToParent);
+		m_pTailRotorFrame->m_xmf4x4Parent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4Parent);
 	}
 
 	CGameObject::Animate(fTimeElapsed);
@@ -1628,12 +1600,12 @@ void CGunshipObject::Animate(float fTimeElapsed)
 	if (m_pMainRotorFrame)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationY(XMConvertToRadians(360.0f * 2.0f) * fTimeElapsed);
-		m_pMainRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4ToParent);
+		m_pMainRotorFrame->m_xmf4x4Parent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4Parent);
 	}
 	if (m_pTailRotorFrame)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationX(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pTailRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4ToParent);
+		m_pTailRotorFrame->m_xmf4x4Parent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4Parent);
 	}
 
 	CGameObject::Animate(fTimeElapsed);
@@ -1660,12 +1632,12 @@ void CMi24Object::Animate(float fTimeElapsed)
 	if (m_pMainRotorFrame)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationY(XMConvertToRadians(360.0f * 2.0f) * fTimeElapsed);
-		m_pMainRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4ToParent);
+		m_pMainRotorFrame->m_xmf4x4Parent = Matrix4x4::Multiply(xmmtxRotate, m_pMainRotorFrame->m_xmf4x4Parent);
 	}
 	if (m_pTailRotorFrame)
 	{
 		XMMATRIX xmmtxRotate = XMMatrixRotationX(XMConvertToRadians(360.0f * 4.0f) * fTimeElapsed);
-		m_pTailRotorFrame->m_xmf4x4ToParent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4ToParent);
+		m_pTailRotorFrame->m_xmf4x4Parent = Matrix4x4::Multiply(xmmtxRotate, m_pTailRotorFrame->m_xmf4x4Parent);
 	}
 
 	CGameObject::Animate(fTimeElapsed);
@@ -1779,14 +1751,14 @@ void CEthanAnimationController::OnRootMotion(CGameObject* pRootGameObject)
 			XMFLOAT3 xmf3Offset = Vector3::Subtract(xmf3Position, m_xmf3FirstRootMotionPosition);
 
 
-			pRootGameObject->m_xmf4x4ToParent._41 += xmf3Offset.x;
-			pRootGameObject->m_xmf4x4ToParent._42 += xmf3Offset.y;
-			pRootGameObject->m_xmf4x4ToParent._43 += xmf3Offset.z;
+			pRootGameObject->m_xmf4x4Parent._41 += xmf3Offset.x;
+			pRootGameObject->m_xmf4x4Parent._42 += xmf3Offset.y;
+			pRootGameObject->m_xmf4x4Parent._43 += xmf3Offset.z;
 
 
 #ifdef _WITH_DEBUG_ROOT_MOTION
 			TCHAR pstrDebug[256] = { 0 };
-			_stprintf_s(pstrDebug, 256, _T("Offset: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n"), xmf3Offset.x, xmf3Offset.y, xmf3Offset.z, pRootGameObject->m_xmf4x4ToParent._41, pRootGameObject->m_xmf4x4ToParent._42, pRootGameObject->m_xmf4x4ToParent._43);
+			_stprintf_s(pstrDebug, 256, _T("Offset: (%.2f, %.2f, %.2f) (%.2f, %.2f, %.2f)\n"), xmf3Offset.x, xmf3Offset.y, xmf3Offset.z, pRootGameObject->m_xmf4x4Parent._41, pRootGameObject->m_xmf4x4Parent._42, pRootGameObject->m_xmf4x4Parent._43);
 			OutputDebugString(pstrDebug);
 #endif
 		}

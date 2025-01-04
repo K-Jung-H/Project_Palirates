@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "Object_Manager.h"
 #include "Shader.h"
 #include "Player.h"
 
@@ -98,13 +99,7 @@ public:
 
 	float								m_fElapsedTime = 0.0f;
 
-	int									m_nGameObjects = 0;
-	CGameObject							**m_ppGameObjects = NULL;
-
-	//int									m_nHierarchicalGameObjects = 0;
-	//CGameObject							**m_ppHierarchicalGameObjects = NULL;
-
-	std::vector<std::shared_ptr<CGameObject>> HierarchicalGameObjects;
+	Object_Manager obj_manager; 
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 

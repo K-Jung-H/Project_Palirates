@@ -241,7 +241,8 @@ public:
 	XMFLOAT4X4						*m_pcbxmf4x4MappedSkinningBoneTransforms = NULL; //[m_nSkinningBones]
 
 public:
-	void PrepareSkinning(CGameObject *pModelRootObject);
+	// 오브젝트의 계층구조에서 해당 메시에 연결해야 하는 뼈 오브젝트를 객체 이름을 기반으로 찾아 메시에 정보 저장
+	void PrepareSkinning(CGameObject *pModelRootObject); 
 	void LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, FILE *pInFile);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);

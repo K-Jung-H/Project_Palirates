@@ -221,7 +221,7 @@ public:
 
 public:
 	int								m_nAnimationSets = 0;
-	CAnimationSet					**m_pAnimationSets = NULL;
+	CAnimationSet					**m_pAnimationSet_list = NULL;
 
 	int								m_nBoneFrames = 0; 
 	CGameObject						**m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
@@ -352,13 +352,14 @@ public:
 
 public:
 	char							m_pstrFrameName[64];
+	bool Active = true;
 
 	CMesh							*m_pMesh = NULL;
 
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 
-	XMFLOAT4X4						m_xmf4x4ToParent;
+	XMFLOAT4X4						m_xmf4x4Parent;
 	XMFLOAT4X4						m_xmf4x4World;
 
 	CGameObject 					*m_pParent = NULL;
