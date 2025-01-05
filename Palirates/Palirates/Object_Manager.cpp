@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Object_Manager.h"
 
-
 void Object_Manager::Add_Object(std::shared_ptr<CGameObject > obj_ptr)
 {
 	if (obj_ptr->m_pSkinnedAnimationController != NULL)
@@ -33,7 +32,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::skinned:
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
-		//	if (obj_ptr->Active)
+			if (obj_ptr->Active)
 				obj_ptr->Animate(fTimeElapsed);
 	}
 	break;
@@ -55,7 +54,8 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 		DebugOutput("Object_Manager::Animate_Objects() - Using_Wrong_Type");
 		::PostQuitMessage(0);
 	}
-		break;
+	break;
+
 	}
 
 }
@@ -74,9 +74,12 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	case Object_Type::skinned:
 	{
 		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
-		{			//if (skinned_obj_ptr->Active)
-			skinned_obj_ptr->Animate(0.0f);
-			skinned_obj_ptr->Render(pd3dCommandList, pCamera);
+		{	
+			if (skinned_obj_ptr->Active)
+			{
+				skinned_obj_ptr->UpdateTransform(NULL);
+				skinned_obj_ptr->Render(pd3dCommandList, pCamera);
+			}
 		}
 	}
 	break;

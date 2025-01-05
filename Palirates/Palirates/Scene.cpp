@@ -126,7 +126,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	humanObject_2->SetPosition(430.0f, m_pTerrain->GetHeight(400.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_2->Active = false;
+	//humanObject_2->Active = false;
 
 	name_view = obj_name_2;
 	humanObject_2->Set_Name(name_view);
@@ -137,7 +137,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	humanObject_3->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_3->Active = false;
+	//humanObject_3->Active = false;
 	name_view = obj_name_3;
 	humanObject_3->Set_Name(name_view);
 	obj_manager.Add_Object(humanObject_3);
@@ -503,7 +503,38 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 {
-	return(false);
+	bool bKeyProcessed = false;
+
+	// W, A, S, D 키 입력 처리
+	if (pKeysBuffer[0x57] & 0xF0) // W 키 확인
+	{
+		DebugOutput("W key is pressed\n");
+		bKeyProcessed = true;
+	}
+
+	if (pKeysBuffer[0x41] & 0xF0) // A 키 확인
+	{
+		DebugOutput("A key is pressed\n");
+		bKeyProcessed = true;
+	}
+
+	if (pKeysBuffer[0x53] & 0xF0) // S 키 확인
+	{
+		DebugOutput("S key is pressed\n");
+		bKeyProcessed = true;
+	}
+
+	if (pKeysBuffer[0x44] & 0xF0) // D 키 확인
+	{
+		DebugOutput("D key is pressed\n");
+		bKeyProcessed = true;
+	}
+
+
+	// 하나 이상의 키가 처리됬으면 true, 아니면 false 
+	// - true = 프레임워크에서 추가적 동작 x
+	// - false = 프레임워크에서 추가적 동작 o
+	return bKeyProcessed; 
 }
 
 void CScene::AnimateObjects(float fTimeElapsed)
