@@ -935,34 +935,97 @@ void CGameObject::Animate(float fTimeElapsed)
 		m_pChild->Animate(fTimeElapsed);
 }
 
-void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+// 기존 방식
+
+//void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+//{
+//	if (m_pSkinnedAnimationController) 
+//		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+//
+//	if (m_pMesh)
+//	{
+//		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+//
+//		if (m_nMaterials > 0)
+//		{
+//			for (int i = 0; i < m_nMaterials; i++)
+//			{
+//				if (m_ppMaterials[i])
+//				{
+//					
+//					if (m_ppMaterials[i]->m_pShader)
+//					{
+//						int pipelinestate_num = m_ppMaterials[i]->m_pShader->Get_Num_PipelineState();
+//						for (int j = 0; j < pipelinestate_num; ++j)
+//						{
+//							m_ppMaterials[i]->m_pShader->Setting_Render(pd3dCommandList, j);
+//						}
+//					}
+//					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+//				}
+//
+//				m_pMesh->Render(pd3dCommandList, i);
+//			}
+//		}
+//	}
+//
+//	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
+//	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
+//}
+
+// 셰이더가 PSO를 여러 개 갖는 경우
+void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_pSkinnedAnimationController) 
+	// 애니메이션 컨트롤러 셰이더 변수 업데이트
+	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
 	if (m_pMesh)
 	{
+		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
 		if (m_nMaterials > 0)
 		{
-			for (int i = 0; i < m_nMaterials; i++)
+			// 재료(Material) 처리
+			for (int i = 0; i < m_nMaterials; ++i)
 			{
-				if (m_ppMaterials[i])
+				CMaterial* pMaterial = m_ppMaterials[i];
+				if (pMaterial)
 				{
-					if (m_ppMaterials[i]->m_pShader) 
-						m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+					CShader* pShader = pMaterial->m_pShader;
+					if (pShader)
+					{
+						// PSO 순회 및 렌더링
+						int pipelineStateNum = pShader->Get_Num_PipelineState();
+						for (int j = 0; j < pipelineStateNum; ++j)
+						{
+							// PSO 설정
+							pShader->Setting_Render(pd3dCommandList, j);
 
-					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+							// 재료(Material) 셰이더 변수 업데이트
+							pMaterial->UpdateShaderVariable(pd3dCommandList);
+
+							// 메쉬 렌더링
+							m_pMesh->Render(pd3dCommandList, i);
+						}
+					}
+					else
+					{
+						// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
+						pMaterial->UpdateShaderVariable(pd3dCommandList);
+						m_pMesh->Render(pd3dCommandList, i);
+					}
 				}
-
-				m_pMesh->Render(pd3dCommandList, i);
 			}
 		}
 	}
 
-	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
-	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
+	if (m_pSibling)
+		m_pSibling->Render(pd3dCommandList, pCamera);
+
+	if (m_pChild)
+		m_pChild->Render(pd3dCommandList, pCamera);
 }
 
 void CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -1478,46 +1541,163 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 	return(pLoadedModel);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color) : CGameObject(1)
+//{
+//	m_nWidth = nWidth;
+//	m_nLength = nLength;
 //
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color) : CGameObject(1)
+//	m_xmf3Scale = xmf3Scale;
+//
+//	m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
+//
+//	CHeightMapGridMesh *pMesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, nWidth, nLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
+//	SetMesh(pMesh);
+//
+//	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+//
+//	CTexture* pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+//	pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
+//
+//	CTexture* pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+//	pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
+//
+//	CTerrainShader *pTerrainShader = new CTerrainShader();
+//	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+//	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+//
+//	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
+//	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
+//
+//	CMaterial *pTerrainMaterial = new CMaterial(2);
+//	pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
+//	pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
+//	pTerrainMaterial->SetShader(pTerrainShader);
+//
+//	SetMaterial(0, pTerrainMaterial);
+//}
+
+// static 변수 초기화
+CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
+CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
+CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
+CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
+int CHeightMapTerrain::tile_map_number = 0;
+
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth) : CGameObject(1)
 {
+	// 셰이더 및 텍스처 설정 (첫 호출 시에만 실행됨)
+	if (pTerrainBaseTexture == nullptr)
+	{
+		// 셰이더 및 텍스처 로딩
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+		pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
+
+		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
+
+		// 셰이더 생성
+		pTerrainShader = new CTerrainShader();
+		pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		// 셰이더 리소스 뷰 생성
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
+
+		// 재사용 가능한 Material 객체 생성
+		pTerrainMaterial = new CMaterial(2);
+		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
+		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
+		pTerrainMaterial->SetShader(pTerrainShader);
+	}
+
+	// Material 설정
+	SetMaterial(0, pTerrainMaterial);
+
+	// ============================================================
+
 	m_nWidth = nWidth;
 	m_nLength = nLength;
-
 	m_xmf3Scale = xmf3Scale;
+	m_nDepth = nMaxDepth;
 
+
+	// 높이 맵 이미지 로드
 	m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
-	CHeightMapGridMesh *pMesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, nWidth, nLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
-	SetMesh(pMesh);
+	// 중심 기준으로 크기 계산
+	int halfWidth = nWidth / 2;
+	int halfLength = nLength / 2;
 
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	// 4등분된 메쉬를 생성할 위치와 크기 배열
+	int startX[] = { 0, halfWidth, 0, halfWidth };
+	int startZ[] = { 0, 0, halfLength, halfLength };
+	int blockWidth[] = { halfWidth, nWidth - halfWidth, halfWidth, nWidth - halfWidth };
+	int blockLength[] = { halfLength, halfLength, nLength - halfLength, nLength - halfLength };
 
-	CTexture* pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
+	// 4개의 메쉬 생성
+	for (int i = 0; i < 4; ++i)
+	{
+		// 기본 메쉬 생성
+		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, startX[i], startZ[i], blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, m_pHeightMapImage);
 
-	CTexture* pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
+		// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
+		if (nMaxDepth > 0)
+		{
+			CHeightMapTerrain* part_map = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, nMaxDepth - 1);
+			part_map->SetMesh(part_mesh);
+			part_map->SetMaterial(0, pTerrainMaterial);
+			string tile_name = "tile map - " + std::to_string(tile_map_number);;
+			part_map->Set_Name(tile_name);
+			tile_map_number += 1;
 
-	CTerrainShader *pTerrainShader = new CTerrainShader();
-	pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
-	CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
-
-	CMaterial *pTerrainMaterial = new CMaterial(2);
-	pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
-	pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
-	pTerrainMaterial->SetShader(pTerrainShader);
-
-	SetMaterial(0, pTerrainMaterial);
+			SetChild(part_map);
+		}
+		else
+		{
+			// 깊이가 0이면 자식 객체를 생성하지 않고 단일 메쉬만 추가
+			SetMesh(part_mesh);
+		}
+	}
 }
+
 
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
 	if (m_pHeightMapImage) delete m_pHeightMapImage;
+
+	if (m_pChild) m_pChild->Release();
+	if (m_pSibling) m_pSibling->Release();
+}
+
+
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_nDepth > 1)
+		return;
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	if (m_pMesh)
+	{
+		if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
+		{
+			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
+
+			m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
+			m_pMesh->Render(pd3dCommandList, 0);
+
+			m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
+			m_pMesh->Render(pd3dCommandList, 0);
+
+			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
+		}
+	}
+
+
+	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
+	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

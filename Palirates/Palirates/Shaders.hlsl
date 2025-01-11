@@ -192,14 +192,30 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 	return(output);
 }
 
-float4 PSTerrain(VS_TERRAIN_OUTPUT input) : SV_TARGET
+float4 PSTerrain_Solid(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {
 	float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
 	float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
-//	float4 cColor = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
 	float4 cColor = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-
 	return(cColor);
+}
+
+VS_TERRAIN_OUTPUT VSTerrain_2(VS_TERRAIN_INPUT input)
+{
+    VS_TERRAIN_OUTPUT output;
+    input.position.y -= 1.0f;
+    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    output.color = input.color;
+    output.uv0 = input.uv0;
+    output.uv1 = input.uv1;
+
+    return (output);
+}
+
+float4 PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input) : SV_TARGET
+{
+    float4 cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
+    return (cColor);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

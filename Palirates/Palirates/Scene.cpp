@@ -100,7 +100,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 257, 257, xmf3Scale, xmf4Color);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 257, 257, xmf3Scale, xmf4Color, 2);
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
 
@@ -573,7 +573,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-//	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
+	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	obj_manager.Animate_Objects(Object_Type::skinned, m_fElapsedTime);
 	obj_manager.Render_Objects_All(pd3dCommandList, pCamera);
@@ -581,7 +581,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 
 	for (int i = 0; i < m_nShaders; i++) 
 		if (m_ppShaders[i]) 
-			m_ppShaders[i]->Render(pd3dCommandList, pCamera);
+			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
 
 }
 
