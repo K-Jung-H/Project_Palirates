@@ -231,8 +231,9 @@ public:
 
 	char							(*m_ppstrSkinningBoneNames)[64]; //[m_nSkinningBones]
 	//CGameObject						**m_ppSkinningBoneFrameCaches = NULL; //[m_nSkinningBones]
+	//	std::vector<std::weak_ptr<CGameObject>> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
+	std::vector<CGameObject*> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
 
-	std::vector<std::shared_ptr<CGameObject>> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
 	XMFLOAT4X4						*m_pxmf4x4BindPoseBoneOffsets = NULL; //[m_nSkinningBones], Transposed
 
 	ID3D12Resource					*m_pd3dcbBindPoseBoneOffsets = NULL; //[m_nSkinningBones]

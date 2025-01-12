@@ -647,6 +647,16 @@ void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandL
 	{
 		XMStoreFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[j], XMMatrixTranspose(XMLoadFloat4x4(&m_ppSkinningBoneFrameCaches[j]->m_xmf4x4World)));
 	}
+
+	// weak_ptr
+	//for (int j = 0; j < m_nSkinningBones; j++)
+	//{
+	//	if (std::shared_ptr<CGameObject> sharedFrameCache = m_ppSkinningBoneFrameCaches[j].lock()) // shared_ptr로 변환 후 작업 수행
+	//		XMStoreFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[j],XMMatrixTranspose(XMLoadFloat4x4(&sharedFrameCache->m_xmf4x4World)));
+	//	
+	//	else 	// weak_ptr가 유효하지 않을 경우에 대한 처리 (예: 초기화 또는 로그 출력)
+	//		XMStoreFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[j], XMMatrixIdentity()); // 기본 값으로 초기화
+	//}
 }
 
 void CSkinnedMesh::ReleaseShaderVariables()
@@ -668,6 +678,7 @@ void CSkinnedMesh::PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject
 {
 	for (int j = 0; j < m_nSkinningBones; j++)
 	{
+		//m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]);
 		m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]);
 	}
 }
@@ -702,7 +713,10 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 				for (int i = 0; i < m_nSkinningBones; i++)
 				{
 					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);
-					m_ppSkinningBoneFrameCaches[i] = NULL;
+					DebugOutput("\nBone Name: ", m_ppstrSkinningBoneNames[i]);
+
+					m_ppSkinningBoneFrameCaches[i] = nullptr;
+					//m_ppSkinningBoneFrameCaches[i].reset();
 				}
 			}
 		}

@@ -367,9 +367,15 @@ CAnimationSet::~CAnimationSet()
 	for (int j = 0; j < m_nKeyFrameRotations; j++) if (m_ppxmf4KeyFrameRotations[j]) delete[] m_ppxmf4KeyFrameRotations[j];
 	if (m_ppxmf4KeyFrameRotations) delete[] m_ppxmf4KeyFrameRotations;
 #else
-	if (m_pfKeyFrameTimes) delete[] m_pfKeyFrameTimes;
-	for (int j = 0; j < m_nKeyFrames; j++) if (m_ppxmf4x4KeyFrameTransforms[j]) delete[] m_ppxmf4x4KeyFrameTransforms[j];
-	if (m_ppxmf4x4KeyFrameTransforms) delete[] m_ppxmf4x4KeyFrameTransforms;
+	if (m_pfKeyFrameTimes) 
+		delete[] m_pfKeyFrameTimes;
+
+	for (int j = 0; j < m_nKeyFrames; j++) 
+		if (m_ppxmf4x4KeyFrameTransforms[j]) 
+			delete[] m_ppxmf4x4KeyFrameTransforms[j];
+	
+	if (m_ppxmf4x4KeyFrameTransforms) 
+		delete[] m_ppxmf4x4KeyFrameTransforms;
 #endif
 
 	DebugOutput("\nDelete AnimationSet: ", m_pstrAnimationSetName);
@@ -435,8 +441,12 @@ CAnimationSets::CAnimationSets(int nAnimationSets)
 
 CAnimationSets::~CAnimationSets()
 {
-	for (int i = 0; i < m_nAnimationSets; i++) if (m_pAnimationSet_list[i]) delete m_pAnimationSet_list[i];
-	if (m_pAnimationSet_list) delete[] m_pAnimationSet_list;
+	for (int i = 0; i < m_nAnimationSets; i++) 
+		if (m_pAnimationSet_list[i]) 
+			delete m_pAnimationSet_list[i];
+
+	if (m_pAnimationSet_list)
+		delete[] m_pAnimationSet_list;
 
 //	if (m_ppBoneFrameCaches) delete[] m_ppBoneFrameCaches;
 }
@@ -574,19 +584,26 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 
 CAnimationController::~CAnimationController()
 {
-	if (m_pAnimationTracks) delete[] m_pAnimationTracks;
+	if (m_pAnimationTracks) 
+		delete[] m_pAnimationTracks;
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
 		m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
 		m_ppd3dcbSkinningBoneTransforms[i]->Release();
 	}
-	if (m_ppd3dcbSkinningBoneTransforms) delete[] m_ppd3dcbSkinningBoneTransforms;
-	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) delete[] m_ppcbxmf4x4MappedSkinningBoneTransforms;
+	
+	if (m_ppd3dcbSkinningBoneTransforms) 
+		delete[] m_ppd3dcbSkinningBoneTransforms;
+	
+	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) 
+		delete[] m_ppcbxmf4x4MappedSkinningBoneTransforms;
 
-	if (m_pAnimationSets) m_pAnimationSets->Release();
+	if (m_pAnimationSets)
+		m_pAnimationSets->Release();
 
-	if (m_ppSkinnedMeshes) delete[] m_ppSkinnedMeshes;
+	if (m_ppSkinnedMeshes) 
+		delete[] m_ppSkinnedMeshes;
 }
 
 void CAnimationController::SetCallbackKeys(int nAnimationTrack, int nCallbackKeys)
@@ -902,22 +919,29 @@ void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnS
 		m_pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
-std::shared_ptr<CGameObject> CGameObject::FindFrame(char *pstrFrameName)
+CGameObject* CGameObject::FindFrame(char* pstrFrameName)
 {
 	if (!strncmp(m_pstrFrameName, pstrFrameName, strlen(pstrFrameName)))
-		return std::shared_ptr<CGameObject>(this);
+		return this;
 
-	std::shared_ptr<CGameObject> pFrameObject = NULL;
+	CGameObject* pFrameObject = nullptr;
 
 	if (m_pSibling) 
-		if (pFrameObject = m_pSibling->FindFrame(pstrFrameName)) 
-			return(pFrameObject);
+	{
+		pFrameObject = m_pSibling->FindFrame(pstrFrameName);
+		if (pFrameObject)
+			return pFrameObject;
+	}
 
-	if (m_pChild) 
-		if (pFrameObject = m_pChild->FindFrame(pstrFrameName)) 
-			return(pFrameObject);
+	if (m_pChild)
+	{
+		pFrameObject = m_pChild->FindFrame(pstrFrameName);
+		if (pFrameObject)
+			return pFrameObject;
+	}
 
-	return(NULL);
+	// 찾지 못한 경우 nullptr 반환
+	return nullptr;
 }
 
 void CGameObject::UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent)
@@ -1471,7 +1495,8 @@ void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoaded
 			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
+				CGameObject* frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
+				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr;
 
 #ifdef _WITH_DEBUG_SKINNING_BONE
 				TCHAR pstrDebug[256] = { 0 };
@@ -1669,39 +1694,85 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	int halfWidth = nWidth / 2;
 	int halfLength = nLength / 2;
 
-	// 4등분된 메쉬를 생성할 위치와 크기 배열
+	// 메쉬 4등분 위치, 크기 배열
 	int startX[] = { 0, halfWidth, 0, halfWidth };
 	int startZ[] = { 0, 0, halfLength, halfLength };
-	int blockWidth[] = { halfWidth, nWidth - halfWidth, halfWidth, nWidth - halfWidth };
-	int blockLength[] = { halfLength, halfLength, nLength - halfLength, nLength - halfLength };
+	int blockWidth[] = { halfWidth + 1, nWidth - halfWidth, halfWidth + 1, nWidth - halfWidth };
+	int blockLength[] = { halfLength + 1, halfLength + 1, nLength - halfLength, nLength - halfLength };
 
-	// 4개의 메쉬 생성
-	for (int i = 0; i < 4; ++i)
+	// 깊이가 0이면 1개의 메쉬로 처리하고, 1 이상이면 4등분하여 계층 구조로 처리
+	if (nMaxDepth == 0)
 	{
-		// 기본 메쉬 생성
-		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, startX[i], startZ[i], blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, m_pHeightMapImage);
-
-		// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
-		if (nMaxDepth > 0)
+		// 깊이가 0이면 1개의 메쉬로 처리
+		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, nWidth, nLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
+		SetMesh(part_mesh);
+	}
+	else
+	{
+		// 깊이가 1 이상이면 4등분하여 자식 객체 생성
+		for (int i = 0; i < 4; ++i)
 		{
-			CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, nMaxDepth - 1);
-			
-			std::shared_ptr<CGameObject>part_map(part_map_raw_ptr);
-			string tile_name = "tile map - " + std::to_string(tile_map_number);
-			tile_map_number += 1;
+			// 기본 메쉬 생성
+			CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, startX[i], startZ[i], blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, m_pHeightMapImage);
 
-			part_map->SetMesh(part_mesh);
-			part_map->SetMaterial(0, pTerrainMaterial);
-			part_map->Set_Name(tile_name);
+			// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
+			if (nMaxDepth > 0)
+			{
+				CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], XMFLOAT3(1.0f,1.0f,1.0f), xmf4Color, nMaxDepth - 1);
 
-			Set_Child(part_map);
-		}
-		else
-		{
-			// 깊이가 0이면 자식 객체를 생성하지 않고 단일 메쉬만 추가
-			SetMesh(part_mesh);
+				std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
+				string tile_name = "tile map - " + std::to_string(tile_map_number);
+				tile_map_number += 1;
+
+				part_map->SetMesh(part_mesh);
+				part_map->SetMaterial(0, pTerrainMaterial);
+				part_map->Set_Name(tile_name);
+
+				Set_Child(part_map);
+			}
 		}
 	}
+
+	//// 높이 맵 이미지 로드
+	//m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
+
+	//// 중심 기준으로 크기 계산
+	//int halfWidth = nWidth / 2;
+	//int halfLength = nLength / 2;
+
+	//// 메쉬 4등분  위치,크기 배열
+	//int startX[] = { 0, halfWidth, 0, halfWidth };
+	//int startZ[] = { 0, 0, halfLength, halfLength };
+	//int blockWidth[] = { halfWidth + 1, nWidth - halfWidth, halfWidth + 1, nWidth - halfWidth };
+	//int blockLength[] = { halfLength + 1, halfLength + 1, nLength - halfLength, nLength - halfLength };
+
+	//// 4개의 메쉬 생성
+	//for (int i = 0; i < 4; ++i)
+	//{
+	//	// 기본 메쉬 생성
+	//	CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, startX[i], startZ[i], blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, m_pHeightMapImage);
+
+	//	// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
+	//	if (nMaxDepth > 0)
+	//	{
+	//		CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, nMaxDepth - 1);
+
+	//		std::shared_ptr<CGameObject>part_map(part_map_raw_ptr);
+	//		string tile_name = "tile map - " + std::to_string(tile_map_number);
+	//		tile_map_number += 1;
+
+	//		part_map->SetMesh(part_mesh);
+	//		part_map->SetMaterial(0, pTerrainMaterial);
+	//		part_map->Set_Name(tile_name);
+
+	//		Set_Child(part_map);
+	//	}
+	//	else
+	//	{
+	//		// 깊이가 0이면 자식 객체를 생성하지 않고 단일 메쉬만 추가
+	//		SetMesh(part_mesh);
+	//	}
+	//}
 }
 
 

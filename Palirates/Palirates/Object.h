@@ -237,7 +237,8 @@ public:
 
 	int								m_nBoneFrames = 0; 
 //	std::shared_ptr<CGameObject>						*m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
-	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
+//	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
+	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
 };
 
@@ -440,7 +441,7 @@ public:
 	CGameObject *GetParent() { return(m_pParent); }
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent=NULL);
 
-	std::shared_ptr<CGameObject> FindFrame(char *pstrFrameName);
+	CGameObject* FindFrame(char *pstrFrameName);
 
 	CTexture *FindReplicatedTexture(_TCHAR *pstrTextureName);
 
