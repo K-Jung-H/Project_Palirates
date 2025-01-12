@@ -230,8 +230,9 @@ public:
 	int								m_nSkinningBones = 0; 
 
 	char							(*m_ppstrSkinningBoneNames)[64]; //[m_nSkinningBones]
-	CGameObject						**m_ppSkinningBoneFrameCaches = NULL; //[m_nSkinningBones]
+	//CGameObject						**m_ppSkinningBoneFrameCaches = NULL; //[m_nSkinningBones]
 
+	std::vector<std::shared_ptr<CGameObject>> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
 	XMFLOAT4X4						*m_pxmf4x4BindPoseBoneOffsets = NULL; //[m_nSkinningBones], Transposed
 
 	ID3D12Resource					*m_pd3dcbBindPoseBoneOffsets = NULL; //[m_nSkinningBones]
@@ -242,7 +243,7 @@ public:
 
 public:
 	// 오브젝트의 계층구조에서 해당 메시에 연결해야 하는 뼈 오브젝트를 객체 이름을 기반으로 찾아 메시에 정보 저장
-	void PrepareSkinning(CGameObject *pModelRootObject); 
+	void PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject);
 	void LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, FILE *pInFile);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);

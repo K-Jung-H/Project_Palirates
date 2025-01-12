@@ -438,7 +438,7 @@ CAnimationSets::~CAnimationSets()
 	for (int i = 0; i < m_nAnimationSets; i++) if (m_pAnimationSet_list[i]) delete m_pAnimationSet_list[i];
 	if (m_pAnimationSet_list) delete[] m_pAnimationSet_list;
 
-	if (m_ppBoneFrameCaches) delete[] m_ppBoneFrameCaches;
+//	if (m_ppBoneFrameCaches) delete[] m_ppBoneFrameCaches;
 }
 
 void CAnimationSets::Bone_Info()
@@ -728,19 +728,28 @@ void CLoadedModelInfo::PrepareSkinning()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CGameObject::CGameObject()
+//CGameObject::CGameObject()
+//{
+//	Set_Name("No_name");
+//	m_xmf4x4Parent = Matrix4x4::Identity();
+//	m_xmf4x4World = Matrix4x4::Identity();
+//}
+
+CGameObject::CGameObject(const std::string_view& name) 
 {
+	Set_Name(name);
 	m_xmf4x4Parent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 }
 
-CGameObject::CGameObject(int nMaterials) : CGameObject()
+CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
 {
 	m_nMaterials = nMaterials;
 	if (m_nMaterials > 0)
 	{
 		m_ppMaterials = new CMaterial*[m_nMaterials];
-		for(int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
+		for(int i = 0; i < m_nMaterials; i++) 
+			m_ppMaterials[i] = NULL;
 	}
 }
 
@@ -762,21 +771,39 @@ CGameObject::~CGameObject()
 	DebugOutput("\nDelete GameObject: ", m_pstrFrameName);
 }
 
-void CGameObject::AddRef() 
-{ 
-	m_nReferences++; 
-
-	if (m_pSibling) m_pSibling->AddRef();
-	if (m_pChild) m_pChild->AddRef();
+std::shared_ptr<CGameObject> CGameObject::Get_Child()
+{
+	if (m_pChild != nullptr)
+		return m_pChild;
+	else
+		return nullptr;
 }
 
-void CGameObject::Release() 
-{ 
-	if (m_pChild) m_pChild->Release();
-	if (m_pSibling) m_pSibling->Release();
-
-	if (--m_nReferences <= 0) delete this; 
+std::shared_ptr<CGameObject> CGameObject::Get_Sibling()
+{
+	if (m_pSibling != nullptr)
+		return m_pSibling;
+	else
+		return nullptr;
 }
+
+
+//
+//void CGameObject::AddRef() 
+//{ 
+//	m_nReferences++; 
+//
+//	if (m_pSibling) m_pSibling->AddRef();
+//	if (m_pChild) m_pChild->AddRef();
+//}
+//
+//void CGameObject::Release() 
+//{ 
+//	if (m_pChild) m_pChild->Release();
+//	if (m_pSibling) m_pSibling->Release();
+//
+////	if (--m_nReferences <= 0) delete this; 
+//}
 
 void CGameObject::Obj_Info(int depth)
 {
@@ -818,24 +845,22 @@ void CGameObject::Set_Name(std::string_view name)
 	m_pstrFrameName[sizeof(m_pstrFrameName) - 1] = '\0';
 }
 
-void CGameObject::SetChild(CGameObject *pChild, bool bReferenceUpdate)
+void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild) 
 {
-	if (pChild)
-	{
-		pChild->m_pParent = this;
-		if (bReferenceUpdate) 
-			pChild->AddRef();
-	}
+	if (pChild) 
+		pChild->m_pParent = this; // 부모 설정
+	
 
-	if (m_pChild)
+	if (m_pChild) 
 	{
-		if (pChild) pChild->m_pSibling = m_pChild->m_pSibling;
+		if (pChild) 
+			pChild->m_pSibling = m_pChild->m_pSibling; // 기존 형제 연결
+		
 		m_pChild->m_pSibling = pChild;
 	}
-	else
-	{
+	else 
 		m_pChild = pChild;
-	}
+
 }
 
 void CGameObject::SetMesh(CMesh *pMesh)
@@ -877,11 +902,12 @@ void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnS
 		m_pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
-CGameObject *CGameObject::FindFrame(char *pstrFrameName)
+std::shared_ptr<CGameObject> CGameObject::FindFrame(char *pstrFrameName)
 {
-	CGameObject *pFrameObject = NULL;
-	if (!strncmp(m_pstrFrameName, pstrFrameName, strlen(pstrFrameName))) 
-		return(this);
+	if (!strncmp(m_pstrFrameName, pstrFrameName, strlen(pstrFrameName)))
+		return std::shared_ptr<CGameObject>(this);
+
+	std::shared_ptr<CGameObject> pFrameObject = NULL;
 
 	if (m_pSibling) 
 		if (pFrameObject = m_pSibling->FindFrame(pstrFrameName)) 
@@ -1386,8 +1412,11 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 			{
 				for (int i = 0; i < nChilds; i++)
 				{
-					CGameObject *pChild = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
-					if (pChild) pGameObject->SetChild(pChild);
+					CGameObject *pChild_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
+					
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
+					if (pChild) 
+						pGameObject->Set_Child(pChild);
 #ifdef _WITH_DEBUG_FRAME_HIERARCHY
 					TCHAR pstrDebug[256] = { 0 };
 					_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pChild, pGameObject);
@@ -1404,15 +1433,18 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 	return(pGameObject);
 }
 
-void CGameObject::PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent)
+void CGameObject::PrintFrameInfo(const std::shared_ptr<CGameObject> pGameObject, CGameObject *pParent)
 {
 	TCHAR pstrDebug[256] = { 0 };
 
 	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
 	OutputDebugString(pstrDebug);
 
-	if (pGameObject->m_pSibling) CGameObject::PrintFrameInfo(pGameObject->m_pSibling, pParent);
-	if (pGameObject->m_pChild) CGameObject::PrintFrameInfo(pGameObject->m_pChild, pGameObject);
+	if (pGameObject->m_pSibling) 
+		CGameObject::PrintFrameInfo(pGameObject->m_pSibling, pParent);
+
+	if (pGameObject->m_pChild)
+		CGameObject::PrintFrameInfo(pGameObject->m_pChild, pGameObject.get());
 }
 
 void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoadedModel)
@@ -1433,7 +1465,8 @@ void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoaded
 		else if (!strcmp(pstrToken, "<FrameNames>:"))
 		{
 			pLoadedModel->m_pAnimationSets->m_nBoneFrames = ::ReadIntegerFromFile(pInFile); 
-			pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches = new CGameObject*[pLoadedModel->m_pAnimationSets->m_nBoneFrames];
+			pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches.resize(pLoadedModel->m_pAnimationSets->m_nBoneFrames, nullptr);
+			//pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches = new CGameObject*[pLoadedModel->m_pAnimationSets->m_nBoneFrames];
 
 			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
 			{
@@ -1511,7 +1544,11 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 		{
 			if (!strcmp(pstrToken, "<Hierarchy>:"))
 			{
-				pLoadedModel->m_pModelRootObject = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes);
+				CGameObject* ModelRootObject_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes);
+			
+				std::shared_ptr<CGameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
+				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
+
 				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
@@ -1647,14 +1684,17 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
 		if (nMaxDepth > 0)
 		{
-			CHeightMapTerrain* part_map = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, nMaxDepth - 1);
-			part_map->SetMesh(part_mesh);
-			part_map->SetMaterial(0, pTerrainMaterial);
-			string tile_name = "tile map - " + std::to_string(tile_map_number);;
-			part_map->Set_Name(tile_name);
+			CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, nMaxDepth - 1);
+			
+			std::shared_ptr<CGameObject>part_map(part_map_raw_ptr);
+			string tile_name = "tile map - " + std::to_string(tile_map_number);
 			tile_map_number += 1;
 
-			SetChild(part_map);
+			part_map->SetMesh(part_mesh);
+			part_map->SetMaterial(0, pTerrainMaterial);
+			part_map->Set_Name(tile_name);
+
+			Set_Child(part_map);
 		}
 		else
 		{
@@ -1667,10 +1707,9 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
-	if (m_pHeightMapImage) delete m_pHeightMapImage;
+	if (m_pHeightMapImage) 
+		delete m_pHeightMapImage;
 
-	if (m_pChild) m_pChild->Release();
-	if (m_pSibling) m_pSibling->Release();
 }
 
 
@@ -1696,8 +1735,12 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	}
 
 
-	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
-	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+	std::shared_ptr<CGameObject> pChild = Get_Child();
+	if (pChild) pChild->Render(pd3dCommandList, pCamera);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1758,7 +1801,7 @@ CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommand
 	if (!pAngrybotModel) // 오류 방지
 		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
 
-	SetChild(pAngrybotModel->m_pModelRootObject, true);
+	Set_Child(pAngrybotModel->m_pModelRootObject);
 	m_pSkinnedAnimationController = new CAngrybotAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
 }
 
@@ -1773,7 +1816,7 @@ CHumanObject::CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 	if (!pHumanModel) 
 		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
 
-	SetChild(pHumanModel->m_pModelRootObject, true);
+	Set_Child(pHumanModel->m_pModelRootObject);
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
 }
 

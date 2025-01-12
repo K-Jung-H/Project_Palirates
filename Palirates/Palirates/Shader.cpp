@@ -547,11 +547,7 @@ void CStandardObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphi
 
 void CStandardObjectsShader::ReleaseObjects()
 {
-	if (m_ppObjects)
-	{
-		for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->Release();
-		delete[] m_ppObjects;
-	}
+	object_list.clear();
 }
 
 void CStandardObjectsShader::AnimateObjects(float fTimeElapsed)
@@ -561,23 +557,21 @@ void CStandardObjectsShader::AnimateObjects(float fTimeElapsed)
 
 void CStandardObjectsShader::ReleaseUploadBuffers()
 {
-	for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->ReleaseUploadBuffers();
+	for (std::shared_ptr<CGameObject> obj_ptr : object_list)
+		obj_ptr->ReleaseUploadBuffers();
 }
 
-void CStandardObjectsShader::Render_Objects(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CStandardObjectsShader::Render_Objects(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	for (int i = 0; i < m_nPipelineStates; ++i)
 	{
 		CStandardShader::Setting_Render(pd3dCommandList, i);
-
-		for (int j = 0; j < m_nObjects; j++)
+		for (std::shared_ptr<CGameObject> obj_ptr : object_list)
 		{
-			if (m_ppObjects[j])
-			{
-				m_ppObjects[j]->Animate(m_fElapsedTime);
-				m_ppObjects[j]->UpdateTransform(NULL);
-				m_ppObjects[j]->Render(pd3dCommandList, pCamera);
-			}
+			obj_ptr->Animate(m_fElapsedTime);
+			obj_ptr->UpdateTransform(NULL);
+			obj_ptr->Render(pd3dCommandList, pCamera);
+
 		}
 	}
 }
@@ -596,13 +590,7 @@ void CSkinnedAnimationObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D
 
 void CSkinnedAnimationObjectsShader::ReleaseObjects()
 {
-	if (m_ppObjects)
-	{
-		for (int j = 0; j < m_nObjects; j++) 
-			if (m_ppObjects[j] != NULL) 
-				m_ppObjects[j]->Release();
-		// delete[] m_ppObjects;
-	}
+	object_list.clear();
 }
 
 void CSkinnedAnimationObjectsShader::AnimateObjects(float fTimeElapsed)
@@ -612,32 +600,24 @@ void CSkinnedAnimationObjectsShader::AnimateObjects(float fTimeElapsed)
 
 void CSkinnedAnimationObjectsShader::ReleaseUploadBuffers()
 {
-	for (int j = 0; j < m_nObjects; j++) if (m_ppObjects[j]) m_ppObjects[j]->ReleaseUploadBuffers();
+	for (std::shared_ptr<CGameObject> obj_ptr : object_list)
+		obj_ptr->ReleaseUploadBuffers();
 }
 
 void CSkinnedAnimationObjectsShader::Render_Objects(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	// 해당 셰이더에 저장된 모든 객체 렌더링
 	// 관련 객체들은 Object_Manager에서 관리하기에 별도로 이 함수 호출할 일 없음
-    for (int j = 0; j < m_nObjects; j++)
-    {
-        if (m_ppObjects[j])
-        {
-            m_ppObjects[j]->Animate(m_fElapsedTime);
-        }
-    }
+	for (std::shared_ptr<CGameObject> obj_ptr : object_list)
+		obj_ptr->Animate(m_fElapsedTime);
 
     for (int i = 0; i < m_nPipelineStates; ++i)
     {
         CSkinnedAnimationStandardShader::Setting_Render(pd3dCommandList, i);
 
-        for (int j = 0; j < m_nObjects; j++)
-        {
-            if (m_ppObjects[j])
-            {
-                m_ppObjects[j]->Render(pd3dCommandList, pCamera);
-            }
-        }
+		for (std::shared_ptr<CGameObject> obj_ptr : object_list)
+			obj_ptr->Render(pd3dCommandList, pCamera);
+
     }
 }
 
@@ -654,10 +634,10 @@ CAngrybotObjectsShader::~CAngrybotObjectsShader()
 void CAngrybotObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, void *pContext)
 {
 	int xObjects = 3, zObjects = 3, i = 0;
+	int n_Objects = (xObjects * 2 + 1) * (zObjects * 2 + 1);
 
-	m_nObjects = (xObjects * 2 + 1) * (zObjects * 2 + 1);
-	m_nObjects = 0;
-	m_ppObjects = new CGameObject*[m_nObjects];
+	n_Objects = 0;
+	object_list.resize(n_Objects, NULL);
 
 	float fxPitch = 7.0f * 2.5f;
 	float fzPitch = 7.0f * 2.5f;
@@ -672,14 +652,19 @@ void CAngrybotObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphi
 	{
 		for (int z = -zObjects; z <= zObjects; z++)
 		{
-			m_ppObjects[nObjects] = new CAngrybotObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pAngrybotModel, 1);
-			m_ppObjects[nObjects]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, (nObjects % 2));
-			m_ppObjects[nObjects]->m_pSkinnedAnimationController->SetTrackSpeed(0, (nObjects % 2) ? 0.25f : 1.0f);
-			m_ppObjects[nObjects]->m_pSkinnedAnimationController->SetTrackPosition(0, (nObjects % 3) ? 0.85f : 0.0f);
+			CGameObject* angrybot_raw_ptr= new CAngrybotObject(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pAngrybotModel, 1);
+
+			angrybot_raw_ptr->m_pSkinnedAnimationController->SetTrackAnimationSet(0, (nObjects % 2));
+			angrybot_raw_ptr->m_pSkinnedAnimationController->SetTrackSpeed(0, (nObjects % 2) ? 0.25f : 1.0f);
+			angrybot_raw_ptr->m_pSkinnedAnimationController->SetTrackPosition(0, (nObjects % 3) ? 0.85f : 0.0f);
 			XMFLOAT3 xmf3Position = XMFLOAT3(fxPitch*x + 390.0f, 0.0f, 730.0f + fzPitch * z);
 			xmf3Position.y = pTerrain->GetHeight(xmf3Position.x, xmf3Position.z);
-			m_ppObjects[nObjects]->SetPosition(xmf3Position);
-			m_ppObjects[nObjects++]->SetScale(2.0f, 2.0f, 2.0f);
+			angrybot_raw_ptr->SetPosition(xmf3Position);
+			angrybot_raw_ptr->SetScale(2.0f, 2.0f, 2.0f);
+
+			std::shared_ptr<CGameObject> obj_shared_ptr(angrybot_raw_ptr);
+			object_list[nObjects++] = obj_shared_ptr;
+
 		}
     }
 

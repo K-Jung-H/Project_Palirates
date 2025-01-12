@@ -611,7 +611,8 @@ CSkinnedMesh::~CSkinnedMesh()
 	if (m_pxmn4BoneIndices) delete[] m_pxmn4BoneIndices;
 	if (m_pxmf4BoneWeights) delete[] m_pxmf4BoneWeights;
 
-	if (m_ppSkinningBoneFrameCaches) delete[] m_ppSkinningBoneFrameCaches;
+//	if (m_ppSkinningBoneFrameCaches) delete[] m_ppSkinningBoneFrameCaches;
+	m_ppSkinningBoneFrameCaches.clear();
 	if (m_ppstrSkinningBoneNames) delete[] m_ppstrSkinningBoneNames;
 
 	if (m_pxmf4x4BindPoseBoneOffsets) delete[] m_pxmf4x4BindPoseBoneOffsets;
@@ -663,7 +664,7 @@ void CSkinnedMesh::ReleaseUploadBuffers()
 	m_pd3dBoneWeightUploadBuffer = NULL;
 }
 
-void CSkinnedMesh::PrepareSkinning(CGameObject *pModelRootObject)
+void CSkinnedMesh::PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject)
 {
 	for (int j = 0; j < m_nSkinningBones; j++)
 	{
@@ -696,7 +697,8 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 			if (m_nSkinningBones > 0) 
 			{
 				m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
-				m_ppSkinningBoneFrameCaches = new CGameObject*[m_nSkinningBones];
+//				m_ppSkinningBoneFrameCaches = new CGameObject*[m_nSkinningBones];
+				m_ppSkinningBoneFrameCaches.resize(m_nSkinningBones);
 				for (int i = 0; i < m_nSkinningBones; i++)
 				{
 					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);

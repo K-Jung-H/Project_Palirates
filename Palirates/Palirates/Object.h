@@ -236,7 +236,8 @@ public:
 	CAnimationSet					**m_pAnimationSet_list = NULL;
 
 	int								m_nBoneFrames = 0; 
-	CGameObject						**m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
+//	std::shared_ptr<CGameObject>						*m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
+	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	void Bone_Info();
 };
 
@@ -284,7 +285,7 @@ public:
 	CLoadedModelInfo() { }
 	~CLoadedModelInfo();
 
-    CGameObject						*m_pModelRootObject = NULL;
+    std::shared_ptr<CGameObject>						m_pModelRootObject = NULL;
 
 	int 							m_nSkinnedMeshes = 0;
 	CSkinnedMesh					**m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
@@ -335,9 +336,9 @@ public:
 
 public:
 	bool							m_bRootMotion = false;
-	CGameObject*					m_pModelRootObject = NULL;
+	std::shared_ptr<CGameObject>				m_pModelRootObject = NULL;
 
-	CGameObject*					m_pRootMotionObject = NULL;
+	std::shared_ptr<CGameObject>				m_pRootMotionObject = NULL;
 	XMFLOAT3						m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
@@ -351,16 +352,26 @@ public:
 
 class CGameObject
 {
+public:
+	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
+
 private:
 	int								m_nReferences = 0;
 
-public:
-	void AddRef();
-	void Release();
+	std::shared_ptr<CGameObject> m_pChild = nullptr;     // 자식 노드
+	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // 형제 노드
 
 public:
-	CGameObject();
-	CGameObject(int nMaterials);
+	//void AddRef();
+	//void Release();
+
+	std::shared_ptr<CGameObject> Get_Child();
+	std::shared_ptr<CGameObject> Get_Sibling();
+
+public:
+	CGameObject(const std::string_view& name = "No_name");
+	CGameObject(int nMaterials, const std::string_view& name = "No_name");
+
     virtual ~CGameObject();
 
 public:
@@ -372,12 +383,8 @@ public:
 	int								m_nMaterials = 0;
 	CMaterial						**m_ppMaterials = NULL;
 
-	XMFLOAT4X4						m_xmf4x4Parent;
-	XMFLOAT4X4						m_xmf4x4World;
-
-	CGameObject 					*m_pParent = NULL;
-	CGameObject 					*m_pChild = NULL;
-	CGameObject 					*m_pSibling = NULL;
+	XMFLOAT4X4				m_xmf4x4Parent{};
+	XMFLOAT4X4				m_xmf4x4World{};
 
 	CAnimationController*			m_pSkinnedAnimationController = NULL;
 
@@ -386,8 +393,8 @@ public:
 	void SetShader(int nMaterial, CShader *pShader);
 	void SetMaterial(int nMaterial, CMaterial *pMaterial);
 
-	void SetChild(CGameObject *pChild, bool bReferenceUpdate=false);
-
+	void Set_Child(std::shared_ptr<CGameObject> pChild);
+	
 	void Obj_Info(int depth=0);
 	void Set_Name(std::string_view name);
 
@@ -432,7 +439,8 @@ public:
 
 	CGameObject *GetParent() { return(m_pParent); }
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent=NULL);
-	CGameObject *FindFrame(char *pstrFrameName);
+
+	std::shared_ptr<CGameObject> FindFrame(char *pstrFrameName);
 
 	CTexture *FindReplicatedTexture(_TCHAR *pstrTextureName);
 
@@ -457,7 +465,7 @@ public:
 
 	static CLoadedModelInfo *LoadGeometryAndAnimationFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, char *pstrFileName,  CShader *pShader);
 
-	static void PrintFrameInfo(CGameObject *pGameObject, CGameObject *pParent);
+	static void PrintFrameInfo(const std::shared_ptr<CGameObject> pGameObject, CGameObject *pParent);
 };
 
 //==================================================================================
