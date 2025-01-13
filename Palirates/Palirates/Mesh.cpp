@@ -110,7 +110,9 @@ CHeightMapImage::CHeightMapImage(LPCTSTR pFileName, int nWidth, int nLength, XMF
 
 CHeightMapImage::~CHeightMapImage()
 {
-	if (m_pHeightMapPixels) delete[] m_pHeightMapPixels;
+	if (m_pHeightMapPixels != NULL) 
+		delete[] m_pHeightMapPixels;
+
 	m_pHeightMapPixels = NULL;
 }
 
@@ -195,10 +197,10 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 		for (int x = xStart; x < (xStart + nWidth); x++, i++)
 		{
 			fHeight = OnGetHeight(x, z, pContext);
-			m_pxmf3Positions[i] = XMFLOAT3((x*m_xmf3Scale.x), fHeight, (z*m_xmf3Scale.z));
+			m_pxmf3Positions[i] = XMFLOAT3((x * m_xmf3Scale.x), fHeight, (z * m_xmf3Scale.z));
 			m_pxmf4Colors[i] = Vector4::Add(OnGetColor(x, z, pContext), xmf4Color);
 			m_pxmf2TextureCoords0[i] = XMFLOAT2(float(x) / float(cxHeightMap - 1), float(czHeightMap - 1 - z) / float(czHeightMap - 1));
-			m_pxmf2TextureCoords1[i] = XMFLOAT2(float(x) / float(m_xmf3Scale.x*0.5f), float(z) / float(m_xmf3Scale.z*0.5f));
+			m_pxmf2TextureCoords1[i] = XMFLOAT2(float(x) / float(m_xmf3Scale.x * 0.5f), float(z) / float(m_xmf3Scale.z * 0.5f));
 			if (fHeight < fMinHeight) fMinHeight = fHeight;
 			if (fHeight > fMaxHeight) fMaxHeight = fHeight;
 		}
@@ -230,13 +232,13 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 
 	m_nSubMeshes = 1;
 	m_pnSubSetIndices = new int[m_nSubMeshes];
-	m_ppnSubSetIndices = new UINT*[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
 
-	m_ppd3dSubSetIndexBuffers = new ID3D12Resource*[m_nSubMeshes];
-	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource*[m_nSubMeshes];
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
 	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
 
-	m_pnSubSetIndices[0] = ((nWidth * 2)*(nLength - 1)) + ((nLength - 1) - 1);
+	m_pnSubSetIndices[0] = ((nWidth * 2) * (nLength - 1)) + ((nLength - 1) - 1);
 	m_ppnSubSetIndices[0] = new UINT[m_pnSubSetIndices[0]];
 
 	for (int j = 0, z = 0; z < nLength - 1; z++)
@@ -297,7 +299,23 @@ void CHeightMapGridMesh::ReleaseUploadBuffers()
 float CHeightMapGridMesh::OnGetHeight(int x, int z, void *pContext)
 {
 	CHeightMapImage *pHeightMapImage = (CHeightMapImage *)pContext;
+
+	int Hight_Map_Width = pHeightMapImage->GetHeightMapWidth();
+	int Hight_Map_Length = pHeightMapImage->GetHeightMapLength();
+
+	// x, z 범위 확인
+	if (x < 0 || x >= Hight_Map_Width || z < 0 || z >= Hight_Map_Length)
+	{
+		std::string errorMessage = "Out of bounds: x=" + std::to_string(x) + ", z=" + std::to_string(z) 
+			+ " (Width=" + std::to_string(Hight_Map_Width) + ", Length=" + std::to_string(Hight_Map_Length) + ")";
+
+		DebugOutput(errorMessage);
+		return 0.0f; 
+	}
+
 	BYTE *pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
+
+
 	XMFLOAT3 xmf3Scale = pHeightMapImage->GetScale();
 	int nWidth = pHeightMapImage->GetHeightMapWidth();
 	float fHeight = pHeightMapPixels[x + (z*nWidth)] * xmf3Scale.y;

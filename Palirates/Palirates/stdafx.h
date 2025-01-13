@@ -27,6 +27,7 @@
 #include <string>
 #include <cwchar>  // wcsrchr 사용을 위한 헤더
 #include <cstring> // wcstombs 함수 사용을 위한 헤더
+#include <cstdio>
 
 
 using namespace std;

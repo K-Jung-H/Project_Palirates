@@ -98,9 +98,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
+
 	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 257, 257, xmf3Scale, xmf4Color, 1);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 2);
+
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
 
@@ -116,7 +118,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
+//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
 	humanObject_1->SetPosition(410.0f, m_pTerrain->GetHeight(400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_1->Set_Name(name_view);
@@ -494,7 +496,82 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	switch (nMessageID)
 	{
 	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case '1':
+		{
+			m_pTerrain->FindFrame("tile map - 0")->Active = true;
+			m_pTerrain->FindFrame("tile map - 1")->Active = false;
+			m_pTerrain->FindFrame("tile map - 2")->Active = false;
+			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+		}
 		break;
+		case '2':
+		{
+			m_pTerrain->FindFrame("tile map - 0")->Active = false;
+			m_pTerrain->FindFrame("tile map - 1")->Active = true;
+			m_pTerrain->FindFrame("tile map - 2")->Active = false;
+			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+		}
+		break;
+
+		case '3':
+		{
+			m_pTerrain->FindFrame("tile map - 0")->Active = false;
+			m_pTerrain->FindFrame("tile map - 1")->Active = false;
+			m_pTerrain->FindFrame("tile map - 2")->Active = true;
+			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+		}
+		break;
+
+		case '4':
+		{
+			m_pTerrain->FindFrame("tile map - 0")->Active = false;
+			m_pTerrain->FindFrame("tile map - 1")->Active = false;
+			m_pTerrain->FindFrame("tile map - 2")->Active = false;
+			m_pTerrain->FindFrame("tile map - 3")->Active = true;
+		}
+		break;
+
+		case '5':
+		{
+			m_pTerrain->FindFrame("tile map - 0")->Active = false;
+			m_pTerrain->FindFrame("tile map - 1")->Active = false;
+			m_pTerrain->FindFrame("tile map - 2")->Active = false;
+			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+		}
+		break;
+
+		case '6':
+		{
+			m_pTerrain->FindFrame("tile map - 0")->Active = true;
+			m_pTerrain->FindFrame("tile map - 1")->Active = true;
+			m_pTerrain->FindFrame("tile map - 2")->Active = true;
+			m_pTerrain->FindFrame("tile map - 3")->Active = true;
+		}
+		break;
+
+		case '7':
+		{
+			m_pTerrain->FindFrame("tile map - 9")->Active = false;
+			m_pTerrain->FindFrame("tile map - 14")->Active = false;
+			m_pTerrain->FindFrame("tile map - 19")->Active = false;
+		}
+		break;
+
+		case '8':
+		{
+			m_pTerrain->FindFrame("tile map - 9")->Active = true;
+			m_pTerrain->FindFrame("tile map - 14")->Active = true;
+			m_pTerrain->FindFrame("tile map - 19")->Active = true;
+		}
+		break;
+
+
+		default:
+			break;
+		}
+
 	default:
 		break;
 	}
@@ -534,7 +611,9 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 	// 하나 이상의 키가 처리됬으면 true, 아니면 false 
 	// - true = 프레임워크에서 추가적 동작 x
 	// - false = 프레임워크에서 추가적 동작 o
-	return bKeyProcessed; 
+	// return bKeyProcessed; 
+	return false; // 프레임 워크에서 플레이어 키 입력 필요
+
 }
 
 void CScene::AnimateObjects(float fTimeElapsed)

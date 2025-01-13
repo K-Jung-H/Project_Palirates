@@ -921,7 +921,7 @@ void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnS
 
 CGameObject* CGameObject::FindFrame(char* pstrFrameName)
 {
-	if (!strncmp(m_pstrFrameName, pstrFrameName, strlen(pstrFrameName)))
+	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
 		return this;
 
 	CGameObject* pFrameObject = nullptr;
@@ -1457,18 +1457,25 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 	return(pGameObject);
 }
 
-void CGameObject::PrintFrameInfo(const std::shared_ptr<CGameObject> pGameObject, CGameObject *pParent)
+void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
 {
-	TCHAR pstrDebug[256] = { 0 };
+	//TCHAR pstrDebug[256] = { 0 };
 
-	_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pGameObject, pParent);
-	OutputDebugString(pstrDebug);
+	//_stprintf_s(pstrDebug, 256, _T("(Frame: %s) (Parent: %s)\n"), pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
+	//OutputDebugStringA(pstrDebug);
+	
+	if (pParent != NULL)
+	{
+		char pstrDebug[256] = { 0 };
+		sprintf_s(pstrDebug, sizeof(pstrDebug), "(Frame: %s) (Parent: %s)\n", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
+		OutputDebugStringA(pstrDebug);
+	}
 
 	if (pGameObject->m_pSibling) 
-		CGameObject::PrintFrameInfo(pGameObject->m_pSibling, pParent);
+		CGameObject::PrintFrameInfo(pGameObject->m_pSibling.get(), pParent);
 
 	if (pGameObject->m_pChild)
-		CGameObject::PrintFrameInfo(pGameObject->m_pChild, pGameObject.get());
+		CGameObject::PrintFrameInfo(pGameObject->m_pChild.get(), pGameObject);
 }
 
 void CGameObject::LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoadedModel)
@@ -1644,9 +1651,12 @@ CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
 CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
+CHeightMapImage* CHeightMapTerrain::m_pHeightMapImage = nullptr;
 int CHeightMapTerrain::tile_map_number = 0;
 
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth) : CGameObject(1)
+//CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth) : CGameObject(1)
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, 
+	int start_x_pos, int start_z_pos, int nWidth, int nLength,  XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth) : CGameObject(1)
 {
 	// 셰이더 및 텍스처 설정 (첫 호출 시에만 실행됨)
 	if (pTerrainBaseTexture == nullptr)
@@ -1674,6 +1684,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 		pTerrainMaterial->SetShader(pTerrainShader);
+
+		// 높이 맵 이미지 로드
+		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
+
+
+		Set_Name("Root_Tile_Map");
 	}
 
 	// Material 설정
@@ -1684,53 +1700,63 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	m_nWidth = nWidth;
 	m_nLength = nLength;
 	m_xmf3Scale = xmf3Scale;
+
 	m_nDepth = nMaxDepth;
 
+	int Cell_num = 2;
+	long cxBlocks = (m_nWidth - 1) / Cell_num;
+	long czBlocks = (m_nLength - 1) / Cell_num;
 
-	// 높이 맵 이미지 로드
-	m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
-
-	// 중심 기준으로 크기 계산
-	int halfWidth = nWidth / 2;
-	int halfLength = nLength / 2;
-
-	// 메쉬 4등분 위치, 크기 배열
-	int startX[] = { 0, halfWidth, 0, halfWidth };
-	int startZ[] = { 0, 0, halfLength, halfLength };
-	int blockWidth[] = { halfWidth + 1, nWidth - halfWidth, halfWidth + 1, nWidth - halfWidth };
-	int blockLength[] = { halfLength + 1, halfLength + 1, nLength - halfLength, nLength - halfLength };
 
 	// 깊이가 0이면 1개의 메쉬로 처리하고, 1 이상이면 4등분하여 계층 구조로 처리
 	if (nMaxDepth == 0)
 	{
 		// 깊이가 0이면 1개의 메쉬로 처리
-		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, nWidth, nLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
+		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth, nLength, xmf3Scale, xmf4Color, m_pHeightMapImage);
 		SetMesh(part_mesh);
 	}
 	else
 	{
-		// 깊이가 1 이상이면 4등분하여 자식 객체 생성
-		for (int i = 0; i < 4; ++i)
+		if (nMaxDepth > 0)
 		{
-			// 기본 메쉬 생성
-			CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, startX[i], startZ[i], blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, m_pHeightMapImage);
-
-			// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
-			if (nMaxDepth > 0)
+			for (int z = 0, zStart = 0; z < Cell_num; ++z)
 			{
-				CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], XMFLOAT3(1.0f,1.0f,1.0f), xmf4Color, nMaxDepth - 1);
+				for (int x = 0, xStart = 0; x < Cell_num; ++x)
+				{
+					xStart = x * (cxBlocks - 1);
+					zStart = z * (czBlocks - 1);
 
-				std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
-				string tile_name = "tile map - " + std::to_string(tile_map_number);
-				tile_map_number += 1;
+					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, cxBlocks, czBlocks, xmf3Scale, xmf4Color, nMaxDepth - 1);
+					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
+					string tile_name = "tile map - " + std::to_string(tile_map_number);
+					tile_map_number += 1;
 
-				part_map->SetMesh(part_mesh);
-				part_map->SetMaterial(0, pTerrainMaterial);
-				part_map->Set_Name(tile_name);
+					part_map->SetMaterial(0, pTerrainMaterial);
+					part_map->Set_Name(tile_name);
 
-				Set_Child(part_map);
+					Set_Child(part_map);
+
+					//DebugOutput("Tile " + std::to_string(tile_map_number - 1) + " StartX: " + std::to_string(xStart) + " StartZ: " + std::to_string(zStart) +
+					//	" Width: " + std::to_string(nBlockWidth) + " Length: " + std::to_string(nBlockLength) + "\n");
+				}
 			}
 		}
+	}
+
+	if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
+	{
+		//FindFrame("tile map - 4")->Active = false;
+		
+		FindFrame("tile map - 0")->Active = false;
+		FindFrame("tile map - 1")->Active = false;
+		FindFrame("tile map - 2")->Active = false;
+		FindFrame("tile map - 3")->Active = false;
+
+		FindFrame("tile map - 9")->Active = false;
+		FindFrame("tile map - 14")->Active = false;
+		FindFrame("tile map - 19")->Active = false;
+
+		PrintFrameInfo(this, NULL);
 	}
 
 	//// 높이 맵 이미지 로드
@@ -1778,19 +1804,20 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
-	if (m_pHeightMapImage) 
+	if (m_pHeightMapImage != NULL) 
 		delete m_pHeightMapImage;
 
+	m_pHeightMapImage = NULL;
 }
 
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_nDepth > 1)
-		return;
-	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-	if (m_pMesh)
+
+	if (Active && m_pMesh != NULL)
 	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
 		if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
 		{
 			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
@@ -1803,14 +1830,18 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
 		}
+
+
 	}
 
+	if (Active)
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
 
 	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
 	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
-
-	std::shared_ptr<CGameObject> pChild = Get_Child();
-	if (pChild) pChild->Render(pd3dCommandList, pCamera);
 
 }
 
