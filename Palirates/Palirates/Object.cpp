@@ -1728,11 +1728,18 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 					float random_B = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
 					XMFLOAT4 tile_color = { random_R ,random_G, random_B, 1.0f };
 
+					int xStart = start_x_pos + x * cxBlocks;
+					int zStart = start_z_pos + z * czBlocks;
 
-					int xStart = start_x_pos + x * (cxBlocks - 1);
-					int zStart = start_z_pos + z * (czBlocks - 1);
+
+					int blockWidth = (x == 0) ? cxBlocks+1 : (m_nWidth - cxBlocks);
+					int blockLength = (z == 0) ? czBlocks+1 : (m_nLength - czBlocks);
+
+					if (x == 1) xStart += 1;
+					if (z == 1) zStart += 1;
+
+					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blockWidth, blockLength, xmf3Scale, tile_color, nMaxDepth - 1);
 					
-					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, cxBlocks, czBlocks, xmf3Scale, tile_color, nMaxDepth - 1);
 					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
 					string tile_name = "tile map - " + std::to_string(tile_map_number);
 					tile_map_number += 1;
@@ -1742,8 +1749,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 					Set_Child(part_map);
 
-					//DebugOutput("Tile " + std::to_string(tile_map_number - 1) + " StartX: " + std::to_string(xStart) + " StartZ: " + std::to_string(zStart) +
-					//	" Width: " + std::to_string(nBlockWidth) + " Length: " + std::to_string(nBlockLength) + "\n");
+					DebugOutput("Tile " + std::to_string(tile_map_number - 1) + " StartX: " + std::to_string(xStart) + " StartZ: " + std::to_string(zStart) +
+						" Width: " + std::to_string(blockWidth) + " Length: " + std::to_string(blockLength) + "\n");
 				}
 			}
 		}
