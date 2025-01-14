@@ -1719,14 +1719,20 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	{
 		if (nMaxDepth > 0)
 		{
-			for (int z = 0, zStart = 0; z < Cell_num; ++z)
+			for (int z = 0; z < Cell_num; ++z)
 			{
-				for (int x = 0, xStart = 0; x < Cell_num; ++x)
+				for (int x = 0; x < Cell_num; ++x)
 				{
-					xStart = x * (cxBlocks - 1);
-					zStart = z * (czBlocks - 1);
+					float random_R = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+					float random_G= static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+					float random_B = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+					XMFLOAT4 tile_color = { random_R ,random_G, random_B, 1.0f };
 
-					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, cxBlocks, czBlocks, xmf3Scale, xmf4Color, nMaxDepth - 1);
+
+					int xStart = start_x_pos + x * (cxBlocks - 1);
+					int zStart = start_z_pos + z * (czBlocks - 1);
+					
+					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, cxBlocks, czBlocks, xmf3Scale, tile_color, nMaxDepth - 1);
 					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
 					string tile_name = "tile map - " + std::to_string(tile_map_number);
 					tile_map_number += 1;

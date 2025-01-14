@@ -180,7 +180,7 @@ struct VS_TERRAIN_OUTPUT
 	float2 uv1 : TEXCOORD1;
 };
 
-VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
+VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 {
 	VS_TERRAIN_OUTPUT output;
 
@@ -200,7 +200,7 @@ float4 PSTerrain_Solid(VS_TERRAIN_OUTPUT input) : SV_TARGET
 	return(cColor);
 }
 
-VS_TERRAIN_OUTPUT VSTerrain_2(VS_TERRAIN_INPUT input)
+VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
     input.position.y -= 1.0f;
@@ -214,7 +214,7 @@ VS_TERRAIN_OUTPUT VSTerrain_2(VS_TERRAIN_INPUT input)
 
 float4 PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input) : SV_TARGET
 {
-    float4 cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
+    float4 cColor = input.color; // float4(0.0f, 1.0f, 0.0f, 1.0f);
     return (cColor);
 }
 

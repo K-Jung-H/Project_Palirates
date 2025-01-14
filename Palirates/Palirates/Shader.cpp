@@ -333,9 +333,9 @@ D3D12_RASTERIZER_DESC CTerrainShader::CreateRasterizerState(int nPipelineState)
 D3D12_SHADER_BYTECODE CTerrainShader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTerrain_2", "vs_5_1", VertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTerrain_Wireframe", "vs_5_1", VertexShaderBlob));
 	else if (nPipelineState == 1)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTerrain", "vs_5_1", VertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSTerrain_Solid", "vs_5_1", VertexShaderBlob));
 
 }
 
