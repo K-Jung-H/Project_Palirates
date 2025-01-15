@@ -1703,6 +1703,11 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	long cxBlocks = (m_nWidth - 1) / Cell_num;
 	long czBlocks = (m_nLength - 1) / Cell_num;
 
+	Area_LT.x = start_x_pos;
+	Area_LT.y = start_z_pos;
+	
+	Area_RB.x = start_x_pos + m_nWidth;
+	Area_RB.y = start_z_pos + m_nLength;
 
 	// 깊이가 0이면 1개의 메쉬로 처리하고, 1 이상이면 4등분하여 계층 구조로 처리
 	if (nMaxDepth == 0)
@@ -1731,8 +1736,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 					int blockWidth = (x == 0) ? cxBlocks+1 : (m_nWidth - cxBlocks);
 					int blockLength = (z == 0) ? czBlocks+1 : (m_nLength - czBlocks);
 
-					//if (x == 1) xStart += 1;
-					//if (z == 1) zStart += 1;
 
 					string tile_name = "tile map - " + std::to_string(tile_map_number++);
 
@@ -1751,53 +1754,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
 	{
-		//FindFrame("tile map - 4")->Active = false;
-		
-
-
 		PrintFrameInfo(this, NULL);
 	}
-
-	//// 높이 맵 이미지 로드
-	//m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
-
-	//// 중심 기준으로 크기 계산
-	//int halfWidth = nWidth / 2;
-	//int halfLength = nLength / 2;
-
-	//// 메쉬 4등분  위치,크기 배열
-	//int startX[] = { 0, halfWidth, 0, halfWidth };
-	//int startZ[] = { 0, 0, halfLength, halfLength };
-	//int blockWidth[] = { halfWidth + 1, nWidth - halfWidth, halfWidth + 1, nWidth - halfWidth };
-	//int blockLength[] = { halfLength + 1, halfLength + 1, nLength - halfLength, nLength - halfLength };
-
-	//// 4개의 메쉬 생성
-	//for (int i = 0; i < 4; ++i)
-	//{
-	//	// 기본 메쉬 생성
-	//	CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, startX[i], startZ[i], blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, m_pHeightMapImage);
-
-	//	// 자식 CHeightMapTerrain 객체 생성 및 자식 메쉬 설정
-	//	if (nMaxDepth > 0)
-	//	{
-	//		CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, blockWidth[i], blockLength[i], xmf3Scale, xmf4Color, nMaxDepth - 1);
-
-	//		std::shared_ptr<CGameObject>part_map(part_map_raw_ptr);
-	//		string tile_name = "tile map - " + std::to_string(tile_map_number);
-	//		tile_map_number += 1;
-
-	//		part_map->SetMesh(part_mesh);
-	//		part_map->SetMaterial(0, pTerrainMaterial);
-	//		part_map->Set_Name(tile_name);
-
-	//		Set_Child(part_map);
-	//	}
-	//	else
-	//	{
-	//		// 깊이가 0이면 자식 객체를 생성하지 않고 단일 메쉬만 추가
-	//		SetMesh(part_mesh);
-	//	}
-	//}
 }
 
 
@@ -1842,6 +1800,36 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
 	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
 
+}
+
+void CHeightMapTerrain::Get_Tile(float x, float z)
+{
+
+	if (m_pParent == NULL)
+	{
+		x /= m_xmf3Scale.x;
+		z /= m_xmf3Scale.z;
+	}
+
+	if (x >= Area_LT.x && x <= Area_RB.x&& z >= Area_LT.y&& z <= Area_RB.y)
+	{
+		CGameObject* child_ptr = Get_Child().get();
+		if (child_ptr)
+			child_ptr->Get_Tile(x, z);
+		else
+		{
+			DebugOutput("\nIt's on " + std::string(m_pstrFrameName));
+			return;
+		}
+	}
+	else
+	{
+		CGameObject* sibling_ptr = Get_Sibling().get();
+		if (sibling_ptr)
+			sibling_ptr->Get_Tile(x, z);
+	}
+
+	return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

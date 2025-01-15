@@ -467,6 +467,8 @@ public:
 	static CLoadedModelInfo *LoadGeometryAndAnimationFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, char *pstrFileName,  CShader *pShader);
 
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent);
+
+	virtual void Get_Tile(float x, float z) {};
 };
 
 //==================================================================================
@@ -512,10 +514,14 @@ private:
 
 	static CHeightMapImage* m_pHeightMapImage;  // 각 객체마다 개별적으로 갖는 높이 맵 이미지
 
+private:
 	int							m_nWidth;
 	int							m_nLength;
 	int							m_nDepth;
 	XMFLOAT3					m_xmf3Scale;
+
+	XMFLOAT2 Area_LT{};
+	XMFLOAT2 Area_RB{};
 
 public:
 	//CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth);
@@ -524,6 +530,7 @@ public:
 	virtual ~CHeightMapTerrain();
 
 	float GetHeight(float x, float z, bool bReverseQuad = false) { return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y); } //World
+	void Get_Tile(float x, float z);
 	XMFLOAT3 GetNormal(float x, float z) { return(m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z))); }
 
 	int GetHeightMapWidth() { return(m_pHeightMapImage->GetHeightMapWidth()); }

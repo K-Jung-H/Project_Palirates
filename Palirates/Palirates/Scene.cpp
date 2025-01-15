@@ -101,7 +101,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	XMFLOAT3 xmf3Scale(8.0f, 2.0f, 8.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 2);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 3);
 
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
@@ -504,16 +504,15 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 1")->Active = false;
 			m_pTerrain->FindFrame("tile map - 2")->Active = false;
 			m_pTerrain->FindFrame("tile map - 3")->Active = false;
-		}
-		break;
+		}		break;
+
 		case '2':
 		{
 			m_pTerrain->FindFrame("tile map - 0")->Active = false;
 			m_pTerrain->FindFrame("tile map - 1")->Active = true;
 			m_pTerrain->FindFrame("tile map - 2")->Active = false;
 			m_pTerrain->FindFrame("tile map - 3")->Active = false;
-		}
-		break;
+		}		break;
 
 		case '3':
 		{
@@ -521,8 +520,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 1")->Active = false;
 			m_pTerrain->FindFrame("tile map - 2")->Active = true;
 			m_pTerrain->FindFrame("tile map - 3")->Active = false;
-		}
-		break;
+		}		break;
 
 		case '4':
 		{
@@ -530,8 +528,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 1")->Active = false;
 			m_pTerrain->FindFrame("tile map - 2")->Active = false;
 			m_pTerrain->FindFrame("tile map - 3")->Active = true;
-		}
-		break;
+		}		break;
 
 		case '5':
 		{
@@ -539,8 +536,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 1")->Active = false;
 			m_pTerrain->FindFrame("tile map - 2")->Active = false;
 			m_pTerrain->FindFrame("tile map - 3")->Active = false;
-		}
-		break;
+		}		break;
 
 		case '6':
 		{
@@ -548,25 +544,27 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 1")->Active = true;
 			m_pTerrain->FindFrame("tile map - 2")->Active = true;
 			m_pTerrain->FindFrame("tile map - 3")->Active = true;
-		}
-		break;
+		}		break;
 
 		case '7':
 		{
 			m_pTerrain->FindFrame("tile map - 9")->Active = false;
 			m_pTerrain->FindFrame("tile map - 14")->Active = false;
 			m_pTerrain->FindFrame("tile map - 19")->Active = false;
-		}
-		break;
+		}		break;
 
 		case '8':
 		{
 			m_pTerrain->FindFrame("tile map - 9")->Active = true;
 			m_pTerrain->FindFrame("tile map - 14")->Active = true;
 			m_pTerrain->FindFrame("tile map - 19")->Active = true;
-		}
-		break;
+		}		break;
 
+		case VK_SPACE:
+		{
+			XMFLOAT3 pos = m_pPlayer->GetPosition();
+			m_pTerrain->Get_Tile(pos.x, pos.z);
+		}	break;
 
 		default:
 			break;

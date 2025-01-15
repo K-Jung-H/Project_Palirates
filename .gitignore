@@ -31,6 +31,6 @@
 *.out
 *.app
 
-/.vs
-/x64
+/Palirates/.vs
+/Palirates/Palirates/x64
 /Palirates/x64
