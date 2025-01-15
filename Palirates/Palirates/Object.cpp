@@ -277,12 +277,12 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		size_t nConverted = 0;
 		mbstowcs_s(&nConverted, pwstrTextureName, 64, pstrFilePath, _TRUNCATE);
 
-		#define _WITH_DISPLAY_TEXTURE_NAME
+		
 
 #ifdef _WITH_DISPLAY_TEXTURE_NAME
 		static int nTextures = 0, nRepeatedTextures = 0;
 		TCHAR pstrDebug[256] = { 0 };
-		_stprintf_s(pstrDebug, 256, _T("Texture Name: %d %c %s\n"), (pstrTextureName[0] == '@') ? nRepeatedTextures++ : nTextures++, (pstrTextureName[0] == '@') ? '@' : ' ', pwstrTextureName);
+		_stprintf_s(pstrDebug, 256, _T("\nTexture Name: %d %c %s"), (pstrTextureName[0] == '@') ? nRepeatedTextures++ : nTextures++, (pstrTextureName[0] == '@') ? '@' : ' ', pwstrTextureName);
 		OutputDebugString(pstrDebug);
 #endif
 		if (!bDuplicated)
@@ -1421,7 +1421,8 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 			pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 			::ReadStringFromFile(pInFile, pstrToken); //<Mesh>:
-			if (!strcmp(pstrToken, "<Mesh>:")) pSkinnedMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
+			if (!strcmp(pstrToken, "<Mesh>:")) 
+				pSkinnedMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 
 			pGameObject->SetMesh(pSkinnedMesh);
 		}
@@ -1458,16 +1459,11 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 }
 
 void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
-{
-	//TCHAR pstrDebug[256] = { 0 };
-
-	//_stprintf_s(pstrDebug, 256, _T("(Frame: %s) (Parent: %s)\n"), pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
-	//OutputDebugStringA(pstrDebug);
-	
+{	
 	if (pParent != NULL)
 	{
 		char pstrDebug[256] = { 0 };
-		sprintf_s(pstrDebug, sizeof(pstrDebug), "(Frame: %s) (Parent: %s)\n", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
+		sprintf_s(pstrDebug, sizeof(pstrDebug), "\n(Frame: %s) (Parent: %s)", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
 		OutputDebugStringA(pstrDebug);
 	}
 
@@ -1735,22 +1731,19 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 					int blockWidth = (x == 0) ? cxBlocks+1 : (m_nWidth - cxBlocks);
 					int blockLength = (z == 0) ? czBlocks+1 : (m_nLength - czBlocks);
 
-					if (x == 1) xStart += 1;
-					if (z == 1) zStart += 1;
+					//if (x == 1) xStart += 1;
+					//if (z == 1) zStart += 1;
+
+					string tile_name = "tile map - " + std::to_string(tile_map_number++);
 
 					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blockWidth, blockLength, xmf3Scale, tile_color, nMaxDepth - 1);
 					
 					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
-					string tile_name = "tile map - " + std::to_string(tile_map_number);
-					tile_map_number += 1;
 
 					part_map->SetMaterial(0, pTerrainMaterial);
 					part_map->Set_Name(tile_name);
 
 					Set_Child(part_map);
-
-					DebugOutput("Tile " + std::to_string(tile_map_number - 1) + " StartX: " + std::to_string(xStart) + " StartZ: " + std::to_string(zStart) +
-						" Width: " + std::to_string(blockWidth) + " Length: " + std::to_string(blockLength) + "\n");
 				}
 			}
 		}
@@ -1760,14 +1753,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	{
 		//FindFrame("tile map - 4")->Active = false;
 		
-		FindFrame("tile map - 0")->Active = false;
-		FindFrame("tile map - 1")->Active = false;
-		FindFrame("tile map - 2")->Active = false;
-		FindFrame("tile map - 3")->Active = false;
 
-		FindFrame("tile map - 9")->Active = false;
-		FindFrame("tile map - 14")->Active = false;
-		FindFrame("tile map - 19")->Active = false;
 
 		PrintFrameInfo(this, NULL);
 	}

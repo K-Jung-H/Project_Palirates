@@ -112,6 +112,9 @@ inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT
 
 #define ANIMATION_CALLBACK_EPSILON		0.00165f
 
+// #define _WITH_DISPLAY_TEXTURE_NAME
+// #define _WITH_DISPLAY_BONE_NAME
+
 namespace Vector3
 {
 	inline XMFLOAT3 XMVectorToFloat3(XMVECTOR& xmvVector)

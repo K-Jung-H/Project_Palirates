@@ -199,6 +199,12 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 			fHeight = OnGetHeight(x, z, pContext);
 			m_pxmf3Positions[i] = XMFLOAT3((x * m_xmf3Scale.x), fHeight, (z * m_xmf3Scale.z));
 			m_pxmf4Colors[i] = Vector4::Add(OnGetColor(x, z, pContext), xmf4Color);
+
+			//if (fHeight == 0.0f)
+			//	m_pxmf4Colors[i] = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
+			//else
+			//	m_pxmf4Colors[i] = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
+
 			m_pxmf2TextureCoords0[i] = XMFLOAT2(float(x) / float(cxHeightMap - 1), float(czHeightMap - 1 - z) / float(czHeightMap - 1));
 			m_pxmf2TextureCoords1[i] = XMFLOAT2(float(x) / float(m_xmf3Scale.x * 0.5f), float(z) / float(m_xmf3Scale.z * 0.5f));
 			if (fHeight < fMinHeight) fMinHeight = fHeight;
@@ -306,7 +312,7 @@ float CHeightMapGridMesh::OnGetHeight(int x, int z, void *pContext)
 	// x, z 범위 확인
 	if (x < 0 || x >= Hight_Map_Width || z < 0 || z >= Hight_Map_Length)
 	{
-		std::string errorMessage = "Out of bounds: x=" + std::to_string(x) + ", z=" + std::to_string(z) 
+		std::string errorMessage = "\nOut of bounds: x=" + std::to_string(x) + ", z=" + std::to_string(z) 
 			+ " (Width=" + std::to_string(Hight_Map_Width) + ", Length=" + std::to_string(Hight_Map_Length) + ")";
 
 		DebugOutput(errorMessage);
@@ -731,8 +737,9 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 				for (int i = 0; i < m_nSkinningBones; i++)
 				{
 					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);
+#ifdef _WITH_DISPLAY_BONE_NAME
 					DebugOutput("\nBone Name: ", m_ppstrSkinningBoneNames[i]);
-
+#endif
 					m_ppSkinningBoneFrameCaches[i] = nullptr;
 					//m_ppSkinningBoneFrameCaches[i].reset();
 				}
