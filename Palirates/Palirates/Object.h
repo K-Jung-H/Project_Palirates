@@ -529,7 +529,7 @@ public:
 		int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth);
 	virtual ~CHeightMapTerrain();
 
-	float GetHeight(float x, float z, bool bReverseQuad = false) { return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y); } //World
+	float GetHeight(float x, float z, bool bReverseQuad = false);  //World
 	void Get_Tile(float x, float z);
 	XMFLOAT3 GetNormal(float x, float z) { return(m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z))); }
 

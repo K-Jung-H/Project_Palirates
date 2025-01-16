@@ -1802,11 +1802,23 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 }
 
+float CHeightMapTerrain::GetHeight(float x, float z, bool bReverseQuad)
+{
+	x -= m_xmf4x4World._41;
+	z -= m_xmf4x4World._43;
+
+	return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y);
+}
+
 void CHeightMapTerrain::Get_Tile(float x, float z)
 {
 
 	if (m_pParent == NULL)
 	{
+		// 자식 타일 객체는 이동할 일 없음
+		x -= m_xmf4x4World._41;	
+		z -= m_xmf4x4World._43;
+
 		x /= m_xmf3Scale.x;
 		z /= m_xmf3Scale.z;
 	}
