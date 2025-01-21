@@ -197,18 +197,40 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 		for (int x = xStart; x < (xStart + nWidth); x++, i++)
 		{
 			fHeight = OnGetHeight(x, z, pContext);
+		
+			//========================================
+			if (fHeight == -100.0f)
+			{
+				bool bFoundValidHeight = false; 
+				for (int offset = 1; !bFoundValidHeight; offset++)
+				{
+					std::vector<std::pair<int, int>> offsets = { {x - offset, z},{x, z - offset},{x - offset, z - offset} };
+
+					for (const std::pair<int, int>& pos : offsets)
+					{
+						fHeight = OnGetHeight(pos.first, pos.second, pContext);
+						if (fHeight != -100.0f)
+						{
+							bFoundValidHeight = true;
+							break;
+						}
+					}
+				}
+
+				if (!bFoundValidHeight)
+					fHeight = 0.0f;
+				
+			}
+			//========================================
 			m_pxmf3Positions[i] = XMFLOAT3((x * m_xmf3Scale.x), fHeight, (z * m_xmf3Scale.z));
 			m_pxmf4Colors[i] = Vector4::Add(OnGetColor(x, z, pContext), xmf4Color);
 
-			//if (fHeight == 0.0f)
-			//	m_pxmf4Colors[i] = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
-			//else
-			//	m_pxmf4Colors[i] = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-
 			m_pxmf2TextureCoords0[i] = XMFLOAT2(float(x) / float(cxHeightMap - 1), float(czHeightMap - 1 - z) / float(czHeightMap - 1));
 			m_pxmf2TextureCoords1[i] = XMFLOAT2(float(x) / float(m_xmf3Scale.x * 0.5f), float(z) / float(m_xmf3Scale.z * 0.5f));
-			if (fHeight < fMinHeight) fMinHeight = fHeight;
-			if (fHeight > fMaxHeight) fMaxHeight = fHeight;
+			if (fHeight < fMinHeight) 
+				fMinHeight = fHeight;
+			if (fHeight > fMaxHeight) 
+				fMaxHeight = fHeight;
 		}
 	}
 
@@ -316,7 +338,7 @@ float CHeightMapGridMesh::OnGetHeight(int x, int z, void *pContext)
 			+ " (Width=" + std::to_string(Hight_Map_Width) + ", Length=" + std::to_string(Hight_Map_Length) + ")";
 
 		DebugOutput(errorMessage);
-		return 0.0f; 
+		return -100.0f;
 	}
 
 	BYTE *pHeightMapPixels = pHeightMapImage->GetHeightMapPixels();
@@ -351,6 +373,45 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList,
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[4] = { m_d3dPositionBufferView, m_d3dColorBufferView, m_d3dTextureCoord0BufferView, m_d3dTextureCoord1BufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
 }
+
+float CHeightMapGridMesh::Get_Height(float localX, float localZ, bool asd)
+{
+	// 범위 체크
+	if (localX < 0 || localX >= m_nWidth - 1 || localZ < 0 || localZ >= m_nLength - 1)
+	{
+		return 0.0f;  // 범위를 벗어나면 기본 높이 반환
+	}
+
+	// 정수 좌표로 변환하여 셀(사각형) 식별
+	int cellX = static_cast<int>(localX);
+	int cellZ = static_cast<int>(localZ);
+
+	// 사각형 셀의 4개 정점 인덱스 계산
+	int i0 = cellX + (cellZ * m_nWidth);         // 왼쪽 위
+	int i1 = (cellX + 1) + (cellZ * m_nWidth);   // 오른쪽 위
+	int i2 = cellX + ((cellZ + 1) * m_nWidth);   // 왼쪽 아래
+	int i3 = (cellX + 1) + ((cellZ + 1) * m_nWidth); // 오른쪽 아래
+
+	// 4개 정점의 좌표
+	XMFLOAT3 v0 = m_pxmf3Positions[i0];
+	XMFLOAT3 v1 = m_pxmf3Positions[i1];
+	XMFLOAT3 v2 = m_pxmf3Positions[i2];
+	XMFLOAT3 v3 = m_pxmf3Positions[i3];
+
+	// x, z 좌표에 대한 선형 보간 비율 계산
+	float fDeltaX = localX - cellX;
+	float fDeltaZ = localZ - cellZ;
+
+	// 첫 번째 삼각형 (v0, v1, v2)에 대한 선형 보간
+	float height1 = (1.0f - fDeltaX) * v0.y + fDeltaX * v1.y;
+	float height2 = (1.0f - fDeltaX) * v2.y + fDeltaX * v3.y;
+
+	// 두 번째 삼각형 (v2, v1, v3)에 대한 선형 보간
+	float finalHeight = (1.0f - fDeltaZ) * height1 + fDeltaZ * height2;
+
+	return finalHeight;
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
