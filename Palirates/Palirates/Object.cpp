@@ -1591,7 +1591,7 @@ CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
 CHeightMapImage* CHeightMapTerrain::m_pHeightMapImage = nullptr;
 
 CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName, 
-	int start_x_pos, int start_z_pos, int nWidth, int nLength,  XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth) : CGameObject(1)
+	int start_x_pos, int start_z_pos, int nWidth, int nLength,  XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap, int nMaxDepth) : CGameObject(1)
 {
 	static int tile_map_number = 0;
 
@@ -1637,6 +1637,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	// ============================================================
 
+	Vertex_gap = (Vertex_gap % 2) ? Vertex_gap + 1 : Vertex_gap;
+
 	m_nWidth = nWidth;
 	m_nLength = nLength;
 	m_xmf3Scale = xmf3Scale;
@@ -1654,7 +1656,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	if (nMaxDepth == 0)
 	{
 		// 깊이가 0이면 1개의 메쉬로 처리
-		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth +1, nLength +1, xmf3Scale, xmf4Color, m_pHeightMapImage);
+		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth +1, nLength +1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);
 	}
 	else
@@ -1677,15 +1679,13 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 			{
 				for (int x = 0; x < Cell_num; ++x)
 				{
-					float random_R = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-					float random_G= static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-					float random_B = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
-					XMFLOAT4 tile_color = { random_R ,random_G, random_B, 1.0f };		
+
+					XMFLOAT4 tile_color = Get_Random_Color(1.0f);
 
 					int xStart = start_x_pos + x * blocks_x_size[0];
 					int zStart = start_z_pos + z * blocks_z_size[0];
 
-					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, nMaxDepth - 1);
+					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, nMaxDepth - 1);
 
 					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
 					Set_Child(part_map);
@@ -1768,15 +1768,17 @@ XMFLOAT3 CHeightMapTerrain::GetNormal(float x, float z)
 
 float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad) 
 {
-	if (m_pParent == NULL)
+	// 스케일 조정은 부모객체에서 한번만 적용하기
+	if (m_pParent == NULL) 
 	{
-		// 자식 타일 객체는 이동할 일 없음
-		x -= m_xmf4x4World._41;
-		z -= m_xmf4x4World._43;
-
 		x /= m_xmf3Scale.x;
 		z /= m_xmf3Scale.z;
 	}
+
+	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임?
+	x -= m_xmf4x4World._41;
+	z -= m_xmf4x4World._43;
+
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
 	{
@@ -1787,7 +1789,7 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
 		{
 			x -= Tile_Start_Pos.x;
 			z -= Tile_Start_Pos.y;
-			return m_pMesh->Get_Height(x, z, bReverseQuad);
+			return m_pMesh->Get_Height(x, z);
 		}
 	}
 	else

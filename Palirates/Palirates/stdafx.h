@@ -95,7 +95,11 @@ extern void DebugOutput(const std::string& message1, const std::wstring& message
 
 extern void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t bufferSize = STR_LENGTH);
 
-#define RANDOM_COLOR			XMFLOAT4(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
+
+extern XMFLOAT4 Get_Random_Color(float w);
+#define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
+
+
 
 #define EPSILON					1.0e-10f
 

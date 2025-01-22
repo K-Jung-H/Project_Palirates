@@ -173,14 +173,20 @@ float CHeightMapImage::GetHeight(float fx, float fz, bool bReverseQuad)
 	return(fHeight);
 }
 
-CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, void *pContext) : CMesh(pd3dDevice, pd3dCommandList)
+CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap, void *pContext) : CMesh(pd3dDevice, pd3dCommandList)
 {
-	m_nVertices = nWidth * nLength;
-	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-
 	m_nWidth = nWidth;
 	m_nLength = nLength;
-	m_xmf3Scale = xmf3Scale;
+	m_xmf3Scale = xmf3Scale;	
+	Vertex_Gap = (Vertex_gap != 0) ? Vertex_gap : 1;
+
+
+	int adjustedWidth = (m_nWidth + Vertex_Gap - 1) / Vertex_Gap;
+	int adjustedLength = (m_nLength + Vertex_Gap - 1) / Vertex_Gap;
+	m_nVertices = adjustedWidth * adjustedLength;
+
+	
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 
 	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
 	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
@@ -192,20 +198,19 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	int czHeightMap = pHeightMapImage->GetHeightMapLength();
 
 	float fHeight = 0.0f, fMinHeight = +FLT_MAX, fMaxHeight = -FLT_MAX;
-	for (int i = 0, z = zStart; z < (zStart + nLength); z++)
+
+	for (int i = 0, z = zStart; z < (zStart + m_nLength); z += Vertex_Gap)
 	{
-		for (int x = xStart; x < (xStart + nWidth); x++, i++)
+		for (int x = xStart; x < (xStart + m_nWidth); x += Vertex_Gap, i++)
 		{
 			fHeight = OnGetHeight(x, z, pContext);
-		
-			//========================================
+
 			if (fHeight == -100.0f)
 			{
-				bool bFoundValidHeight = false; 
+				bool bFoundValidHeight = false;
 				for (int offset = 1; !bFoundValidHeight; offset++)
 				{
-					std::vector<std::pair<int, int>> offsets = { {x - offset, z},{x, z - offset},{x - offset, z - offset} };
-
+					std::vector<std::pair<int, int>> offsets = { {x - offset, z}, {x, z - offset}, {x - offset, z - offset} };
 					for (const std::pair<int, int>& pos : offsets)
 					{
 						fHeight = OnGetHeight(pos.first, pos.second, pContext);
@@ -219,19 +224,15 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 
 				if (!bFoundValidHeight)
 					fHeight = 0.0f;
-				
 			}
-			//========================================
+
 			m_pxmf3Positions[i] = XMFLOAT3((x * m_xmf3Scale.x), fHeight, (z * m_xmf3Scale.z));
 			m_pxmf4Colors[i] = Vector4::Add(OnGetColor(x, z, pContext), xmf4Color);
 
 			m_pxmf2TextureCoords0[i] = XMFLOAT2(float(x) / float(cxHeightMap - 1), float(czHeightMap - 1 - z) / float(czHeightMap - 1));
 			m_pxmf2TextureCoords1[i] = XMFLOAT2(float(x) / float(m_xmf3Scale.x * 0.5f), float(z) / float(m_xmf3Scale.z * 0.5f));
-			if (fHeight < fMinHeight) 
-				fMinHeight = fHeight;
-			if (fHeight > fMaxHeight) 
-				fMaxHeight = fHeight;
 		}
+
 	}
 
 	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
@@ -266,27 +267,30 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
 	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
 
-	m_pnSubSetIndices[0] = ((nWidth * 2) * (nLength - 1)) + ((nLength - 1) - 1);
+	m_pnSubSetIndices[0] = (adjustedWidth * 2 * (adjustedLength - 1)) + (adjustedLength - 2);
 	m_ppnSubSetIndices[0] = new UINT[m_pnSubSetIndices[0]];
 
-	for (int j = 0, z = 0; z < nLength - 1; z++)
+
+	for (int j = 0, z = 0; z <adjustedLength - 1; z++)
 	{
 		if ((z % 2) == 0)
 		{
-			for (int x = 0; x < nWidth; x++)
+			for (int x = 0; x < adjustedWidth; x++)
 			{
-				if ((x == 0) && (z > 0)) m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * nWidth));
-				m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * nWidth));
-				m_ppnSubSetIndices[0][j++] = (UINT)((x + (z * nWidth)) + nWidth);
+				if ((x == 0) && (z > 0))
+					m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * adjustedWidth));
+				m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * adjustedWidth));
+				m_ppnSubSetIndices[0][j++] = (UINT)((x + (z * adjustedWidth)) + adjustedWidth);
 			}
 		}
 		else
 		{
-			for (int x = nWidth - 1; x >= 0; x--)
+			for (int x = adjustedWidth - 1; x >= 0; x--)
 			{
-				if (x == (nWidth - 1)) m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * nWidth));
-				m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * nWidth));
-				m_ppnSubSetIndices[0][j++] = (UINT)((x + (z * nWidth)) + nWidth);
+				if (x == (adjustedWidth - 1))
+					m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * adjustedWidth));
+				m_ppnSubSetIndices[0][j++] = (UINT)(x + (z * adjustedWidth));
+				m_ppnSubSetIndices[0][j++] = (UINT)((x + (z * adjustedWidth)) + adjustedWidth);
 			}
 		}
 	}
@@ -374,44 +378,36 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList,
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
 }
 
-float CHeightMapGridMesh::Get_Height(float localX, float localZ, bool asd)
+float CHeightMapGridMesh::Get_Height(float localX, float localZ) 
 {
-	// 범위 체크
-	if (localX < 0 || localX >= m_nWidth - 1 || localZ < 0 || localZ >= m_nLength - 1)
-	{
-		return 0.0f;  // 범위를 벗어나면 기본 높이 반환
-	}
+	int adjustedWidth = (m_nWidth + Vertex_Gap - 1) / Vertex_Gap;
+	int adjustedLength = (m_nLength + Vertex_Gap - 1) / Vertex_Gap;
 
-	// 정수 좌표로 변환하여 셀(사각형) 식별
-	int cellX = static_cast<int>(localX);
-	int cellZ = static_cast<int>(localZ);
+	float cellSizeX = (float)Vertex_Gap;
+	float cellSizeZ = (float)Vertex_Gap;
 
-	// 사각형 셀의 4개 정점 인덱스 계산
-	int i0 = cellX + (cellZ * m_nWidth);         // 왼쪽 위
-	int i1 = (cellX + 1) + (cellZ * m_nWidth);   // 오른쪽 위
-	int i2 = cellX + ((cellZ + 1) * m_nWidth);   // 왼쪽 아래
-	int i3 = (cellX + 1) + ((cellZ + 1) * m_nWidth); // 오른쪽 아래
+	int cellX = static_cast<int>(localX / cellSizeX);
+	int cellZ = static_cast<int>(localZ / cellSizeZ);
 
-	// 4개 정점의 좌표
+	float fDeltaX = (localX - (cellX * cellSizeX)) / cellSizeX;
+	float fDeltaZ = (localZ - (cellZ * cellSizeZ)) / cellSizeZ;
+
+	int i0 = cellX + (cellZ * adjustedWidth);
+	int i1 = (cellX + 1) + (cellZ * adjustedWidth);
+	int i2 = cellX + ((cellZ + 1) * adjustedWidth);
+	int i3 = (cellX + 1) + ((cellZ + 1) * adjustedWidth);
+
 	XMFLOAT3 v0 = m_pxmf3Positions[i0];
 	XMFLOAT3 v1 = m_pxmf3Positions[i1];
 	XMFLOAT3 v2 = m_pxmf3Positions[i2];
 	XMFLOAT3 v3 = m_pxmf3Positions[i3];
 
-	// x, z 좌표에 대한 선형 보간 비율 계산
-	float fDeltaX = localX - cellX;
-	float fDeltaZ = localZ - cellZ;
-
-	// 첫 번째 삼각형 (v0, v1, v2)에 대한 선형 보간
 	float height1 = (1.0f - fDeltaX) * v0.y + fDeltaX * v1.y;
 	float height2 = (1.0f - fDeltaX) * v2.y + fDeltaX * v3.y;
-
-	// 두 번째 삼각형 (v2, v1, v3)에 대한 선형 보간
 	float finalHeight = (1.0f - fDeltaZ) * height1 + fDeltaZ * height2;
 
 	return finalHeight;
 }
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -82,7 +82,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
-	virtual float Get_Height(float x, float z, bool bReverseQuad) { return 0.0f; }
+	virtual float Get_Height(float x, float z) { return 0.0f; }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,6 +115,7 @@ protected:
 	int								m_nWidth;
 	int								m_nLength;
 	XMFLOAT3						m_xmf3Scale;
+	int Vertex_Gap = 1;
 
 protected:
 	XMFLOAT4						*m_pxmf4Colors = NULL;
@@ -134,7 +135,7 @@ protected:
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dTextureCoord1BufferView;
 
 public:
-	CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), void *pContext = NULL);
+	CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int xStart, int zStart, int nWidth, int nLength, XMFLOAT3 xmf3Scale = XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f), int Vertex_gap = 1, void *pContext = NULL);
 	virtual ~CHeightMapGridMesh();
 
 	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
@@ -148,7 +149,7 @@ public:
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
-	virtual float Get_Height(float x, float z, bool bReverseQuad);
+	virtual float Get_Height(float x, float z);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

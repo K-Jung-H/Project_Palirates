@@ -527,7 +527,7 @@ private:
 
 public:
 	CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName,
-		int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int nMaxDepth);
+		int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1);
 	virtual ~CHeightMapTerrain();
 
 	void Set_Tile(int n);

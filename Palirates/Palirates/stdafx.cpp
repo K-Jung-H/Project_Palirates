@@ -353,3 +353,12 @@ void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t 
 	wcstombs(textureName, pFileName, bufferSize - 1);  // bufferSize를 고려하여 변환
 	textureName[bufferSize - 1] = '\0';  // 널 종료를 보장
 }
+
+XMFLOAT4 Get_Random_Color(float w)
+{
+	float R = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+	float G = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+	float B = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+
+	return XMFLOAT4{ R,G,B,w };
+}
