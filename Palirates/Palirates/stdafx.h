@@ -1,7 +1,7 @@
 // stdafx.h : 자주 사용하지만 자주 변경되지는 않는
 // 표준 시스템 포함 파일 및 프로젝트 관련 포함 파일이
 // 들어 있는 포함 파일입니다.
-//
+
 
 #pragma once
 
@@ -32,6 +32,12 @@
 
 using namespace std;
 
+// UI
+#include <d2d1_3.h>
+#include <dwrite.h>
+#include <d3d11on12.h>
+
+
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <D3Dcompiler.h>
@@ -44,6 +50,7 @@ using namespace std;
 
 #ifdef _DEBUG
 #include <dxgidebug.h>
+#include <comdef.h>
 #endif
 
 using namespace DirectX;
@@ -60,12 +67,16 @@ extern HINSTANCE						ghAppInstance;
 
 #define STR_LENGTH 64
 
+
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi.lib")
-
 #pragma comment(lib, "dxguid.lib")
+
+#pragma comment(lib, "d3d11.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 
 // TODO: 프로그램에 필요한 추가 헤더는 여기에서 참조합니다.
 
@@ -118,6 +129,11 @@ inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
+
+#define WRITE_TEXT_UI
+
+#define DEBUG_MESSAGE
+
 
 namespace Vector3
 {

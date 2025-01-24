@@ -6,6 +6,7 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
+#include "UILayer.h"
 
 class CGameFramework
 {
@@ -85,5 +86,9 @@ private:
 	POINT						m_ptOldCursorPos;
 
 	_TCHAR						m_pszFrameRate[70];
+
+#ifdef WRITE_TEXT_UI
+	Text_UI_Renderer* text_ui_renderer = NULL;
+#endif 
 };
 

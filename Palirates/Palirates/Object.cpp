@@ -1439,7 +1439,7 @@ void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
 	if (pParent != NULL)
 	{
 		char pstrDebug[256] = { 0 };
-		sprintf_s(pstrDebug, sizeof(pstrDebug), "\n(Frame: %s) (Parent: %s)", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
+		sprintf_s(pstrDebug, sizeof(pstrDebug), "(Frame: %s) <- (Parent: %s)\n", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
 		OutputDebugStringA(pstrDebug);
 	}
 

@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 #pragma once
-
+#include "UILayer.h"
 #include "Object_Manager.h"
 #include "Shader.h"
 #include "Player.h"
@@ -98,6 +98,13 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUSrvDescriptorNextHandle() { return(m_d3dSrvGPUDescriptorNextHandle); }
 
 	float								m_fElapsedTime = 0.0f;
+
+#ifdef WRITE_TEXT_UI
+	Text_UI_Manager* text_ui_manager = NULL;
+	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);
+	std::vector<TextBlock*>* Get_Text_List();
+	void Update_UI();
+#endif
 
 	Object_Manager obj_manager; 
 
