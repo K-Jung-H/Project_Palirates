@@ -1804,8 +1804,38 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
 
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 {
-	XMFLOAT3 normal = m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z));
-	return normal;
+	// 스케일 조정은 부모객체에서 한번만 적용하기
+	if (m_pParent == NULL)
+	{
+		x /= m_xmf3Scale.x;
+		z /= m_xmf3Scale.z;
+	}
+
+	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임?
+	x -= m_xmf4x4World._41;
+	z -= m_xmf4x4World._43;
+
+
+	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
+	{
+		CGameObject* child_ptr = Get_Child().get();
+		if (child_ptr)
+			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
+		else
+		{
+			x -= Tile_Start_Pos.x;
+			z -= Tile_Start_Pos.y;
+			return m_pMesh->Get_Normal(x, z);
+		}
+	}
+	else
+	{
+		CGameObject* sibling_ptr = Get_Sibling().get();
+		if (sibling_ptr)
+			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Normal(x, z);
+	}
+
+	return XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
 
 int CHeightMapTerrain::Get_Tile(float x, float z)

@@ -26,6 +26,10 @@ class CGameObject;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+bool IsPointInTriangle(float x, float z, const XMFLOAT3& v0, const XMFLOAT3& v1, const XMFLOAT3& v2);
+
+
 class CMesh
 {
 public:
@@ -82,7 +86,10 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet);
 	virtual void OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
+
+
 	virtual float Get_Height(float x, float z) { return 0.0f; }
+	virtual XMFLOAT3 Get_Normal(float x, float z) { return XMFLOAT3{ 0.0f,0.0f,0.0f }; }
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,6 +122,8 @@ protected:
 	int								m_nWidth;
 	int								m_nLength;
 	XMFLOAT3						m_xmf3Scale;
+	XMFLOAT2						m_xmArea_LT;
+	XMFLOAT2						m_xmArea_RB;
 	int Vertex_Gap = 1;
 
 protected:
@@ -150,6 +159,8 @@ public:
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
 	virtual float Get_Height(float x, float z);
+	virtual XMFLOAT3 Get_Normal(float x, float z);
+	XMFLOAT3 Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

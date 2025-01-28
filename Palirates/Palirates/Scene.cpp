@@ -214,11 +214,11 @@ void CScene::Update_UI()
 	{
 		XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
 		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z);
-		XMFLOAT3 tile_normal = m_pTerrain->Get_Normal(xmf3Position.x, xmf3Position.z);
+		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
 
 		// 버퍼에 값 포맷팅
 		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos-%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
-		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal-%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
+		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal-%.2f,%.2f,%.2f"), tile_normal.x, tile_normal.y, tile_normal.z);
 		_stprintf_s(Tile_Info_Buffer, 100, _T("Tile - %d"), tile_n);
 
 		text_ui_manager->UpdateTextBlock(0, Player_pos_Buffer, NULL, NULL);

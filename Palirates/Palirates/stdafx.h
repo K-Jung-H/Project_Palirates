@@ -131,7 +131,6 @@ inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT
 // #define _WITH_DISPLAY_BONE_NAME
 
 #define WRITE_TEXT_UI
-
 #define DEBUG_MESSAGE
 
 

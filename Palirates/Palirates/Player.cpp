@@ -355,9 +355,19 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 
 	float fHeight = pTerrain->Get_Mesh_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
 	int tile_num = pTerrain->Get_Tile(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+	XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+	
 
-	string debug_message = "Tile_" + std::to_string(tile_num) + ",\t Height: " + std::to_string(fHeight) + "\t cal by mesh\n";
-	DebugOutput(debug_message);
+
+	//===========================================================
+	XMFLOAT3 xmf3RotateAxis, xmf3SurfaceNormal;
+	xmf3RotateAxis = Vector3::CrossProduct(XMFLOAT3(0.0f, 1.0f, 0.0f), xmf3SurfaceNormal);
+	if (Vector3::IsZero(xmf3RotateAxis)) 
+		xmf3RotateAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	float fAngle = acos(Vector3::DotProduct(XMFLOAT3(0.0f, 1.0f, 0.0f), xmf3SurfaceNormal));
+	CGameObject::Rotate(&xmf3RotateAxis, XMConvertToDegrees(fAngle));
+	//===========================================================
+
 
 	if (xmf3PlayerPosition.y < fHeight)
 	{
@@ -367,6 +377,11 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 		xmf3PlayerPosition.y = fHeight;
 		SetPosition(xmf3PlayerPosition);
 	}
+
+#ifdef DEBUG_MESSAGE
+	string debug_message = "Tile_" + std::to_string(tile_num) + ",\t Height: " + std::to_string(fHeight) + "\t cal by mesh\n";
+	DebugOutput(debug_message);
+#endif
 }
 
 void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)

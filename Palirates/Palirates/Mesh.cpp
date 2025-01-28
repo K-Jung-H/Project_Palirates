@@ -1,10 +1,29 @@
-//-----------------------------------------------------------------------------
-// File: CGameObject.cpp
-//-----------------------------------------------------------------------------
-
 #include "stdafx.h"
 #include "Mesh.h"
 #include "Object.h"
+
+bool IsPointInTriangle(float x, float z, const XMFLOAT3& v0, const XMFLOAT3& v1, const XMFLOAT3& v2)
+{
+	// 검사할 점
+	XMFLOAT2 p(x, z);
+	XMFLOAT2 a(v0.x, v0.z);
+	XMFLOAT2 b(v1.x, v1.z);
+	XMFLOAT2 c(v2.x, v2.z);
+
+	// 벡터 외적 계산
+	float cross1 = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+	float cross2 = (c.x - b.x) * (p.y - b.y) - (c.y - b.y) * (p.x - b.x);
+	float cross3 = (a.x - c.x) * (p.y - c.y) - (a.y - c.y) * (p.x - c.x);
+
+	// 외적 값의 부호가 모두 같거나, 절대값 비교를 통해 방향성을 무시
+	return ((cross1 >= 0 && cross2 >= 0 && cross3 >= 0) ||
+		(cross1 <= 0 && cross2 <= 0 && cross3 <= 0));
+}
+
+
+
+
+//==============================================================================
 
 CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -80,6 +99,7 @@ void CMesh::Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet)
 void CMesh::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext)
 {
 }
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -197,7 +217,14 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	int cxHeightMap = pHeightMapImage->GetHeightMapWidth();
 	int czHeightMap = pHeightMapImage->GetHeightMapLength();
 
+	m_xmArea_LT = XMFLOAT2(xStart * m_xmf3Scale.x, zStart * m_xmf3Scale.z);
+	m_xmArea_RB = XMFLOAT2((xStart + (nWidth - 1)) * m_xmf3Scale.x, (zStart + (nLength - 1)) * m_xmf3Scale.z);
+
+
 	float fHeight = 0.0f, fMinHeight = +FLT_MAX, fMaxHeight = -FLT_MAX;
+
+	XMFLOAT2						m_xmArea_LT;
+	XMFLOAT2						m_xmArea_RB;
 
 	for (int i = 0, z = zStart; z < (zStart + m_nLength); z += Vertex_Gap)
 	{
@@ -235,29 +262,6 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 
 	}
 
-	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
-
-	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
-	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
-
-	m_pd3dColorBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
-
-	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
-	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
-	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
-
-	m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
-
-	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
-	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
-
-	m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
-
-	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
-	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
 
 	m_nSubMeshes = 1;
 	m_pnSubSetIndices = new int[m_nSubMeshes];
@@ -300,6 +304,30 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
 	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * m_pnSubSetIndices[0];
+
+	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	m_pd3dColorBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+
+	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
+
+	m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+
+	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
+
+	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
 }
 
 CHeightMapGridMesh::~CHeightMapGridMesh()
@@ -409,8 +437,74 @@ float CHeightMapGridMesh::Get_Height(float localX, float localZ)
 	return finalHeight;
 }
 
+XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
+{
+	x *= m_xmf3Scale.x;
+	z *= m_xmf3Scale.z;
+
+	// 모든 삼각형을 순회
+	for (UINT i = 0; i < m_pnSubSetIndices[0] - 2; ++i)
+	{
+		// 삼각형 스트립에서 연속된 인덱스를 사용하여 삼각형 생성
+		UINT index0 = m_ppnSubSetIndices[0][i];
+		UINT index1 = m_ppnSubSetIndices[0][i + 1];
+		UINT index2 = m_ppnSubSetIndices[0][i + 2];
+
+		// 삼각형의 정점 좌표 가져오기
+		XMFLOAT3 v0 = m_pxmf3Positions[index0];
+		XMFLOAT3 v1 = m_pxmf3Positions[index1];
+		XMFLOAT3 v2 = m_pxmf3Positions[index2];
+
+		 // 동일한 정점이 있으면 해당 삼각형을 건너뛰기
+		if (std::tie(v0.x, v0.y, v0.z) == std::tie(v1.x, v1.y, v1.z) ||
+			std::tie(v1.x, v1.y, v1.z) == std::tie(v2.x, v2.y, v2.z) ||
+			std::tie(v0.x, v0.y, v0.z) == std::tie(v2.x, v2.y, v2.z))
+		{
+			continue; 
+		}
+
+		// 입력 좌표 (x, z)가 삼각형 내부에 포함되는지 확인
+		if (IsPointInTriangle(x, z, v0, v1, v2))
+		{
+#ifdef DEBUG_MESSAGE
+			string message = "Index: " + std::to_string(i) + " - p1: (x = " + std::to_string((int)v0.x) + ", z = " + std::to_string((int)v0.z) + ") ";
+			message += "p2: (x = " + std::to_string((int)v1.x) + ", z = " + std::to_string((int)v1.z) + ") ";
+			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
+			DebugOutput(message);
+#endif
+			// 삼각형 법선 반환
+			return Get_PolygonNormal(v0, v1, v2);  
+		}
+	}
+
+	// 포함된 폴리곤을 찾지 못한 경우 지정된 법선 반환
+	return XMFLOAT3(0.0f, -1.0f, 0.0f);
+}
+
+XMFLOAT3 CHeightMapGridMesh::Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2)
+{
+	XMFLOAT3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+	XMFLOAT3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+
+	XMFLOAT3 normal = { 0.0f,0.0f,0.0f };
+	normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
+	normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
+	normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
+
+
+	float length = sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+	if (length > 0.0f)
+	{
+		normal.x /= length;
+		normal.y /= length;
+		normal.z /= length;
+	}
+
+	return normal;
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
 CSkyBoxMesh::CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth, float fHeight, float fDepth) : CMesh(pd3dDevice, pd3dCommandList)
 {
 	m_nVertices = 36;
