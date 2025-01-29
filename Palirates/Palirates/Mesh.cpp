@@ -439,8 +439,8 @@ float CHeightMapGridMesh::Get_Height(float localX, float localZ)
 
 XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
 {
-	x *= m_xmf3Scale.x;
-	z *= m_xmf3Scale.z;
+	x = x * m_xmf3Scale.x + m_xmArea_LT.x;
+	z = z *  m_xmf3Scale.z + m_xmArea_LT.y;
 
 	// 모든 삼각형을 순회
 	for (UINT i = 0; i < m_pnSubSetIndices[0] - 2; ++i)
