@@ -757,6 +757,9 @@ CGameObject::CGameObject(const std::string_view& name)
 	Set_Name(name);
 	m_xmf4x4Parent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
+
+	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	m_fRotationSpeed = 0.0f;
 }
 
 CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
@@ -953,6 +956,7 @@ void CGameObject::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+
 
 	if (m_pSibling) 
 		m_pSibling->Animate(fTimeElapsed);
@@ -1811,7 +1815,7 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 		z /= m_xmf3Scale.z;
 	}
 
-	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임?
+	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임
 	x -= m_xmf4x4World._41;
 	z -= m_xmf4x4World._43;
 

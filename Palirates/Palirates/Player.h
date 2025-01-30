@@ -66,6 +66,7 @@ public:
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
+//	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
@@ -108,8 +109,11 @@ public:
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
 
+	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
+
+	void AlignWithNormal(XMFLOAT3 normal);
 };
 

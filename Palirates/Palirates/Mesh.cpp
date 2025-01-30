@@ -406,36 +406,75 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList,
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
 }
 
-float CHeightMapGridMesh::Get_Height(float localX, float localZ) 
+float CHeightMapGridMesh::Get_Height(float x, float z)
 {
-	int adjustedWidth = (m_nWidth + Vertex_Gap - 1) / Vertex_Gap;
-	int adjustedLength = (m_nLength + Vertex_Gap - 1) / Vertex_Gap;
+	x = x * m_xmf3Scale.x + m_xmArea_LT.x;
+	z = z * m_xmf3Scale.z + m_xmArea_LT.y;
 
-	float cellSizeX = (float)Vertex_Gap;
-	float cellSizeZ = (float)Vertex_Gap;
+	// 모든 삼각형을 순회
+	for (UINT i = 0; i < m_pnSubSetIndices[0] - 2; ++i)
+	{
+		// 삼각형 스트립에서 연속된 인덱스를 사용하여 삼각형 생성
+		UINT index0 = m_ppnSubSetIndices[0][i];
+		UINT index1 = m_ppnSubSetIndices[0][i + 1];
+		UINT index2 = m_ppnSubSetIndices[0][i + 2];
 
-	int cellX = static_cast<int>(localX / cellSizeX);
-	int cellZ = static_cast<int>(localZ / cellSizeZ);
+		// 삼각형의 정점 좌표 가져오기
+		XMFLOAT3 v0 = m_pxmf3Positions[index0];
+		XMFLOAT3 v1 = m_pxmf3Positions[index1];
+		XMFLOAT3 v2 = m_pxmf3Positions[index2];
 
-	float fDeltaX = (localX - (cellX * cellSizeX)) / cellSizeX;
-	float fDeltaZ = (localZ - (cellZ * cellSizeZ)) / cellSizeZ;
+		// 동일한 정점이 있으면 해당 삼각형을 건너뛰기
+		if (std::tie(v0.x, v0.y, v0.z) == std::tie(v1.x, v1.y, v1.z) ||
+			std::tie(v1.x, v1.y, v1.z) == std::tie(v2.x, v2.y, v2.z) ||
+			std::tie(v0.x, v0.y, v0.z) == std::tie(v2.x, v2.y, v2.z))
+		{
+			continue;
+		}
 
-	int i0 = cellX + (cellZ * adjustedWidth);
-	int i1 = (cellX + 1) + (cellZ * adjustedWidth);
-	int i2 = cellX + ((cellZ + 1) * adjustedWidth);
-	int i3 = (cellX + 1) + ((cellZ + 1) * adjustedWidth);
+		// 입력 좌표 (x, z)가 삼각형 내부에 포함되는지 확인
+		if (IsPointInTriangle(x, z, v0, v1, v2))
+		{
+#ifdef DEBUG_MESSAGE
+			string message = "Index: " + std::to_string(i) + " - p1: (x = " + std::to_string((int)v0.x) + ", z = " + std::to_string((int)v0.z) + ") ";
+			message += "p2: (x = " + std::to_string((int)v1.x) + ", z = " + std::to_string((int)v1.z) + ") ";
+			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
+			DebugOutput(message);
+#endif
+			// 삼각형 높이 반환
+			return Get_PolygonHeight(x, z, v0, v1, v2);
+		}
+	}
 
-	XMFLOAT3 v0 = m_pxmf3Positions[i0];
-	XMFLOAT3 v1 = m_pxmf3Positions[i1];
-	XMFLOAT3 v2 = m_pxmf3Positions[i2];
-	XMFLOAT3 v3 = m_pxmf3Positions[i3];
-
-	float height1 = (1.0f - fDeltaX) * v0.y + fDeltaX * v1.y;
-	float height2 = (1.0f - fDeltaX) * v2.y + fDeltaX * v3.y;
-	float finalHeight = (1.0f - fDeltaZ) * height1 + fDeltaZ * height2;
-
-	return finalHeight;
+	// 포함된 폴리곤을 찾지 못한 경우 지정된 높이 반환
+	return -1.0f;
 }
+
+float  CHeightMapGridMesh::Get_PolygonHeight(float x, float z, XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2)
+
+{
+	// 삼각형의 두 개의 변을 계산
+	XMFLOAT3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+	XMFLOAT3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+
+	// 삼각형의 법선 벡터 계산 (외적)
+	XMFLOAT3 normal;
+	normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
+	normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
+	normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
+
+	// 평면 방정식의 D 값 계산 (D = - (A*x + B*y + C*z))
+	float D = -(normal.x * v0.x + normal.y * v0.y + normal.z * v0.z);
+
+	// y = (-Ax - Cz - D) / B를 이용하여 높이(y) 계산
+	if (normal.y != 0.0f)
+	{
+		return (-normal.x * x - normal.z * z - D) / normal.y;
+	}
+
+	return v0.y; // 법선이 y축과 평행한 경우 예외 처리
+}
+
 
 XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
 {
@@ -472,8 +511,8 @@ XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
 			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
 			DebugOutput(message);
 #endif
-			// 삼각형 법선 반환
-			return Get_PolygonNormal(v0, v1, v2);  
+			bool is_Reversed = (i % 2 == 1);  
+			return Get_PolygonNormal(v0, v1, v2, is_Reversed);
 		}
 	}
 
@@ -481,16 +520,15 @@ XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
 	return XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
 
-XMFLOAT3 CHeightMapGridMesh::Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2)
+XMFLOAT3 CHeightMapGridMesh::Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2, bool is_Reversed)
 {
 	XMFLOAT3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
 	XMFLOAT3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
 
-	XMFLOAT3 normal = { 0.0f,0.0f,0.0f };
+	XMFLOAT3 normal;
 	normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
 	normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
 	normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
-
 
 	float length = sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
 	if (length > 0.0f)
@@ -500,8 +538,17 @@ XMFLOAT3 CHeightMapGridMesh::Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT
 		normal.z /= length;
 	}
 
+	// 삼각형이 뒤집혀 있으면 노멀 반전
+	if (is_Reversed)
+	{
+		normal.x = -normal.x;
+		normal.y = -normal.y;
+		normal.z = -normal.z;
+	}
+
 	return normal;
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 

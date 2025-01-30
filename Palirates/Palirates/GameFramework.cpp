@@ -615,9 +615,6 @@ void CGameFramework::FrameAdvance()
 	MoveToNextFrame();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 12, 37);
-//	size_t nLength = _tcslen(m_pszFrameRate);
-//	XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
-//	_stprintf_s(m_pszFrameRate + nLength, 70 - nLength, _T("(%4f, %4f, %4f)"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
-//	::SetWindowText(m_hWnd, m_pszFrameRate);
+
 }
 

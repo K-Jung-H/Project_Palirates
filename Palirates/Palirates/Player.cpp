@@ -144,31 +144,47 @@ void CPlayer::Rotate(float x, float y, float z)
 void CPlayer::Update(float fTimeElapsed)
 {
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
+
 	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+
 	float fMaxVelocityXZ = m_fMaxVelocityXZ;
+	float fMaxVelocityY = m_fMaxVelocityY;
+
 	if (fLength > m_fMaxVelocityXZ)
 	{
 		m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
 		m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
 	}
-	float fMaxVelocityY = m_fMaxVelocityY;
+
 	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
-	if (fLength > m_fMaxVelocityY) m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
+
+	if (fLength > m_fMaxVelocityY) 
+		m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
 
 	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 	Move(xmf3Velocity, false);
 
-	if (m_pPlayerUpdatedContext) OnPlayerUpdateCallback(fTimeElapsed);
+	if (m_pPlayerUpdatedContext) 
+		OnPlayerUpdateCallback(fTimeElapsed);
 
 	DWORD nCurrentCameraMode = m_pCamera->GetMode();
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->Update(m_xmf3Position, fTimeElapsed);
-	if (m_pCameraUpdatedContext) OnCameraUpdateCallback(fTimeElapsed);
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) m_pCamera->SetLookAt(m_xmf3Position);
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
+		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+
+	if (m_pCameraUpdatedContext) 
+		OnCameraUpdateCallback(fTimeElapsed);
+
+	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) 
+		m_pCamera->SetLookAt(m_xmf3Position);
+
 	m_pCamera->RegenerateViewMatrix();
 
 	fLength = Vector3::Length(m_xmf3Velocity);
 	float fDeceleration = (m_fFriction * fTimeElapsed);
-	if (fDeceleration > fLength) fDeceleration = fLength;
+
+	if (fDeceleration > fLength) 
+		fDeceleration = fLength;
+
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
 }
 
@@ -354,20 +370,6 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 	bool bReverseQuad = ((z % 2) != 0);
 
 	float fHeight = pTerrain->Get_Mesh_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
-	int tile_num = pTerrain->Get_Tile(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
-	XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
-	
-
-
-	//===========================================================
-	XMFLOAT3 xmf3RotateAxis, xmf3SurfaceNormal;
-	xmf3RotateAxis = Vector3::CrossProduct(XMFLOAT3(0.0f, 1.0f, 0.0f), xmf3SurfaceNormal);
-	if (Vector3::IsZero(xmf3RotateAxis)) 
-		xmf3RotateAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	float fAngle = acos(Vector3::DotProduct(XMFLOAT3(0.0f, 1.0f, 0.0f), xmf3SurfaceNormal));
-	CGameObject::Rotate(&xmf3RotateAxis, XMConvertToDegrees(fAngle));
-	//===========================================================
-
 
 	if (xmf3PlayerPosition.y < fHeight)
 	{
@@ -379,6 +381,9 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 	}
 
 #ifdef DEBUG_MESSAGE
+	int tile_num = pTerrain->Get_Tile(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+
+
 	string debug_message = "Tile_" + std::to_string(tile_num) + ",\t Height: " + std::to_string(fHeight) + "\t cal by mesh\n";
 	DebugOutput(debug_message);
 #endif
@@ -418,9 +423,35 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
 }
 
+
+void CTerrainPlayer::Animate(float fTimeElapsed)
+{
+	OnPrepareRender();
+
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+
+
+	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
+	XMFLOAT3 xmf3PlayerPosition = GetPosition();
+	XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
+	AlignWithNormal(world_normal);
+
+	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
+	if (sibling_ptr != nullptr)
+		sibling_ptr->Animate(fTimeElapsed);
+
+	shared_ptr<CGameObject> child_ptr = Get_Child();
+	if (child_ptr != nullptr)
+		child_ptr->Animate(fTimeElapsed);
+
+}
+
+
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
+
 
 	if (m_pSkinnedAnimationController)
 	{
@@ -432,4 +463,16 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 			m_pSkinnedAnimationController->SetTrackPosition(1, 0.0f);
 		}
 	}
+
+}
+
+void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
+{
+	m_xmf3Up = Vector3::Normalize(normal);
+
+	if (fabs(Vector3::DotProduct(m_xmf3Look, m_xmf3Up)) > 0.99f)
+		m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
+	
+	m_xmf3Right = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Up, m_xmf3Look, true));
+	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
 }

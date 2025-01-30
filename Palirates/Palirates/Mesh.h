@@ -159,8 +159,12 @@ public:
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 
 	virtual float Get_Height(float x, float z);
+	float  Get_PolygonHeight(float x, float z, XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2);
+	
+
 	virtual XMFLOAT3 Get_Normal(float x, float z);
 	XMFLOAT3 Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2);
+	XMFLOAT3 Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2, bool is_Reversed);
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
