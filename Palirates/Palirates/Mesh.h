@@ -56,6 +56,8 @@ protected:
 	UINT							m_nSlot = 0;
 	UINT							m_nOffset = 0;
 
+	BoundingOrientedBox* bounding_box = NULL;
+
 protected:
 	int								m_nVertices = 0;
 
@@ -90,6 +92,8 @@ public:
 
 	virtual float Get_Height(float x, float z) { return 0.0f; }
 	virtual XMFLOAT3 Get_Normal(float x, float z) { return XMFLOAT3{ 0.0f,0.0f,0.0f }; }
+
+	BoundingOrientedBox* Get_BoundingBox() { return bounding_box; };
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -163,7 +167,6 @@ public:
 	
 
 	virtual XMFLOAT3 Get_Normal(float x, float z);
-	XMFLOAT3 Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2);
 	XMFLOAT3 Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2, bool is_Reversed);
 };
 

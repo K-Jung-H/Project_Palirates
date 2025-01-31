@@ -1256,7 +1256,8 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 	m_nMaterials = ReadIntegerFromFile(pInFile);
 
 	m_ppMaterials = new CMaterial*[m_nMaterials];
-	for (int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
+	for (int i = 0; i < m_nMaterials; i++) 
+		m_ppMaterials[i] = NULL;
 
 	CMaterial *pMaterial = NULL;
 
@@ -1586,6 +1587,30 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 	return(pLoadedModel);
 }
 
+BoundingOrientedBox* CGameObject::Get_Collider()
+{
+	BoundingOrientedBox* pOriginalBoundingBox = m_pMesh->Get_BoundingBox();
+	if (pOriginalBoundingBox == NULL)
+		return NULL;
+
+
+
+	BoundingOrientedBox* pWorldBoundingBox = new BoundingOrientedBox(*pOriginalBoundingBox);
+	pWorldBoundingBox->Center = GetPosition();
+
+	if (pWorldBoundingBox->Extents.x == 0)
+		pWorldBoundingBox->Extents.x = 1.0f;
+	else if (pWorldBoundingBox->Extents.y == 0)
+		pWorldBoundingBox->Extents.y = 1.0f;
+	else if (pWorldBoundingBox->Extents.z == 0)
+		pWorldBoundingBox->Extents.z = 1.0f;
+
+
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	XMStoreFloat4(&pWorldBoundingBox->Orientation, quaternionRotation);
+
+	return pWorldBoundingBox;
+}
 
 // static 변수 초기화
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
@@ -1617,8 +1642,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		// 셰이더 리소스 뷰 생성
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, PARAMETER_TERRAIN_BASE_TEXTURE);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, PARAMETER_TERRAIN_DETAIL_TEXTURE);
 
 		// 재사용 가능한 Material 객체 생성
 		pTerrainMaterial = new CMaterial(2);
@@ -1891,7 +1916,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, 10);
+	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, PARAMETER_SKYBOX_TEXTURE);
 
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);

@@ -1,6 +1,33 @@
 #pragma once
 #include "Object.h"
 
+
+struct OOBB_INFO
+{
+	XMFLOAT4X4 world_matrix;
+	XMFLOAT4 line_color;
+};
+
+class OOBB_Drawer
+{
+protected:
+	ID3D12Resource* m_pd3dcbOOBBInfo = NULL; // OOBB_INFO 에 대한 배열로 처리해서, 인스턴싱하는 걸로 하기
+	OOBB_INFO* m_pcbMappedOOBBInfo = NULL;
+public:
+	static CMesh* oobb_Mesh;
+	static CShader* oobb_shader;
+	OOBB_Drawer() { }
+	~OOBB_Drawer() { oobb_Mesh->Release(); }
+	void SetMesh(CMesh* mesh) { oobb_Mesh = mesh; }
+
+	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj, XMFLOAT4 line_color);
+	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox, XMFLOAT4 line_color);
+
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+};
+
 enum class Object_Type
 {
 	skinned,
@@ -11,6 +38,9 @@ enum class Object_Type
 class Object_Manager
 {
 private:
+
+	OOBB_Drawer* bounding_box_drawer = NULL;
+
 	// 자료 구조를 unordered_map이나 unordered_set 로 관리하면, 애니메이션,렌더링 처리 순서를 관리할 수 있을거 같은데..
 
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;

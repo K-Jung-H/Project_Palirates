@@ -223,8 +223,6 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 
 	float fHeight = 0.0f, fMinHeight = +FLT_MAX, fMaxHeight = -FLT_MAX;
 
-	XMFLOAT2						m_xmArea_LT;
-	XMFLOAT2						m_xmArea_RB;
 
 	for (int i = 0, z = zStart; z < (zStart + m_nLength); z += Vertex_Gap)
 	{
@@ -328,6 +326,22 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
 	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
 	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	XMFLOAT3 center = 
+	{
+		(m_xmArea_LT.x + m_xmArea_RB.x) * 0.5f,
+		(fMinHeight + fMaxHeight) * 0.5f,
+		(m_xmArea_LT.y + m_xmArea_RB.y) * 0.5f
+	};
+
+	XMFLOAT3 extents = 
+	{
+		(m_xmArea_RB.x - m_xmArea_LT.x) * 0.5f,
+		(fMaxHeight - fMinHeight) * 0.5f,
+		(m_xmArea_RB.y - m_xmArea_LT.y) * 0.5f
+	};
+
+	bounding_box = new BoundingOrientedBox(center, extents, XMFLOAT4(0, 0, 0, 1));
 }
 
 CHeightMapGridMesh::~CHeightMapGridMesh()
@@ -855,13 +869,13 @@ void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandL
 	if (m_pd3dcbBindPoseBoneOffsets)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneOffsetsGpuVirtualAddress = m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(11, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
+		pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_BONE_OFFSET, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
 	}
 
 	if (m_pd3dcbSkinningBoneTransforms)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(12, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
+		pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
 	}
 
 	// 뼈들의 변환 행렬 정보를 애니메이션 컨트롤러의 m_pcbxmf4x4MappedSkinningBoneTransforms에 전달

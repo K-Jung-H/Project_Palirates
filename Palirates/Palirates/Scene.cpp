@@ -322,7 +322,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dDescriptorRanges[9].RegisterSpace = 0;
 	pd3dDescriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[15];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[16];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
@@ -375,31 +375,35 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dRootParameters[9].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
 	pd3dRootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[10].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[10].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
-	pd3dRootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[11].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
-	pd3dRootParameters[11].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[12].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-	pd3dRootParameters[12].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[13].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[13].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
-	pd3dRootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-	pd3dRootParameters[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[14].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[14].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
-	pd3dRootParameters[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.ShaderRegister = 6; //Bounding Box Renderer
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
 
 	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
