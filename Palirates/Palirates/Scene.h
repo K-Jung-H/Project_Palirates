@@ -106,7 +106,7 @@ public:
 	void Update_UI();
 #endif
 
-	Object_Manager obj_manager; 
+	Object_Manager* obj_manager = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 

@@ -178,9 +178,20 @@ public:
 	CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f);
 	virtual ~CSkyBoxMesh();
 };
+class CubeMesh : public CMesh
+{
+public:
+	CubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f);
+	virtual ~CubeMesh();
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) {}
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
 class CStandardMesh : public CMesh
 {
 public:

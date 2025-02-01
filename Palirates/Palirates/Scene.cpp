@@ -17,6 +17,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvGPUDescriptorNextHandle;
 D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvCPUDescriptorNextHandle;
 D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvGPUDescriptorNextHandle;
 
+
+
 CScene::CScene()
 {
 }
@@ -96,6 +98,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
+	obj_manager = new Object_Manager();
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
@@ -123,7 +128,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->SetPosition(410.0f, m_pTerrain->GetHeight(400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_1->Set_Name(name_view);
-	obj_manager.Add_Object(humanObject_1);
+	obj_manager->Add_Object(humanObject_1);
 
 	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
@@ -133,7 +138,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	name_view = obj_name_2;
 	humanObject_2->Set_Name(name_view);
-	obj_manager.Add_Object(humanObject_2);
+	obj_manager->Add_Object(humanObject_2);
 
 
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
@@ -143,7 +148,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//humanObject_3->Active = false;
 	name_view = obj_name_3;
 	humanObject_3->Set_Name(name_view);
-	obj_manager.Add_Object(humanObject_3);
+	obj_manager->Add_Object(humanObject_3);
 
 
 
@@ -232,7 +237,7 @@ void CScene::ReleaseObjects()
 	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
 	if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap->Release();
 
-	obj_manager.Clear_Object_List_All();
+	obj_manager->Clear_Object_List_All();
 	delete text_ui_manager;
 
 
@@ -324,10 +329,10 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 
 	D3D12_ROOT_PARAMETER pd3dRootParameters[16];
 
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
-	pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.ShaderRegister = 1; //Camera
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 	pd3dRootParameters[1].Constants.Num32BitValues = 33;
@@ -484,8 +489,8 @@ void CScene::ReleaseUploadBuffers()
 	if(m_ppShaders[i] != NULL)
 		m_ppShaders[i]->ReleaseUploadBuffers();
 	
-	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager.Get_Object_List(Object_Type::skinned);
-	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager.Get_Object_List(Object_Type::non_skinned);
+	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
+	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager->Get_Object_List(Object_Type::non_skinned);
 
 	for (std::shared_ptr<CGameObject> obj_ptr : *skinned_obj_container)
 		obj_ptr->ReleaseUploadBuffers();
@@ -696,6 +701,14 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
+	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
+	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
+	std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+
+	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
+	obj_manager->Update_OBB_Drawer(pd3dCommandList, temp_list);
+
+
 	if (m_pd3dGraphicsRootSignature) 
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -713,8 +726,8 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	obj_manager.Animate_Objects(Object_Type::skinned, m_fElapsedTime);
-	obj_manager.Render_Objects_All(pd3dCommandList, pCamera);
+	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
 	for (int i = 0; i < m_nShaders; i++) 

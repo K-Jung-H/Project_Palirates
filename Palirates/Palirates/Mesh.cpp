@@ -628,6 +628,125 @@ CSkyBoxMesh::~CSkyBoxMesh()
 {
 }
 
+
+CubeMesh::CubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth, float fHeight, float fDepth) : CMesh(pd3dDevice, pd3dCommandList)
+{
+	m_nOffset = 0;
+	m_nSlot = 0;
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	float fx = fWidth * 0.5f, fy = fHeight * 0.5f, fz = fDepth * 0.5f;
+
+	// 정점 개수 설정
+	m_nVertices = 8;
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+
+	// 큐브의 8개 정점 위치 초기화
+	m_pxmf3Positions[0] = XMFLOAT3(-fx, -fy, -fz); // v0
+	m_pxmf3Positions[1] = XMFLOAT3(fx, -fy, -fz);  // v1
+	m_pxmf3Positions[2] = XMFLOAT3(-fx, fy, -fz);   // v2
+	m_pxmf3Positions[3] = XMFLOAT3(fx, fy, -fz);    // v3
+	m_pxmf3Positions[4] = XMFLOAT3(-fx, -fy, fz);   // v4
+	m_pxmf3Positions[5] = XMFLOAT3(fx, -fy, fz);    // v5
+	m_pxmf3Positions[6] = XMFLOAT3(-fx, fy, fz);     // v6
+	m_pxmf3Positions[7] = XMFLOAT3(fx, fy, fz);      // v7
+
+	// 버퍼 생성
+	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	// 서브메쉬 개수 설정
+	m_nSubMeshes = 1;
+
+	// 인덱스 개수 설정
+	int nSubMeshIndices = 36;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+	m_pnSubSetIndices[0] = nSubMeshIndices;
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices];
+
+	// 큐브의 인덱스 배열 초기화
+	UINT* indices = m_ppnSubSetIndices[0];
+
+	// 각 면을 구성하는 인덱스 설정
+	// 면 1: v0, v1, v2, v3
+	indices[0] = 0; indices[1] = 1; indices[2] = 2;
+	indices[3] = 1; indices[4] = 3; indices[5] = 2;
+
+	// 면 2: v4, v5, v6, v7
+	indices[6] = 4; indices[7] = 5; indices[8] = 6;
+	indices[9] = 5; indices[10] = 7; indices[11] = 6;
+
+	// 면 3: v0, v4, v6, v2
+	indices[12] = 0; indices[13] = 4; indices[14] = 6;
+	indices[15] = 4; indices[16] = 2; indices[17] = 0;
+
+	// 면 4: v1, v3, v7, v5
+	indices[18] = 1; indices[19] = 3; indices[20] = 7;
+	indices[21] = 3; indices[22] = 5; indices[23] = 1;
+
+	// 면 5: v0, v1, v5, v4
+	indices[24] = 0; indices[25] = 1; indices[26] = 5;
+	indices[27] = 5; indices[28] = 4; indices[29] = 0;
+
+	// 면 6: v2, v6, v7, v3
+	indices[30] = 2; indices[31] = 6; indices[32] = 7;
+	indices[33] = 7; indices[34] = 3; indices[35] = 2;
+
+	// 인덱스 버퍼 생성
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
+		pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * nSubMeshIndices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]
+	);
+
+	// 인덱스 버퍼 뷰 설정
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
+}
+
+
+CubeMesh::~CubeMesh()
+{
+}
+
+void CubeMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW* pVertexBufferViews = (D3D12_VERTEX_BUFFER_VIEW*)pContext;
+
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews); // 2개 버퍼를 설정
+	// pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(pVertexBufferViews), pVertexBufferViews);
+
+}
+
+void CubeMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	UpdateShaderVariables(pd3dCommandList);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[] = { m_d3dPositionBufferView, d3dInstancingBufferView };
+	OnPreRender(pd3dCommandList, pVertexBufferViews); 
+
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	if (m_nSubMeshes > 0)
+	{
+
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[0]));
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], 1, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
+	}
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CStandardMesh::CStandardMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMesh(pd3dDevice, pd3dCommandList)

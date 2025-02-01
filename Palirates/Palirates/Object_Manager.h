@@ -1,29 +1,60 @@
 #pragma once
 #include "Object.h"
+#include "Shader.h"
 
 
-struct OOBB_INFO
+#define DEFAULT_INSTANCE_NUM 50
+
+struct BoundingBox_Instance_Info
 {
-	XMFLOAT4X4 world_matrix;
-	XMFLOAT4 line_color;
+	XMFLOAT4X4 world_4x4transform;
+	XMFLOAT4 box_color;
+	bool active;
 };
 
-class OOBB_Drawer
+class BoundingBox_Shader : public CShader
+{
+public:
+	BoundingBox_Shader();
+	virtual ~BoundingBox_Shader();
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+};
+
+
+class OBB_Drawer
 {
 protected:
-	ID3D12Resource* m_pd3dcbOOBBInfo = NULL; // OOBB_INFO 에 대한 배열로 처리해서, 인스턴싱하는 걸로 하기
-	OOBB_INFO* m_pcbMappedOOBBInfo = NULL;
+	ID3D12Resource* Instance_info = NULL;
+	BoundingBox_Instance_Info* Mapped_Instance_info = NULL;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
+
+	int rendering_max_num = DEFAULT_INSTANCE_NUM;
+
 public:
-	static CMesh* oobb_Mesh;
-	static CShader* oobb_shader;
-	OOBB_Drawer() { }
-	~OOBB_Drawer() { oobb_Mesh->Release(); }
-	void SetMesh(CMesh* mesh) { oobb_Mesh = mesh; }
+	static CubeMesh* obb_Mesh;
+	static BoundingBox_Shader* obb_shader;
 
-	void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* g_obj, XMFLOAT4 line_color);
-	bool UpdateOOBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* matrix, BoundingOrientedBox* pBoundingBox, XMFLOAT4 line_color);
+	OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	~OBB_Drawer();
 
+	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Release_OBB_Data_ShaderVariables();
+	
+	void Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
+	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list);
+	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
+	
+
+
+	
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 };
@@ -39,7 +70,7 @@ class Object_Manager
 {
 private:
 
-	OOBB_Drawer* bounding_box_drawer = NULL;
+	shared_ptr<OBB_Drawer> bounding_box_drawer;
 
 	// 자료 구조를 unordered_map이나 unordered_set 로 관리하면, 애니메이션,렌더링 처리 순서를 관리할 수 있을거 같은데..
 
@@ -50,6 +81,9 @@ private:
 	// 이를 방지 하고 싶다면 shared_ptr에 대응되는 weak_ptr를 저장하여, 생명 주기 검사 필요
 	// delete 안쓰면 문제 없음
 public:
+	Object_Manager();
+	~Object_Manager();
+
 	void Add_Object(std::shared_ptr<CGameObject > obj_ptr);
 	void Delete_Object(std::shared_ptr<CGameObject > obj_ptr);
 
@@ -64,5 +98,10 @@ public:
 	
 	void Clear_Object_List_All();
 	void Clear_Object_List(Object_Type type);
+
+	//========================================================================
+	void Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	void Update_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
+	void Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 };
 

@@ -1589,6 +1589,8 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 
 BoundingOrientedBox* CGameObject::Get_Collider()
 {
+	if (m_pMesh == NULL)
+		return NULL;
 	BoundingOrientedBox* pOriginalBoundingBox = m_pMesh->Get_BoundingBox();
 	if (pOriginalBoundingBox == NULL)
 		return NULL;
