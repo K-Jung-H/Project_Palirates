@@ -104,10 +104,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
-	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
+	XMFLOAT3 xmf3Scale(4.0f, 2.0f, 4.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 4, 2);
-//	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
+	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
 
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
@@ -701,13 +701,6 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
-	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
-	std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
-
-	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
-	obj_manager->Update_OBB_Drawer(pd3dCommandList, temp_list);
-
 
 	if (m_pd3dGraphicsRootSignature) 
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
@@ -723,7 +716,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 
-	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
@@ -734,5 +727,12 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 		if (m_ppShaders[i]) 
 			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
 
+	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
+// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
+	static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+
+	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
+	obj_manager->Update_OBB_Drawer(pd3dCommandList, temp_list);
+	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
 }
 

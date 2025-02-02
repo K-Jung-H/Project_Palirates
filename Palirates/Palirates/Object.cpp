@@ -965,43 +965,6 @@ void CGameObject::Animate(float fTimeElapsed)
 		m_pChild->Animate(fTimeElapsed);
 }
 
-// 기존 방식
-
-//void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
-//{
-//	if (m_pSkinnedAnimationController) 
-//		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
-//
-//	if (m_pMesh)
-//	{
-//		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-//
-//		if (m_nMaterials > 0)
-//		{
-//			for (int i = 0; i < m_nMaterials; i++)
-//			{
-//				if (m_ppMaterials[i])
-//				{
-//					
-//					if (m_ppMaterials[i]->m_pShader)
-//					{
-//						int pipelinestate_num = m_ppMaterials[i]->m_pShader->Get_Num_PipelineState();
-//						for (int j = 0; j < pipelinestate_num; ++j)
-//						{
-//							m_ppMaterials[i]->m_pShader->Setting_Render(pd3dCommandList, j);
-//						}
-//					}
-//					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
-//				}
-//
-//				m_pMesh->Render(pd3dCommandList, i);
-//			}
-//		}
-//	}
-//
-//	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
-//	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
-//}
 
 // 셰이더가 PSO를 여러 개 갖는 경우
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1127,6 +1090,9 @@ void CGameObject::SetScale(float x, float y, float z)
 
 XMFLOAT3 CGameObject::GetPosition()
 {
+	//if(m_pParent != NULL)
+	//	GetPosition()
+
 	return(XMFLOAT3(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43));
 }
 
@@ -1597,21 +1563,21 @@ BoundingOrientedBox* CGameObject::Get_Collider()
 
 
 
-	BoundingOrientedBox* pWorldBoundingBox = new BoundingOrientedBox(*pOriginalBoundingBox);
-	pWorldBoundingBox->Center = GetPosition();
+	BoundingOrientedBox pWorldBoundingBox(*pOriginalBoundingBox);
+	pWorldBoundingBox.Center = GetPosition();
 
-	if (pWorldBoundingBox->Extents.x == 0)
-		pWorldBoundingBox->Extents.x = 1.0f;
-	else if (pWorldBoundingBox->Extents.y == 0)
-		pWorldBoundingBox->Extents.y = 1.0f;
-	else if (pWorldBoundingBox->Extents.z == 0)
-		pWorldBoundingBox->Extents.z = 1.0f;
+	if (pWorldBoundingBox.Extents.x == 0.0f)
+		pWorldBoundingBox.Extents.x = 1.0f;
+	if (pWorldBoundingBox.Extents.y == 0.0f)
+		pWorldBoundingBox.Extents.y = 1.0f;
+	if (pWorldBoundingBox.Extents.z == 0.0f)
+		pWorldBoundingBox.Extents.z = 1.0f;
 
 
 	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
-	XMStoreFloat4(&pWorldBoundingBox->Orientation, quaternionRotation);
+	XMStoreFloat4(&pWorldBoundingBox.Orientation, quaternionRotation);
 
-	return pWorldBoundingBox;
+	return &pWorldBoundingBox;
 }
 
 // static 변수 초기화
@@ -1675,11 +1641,11 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	m_xmf3Scale = xmf3Scale;
 	m_nDepth = nMaxDepth;
 
-	Area_LT.x = start_x_pos;
-	Area_LT.y = start_z_pos;
+	Area_LT.x = start_x_pos * xmf3Scale.x;
+	Area_LT.y = start_z_pos * xmf3Scale.z;
 
-	Area_RB.x = start_x_pos + m_nWidth;
-	Area_RB.y = start_z_pos + m_nLength;
+	Area_RB.x = (start_x_pos + m_nWidth) * xmf3Scale.x;
+	Area_RB.y = (start_z_pos + m_nLength) * xmf3Scale.z;
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
@@ -1799,35 +1765,32 @@ XMFLOAT3 CHeightMapTerrain::GetNormal(float x, float z)
 
 float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad) 
 {
-	// 스케일 조정은 부모객체에서 한번만 적용하기
-	if (m_pParent == NULL) 
+	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임
+	if (m_pParent == NULL)
 	{
-		x /= m_xmf3Scale.x;
-		z /= m_xmf3Scale.z;
+		x -= m_xmf4x4World._41;
+		z -= m_xmf4x4World._43;
 	}
-
-	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임?
-	x -= m_xmf4x4World._41;
-	z -= m_xmf4x4World._43;
-
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
 	{
-		CGameObject* child_ptr = Get_Child().get();
-		if (child_ptr)
+		if (Get_Child())
+		{
+			CGameObject* child_ptr = Get_Child().get();
 			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad);
+		}
 		else
 		{
-			x -= Tile_Start_Pos.x;
-			z -= Tile_Start_Pos.y;
 			return m_pMesh->Get_Height(x, z);
 		}
 	}
 	else
 	{
-		CGameObject* sibling_ptr = Get_Sibling().get();
-		if (sibling_ptr)
+		if (Get_Sibling())
+		{
+			CGameObject* sibling_ptr = Get_Sibling().get();
 			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad);
+		}
 	}
 
 	return -1;
@@ -1835,16 +1798,12 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
 
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 {
-	// 스케일 조정은 부모객체에서 한번만 적용하기
+	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임
 	if (m_pParent == NULL)
 	{
-		x /= m_xmf3Scale.x;
-		z /= m_xmf3Scale.z;
+		x -= m_xmf4x4World._41;
+		z -= m_xmf4x4World._43;
 	}
-
-	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임
-	x -= m_xmf4x4World._41;
-	z -= m_xmf4x4World._43;
 
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
@@ -1854,8 +1813,6 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
 		else
 		{
-			x -= Tile_Start_Pos.x;
-			z -= Tile_Start_Pos.y;
 			return m_pMesh->Get_Normal(x, z);
 		}
 	}
@@ -1871,15 +1828,10 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 
 int CHeightMapTerrain::Get_Tile(float x, float z)
 {
-
 	if (m_pParent == NULL)
 	{
-		// 자식 타일 객체는 이동할 일 없음
-		x -= m_xmf4x4World._41;	
+		x -= m_xmf4x4World._41;
 		z -= m_xmf4x4World._43;
-
-		x /= m_xmf3Scale.x;
-		z /= m_xmf3Scale.z;
 	}
 
 	if (x >= Area_LT.x && x < Area_RB.x&& z >= Area_LT.y&& z < Area_RB.y)
@@ -1900,6 +1852,33 @@ int CHeightMapTerrain::Get_Tile(float x, float z)
 
 	// 문제 발생 시 -1 반환
 	return -1; 
+}
+
+
+BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
+{
+	if (m_pMesh == NULL)
+		return NULL;
+	BoundingOrientedBox* pOriginalBoundingBox = m_pMesh->Get_BoundingBox();
+	if (pOriginalBoundingBox == NULL)
+		return NULL;
+
+
+
+	BoundingOrientedBox pWorldBoundingBox(*pOriginalBoundingBox);
+
+	if (pWorldBoundingBox.Extents.x == 0.0f)
+		pWorldBoundingBox.Extents.x = 1.0f;
+	if (pWorldBoundingBox.Extents.y == 0.0f)
+		pWorldBoundingBox.Extents.y = 1.0f;
+	if (pWorldBoundingBox.Extents.z == 0.0f)
+		pWorldBoundingBox.Extents.z = 1.0f;
+
+
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	XMStoreFloat4(&pWorldBoundingBox.Orientation, quaternionRotation);
+
+	return &pWorldBoundingBox;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

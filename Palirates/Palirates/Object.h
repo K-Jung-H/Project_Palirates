@@ -519,6 +519,8 @@ public:
 	XMFLOAT3 Get_Mesh_Normal(float x, float z);
 
 	int Get_Tile(float x, float z);
+	virtual BoundingOrientedBox* Get_Collider();
+
 
 	int GetHeightMapWidth() { return(m_pHeightMapImage->GetHeightMapWidth()); }
 	int GetHeightMapLength() { return(m_pHeightMapImage->GetHeightMapLength()); }

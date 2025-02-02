@@ -52,20 +52,21 @@ D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState
 D3D12_DEPTH_STENCIL_DESC BoundingBox_Shader::CreateDepthStencilState(int nPipelineState)
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
-	d3dDepthStencilDesc.DepthEnable = FALSE;
-	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_NEVER;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 	d3dDepthStencilDesc.StencilEnable = FALSE;
-	d3dDepthStencilDesc.StencilReadMask = 0xff;
-	d3dDepthStencilDesc.StencilWriteMask = 0xff;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
 	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_INCR;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
 	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_DECR;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
 	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
 
 	return(d3dDepthStencilDesc);
 }
@@ -75,8 +76,8 @@ D3D12_RASTERIZER_DESC BoundingBox_Shader::CreateRasterizerState(int nPipelineSta
 	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
 	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
 
-	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_WIREFRAME; //   D3D12_FILL_MODE_WIREFRAME
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // D3D12_CULL_MODE_BACK
 	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
 	d3dRasterizerDesc.DepthBias = 0;
 	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
@@ -141,10 +142,11 @@ OBB_Drawer::~OBB_Drawer()
 
 void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = rendering_max_num * ((sizeof(BoundingBox_Instance_Info) + 255) & ~255); //256의 배수
+	//UINT ncbElementBytes = rendering_max_num * ((sizeof(BoundingBox_Instance_Info) + 255) & ~255); //256의 배수 
+	
 	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(BoundingBox_Instance_Info) * rendering_max_num, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
-
+	
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(BoundingBox_Instance_Info);
 	m_d3dInstancingBufferView.SizeInBytes = sizeof(BoundingBox_Instance_Info) * rendering_max_num;
@@ -178,13 +180,13 @@ void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std
 			else
 				Mapped_Instance_info[i].active = false;
 
-			Mapped_Instance_info[i].world_4x4transform = world_matrix;
+			Mapped_Instance_info[i].world_4x4transform = world_matrix; // Matrix4x4::Identity();
 			Mapped_Instance_info[i].box_color = { 0.0f, 1.0f, 0.0f, 1.0f };
 		}
 
 		for (int i = obb_num; i < rendering_max_num; ++i)
 		{
-			Mapped_Instance_info[i].active = false;
+			Mapped_Instance_info[i].active = true;
 			Mapped_Instance_info[i].box_color = { 1.0f, 0.0f, 0.0f, 1.0f };
 			Mapped_Instance_info[i].world_4x4transform = Matrix4x4::Identity();
 		}
@@ -195,15 +197,13 @@ void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std
 
 void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list)
 {
-	if (!obj || obj->Get_Collider() == NULL)
-		return;
+	if (!obj)
+		return; 
 
-	obb_obj_ptr_list.push_back(obj); 
-
-
+	if (obj->Get_Collider() != NULL) 
+		obb_obj_ptr_list.push_back(obj);
+	
 	FindOBBObjects(obj->Get_Child(), obb_obj_ptr_list);
-
-
 	FindOBBObjects(obj->Get_Sibling(), obb_obj_ptr_list);
 }
 
@@ -211,15 +211,16 @@ void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<st
 bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
 {
 	// 게임 오브젝트에서 BoundingOrientedBox를 가져오고, NULL 체크
-	BoundingOrientedBox* pBoundingBox = g_obj->Get_Collider();
-	if (pBoundingBox == NULL)
-		return NULL;
+	if (g_obj->Get_Collider() == NULL)
+		return false;
+
+	BoundingOrientedBox pBoundingBox(*g_obj->Get_Collider());
 
 	// BoundingOrientedBox의 Extents 값을 가져옵니다 (필요한 값만 사용)
-	XMVECTOR extents = XMLoadFloat3(&pBoundingBox->Extents);
+	XMVECTOR extents = XMLoadFloat3(&pBoundingBox.Extents);
 
 	// 게임 오브젝트의 위치와 회전값을 로드
-	XMVECTOR center = XMLoadFloat3(&pBoundingBox->Center);
+	XMVECTOR center = XMLoadFloat3(&pBoundingBox.Center);
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
 
 	// 월드 행렬에서 회전 행렬 추출
@@ -229,20 +230,21 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 	// 회전 행렬을 기준으로 BoundingOrientedBox에 적용할 변환 행렬을 구성
 	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
 	XMMATRIX scaleMatrix = XMMatrixScaling(
-		2.0f * XMVectorGetX(extents),
-		2.0f * XMVectorGetY(extents),
-		2.0f * XMVectorGetZ(extents));
+		0.1f * XMVectorGetX(extents),
+		0.1f * XMVectorGetY(extents),
+		0.1f * XMVectorGetZ(extents));
 
 	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(center);
 
 	// 최종 월드 행렬 계산 (스케일, 회전, 이동 순서로 적용)
 	XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
+
 	// 행렬을 XMFLOAT4X4 형식으로 저장 (HLSL에서 사용하는 행렬은 행 우선(row-major) 형태이므로 전치 필요)
 	XMFLOAT4X4 xmf4x4World;
-	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(finalWorldMatrix));
+	XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalWorldMatrix));
 
-	return &xmf4x4World;
+	return true;
 }
 
 void OBB_Drawer::Release_OBB_Data_ShaderVariables()
@@ -253,6 +255,8 @@ void OBB_Drawer::Release_OBB_Data_ShaderVariables()
 
 void OBB_Drawer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	obb_shader->Setting_Render(pd3dCommandList, 0);
+
 	if (obb_Mesh)
 		obb_Mesh->Render(pd3dCommandList, m_d3dInstancingBufferView, rendering_max_num);
 

@@ -9,7 +9,7 @@ struct BoundingBox_Instance_Info
 {
 	XMFLOAT4X4 world_4x4transform;
 	XMFLOAT4 box_color;
-	bool active;
+	UINT active;
 };
 
 class BoundingBox_Shader : public CShader

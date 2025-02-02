@@ -255,19 +255,12 @@ float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 }
 
 
-struct BoundingBox_Instance_Info
-{
-    matrix world_4x4transform; // 월드 변환 행렬
-    float4 box_color; // 박스 색상
-    bool active; // 활성화 여부
-};
 
 struct VS_OBB_INPUT
 {
     float3 position : POSITION; 
     float4 color : COLOR; 
     
-    // 인스턴싱 데이터
     float4x4 obb_worldMatrix : WORLDMATRIX; // 월드 변환 행렬
     float4 instanceColor : INSTANCECOLOR; // 색상
     uint instanceBool : INSTANCEBOOL;
@@ -277,13 +270,16 @@ struct VS_OBB_OUTPUT
 {
     float4 position : SV_POSITION; 
     float4 color : COLOR; 
+    uint instanceBool : INSTANCEBOOL;
 };
 
 VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 {
     VS_OBB_OUTPUT output;
-    output.position = mul(mul(mul(float4(input.position, 1.0f), input.obb_worldMatrix), gmtxView), gmtxProjection);
-
+	output.position = mul(mul(mul(float4(input.position, 1.0f), input.obb_worldMatrix), gmtxView), gmtxProjection);
+    output.color = input.instanceColor;
+    output.instanceBool = input.instanceBool;
+	
     return (output);
 }
 
@@ -291,7 +287,10 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 
 float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
 {
+    if (input.instanceBool == 0)
+        discard;
+	
     float4 cColor = input.color;
-
+        
     return (cColor);
 }
