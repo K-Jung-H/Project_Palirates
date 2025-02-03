@@ -1580,6 +1580,15 @@ BoundingOrientedBox* CGameObject::Get_Collider()
 	return &pWorldBoundingBox;
 }
 
+void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
+{
+	// 정점 없이 OBB 만 갖는 CMesh 생성하여 연결하기, Render은 동작 없게 해야 함
+	if (m_pMesh == NULL)
+		m_pMesh = new OBBContainer();
+	m_pMesh->Set_BoundingBox(ptr); // ptr이 NULL 인 경우, 기본값 OBB로 생성
+}
+
+
 // static 변수 초기화
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;

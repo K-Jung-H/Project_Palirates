@@ -180,15 +180,21 @@ void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std
 			else
 				Mapped_Instance_info[i].active = false;
 
-			Mapped_Instance_info[i].world_4x4transform = world_matrix; // Matrix4x4::Identity();
-			Mapped_Instance_info[i].box_color = { 0.0f, 1.0f, 0.0f, 1.0f };
+			Mapped_Instance_info[i].world_4x4transform = world_matrix; 
+			
+			if(obb_obj_ptr_list[i]->Active)
+				XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::LimeGreen);
+			else
+				XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
+
 		}
 
 		for (int i = obb_num; i < rendering_max_num; ++i)
 		{
-			Mapped_Instance_info[i].active = true;
-			Mapped_Instance_info[i].box_color = { 1.0f, 0.0f, 0.0f, 1.0f };
+			Mapped_Instance_info[i].active = false;
 			Mapped_Instance_info[i].world_4x4transform = Matrix4x4::Identity();
+			XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
+
 		}
 	}
 
@@ -207,45 +213,35 @@ void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<st
 	FindOBBObjects(obj->Get_Sibling(), obb_obj_ptr_list);
 }
 
-
 bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
 {
-	// 게임 오브젝트에서 BoundingOrientedBox를 가져오고, NULL 체크
 	if (g_obj->Get_Collider() == NULL)
 		return false;
 
 	BoundingOrientedBox pBoundingBox(*g_obj->Get_Collider());
-
-	// BoundingOrientedBox의 Extents 값을 가져옵니다 (필요한 값만 사용)
 	XMVECTOR extents = XMLoadFloat3(&pBoundingBox.Extents);
 
-	// 게임 오브젝트의 위치와 회전값을 로드
-	XMVECTOR center = XMLoadFloat3(&pBoundingBox.Center);
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
 
-	// 월드 행렬에서 회전 행렬 추출
 	XMVECTOR scale, rotation, translation;
 	XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix);
 
-	// 회전 행렬을 기준으로 BoundingOrientedBox에 적용할 변환 행렬을 구성
-	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
 	XMMATRIX scaleMatrix = XMMatrixScaling(
-		0.1f * XMVectorGetX(extents),
-		0.1f * XMVectorGetY(extents),
-		0.1f * XMVectorGetZ(extents));
+		2.0f * XMVectorGetX(extents),
+		2.0f * XMVectorGetY(extents),
+		2.0f * XMVectorGetZ(extents));
 
-	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(center);
+	XMVECTOR obbRotation = XMLoadFloat4(&pBoundingBox.Orientation);
+	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(obbRotation);
+	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + XMLoadFloat3(&pBoundingBox.Center));
 
-	// 최종 월드 행렬 계산 (스케일, 회전, 이동 순서로 적용)
 	XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
-
-	// 행렬을 XMFLOAT4X4 형식으로 저장 (HLSL에서 사용하는 행렬은 행 우선(row-major) 형태이므로 전치 필요)
-	XMFLOAT4X4 xmf4x4World;
 	XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalWorldMatrix));
 
 	return true;
 }
+
 
 void OBB_Drawer::Release_OBB_Data_ShaderVariables()
 {

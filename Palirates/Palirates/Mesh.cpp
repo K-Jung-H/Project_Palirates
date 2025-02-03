@@ -100,6 +100,18 @@ void CMesh::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pCont
 {
 }
 
+void CMesh::Set_BoundingBox(BoundingOrientedBox* new_obb_ptr)
+{
+	if (new_obb_ptr == NULL)
+		bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	else
+	{
+		if (bounding_box == nullptr)		
+			bounding_box = new BoundingOrientedBox();
+		*bounding_box = *new_obb_ptr;
+	}
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -723,9 +735,7 @@ CubeMesh::~CubeMesh()
 void CubeMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
 {
 	D3D12_VERTEX_BUFFER_VIEW* pVertexBufferViews = (D3D12_VERTEX_BUFFER_VIEW*)pContext;
-
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews); // 2개 버퍼를 설정
-	// pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(pVertexBufferViews), pVertexBufferViews);
 
 }
 

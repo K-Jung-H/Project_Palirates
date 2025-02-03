@@ -363,9 +363,6 @@ private:
 	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // 형제 노드
 
 public:
-	//void AddRef();
-	//void Release();
-
 	std::shared_ptr<CGameObject> Get_Child();
 	std::shared_ptr<CGameObject> Get_Sibling();
 
@@ -476,7 +473,7 @@ public:
 
 	virtual int Get_Tile(float x, float z) { return -1; };
 	virtual BoundingOrientedBox* Get_Collider();
-
+	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 };
 
 //==================================================================================

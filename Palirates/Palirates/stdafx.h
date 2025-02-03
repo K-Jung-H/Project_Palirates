@@ -103,7 +103,7 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 #define WRITE_TEXT_UI
-// #define DEBUG_MESSAGE
+ #define DEBUG_MESSAGE
 
 //=============================================
 

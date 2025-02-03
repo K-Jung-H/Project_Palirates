@@ -3,7 +3,7 @@
 #include "Shader.h"
 
 
-#define DEFAULT_INSTANCE_NUM 50
+#define DEFAULT_INSTANCE_NUM 100
 
 struct BoundingBox_Instance_Info
 {
