@@ -155,10 +155,11 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D1
 void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
 {
 	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
+	std::unordered_set<CGameObject*> visited;  // 중복 검사를 위한 컨테이너
 
 	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
 	{
-		FindOBBObjects(obj_ptr, obb_obj_ptr_list);
+		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
 	}
 
 	int obb_num = obb_obj_ptr_list.size();
@@ -201,16 +202,20 @@ void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std
 
 }
 
-void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list)
+void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited)
 {
-	if (!obj)
-		return; 
+	// 이미 방문한 객체는 생략
+	if (!obj || visited.count(obj.get()) > 0)  
+		return;
 
-	if (obj->Get_Collider() != NULL) 
+	// 현재 객체 방문 기록 처리
+	visited.insert(obj.get());  
+
+	if (obj->Get_Collider() != NULL)
 		obb_obj_ptr_list.push_back(obj);
-	
-	FindOBBObjects(obj->Get_Child(), obb_obj_ptr_list);
-	FindOBBObjects(obj->Get_Sibling(), obb_obj_ptr_list);
+
+	FindOBBObjects(obj->Get_Child(), obb_obj_ptr_list, visited);
+	FindOBBObjects(obj->Get_Sibling(), obb_obj_ptr_list, visited);
 }
 
 bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)

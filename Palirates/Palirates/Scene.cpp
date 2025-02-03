@@ -132,9 +132,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
 	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
+	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
 
-	BoundingOrientedBox* test_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(10.5f, 10.5f, 10.5f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
-	test_obj->Set_Collider(test_box);
+	test_obj->Add_Collider(0.0f);
+	test_obj2->Add_Collider(1.0f);
 
 	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
@@ -734,12 +735,16 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
 
 
+	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
 	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
-// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
-	//static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
+	static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
+	vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
+	
+	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
 
-	static vector<shared_ptr<CGameObject>> temp_list{ };
-	obj_manager->Update_OBB_Drawer(pd3dCommandList, *obj_manager->Get_Object_List(Object_Type::skinned));
+	obj_manager->Update_OBB_Drawer(pd3dCommandList, temp_list);
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
 }
 

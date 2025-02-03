@@ -472,7 +472,9 @@ public:
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent);
 
 	virtual int Get_Tile(float x, float z) { return -1; };
+
 	virtual BoundingOrientedBox* Get_Collider();
+	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 };
 

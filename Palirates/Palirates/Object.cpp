@@ -1564,7 +1564,7 @@ BoundingOrientedBox* CGameObject::Get_Collider()
 
 
 	BoundingOrientedBox pWorldBoundingBox(*pOriginalBoundingBox);
-	pWorldBoundingBox.Center = GetPosition();
+//	pWorldBoundingBox.Center = GetPosition();
 
 	if (pWorldBoundingBox.Extents.x == 0.0f)
 		pWorldBoundingBox.Extents.x = 1.0f;
@@ -1580,9 +1580,22 @@ BoundingOrientedBox* CGameObject::Get_Collider()
 	return &pWorldBoundingBox;
 }
 
+void CGameObject::Add_Collider(float cube_length)
+{
+	if (cube_length > 0.0f)
+	{
+		BoundingOrientedBox* collider_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(cube_length, cube_length, cube_length), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+		Set_Collider(collider_box);
+	}
+	else
+		Set_Collider(NULL);
+
+}
+
+
+
 void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
-	// 정점 없이 OBB 만 갖는 CMesh 생성하여 연결하기, Render은 동작 없게 해야 함
 	if (m_pMesh == NULL)
 		m_pMesh = new OBBContainer();
 	m_pMesh->Set_BoundingBox(ptr); // ptr이 NULL 인 경우, 기본값 OBB로 생성
