@@ -866,6 +866,16 @@ void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild)
 
 }
 
+void CGameObject::Set_Active(bool active, bool IsRoot)
+{
+	Active = active;
+
+	if (m_pChild != NULL)
+		m_pChild->Set_Active(active, false); 
+
+	if (!IsRoot && m_pSibling != NULL)
+		m_pSibling->Set_Active(active, false);
+}
 void CGameObject::SetMesh(CMesh *pMesh)
 {
 	if (m_pMesh) m_pMesh->Release();
@@ -1733,7 +1743,7 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 
-	if (Active && m_pMesh != NULL)
+	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
@@ -1753,7 +1763,7 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 	}
 
-	if (Active)
+	if (Get_Active())
 	{
 		std::shared_ptr<CGameObject> pChild = Get_Child();
 		if (pChild) pChild->Render(pd3dCommandList, pCamera);

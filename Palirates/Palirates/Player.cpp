@@ -381,11 +381,13 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 	}
 
 #ifdef DEBUG_MESSAGE
+#ifdef DEBUG_MESSAGE_TILE_MAP
 	int tile_num = pTerrain->Get_Tile(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
 
 
-	string debug_message = "Tile_" + std::to_string(tile_num) + ",\t Height: " + std::to_string(fHeight) + "\t cal by mesh\n";
+	string debug_message = "Tile_" + std::to_string(tile_num) + ",\t Height: " + std::to_string(fHeight) + "\n";
 	DebugOutput(debug_message);
+#endif
 #endif
 }
 

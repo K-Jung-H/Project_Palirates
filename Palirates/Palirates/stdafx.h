@@ -103,7 +103,12 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 #define WRITE_TEXT_UI
- #define DEBUG_MESSAGE
+ #define RENDER_OBB
+
+//#define DEBUG_MESSAGE
+#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
+#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
+#define DEBUG_MESSAGE_TILE_MAP
 
 //=============================================
 

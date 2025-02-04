@@ -462,11 +462,15 @@ float CHeightMapGridMesh::Get_Height(float x, float z)
 		if (IsPointInTriangle(x, z, v0, v1, v2))
 		{
 #ifdef DEBUG_MESSAGE
+#ifdef	DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
+
 			string message = "Index: " + std::to_string(i) + " - p1: (x = " + std::to_string((int)v0.x) + ", z = " + std::to_string((int)v0.z) + ") ";
 			message += "p2: (x = " + std::to_string((int)v1.x) + ", z = " + std::to_string((int)v1.z) + ") ";
 			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
 			DebugOutput(message);
 #endif
+#endif
+
 			// 삼각형 높이 반환
 			return Get_PolygonHeight(x, z, v0, v1, v2);
 		}
@@ -529,10 +533,12 @@ XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
 		if (IsPointInTriangle(x, z, v0, v1, v2))
 		{
 #ifdef DEBUG_MESSAGE
+#ifdef	DEBUG_MESSAGE_NORMAL_POLYGON_INFO
 			string message = "Index: " + std::to_string(i) + " - p1: (x = " + std::to_string((int)v0.x) + ", z = " + std::to_string((int)v0.z) + ") ";
 			message += "p2: (x = " + std::to_string((int)v1.x) + ", z = " + std::to_string((int)v1.z) + ") ";
 			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
 			DebugOutput(message);
+#endif
 #endif
 			bool is_Reversed = (i % 2 == 1);  
 			return Get_PolygonNormal(v0, v1, v2, is_Reversed);

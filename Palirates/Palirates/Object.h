@@ -353,34 +353,22 @@ public:
 
 class CGameObject
 {
-public:
-	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
-
 private:
-	int								m_nReferences = 0;
-
 	std::shared_ptr<CGameObject> m_pChild = nullptr;     // 자식 노드
 	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // 형제 노드
 
-public:
-	std::shared_ptr<CGameObject> Get_Child();
-	std::shared_ptr<CGameObject> Get_Sibling();
-
-public:
-	CGameObject(const std::string_view& name = "No_name");
-	CGameObject(int nMaterials, const std::string_view& name = "No_name");
-
-    virtual ~CGameObject();
-
-public:
-	char							m_pstrFrameName[64];
 	bool Active = true;
 
-	CMesh							*m_pMesh = NULL;
-	CAnimationController*			m_pSkinnedAnimationController = NULL;
+public:
+	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
+
+	char							m_pstrFrameName[64];
+
+	CMesh* m_pMesh = NULL;
+	CAnimationController* m_pSkinnedAnimationController = NULL;
 
 	int								m_nMaterials = 0;
-	CMaterial						**m_ppMaterials = NULL;
+	CMaterial** m_ppMaterials = NULL;
 
 	XMFLOAT4X4				m_xmf4x4Parent{};
 	XMFLOAT4X4				m_xmf4x4World{};
@@ -389,6 +377,17 @@ public:
 	float m_fRotationSpeed;
 
 public:
+	CGameObject(const std::string_view& name = "No_name");
+	CGameObject(int nMaterials, const std::string_view& name = "No_name");
+
+    virtual ~CGameObject();
+
+	std::shared_ptr<CGameObject> Get_Child();
+	std::shared_ptr<CGameObject> Get_Sibling();
+
+	void Set_Active(bool active, bool bIsRoot = true);
+	bool Get_Active() { return Active; }
+
 	void SetMesh(CMesh *pMesh);
 	void SetShader(CShader *pShader);
 	void SetShader(int nMaterial, CShader *pShader);

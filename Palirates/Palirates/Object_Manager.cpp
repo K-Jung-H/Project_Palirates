@@ -183,7 +183,7 @@ void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std
 
 			Mapped_Instance_info[i].world_4x4transform = world_matrix; 
 			
-			if(obb_obj_ptr_list[i]->Active)
+			if(obb_obj_ptr_list[i]->Get_Active())
 				XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::LimeGreen);
 			else
 				XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
@@ -307,7 +307,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::skinned:
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
-			if (obj_ptr->Active)
+			if (obj_ptr->Get_Active())
 				obj_ptr->Animate(fTimeElapsed);
 	}
 	break;
@@ -315,7 +315,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::non_skinned:
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
-			if (obj_ptr->Active)
+			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
 				obj_ptr->UpdateTransform(NULL);
@@ -350,7 +350,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	{
 		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
 		{	
-			if (skinned_obj_ptr->Active)
+			if (skinned_obj_ptr->Get_Active())
 			{
 				skinned_obj_ptr->UpdateTransform(NULL);
 				skinned_obj_ptr->Render(pd3dCommandList, pCamera);
@@ -362,7 +362,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	case Object_Type::non_skinned:
 	{
 		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
-			if (obj_ptr->Active)
+			if (obj_ptr->Get_Active())
 				obj_ptr->Render(pd3dCommandList, pCamera);
 	}
 	break;

@@ -99,7 +99,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	BuildDefaultLightsAndMaterials();
 
 	obj_manager = new Object_Manager();
+
+#ifdef RENDER_OBB
 	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+#endif
 
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
@@ -118,7 +121,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	std::string_view name_view = obj_name_1;
-
 	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
@@ -129,31 +131,31 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_1);
 	
-	
-	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
+	//====================================================
+	// 테스트용 코드	
+//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
 	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
 	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
 
 	test_obj->Add_Collider(0.0f);
 	test_obj2->Add_Collider(1.0f);
 
+	//====================================================
+
+	name_view = obj_name_2;
 	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	humanObject_2->SetPosition(430.0f, m_pTerrain->GetHeight(400.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_2->Active = false;
-
-	name_view = obj_name_2;
 	humanObject_2->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_2);
 
 
+	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	humanObject_3->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_3->Active = false;
-	name_view = obj_name_3;
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3);
 
@@ -574,64 +576,64 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case '1':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = true;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '2':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = true;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '3':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = true;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '4':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = true;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
 		}		break;
 
 		case '5':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '6':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = true;
-			m_pTerrain->FindFrame("tile map - 1")->Active = true;
-			m_pTerrain->FindFrame("tile map - 2")->Active = true;
-			m_pTerrain->FindFrame("tile map - 3")->Active = true;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
 		}		break;
 
 		case '7':
 		{
-			m_pTerrain->FindFrame("tile map - 9")->Active = false;
-			m_pTerrain->FindFrame("tile map - 14")->Active = false;
-			m_pTerrain->FindFrame("tile map - 19")->Active = false;
+			m_pTerrain->FindFrame("tile map - 9")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 14")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 19")->Set_Active(false);
 		}		break;
 
 		case '8':
 		{
-			m_pTerrain->FindFrame("tile map - 9")->Active = true;
-			m_pTerrain->FindFrame("tile map - 14")->Active = true;
-			m_pTerrain->FindFrame("tile map - 19")->Active = true;
+			m_pTerrain->FindFrame("tile map - 9")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 14")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 19")->Set_Active(true);
 		}		break;
 
 		case VK_SPACE:
@@ -738,6 +740,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
 	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
 	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
+#ifdef RENDER_OBB
 	static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
 	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
 	vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -746,5 +749,6 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 
 	obj_manager->Update_OBB_Drawer(pd3dCommandList, temp_list);
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
+#endif
 }
 
