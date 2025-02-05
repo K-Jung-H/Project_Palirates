@@ -711,7 +711,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 }
 
-void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 
 	if (m_pd3dGraphicsRootSignature) 
@@ -750,7 +750,7 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	
 	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
 
-	obj_manager->Update_OBB_Drawer(pd3dCommandList, temp_list);
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
 #endif
 }

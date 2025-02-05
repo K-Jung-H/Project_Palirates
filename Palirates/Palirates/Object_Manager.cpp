@@ -142,17 +142,18 @@ OBB_Drawer::~OBB_Drawer()
 
 void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	//UINT ncbElementBytes = rendering_max_num * ((sizeof(BoundingBox_Instance_Info) + 255) & ~255); //256의 배수 
-	
-	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(BoundingBox_Instance_Info) * rendering_max_num, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * rendering_max_num;
+	bufferSize = (bufferSize + 255) & ~255;
+
+	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
-	
+
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(BoundingBox_Instance_Info);
-	m_d3dInstancingBufferView.SizeInBytes = sizeof(BoundingBox_Instance_Info) * rendering_max_num;
+	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 정렬된 크기 사용
 }
 
-void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
+void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
 {
 	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
 	std::unordered_set<CGameObject*> visited;  // 중복 검사를 위한 컨테이너
@@ -168,7 +169,17 @@ void OBB_Drawer::Update_OBB_Data(ID3D12GraphicsCommandList* pd3dCommandList, std
 	{
 		// 새로운 버퍼 크기 재조정 
 		// == 크기를 키운 새로운 버퍼 생성
-		DebugOutput("Not Prepared");
+		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
+
+
+		Release_OBB_Data_ShaderVariables();
+
+		// 새로운 최대 크기 업데이트
+		rendering_max_num = obb_num * 2;
+		rendering_max_num = min(rendering_max_num, MAX_INSTANCING_NUM);
+
+		// 새로운 버퍼 생성
+		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 	else
 	{
@@ -443,9 +454,9 @@ void Object_Manager::Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	bounding_box_drawer->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
-void Object_Manager::Update_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
+void Object_Manager::Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
 {
-	bounding_box_drawer->Update_OBB_Data(pd3dCommandList, gameobj_container);
+	bounding_box_drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, gameobj_container);
 }
 void Object_Manager::Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
