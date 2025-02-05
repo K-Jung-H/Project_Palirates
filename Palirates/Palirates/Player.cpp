@@ -300,7 +300,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetCameraUpdatedContext(pContext);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(25.0f, pTerrain->GetHeight(25.0f, 25.0f), 25.0f));
+	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Mesh_Height(25.0f, 25.0f, last_tile_ptr), 25.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
 	if (pAngrybotModel) delete pAngrybotModel;
@@ -369,7 +369,7 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Mesh_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad) + 0.0f;
+	float fHeight = pTerrain->Get_Mesh_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr) + 0.0f;
 
 	if (xmf3PlayerPosition.y < fHeight)
 	{
@@ -378,7 +378,10 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 		SetVelocity(xmf3PlayerVelocity);
 		xmf3PlayerPosition.y = fHeight;
 		SetPosition(xmf3PlayerPosition);
+		On_Ground = true;
 	}
+	else
+		On_Ground = false;
 
 #ifdef DEBUG_MESSAGE
 #ifdef DEBUG_MESSAGE_TILE_MAP
@@ -399,7 +402,7 @@ void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3CameraPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Mesh_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad) + 5.0f;
+	float fHeight = pTerrain->Get_Mesh_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad, last_tile_ptr) + 5.0f;
 
 
 	if (xmf3CameraPosition.y <= fHeight)
@@ -433,11 +436,13 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
-
-	CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
-	XMFLOAT3 xmf3PlayerPosition = GetPosition();
-	XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z);
-	AlignWithNormal(world_normal);
+	if (On_Ground)
+	{
+		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
+		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
+		AlignWithNormal(world_normal);
+	}
 
 	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
 	if (sibling_ptr != nullptr)

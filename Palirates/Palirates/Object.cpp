@@ -1781,38 +1781,38 @@ void CHeightMapTerrain::Set_Tile(int n)
 	Set_Name(tile_name);
 }
 
-float CHeightMapTerrain::GetHeight(float x, float z, bool bReverseQuad)
-{
-	x -= m_xmf4x4World._41;
-	z -= m_xmf4x4World._43;
 
-	return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y);
+float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
+{
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
 }
 
-XMFLOAT3 CHeightMapTerrain::GetNormal(float x, float z)
+float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr)
 {
-	XMFLOAT3 normal = m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z));
-	return normal;
-}
-
-float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad) 
-{
-	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임
-	if (m_pParent == NULL)
+	if (last_tile_ptr != NULL)
 	{
+		if (x >= last_tile_ptr->Area_LT.x && x < last_tile_ptr->Area_RB.x &&
+			z >= last_tile_ptr->Area_LT.y && z < last_tile_ptr->Area_RB.y)
+		{
+			return last_tile_ptr->Get_Mesh_Height(x, z, bReverseQuad);
+		}
+	}
+
 		x -= m_xmf4x4World._41;
 		z -= m_xmf4x4World._43;
-	}
+
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
 	{
 		if (Get_Child())
 		{
 			CGameObject* child_ptr = Get_Child().get();
-			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad);
+			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
 		}
 		else
 		{
+			last_tile_ptr = this;
 			return m_pMesh->Get_Height(x, z);
 		}
 	}
@@ -1821,21 +1821,38 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
 		if (Get_Sibling())
 		{
 			CGameObject* sibling_ptr = Get_Sibling().get();
-			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad);
+			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
 		}
 	}
 
 	return -1;
 }
 
+
+
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 {
-	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임
-	if (m_pParent == NULL)
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Mesh_Normal(x, z, last_tile_ptr);
+}
+
+
+
+XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr)
+{
+	if (last_tile_ptr != NULL)
 	{
-		x -= m_xmf4x4World._41;
-		z -= m_xmf4x4World._43;
+		if (x >= last_tile_ptr->Area_LT.x && x < last_tile_ptr->Area_RB.x &&
+			z >= last_tile_ptr->Area_LT.y && z < last_tile_ptr->Area_RB.y)
+		{
+			return last_tile_ptr->Get_Mesh_Normal(x, z);
+		}
 	}
+
+
+	x -= m_xmf4x4World._41;
+	z -= m_xmf4x4World._43;
+	
 
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
@@ -1845,6 +1862,8 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
 		else
 		{
+			// 범위 밖이 아니라면
+			// 여기서 타일 저장해야 함
 			return m_pMesh->Get_Normal(x, z);
 		}
 	}
@@ -1860,11 +1879,23 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 
 int CHeightMapTerrain::Get_Tile(float x, float z)
 {
-	if (m_pParent == NULL)
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Tile(x, z, last_tile_ptr);
+}
+
+int CHeightMapTerrain::Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr)
+{
+	if (last_tile_ptr != NULL)
 	{
-		x -= m_xmf4x4World._41;
-		z -= m_xmf4x4World._43;
+		if (x >= last_tile_ptr->Area_LT.x && x < last_tile_ptr->Area_RB.x &&
+			z >= last_tile_ptr->Area_LT.y && z < last_tile_ptr->Area_RB.y)
+		{
+			return last_tile_ptr->Get_Tile(x, z);
+		}
 	}
+
+	x -= m_xmf4x4World._41;
+	z -= m_xmf4x4World._43;
 
 	if (x >= Area_LT.x && x < Area_RB.x&& z >= Area_LT.y&& z < Area_RB.y)
 	{

@@ -662,7 +662,7 @@ void CAngrybotObjectsShader::BuildObjects(ID3D12Device *pd3dDevice, ID3D12Graphi
 			angrybot_raw_ptr->m_pSkinnedAnimationController->SetTrackSpeed(0, (nObjects % 2) ? 0.25f : 1.0f);
 			angrybot_raw_ptr->m_pSkinnedAnimationController->SetTrackPosition(0, (nObjects % 3) ? 0.85f : 0.0f);
 			XMFLOAT3 xmf3Position = XMFLOAT3(fxPitch*x + 390.0f, 0.0f, 730.0f + fzPitch * z);
-			xmf3Position.y = pTerrain->GetHeight(xmf3Position.x, xmf3Position.z);
+			xmf3Position.y = pTerrain->Get_Mesh_Height(xmf3Position.x, xmf3Position.z);
 			angrybot_raw_ptr->SetPosition(xmf3Position);
 			angrybot_raw_ptr->SetScale(2.0f, 2.0f, 2.0f);
 

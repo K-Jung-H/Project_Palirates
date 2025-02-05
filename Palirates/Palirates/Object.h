@@ -509,14 +509,15 @@ public:
 
 	void Set_Tile(int n);
 
-
-	float GetHeight(float x, float z, bool bReverseQuad = false);  //World
-	XMFLOAT3 GetNormal(float x, float z);
-	
 	float Get_Mesh_Height(float x, float z, bool bReverseQuad = false);
+	float Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
+
 	XMFLOAT3 Get_Mesh_Normal(float x, float z);
+	XMFLOAT3  Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr);
 
 	int Get_Tile(float x, float z);
+	int Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr);
+
 	virtual BoundingOrientedBox* Get_Collider();
 
 

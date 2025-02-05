@@ -34,7 +34,7 @@ protected:
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
 	CCamera						*m_pCamera = NULL;
-
+	CHeightMapTerrain* last_tile_ptr = NULL;
 public:
 	CPlayer();
 	virtual ~CPlayer();
@@ -84,6 +84,8 @@ public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+
+	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 };
 
 
@@ -99,6 +101,9 @@ public:
 
 class CTerrainPlayer : public CPlayer
 {
+private:
+	bool On_Ground = false;
+
 public:
 	CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext=NULL);
 	virtual ~CTerrainPlayer();
@@ -115,5 +120,6 @@ public:
 	virtual void Update(float fTimeElapsed);
 
 	void AlignWithNormal(XMFLOAT3 normal);
+	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 };
 

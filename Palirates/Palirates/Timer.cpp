@@ -45,6 +45,11 @@ void CGameTimer::Tick(float fLockFPS)
 	        fTimeElapsed = float((m_nCurrentPerformanceCounter - m_nLastPerformanceCounter) * m_fTimeScale);
         }
     } 
+	//else 
+	//{
+	//	::QueryPerformanceCounter((LARGE_INTEGER*)&m_nCurrentPerformanceCounter);
+	//	fTimeElapsed = float((m_nCurrentPerformanceCounter - m_nLastPerformanceCounter) * m_fTimeScale);
+	//}
 
 	m_nLastPerformanceCounter = m_nCurrentPerformanceCounter;
 
@@ -67,6 +72,8 @@ void CGameTimer::Tick(float fLockFPS)
     m_fTimeElapsed = 0.0f;
     for (ULONG i = 0; i < m_nSampleCount; i++) m_fTimeElapsed += m_fFrameTime[i];
     if (m_nSampleCount > 0) m_fTimeElapsed /= m_nSampleCount;
+
+
 }
 
 unsigned long CGameTimer::GetFrameRate(LPTSTR lpszString, int nCharacters) 

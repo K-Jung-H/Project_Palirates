@@ -109,7 +109,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 4,2);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 32,3);
 //	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
 
 
@@ -126,7 +126,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-	humanObject_1->SetPosition(410.0f, m_pTerrain->GetHeight(400.0f, 735.0f), 735.0f);
+	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_1->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_1);
@@ -145,7 +145,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	name_view = obj_name_2;
 	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_2->SetPosition(430.0f, m_pTerrain->GetHeight(400.0f, 700.0f), 700.0f);
+	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_2->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_2);
@@ -154,7 +154,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	humanObject_3->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 720.0f);
+	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3);
@@ -185,7 +185,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
-
+#ifdef WRITE_TEXT_UI
 void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 {
 	text_ui_manager = new Text_UI_Manager(text_ui_renderer_ptr->m_pd2dWriteFactory, text_ui_renderer_ptr->m_pd2dDeviceContext);
@@ -227,7 +227,7 @@ void CScene::Update_UI()
 	if (text_ui_manager)
 	{
 		XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
-		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z);
+		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
 		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
 
 		// 버퍼에 값 포맷팅
@@ -241,14 +241,17 @@ void CScene::Update_UI()
 	}
 }
 
+#endif
+
 void CScene::ReleaseObjects()
 {
 	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
 	if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap->Release();
 
 	obj_manager->Clear_Object_List_All();
+#ifdef WRITE_TEXT_UI
 	delete text_ui_manager;
-
+#endif
 
 	if (m_ppShaders)
 	{
