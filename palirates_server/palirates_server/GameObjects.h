@@ -1,20 +1,25 @@
 #pragma once
 #include <string>
+#include <iostream>
+#include <cstdlib>
 
 struct Position
 {
     float x, y;
 };
 
-class Player 
+class Player
 {
 public:
     int id;
     Position pos;
     std::string action;
+    bool inGame;
+
+    Player() : id(0), pos{ 0, 0 }, action("idle"), inGame(false) {}
 
     Player(int playerId, float x, float y, const std::string& act)
-        : id(playerId), pos{ x, y }, action(act) {}
+        : id(playerId), pos{ x, y }, action(act), inGame(false) {}
 
     void update(float x, float y, const std::string& act) 
     {
@@ -24,7 +29,7 @@ public:
     }
 };
 
-class Monster 
+class Monster
 {
 public:
     int id;
@@ -34,9 +39,15 @@ public:
     Monster(int monsterId, float x, float y, const std::string& act)
         : id(monsterId), pos{ x, y }, action(act) {}
 
-    virtual void update() 
+    virtual void update(float x, float y, const std::string& act)
     {
-        // 몬스터 이동 로직
+        pos.x = x;
+        pos.y = y;
+        action = act;
+
+        // 간단한 랜덤 이동 AI 추가
+        pos.x += (rand() % 3 - 1) * 5;
+        pos.y += (rand() % 3 - 1) * 5;
     }
 };
 
@@ -46,17 +57,14 @@ public:
     BossMonster(int monsterId, float x, float y, const std::string& act)
         : Monster(monsterId, x, y, act) {}
 
-    void update() override
+    void update(float x, float y, const std::string& act) override
     {
-        // 보스 몬스터의 특수 로직
+        pos.x = x;
+        pos.y = y;
+        action = act;
+
+        //간단한 이동 로직
+        pos.x += (rand() % 5 - 2) * 10;
+        pos.y += (rand() % 5 - 2) * 10;
     }
-};
-
-struct Particle 
-{
-    Position pos;
-    std::string type;
-
-    Particle(float x, float y, const std::string& particleType)
-        : pos{ x, y }, type(particleType) {}
 };
