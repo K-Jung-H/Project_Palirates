@@ -17,6 +17,8 @@ D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dCbvGPUDescriptorNextHandle;
 D3D12_CPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvCPUDescriptorNextHandle;
 D3D12_GPU_DESCRIPTOR_HANDLE	CScene::m_d3dSrvGPUDescriptorNextHandle;
 
+
+
 CScene::CScene()
 {
 }
@@ -96,12 +98,18 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
+	obj_manager = new Object_Manager();
+
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+#endif
+
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
 	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 4, 2);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 32,3);
 //	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
 
 
@@ -113,37 +121,43 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	std::string_view name_view = obj_name_1;
-
 	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
-	humanObject_1->SetPosition(410.0f, m_pTerrain->GetHeight(400.0f, 735.0f), 735.0f);
+	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_1->Set_Name(name_view);
-	obj_manager.Add_Object(humanObject_1);
+	obj_manager->Add_Object(humanObject_1);
+	
+	//====================================================
+	// 테스트용 코드	
+//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
+	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
+	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
 
-	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
-	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_2->SetPosition(430.0f, m_pTerrain->GetHeight(400.0f, 700.0f), 700.0f);
-	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_2->Active = false;
+	test_obj->Add_Collider(0.0f);
+	test_obj2->Add_Collider(1.0f);
+
+	//====================================================
 
 	name_view = obj_name_2;
+	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
+	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_2->Set_Name(name_view);
-	obj_manager.Add_Object(humanObject_2);
+	obj_manager->Add_Object(humanObject_2);
 
 
+	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	humanObject_3->SetPosition(400.0f, m_pTerrain->GetHeight(400.0f, 720.0f), 720.0f);
+	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_3->Active = false;
-	name_view = obj_name_3;
 	humanObject_3->Set_Name(name_view);
-	obj_manager.Add_Object(humanObject_3);
+	obj_manager->Add_Object(humanObject_3);
 
 
 
@@ -171,7 +185,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
-
+#ifdef WRITE_TEXT_UI
 void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 {
 	text_ui_manager = new Text_UI_Manager(text_ui_renderer_ptr->m_pd2dWriteFactory, text_ui_renderer_ptr->m_pd2dDeviceContext);
@@ -213,13 +227,13 @@ void CScene::Update_UI()
 	if (text_ui_manager)
 	{
 		XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
-		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z);
-		XMFLOAT3 tile_normal = m_pTerrain->Get_Normal(xmf3Position.x, xmf3Position.z);
+		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
+		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
 
 		// 버퍼에 값 포맷팅
-		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos-%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
-		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal-%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
-		_stprintf_s(Tile_Info_Buffer, 100, _T("Tile - %d"), tile_n);
+		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos >>%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
+		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal >> %.2f,%.2f,%.2f"), tile_normal.x, tile_normal.y, tile_normal.z);
+		_stprintf_s(Tile_Info_Buffer, 100, _T("Tile  >> %d"), tile_n);
 
 		text_ui_manager->UpdateTextBlock(0, Player_pos_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(1, Player_normal_Buffer, NULL, NULL);
@@ -227,14 +241,17 @@ void CScene::Update_UI()
 	}
 }
 
+#endif
+
 void CScene::ReleaseObjects()
 {
 	if (m_pd3dGraphicsRootSignature) m_pd3dGraphicsRootSignature->Release();
 	if (m_pd3dCbvSrvDescriptorHeap) m_pd3dCbvSrvDescriptorHeap->Release();
 
-	obj_manager.Clear_Object_List_All();
+	obj_manager->Clear_Object_List_All();
+#ifdef WRITE_TEXT_UI
 	delete text_ui_manager;
-
+#endif
 
 	if (m_ppShaders)
 	{
@@ -322,12 +339,12 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dDescriptorRanges[9].RegisterSpace = 0;
 	pd3dDescriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[15];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[16];
 
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera
-	pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.ShaderRegister = 1; //Camera
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_CAMERA_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 	pd3dRootParameters[1].Constants.Num32BitValues = 33;
@@ -375,31 +392,35 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dRootParameters[9].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
 	pd3dRootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[10].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[10].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[10].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
-	pd3dRootParameters[10].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
+	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[11].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[11].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
-	pd3dRootParameters[11].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[11].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
+	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[12].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[12].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-	pd3dRootParameters[12].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[12].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
+	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[13].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[13].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[13].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
-	pd3dRootParameters[13].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_BONE_OFFSET].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-	pd3dRootParameters[14].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[14].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[14].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
-	pd3dRootParameters[14].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.ShaderRegister = 6; //Bounding Box Renderer
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
 
 	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -480,8 +501,8 @@ void CScene::ReleaseUploadBuffers()
 	if(m_ppShaders[i] != NULL)
 		m_ppShaders[i]->ReleaseUploadBuffers();
 	
-	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager.Get_Object_List(Object_Type::skinned);
-	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager.Get_Object_List(Object_Type::non_skinned);
+	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
+	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager->Get_Object_List(Object_Type::non_skinned);
 
 	for (std::shared_ptr<CGameObject> obj_ptr : *skinned_obj_container)
 		obj_ptr->ReleaseUploadBuffers();
@@ -558,64 +579,64 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case '1':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = true;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '2':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = true;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '3':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = true;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '4':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = true;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
 		}		break;
 
 		case '5':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = false;
-			m_pTerrain->FindFrame("tile map - 1")->Active = false;
-			m_pTerrain->FindFrame("tile map - 2")->Active = false;
-			m_pTerrain->FindFrame("tile map - 3")->Active = false;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '6':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Active = true;
-			m_pTerrain->FindFrame("tile map - 1")->Active = true;
-			m_pTerrain->FindFrame("tile map - 2")->Active = true;
-			m_pTerrain->FindFrame("tile map - 3")->Active = true;
+			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
 		}		break;
 
 		case '7':
 		{
-			m_pTerrain->FindFrame("tile map - 9")->Active = false;
-			m_pTerrain->FindFrame("tile map - 14")->Active = false;
-			m_pTerrain->FindFrame("tile map - 19")->Active = false;
+			m_pTerrain->FindFrame("tile map - 9")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 14")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 19")->Set_Active(false);
 		}		break;
 
 		case '8':
 		{
-			m_pTerrain->FindFrame("tile map - 9")->Active = true;
-			m_pTerrain->FindFrame("tile map - 14")->Active = true;
-			m_pTerrain->FindFrame("tile map - 19")->Active = true;
+			m_pTerrain->FindFrame("tile map - 9")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 14")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 19")->Set_Active(true);
 		}		break;
 
 		case VK_SPACE:
@@ -623,6 +644,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			XMFLOAT3 pos = m_pPlayer->GetPosition();
 			m_pTerrain->Get_Tile(pos.x, pos.z);
 		}	break;
+
+		case 'Z':
+		{
+			m_pPlayer->Animate_test();
+			m_pPlayer->FallingTimer_Reset();
+		}		break;
 
 		default:
 			break;
@@ -690,8 +717,9 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 }
 
-void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
+
 	if (m_pd3dGraphicsRootSignature) 
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
@@ -706,16 +734,30 @@ void CScene::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
 
-	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
-	obj_manager.Animate_Objects(Object_Type::skinned, m_fElapsedTime);
-	obj_manager.Render_Objects_All(pd3dCommandList, pCamera);
+	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
 	for (int i = 0; i < m_nShaders; i++) 
 		if (m_ppShaders[i]) 
 			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
 
+
+	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
+	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
+	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
+#ifdef RENDER_OBB
+	static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
+	vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
+	
+	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
+
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
+	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
+#endif
 }
 

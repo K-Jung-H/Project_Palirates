@@ -34,6 +34,8 @@ cbuffer cbGameObjectInfo : register(b2)
 #define MATERIAL_DETAIL_ALBEDO_MAP	0x20
 #define MATERIAL_DETAIL_NORMAL_MAP	0x40
 
+Texture2D gtxtTerrainBaseTexture : register(t1);
+Texture2D gtxtTerrainDetailTexture : register(t2);
 Texture2D gtxtAlbedoTexture : register(t6);
 Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);
@@ -41,8 +43,11 @@ Texture2D gtxtMetallicTexture : register(t9);
 Texture2D gtxtEmissionTexture : register(t10);
 Texture2D gtxtDetailAlbedoTexture : register(t11);
 Texture2D gtxtDetailNormalTexture : register(t12);
+TextureCube gtxtSkyCubeTexture : register(t13);
+
 
 SamplerState gssWrap : register(s0);
+SamplerState gssClamp : register(s1);
 
 struct VS_STANDARD_INPUT
 {
@@ -161,8 +166,7 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-Texture2D gtxtTerrainBaseTexture : register(t1);
-Texture2D gtxtTerrainDetailTexture : register(t2);
+
 
 struct VS_TERRAIN_INPUT
 {
@@ -241,12 +245,52 @@ VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 	return(output);
 }
 
-TextureCube gtxtSkyCubeTexture : register(t13);
-SamplerState gssClamp : register(s1);
+
 
 float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 {
 	float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
 
 	return(cColor);
+}
+
+
+
+struct VS_OBB_INPUT
+{
+    float3 position : POSITION; 
+    float4 color : COLOR; 
+    
+    float4x4 obb_worldMatrix : WORLDMATRIX; // 월드 변환 행렬
+    float4 instanceColor : INSTANCECOLOR; // 색상
+    uint instanceBool : INSTANCEBOOL;
+};
+
+struct VS_OBB_OUTPUT
+{
+    float4 position : SV_POSITION; 
+    float4 color : COLOR; 
+    uint instanceBool : INSTANCEBOOL;
+};
+
+VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
+{
+    VS_OBB_OUTPUT output;
+	output.position = mul(mul(mul(float4(input.position, 1.0f), input.obb_worldMatrix), gmtxView), gmtxProjection);
+    output.color = input.instanceColor;
+    output.instanceBool = input.instanceBool;
+	
+    return (output);
+}
+
+
+
+float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
+{
+    if (input.instanceBool == 0)
+        discard;
+	
+    float4 cColor = input.color;
+        
+    return (cColor);
 }

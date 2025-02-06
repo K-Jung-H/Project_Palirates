@@ -1,10 +1,29 @@
-//-----------------------------------------------------------------------------
-// File: CGameObject.cpp
-//-----------------------------------------------------------------------------
-
 #include "stdafx.h"
 #include "Mesh.h"
 #include "Object.h"
+
+bool IsPointInTriangle(float x, float z, const XMFLOAT3& v0, const XMFLOAT3& v1, const XMFLOAT3& v2)
+{
+	// 검사할 점
+	XMFLOAT2 p(x, z);
+	XMFLOAT2 a(v0.x, v0.z);
+	XMFLOAT2 b(v1.x, v1.z);
+	XMFLOAT2 c(v2.x, v2.z);
+
+	// 벡터 외적 계산
+	float cross1 = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
+	float cross2 = (c.x - b.x) * (p.y - b.y) - (c.y - b.y) * (p.x - b.x);
+	float cross3 = (a.x - c.x) * (p.y - c.y) - (a.y - c.y) * (p.x - c.x);
+
+	// 외적 값의 부호가 모두 같거나, 절대값 비교를 통해 방향성을 무시
+	return ((cross1 >= 0 && cross2 >= 0 && cross3 >= 0) ||
+		(cross1 <= 0 && cross2 <= 0 && cross3 <= 0));
+}
+
+
+
+
+//==============================================================================
 
 CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
@@ -80,6 +99,19 @@ void CMesh::Render(ID3D12GraphicsCommandList *pd3dCommandList, int nSubSet)
 void CMesh::OnPostRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext)
 {
 }
+
+void CMesh::Set_BoundingBox(BoundingOrientedBox* new_obb_ptr)
+{
+	if (new_obb_ptr == NULL)
+		bounding_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(0.5f, 0.5f, 0.5f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	else
+	{
+		if (bounding_box == nullptr)		
+			bounding_box = new BoundingOrientedBox();
+		*bounding_box = *new_obb_ptr;
+	}
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -197,7 +229,12 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	int cxHeightMap = pHeightMapImage->GetHeightMapWidth();
 	int czHeightMap = pHeightMapImage->GetHeightMapLength();
 
+	m_xmArea_LT = XMFLOAT2(xStart * m_xmf3Scale.x, zStart * m_xmf3Scale.z);
+	m_xmArea_RB = XMFLOAT2((xStart + (nWidth - 1)) * m_xmf3Scale.x, (zStart + (nLength - 1)) * m_xmf3Scale.z);
+
+
 	float fHeight = 0.0f, fMinHeight = +FLT_MAX, fMaxHeight = -FLT_MAX;
+
 
 	for (int i = 0, z = zStart; z < (zStart + m_nLength); z += Vertex_Gap)
 	{
@@ -226,6 +263,9 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 					fHeight = 0.0f;
 			}
 
+			if (fHeight < fMinHeight) fMinHeight = fHeight;
+			if (fHeight > fMaxHeight) fMaxHeight = fHeight;
+
 			m_pxmf3Positions[i] = XMFLOAT3((x * m_xmf3Scale.x), fHeight, (z * m_xmf3Scale.z));
 			m_pxmf4Colors[i] = Vector4::Add(OnGetColor(x, z, pContext), xmf4Color);
 
@@ -235,29 +275,6 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 
 	}
 
-	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
-
-	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
-	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
-	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
-
-	m_pd3dColorBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
-
-	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
-	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
-	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
-
-	m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
-
-	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
-	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
-
-	m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
-
-	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
-	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
-	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
 
 	m_nSubMeshes = 1;
 	m_pnSubSetIndices = new int[m_nSubMeshes];
@@ -300,6 +317,46 @@ CHeightMapGridMesh::CHeightMapGridMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsC
 	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
 	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * m_pnSubSetIndices[0];
+
+	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	m_pd3dColorBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+
+	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
+
+	m_pd3dTextureCoord0Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+
+	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	m_pd3dTextureCoord1Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1, sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
+
+	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	XMFLOAT3 center = 
+	{
+		(m_xmArea_LT.x + m_xmArea_RB.x) * 0.5f,
+		(fMinHeight + fMaxHeight) * 0.5f,
+		(m_xmArea_LT.y + m_xmArea_RB.y) * 0.5f
+	};
+
+	XMFLOAT3 extents = 
+	{
+		(m_xmArea_RB.x - m_xmArea_LT.x) * 0.5f,
+		(fMaxHeight - fMinHeight) * 0.5f,
+		(m_xmArea_RB.y - m_xmArea_LT.y) * 0.5f
+	};
+
+	bounding_box = new BoundingOrientedBox(center, extents, XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
 CHeightMapGridMesh::~CHeightMapGridMesh()
@@ -378,39 +435,157 @@ void CHeightMapGridMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList,
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 4, pVertexBufferViews);
 }
 
-float CHeightMapGridMesh::Get_Height(float localX, float localZ) 
+float CHeightMapGridMesh::Get_Height(float x, float z)
 {
-	int adjustedWidth = (m_nWidth + Vertex_Gap - 1) / Vertex_Gap;
-	int adjustedLength = (m_nLength + Vertex_Gap - 1) / Vertex_Gap;
+	// 모든 삼각형을 순회
+	for (UINT i = 0; i < m_pnSubSetIndices[0] - 2; ++i)
+	{
+		// 삼각형 스트립에서 연속된 인덱스를 사용하여 삼각형 생성
+		UINT index0 = m_ppnSubSetIndices[0][i];
+		UINT index1 = m_ppnSubSetIndices[0][i + 1];
+		UINT index2 = m_ppnSubSetIndices[0][i + 2];
 
-	float cellSizeX = (float)Vertex_Gap;
-	float cellSizeZ = (float)Vertex_Gap;
+		// 삼각형의 정점 좌표 가져오기
+		XMFLOAT3 v0 = m_pxmf3Positions[index0];
+		XMFLOAT3 v1 = m_pxmf3Positions[index1];
+		XMFLOAT3 v2 = m_pxmf3Positions[index2];
 
-	int cellX = static_cast<int>(localX / cellSizeX);
-	int cellZ = static_cast<int>(localZ / cellSizeZ);
+		// 동일한 정점이 있으면 해당 삼각형을 건너뛰기
+		if (std::tie(v0.x, v0.y, v0.z) == std::tie(v1.x, v1.y, v1.z) ||
+			std::tie(v1.x, v1.y, v1.z) == std::tie(v2.x, v2.y, v2.z) ||
+			std::tie(v0.x, v0.y, v0.z) == std::tie(v2.x, v2.y, v2.z))
+		{
+			continue;
+		}
 
-	float fDeltaX = (localX - (cellX * cellSizeX)) / cellSizeX;
-	float fDeltaZ = (localZ - (cellZ * cellSizeZ)) / cellSizeZ;
+		// 입력 좌표 (x, z)가 삼각형 내부에 포함되는지 확인
+		if (IsPointInTriangle(x, z, v0, v1, v2))
+		{
+#ifdef DEBUG_MESSAGE
+#ifdef	DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
 
-	int i0 = cellX + (cellZ * adjustedWidth);
-	int i1 = (cellX + 1) + (cellZ * adjustedWidth);
-	int i2 = cellX + ((cellZ + 1) * adjustedWidth);
-	int i3 = (cellX + 1) + ((cellZ + 1) * adjustedWidth);
+			string message = "Index: " + std::to_string(i) + " - p1: (x = " + std::to_string((int)v0.x) + ", z = " + std::to_string((int)v0.z) + ") ";
+			message += "p2: (x = " + std::to_string((int)v1.x) + ", z = " + std::to_string((int)v1.z) + ") ";
+			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
+			DebugOutput(message);
+#endif
+#endif
 
-	XMFLOAT3 v0 = m_pxmf3Positions[i0];
-	XMFLOAT3 v1 = m_pxmf3Positions[i1];
-	XMFLOAT3 v2 = m_pxmf3Positions[i2];
-	XMFLOAT3 v3 = m_pxmf3Positions[i3];
+			// 삼각형 높이 반환
+			return Get_PolygonHeight(x, z, v0, v1, v2);
+		}
+	}
 
-	float height1 = (1.0f - fDeltaX) * v0.y + fDeltaX * v1.y;
-	float height2 = (1.0f - fDeltaX) * v2.y + fDeltaX * v3.y;
-	float finalHeight = (1.0f - fDeltaZ) * height1 + fDeltaZ * height2;
+	// 포함된 폴리곤을 찾지 못한 경우 지정된 높이 반환
+	return -1.0f;
+}
 
-	return finalHeight;
+float  CHeightMapGridMesh::Get_PolygonHeight(float x, float z, XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2)
+
+{
+	// 삼각형의 두 개의 변을 계산
+	XMFLOAT3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+	XMFLOAT3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+
+	// 삼각형의 법선 벡터 계산 (외적)
+	XMFLOAT3 normal;
+	normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
+	normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
+	normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
+
+	// 평면 방정식의 D 값 계산 (D = - (A*x + B*y + C*z))
+	float D = -(normal.x * v0.x + normal.y * v0.y + normal.z * v0.z);
+
+	// y = (-Ax - Cz - D) / B를 이용하여 높이(y) 계산
+	if (normal.y != 0.0f)
+	{
+		return (-normal.x * x - normal.z * z - D) / normal.y;
+	}
+
+	return v0.y; // 법선이 y축과 평행한 경우 예외 처리
+}
+
+
+XMFLOAT3 CHeightMapGridMesh::Get_Normal(float x, float z)
+{
+	// 모든 삼각형을 순회
+	for (UINT i = 0; i < m_pnSubSetIndices[0] - 2; ++i)
+	{
+		// 삼각형 스트립에서 연속된 인덱스를 사용하여 삼각형 생성
+		UINT index0 = m_ppnSubSetIndices[0][i];
+		UINT index1 = m_ppnSubSetIndices[0][i + 1];
+		UINT index2 = m_ppnSubSetIndices[0][i + 2];
+
+		// 삼각형의 정점 좌표 가져오기
+		XMFLOAT3 v0 = m_pxmf3Positions[index0];
+		XMFLOAT3 v1 = m_pxmf3Positions[index1];
+		XMFLOAT3 v2 = m_pxmf3Positions[index2];
+
+		 // 동일한 정점이 있으면 해당 삼각형을 건너뛰기
+		if (std::tie(v0.x, v0.y, v0.z) == std::tie(v1.x, v1.y, v1.z) ||
+			std::tie(v1.x, v1.y, v1.z) == std::tie(v2.x, v2.y, v2.z) ||
+			std::tie(v0.x, v0.y, v0.z) == std::tie(v2.x, v2.y, v2.z))
+		{
+			continue; 
+		}
+
+		// 입력 좌표 (x, z)가 삼각형 내부에 포함되는지 확인
+		if (IsPointInTriangle(x, z, v0, v1, v2))
+		{
+#ifdef DEBUG_MESSAGE
+#ifdef	DEBUG_MESSAGE_NORMAL_POLYGON_INFO
+			string message = "Index: " + std::to_string(i) + " - p1: (x = " + std::to_string((int)v0.x) + ", z = " + std::to_string((int)v0.z) + ") ";
+			message += "p2: (x = " + std::to_string((int)v1.x) + ", z = " + std::to_string((int)v1.z) + ") ";
+			message += "p3: (x = " + std::to_string((int)v2.x) + ", z = " + std::to_string((int)v2.z) + ")\n";
+			DebugOutput(message);
+#endif
+#endif
+			bool is_Reversed = (i % 2 == 1);  
+			return Get_PolygonNormal(v0, v1, v2, is_Reversed);
+		}
+	}
+
+	// 포함된 폴리곤을 찾지 못한 경우 지정된 법선 반환
+	return XMFLOAT3(0.0f, -1.0f, 0.0f);
+}
+
+XMFLOAT3 CHeightMapGridMesh::Get_PolygonNormal(XMFLOAT3 v0, XMFLOAT3 v1, XMFLOAT3 v2, bool is_Reversed)
+{
+	XMFLOAT3 edge1(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z);
+	XMFLOAT3 edge2(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z);
+
+	XMFLOAT3 normal;
+	normal.x = edge1.y * edge2.z - edge1.z * edge2.y;
+	normal.y = edge1.z * edge2.x - edge1.x * edge2.z;
+	normal.z = edge1.x * edge2.y - edge1.y * edge2.x;
+
+	float length = sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+	if (length > 0.0f)
+	{
+		normal.x /= length;
+		normal.y /= length;
+		normal.z /= length;
+	}
+
+	// 삼각형이 뒤집혀 있으면 노멀 반전
+	if (is_Reversed)
+	{
+		normal.x = -normal.x;
+		normal.y = -normal.y;
+		normal.z = -normal.z;
+	}
+
+	return normal;
+}
+
+BoundingOrientedBox* CHeightMapGridMesh::Get_BoundingBox() 
+{
+	return bounding_box;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
 CSkyBoxMesh::CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth, float fHeight, float fDepth) : CMesh(pd3dDevice, pd3dCommandList)
 {
 	m_nVertices = 36;
@@ -473,6 +648,123 @@ CSkyBoxMesh::~CSkyBoxMesh()
 {
 }
 
+
+CubeMesh::CubeMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fWidth, float fHeight, float fDepth) : CMesh(pd3dDevice, pd3dCommandList)
+{
+	m_nOffset = 0;
+	m_nSlot = 0;
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	float fx = fWidth * 0.5f, fy = fHeight * 0.5f, fz = fDepth * 0.5f;
+
+	// 정점 개수 설정
+	m_nVertices = 8;
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+
+	// 큐브의 8개 정점 위치 초기화
+	m_pxmf3Positions[0] = XMFLOAT3(-fx, +fy, -fz); // v0
+	m_pxmf3Positions[1] = XMFLOAT3(+fx, +fy, -fz);  // v1
+	m_pxmf3Positions[2] = XMFLOAT3(+fx, +fy, +fz);   // v2
+	m_pxmf3Positions[3] = XMFLOAT3(-fx, +fy, +fz);    // v3
+	m_pxmf3Positions[4] = XMFLOAT3(-fx, -fy, -fz);   // v4
+	m_pxmf3Positions[5] = XMFLOAT3(+fx, -fy, -fz);    // v5
+	m_pxmf3Positions[6] = XMFLOAT3(+fx, -fy, +fz);     // v6
+	m_pxmf3Positions[7] = XMFLOAT3(-fx, -fy, +fz);      // v7
+
+	// 버퍼 생성
+	m_pd3dPositionBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	// 서브메쉬 개수 설정
+	m_nSubMeshes = 1;
+
+	// 인덱스 개수 설정
+	int nSubMeshIndices = 36;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+	m_pnSubSetIndices[0] = nSubMeshIndices;
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices];
+
+	// 큐브의 인덱스 배열 초기화
+	UINT* indices = m_ppnSubSetIndices[0];
+
+	// 각 면을 구성하는 인덱스 설정
+	// 면 1: v0, v1, v2, v3
+	indices[0] = 3; indices[1] = 1; indices[2] = 0;
+	indices[3] = 2; indices[4] = 1; indices[5] = 3;
+
+	// 면 2: v4, v5, v6, v7
+	indices[6] = 0; indices[7] = 5; indices[8] = 4;
+	indices[9] = 1; indices[10] = 5; indices[11] = 0;
+
+	// 면 3: v0, v4, v6, v2
+	indices[12] = 3; indices[13] = 4; indices[14] = 7;
+	indices[15] = 0; indices[16] = 4; indices[17] = 3;
+
+	// 면 4: v1, v3, v7, v5
+	indices[18] = 1; indices[19] = 6; indices[20] = 5;
+	indices[21] = 2; indices[22] = 6; indices[23] = 1;
+
+	// 면 5: v0, v1, v5, v4
+	indices[24] = 2; indices[25] = 7; indices[26] = 6;
+	indices[27] = 3; indices[28] = 7; indices[29] = 2;
+
+	// 면 6: v2, v6, v7, v3
+	indices[30] = 6; indices[31] = 4; indices[32] = 5;
+	indices[33] = 7; indices[34] = 4; indices[35] = 6;
+
+	// 인덱스 버퍼 생성
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
+		pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * nSubMeshIndices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]
+	);
+
+	// 인덱스 버퍼 뷰 설정
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
+}
+
+
+CubeMesh::~CubeMesh()
+{
+}
+
+void CubeMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW* pVertexBufferViews = (D3D12_VERTEX_BUFFER_VIEW*)pContext;
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews); // 2개 버퍼를 설정
+
+}
+
+void CubeMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	UpdateShaderVariables(pd3dCommandList);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[] = { m_d3dPositionBufferView, d3dInstancingBufferView };
+	OnPreRender(pd3dCommandList, pVertexBufferViews); 
+
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	if (m_nSubMeshes > 0)
+	{
+
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[0]));
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+	}
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CStandardMesh::CStandardMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMesh(pd3dDevice, pd3dCommandList)
@@ -714,13 +1006,13 @@ void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandL
 	if (m_pd3dcbBindPoseBoneOffsets)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneOffsetsGpuVirtualAddress = m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(11, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
+		pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_BONE_OFFSET, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
 	}
 
 	if (m_pd3dcbSkinningBoneTransforms)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(12, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
+		pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
 	}
 
 	// 뼈들의 변환 행렬 정보를 애니메이션 컨트롤러의 m_pcbxmf4x4MappedSkinningBoneTransforms에 전달

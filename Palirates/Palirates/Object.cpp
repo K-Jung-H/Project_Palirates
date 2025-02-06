@@ -474,7 +474,26 @@ void CAnimationSets::Bone_Info()
 	}
 }
 
+void CAnimationSets::ClassifyBones()
+{
+	/*for (int i = 0; i < m_nBoneFrames; i++)
+	{
+		std::string boneName = m_ppBoneFrameCaches[i]->GetBoneName();
 
+		if (boneName.find("Spine") != std::string::npos ||
+			boneName.find("Chest") != std::string::npos ||
+			boneName.find("Neck") != std::string::npos)
+		{
+			m_vecUpperBodyBoneIndices.push_back(i);
+		}
+		else if (boneName.find("Pelvis") != std::string::npos ||
+			boneName.find("Thigh") != std::string::npos ||
+			boneName.find("Leg") != std::string::npos)
+		{
+			m_vecLowerBodyBoneIndices.push_back(i);
+		}
+	}*/
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -656,6 +675,65 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3d
 	}
 }
 
+// 선형 보간 (위치 & 크기)
+XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
+	return XMFLOAT3(
+		a.x + (b.x - a.x) * t,
+		a.y + (b.y - a.y) * t,
+		a.z + (b.z - a.z) * t
+	);
+}
+
+// 사원수 보간 (회전)
+XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
+	XMVECTOR v1 = XMLoadFloat4(&q1);
+	XMVECTOR v2 = XMLoadFloat4(&q2);
+	XMVECTOR result = XMQuaternionSlerp(v1, v2, t);
+
+	XMFLOAT4 out;
+	XMStoreFloat4(&out, result);
+	return out;
+}
+
+// 행렬에서 위치 정보 추출
+XMFLOAT3 GetTranslation(const XMFLOAT4X4& matrix) {
+	return XMFLOAT3(matrix._41, matrix._42, matrix._43);
+}
+
+// 행렬에서 회전 정보 추출
+XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX mat = XMLoadFloat4x4(&matrix);
+	XMMatrixDecompose(&scale, &rotation, &translation, mat);
+
+	XMFLOAT4 rot;
+	XMStoreFloat4(&rot, rotation);
+	return rot;
+}
+
+// 행렬에서 스케일 정보 추출
+XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX mat = XMLoadFloat4x4(&matrix);
+	XMMatrixDecompose(&scale, &rotation, &translation, mat);
+
+	XMFLOAT3 scl;
+	XMStoreFloat3(&scl, scale);
+	return scl;
+}
+
+// 위치, 회전, 크기를 이용해 행렬 재구성
+XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
+	XMMATRIX S = XMMatrixScaling(scale.x, scale.y, scale.z);
+	XMMATRIX R = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
+	XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
+
+	XMMATRIX finalMatrix = S * R * T;
+	XMFLOAT4X4 result;
+	XMStoreFloat4x4(&result, finalMatrix);
+	return result;
+}
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
@@ -757,6 +835,9 @@ CGameObject::CGameObject(const std::string_view& name)
 	Set_Name(name);
 	m_xmf4x4Parent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
+
+	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	m_fRotationSpeed = 0.0f;
 }
 
 CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
@@ -863,6 +944,16 @@ void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild)
 
 }
 
+void CGameObject::Set_Active(bool active, bool IsRoot)
+{
+	Active = active;
+
+	if (m_pChild != NULL)
+		m_pChild->Set_Active(active, false); 
+
+	if (!IsRoot && m_pSibling != NULL)
+		m_pSibling->Set_Active(active, false);
+}
 void CGameObject::SetMesh(CMesh *pMesh)
 {
 	if (m_pMesh) m_pMesh->Release();
@@ -954,6 +1045,7 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
+
 	if (m_pSibling) 
 		m_pSibling->Animate(fTimeElapsed);
 
@@ -961,43 +1053,6 @@ void CGameObject::Animate(float fTimeElapsed)
 		m_pChild->Animate(fTimeElapsed);
 }
 
-// 기존 방식
-
-//void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
-//{
-//	if (m_pSkinnedAnimationController) 
-//		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
-//
-//	if (m_pMesh)
-//	{
-//		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-//
-//		if (m_nMaterials > 0)
-//		{
-//			for (int i = 0; i < m_nMaterials; i++)
-//			{
-//				if (m_ppMaterials[i])
-//				{
-//					
-//					if (m_ppMaterials[i]->m_pShader)
-//					{
-//						int pipelinestate_num = m_ppMaterials[i]->m_pShader->Get_Num_PipelineState();
-//						for (int j = 0; j < pipelinestate_num; ++j)
-//						{
-//							m_ppMaterials[i]->m_pShader->Setting_Render(pd3dCommandList, j);
-//						}
-//					}
-//					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
-//				}
-//
-//				m_pMesh->Render(pd3dCommandList, i);
-//			}
-//		}
-//	}
-//
-//	if (m_pSibling) m_pSibling->Render(pd3dCommandList, pCamera);
-//	if (m_pChild) m_pChild->Render(pd3dCommandList, pCamera);
-//}
 
 // 셰이더가 PSO를 여러 개 갖는 경우
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1123,6 +1178,9 @@ void CGameObject::SetScale(float x, float y, float z)
 
 XMFLOAT3 CGameObject::GetPosition()
 {
+	//if(m_pParent != NULL)
+	//	GetPosition()
+
 	return(XMFLOAT3(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43));
 }
 
@@ -1252,7 +1310,8 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 	m_nMaterials = ReadIntegerFromFile(pInFile);
 
 	m_ppMaterials = new CMaterial*[m_nMaterials];
-	for (int i = 0; i < m_nMaterials; i++) m_ppMaterials[i] = NULL;
+	for (int i = 0; i < m_nMaterials; i++) 
+		m_ppMaterials[i] = NULL;
 
 	CMaterial *pMaterial = NULL;
 
@@ -1582,6 +1641,54 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 	return(pLoadedModel);
 }
 
+BoundingOrientedBox* CGameObject::Get_Collider()
+{
+	if (m_pMesh == NULL)
+		return NULL;
+	BoundingOrientedBox* pOriginalBoundingBox = m_pMesh->Get_BoundingBox();
+	if (pOriginalBoundingBox == NULL)
+		return NULL;
+
+
+
+	BoundingOrientedBox pWorldBoundingBox(*pOriginalBoundingBox);
+//	pWorldBoundingBox.Center = GetPosition();
+
+	if (pWorldBoundingBox.Extents.x == 0.0f)
+		pWorldBoundingBox.Extents.x = 1.0f;
+	if (pWorldBoundingBox.Extents.y == 0.0f)
+		pWorldBoundingBox.Extents.y = 1.0f;
+	if (pWorldBoundingBox.Extents.z == 0.0f)
+		pWorldBoundingBox.Extents.z = 1.0f;
+
+
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	XMStoreFloat4(&pWorldBoundingBox.Orientation, quaternionRotation);
+
+	return &pWorldBoundingBox;
+}
+
+void CGameObject::Add_Collider(float cube_length)
+{
+	if (cube_length > 0.0f)
+	{
+		BoundingOrientedBox* collider_box = new BoundingOrientedBox(XMFLOAT3(0.0f, 0.0f, 0.0f), XMFLOAT3(cube_length, cube_length, cube_length), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+		Set_Collider(collider_box);
+	}
+	else
+		Set_Collider(NULL);
+
+}
+
+
+
+void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
+{
+	if (m_pMesh == NULL)
+		m_pMesh = new OBBContainer();
+	m_pMesh->Set_BoundingBox(ptr); // ptr이 NULL 인 경우, 기본값 OBB로 생성
+}
+
 
 // static 변수 초기화
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
@@ -1613,8 +1720,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		// 셰이더 리소스 뷰 생성
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, 13);
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, 14);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, PARAMETER_TERRAIN_BASE_TEXTURE);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, PARAMETER_TERRAIN_DETAIL_TEXTURE);
 
 		// 재사용 가능한 Material 객체 생성
 		pTerrainMaterial = new CMaterial(2);
@@ -1644,11 +1751,11 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	m_xmf3Scale = xmf3Scale;
 	m_nDepth = nMaxDepth;
 
-	Area_LT.x = start_x_pos;
-	Area_LT.y = start_z_pos;
+	Area_LT.x = start_x_pos * xmf3Scale.x;
+	Area_LT.y = start_z_pos * xmf3Scale.z;
 
-	Area_RB.x = start_x_pos + m_nWidth;
-	Area_RB.y = start_z_pos + m_nLength;
+	Area_RB.x = (start_x_pos + m_nWidth) * xmf3Scale.x;
+	Area_RB.y = (start_z_pos + m_nLength) * xmf3Scale.z;
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
@@ -1714,7 +1821,7 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 
-	if (Active && m_pMesh != NULL)
+	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
@@ -1734,7 +1841,7 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 	}
 
-	if (Active)
+	if (Get_Active())
 	{
 		std::shared_ptr<CGameObject> pChild = Get_Child();
 		if (pChild) pChild->Render(pd3dCommandList, pCamera);
@@ -1752,74 +1859,121 @@ void CHeightMapTerrain::Set_Tile(int n)
 	Set_Name(tile_name);
 }
 
-float CHeightMapTerrain::GetHeight(float x, float z, bool bReverseQuad)
-{
-	x -= m_xmf4x4World._41;
-	z -= m_xmf4x4World._43;
 
-	return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y);
+float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
+{
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
 }
 
-XMFLOAT3 CHeightMapTerrain::GetNormal(float x, float z)
+float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr)
 {
-	XMFLOAT3 normal = m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z));
-	return normal;
-}
-
-float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad) 
-{
-	// 스케일 조정은 부모객체에서 한번만 적용하기
-	if (m_pParent == NULL) 
+	if (last_tile_ptr != NULL)
 	{
-		x /= m_xmf3Scale.x;
-		z /= m_xmf3Scale.z;
+		if (x >= last_tile_ptr->Area_LT.x && x < last_tile_ptr->Area_RB.x &&
+			z >= last_tile_ptr->Area_LT.y && z < last_tile_ptr->Area_RB.y)
+		{
+			return last_tile_ptr->Get_Mesh_Height(x, z, bReverseQuad);
+		}
 	}
 
-	// 자식 객체 위치 조정 - y 값은 지형맵에서 조정할 필요 없을거임?
+		x -= m_xmf4x4World._41;
+		z -= m_xmf4x4World._43;
+
+
+	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
+	{
+		if (Get_Child())
+		{
+			CGameObject* child_ptr = Get_Child().get();
+			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
+		}
+		else
+		{
+			last_tile_ptr = this;
+			return m_pMesh->Get_Height(x, z);
+		}
+	}
+	else
+	{
+		if (Get_Sibling())
+		{
+			CGameObject* sibling_ptr = Get_Sibling().get();
+			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
+		}
+	}
+
+	return -1;
+}
+
+
+
+XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
+{
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Mesh_Normal(x, z, last_tile_ptr);
+}
+
+
+
+XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr)
+{
+	if (last_tile_ptr != NULL)
+	{
+		if (x >= last_tile_ptr->Area_LT.x && x < last_tile_ptr->Area_RB.x &&
+			z >= last_tile_ptr->Area_LT.y && z < last_tile_ptr->Area_RB.y)
+		{
+			return last_tile_ptr->Get_Mesh_Normal(x, z);
+		}
+	}
+
+
 	x -= m_xmf4x4World._41;
 	z -= m_xmf4x4World._43;
+	
 
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
 	{
 		CGameObject* child_ptr = Get_Child().get();
 		if (child_ptr)
-			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad);
+			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
 		else
 		{
-			x -= Tile_Start_Pos.x;
-			z -= Tile_Start_Pos.y;
-			return m_pMesh->Get_Height(x, z);
+			// 범위 밖이 아니라면
+			// 여기서 타일 저장해야 함
+			return m_pMesh->Get_Normal(x, z);
 		}
 	}
 	else
 	{
 		CGameObject* sibling_ptr = Get_Sibling().get();
 		if (sibling_ptr)
-			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad);
+			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Normal(x, z);
 	}
 
-	return -1;
-}
-
-XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
-{
-	XMFLOAT3 normal = m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z));
-	return normal;
+	return XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
 
 int CHeightMapTerrain::Get_Tile(float x, float z)
 {
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Tile(x, z, last_tile_ptr);
+}
 
-	if (m_pParent == NULL)
+int CHeightMapTerrain::Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr)
+{
+	if (last_tile_ptr != NULL)
 	{
-		// 자식 타일 객체는 이동할 일 없음
-		x -= m_xmf4x4World._41;	
-		z -= m_xmf4x4World._43;
-
-		x /= m_xmf3Scale.x;
-		z /= m_xmf3Scale.z;
+		if (x >= last_tile_ptr->Area_LT.x && x < last_tile_ptr->Area_RB.x &&
+			z >= last_tile_ptr->Area_LT.y && z < last_tile_ptr->Area_RB.y)
+		{
+			return last_tile_ptr->Get_Tile(x, z);
+		}
 	}
+
+	x -= m_xmf4x4World._41;
+	z -= m_xmf4x4World._43;
 
 	if (x >= Area_LT.x && x < Area_RB.x&& z >= Area_LT.y&& z < Area_RB.y)
 	{
@@ -1841,6 +1995,33 @@ int CHeightMapTerrain::Get_Tile(float x, float z)
 	return -1; 
 }
 
+
+BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
+{
+	if (m_pMesh == NULL)
+		return NULL;
+	BoundingOrientedBox* pOriginalBoundingBox = m_pMesh->Get_BoundingBox();
+	if (pOriginalBoundingBox == NULL)
+		return NULL;
+
+
+
+	BoundingOrientedBox pWorldBoundingBox(*pOriginalBoundingBox);
+
+	if (pWorldBoundingBox.Extents.x == 0.0f)
+		pWorldBoundingBox.Extents.x = 1.0f;
+	if (pWorldBoundingBox.Extents.y == 0.0f)
+		pWorldBoundingBox.Extents.y = 1.0f;
+	if (pWorldBoundingBox.Extents.z == 0.0f)
+		pWorldBoundingBox.Extents.z = 1.0f;
+
+
+	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
+	XMStoreFloat4(&pWorldBoundingBox.Orientation, quaternionRotation);
+
+	return &pWorldBoundingBox;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
@@ -1857,7 +2038,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, 10);
+	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, PARAMETER_SKYBOX_TEXTURE);
 
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);

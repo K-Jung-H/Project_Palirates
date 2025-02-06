@@ -34,6 +34,10 @@ protected:
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
 	CCamera						*m_pCamera = NULL;
+	CHeightMapTerrain* last_tile_ptr = NULL;
+
+	bool Anime_test_FallingLoop = false;
+	float m_fFallingTimer = 0.0f;
 
 public:
 	CPlayer();
@@ -66,6 +70,8 @@ public:
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
+//	virtual void Animate(float fTimeElapsed);
+	virtual void Animate_test();
 	virtual void Update(float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
@@ -83,6 +89,10 @@ public:
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareRender();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+
+	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
+
+	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 };
 
 
@@ -98,6 +108,9 @@ public:
 
 class CTerrainPlayer : public CPlayer
 {
+private:
+	bool On_Ground = false;
+
 public:
 	CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext=NULL);
 	virtual ~CTerrainPlayer();
@@ -108,8 +121,12 @@ public:
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
 
+	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
+
+	void AlignWithNormal(XMFLOAT3 normal);
+	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 };
 

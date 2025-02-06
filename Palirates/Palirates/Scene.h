@@ -60,7 +60,7 @@ public:
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
     void AnimateObjects(float fTimeElapsed);
-    void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+    void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
 	void ReleaseUploadBuffers();
 
@@ -106,7 +106,7 @@ public:
 	void Update_UI();
 #endif
 
-	Object_Manager obj_manager; 
+	Object_Manager* obj_manager = NULL;
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 

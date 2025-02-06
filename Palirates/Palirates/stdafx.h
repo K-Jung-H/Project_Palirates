@@ -28,7 +28,7 @@
 #include <cwchar>  // wcsrchr 사용을 위한 헤더
 #include <cstring> // wcstombs 함수 사용을 위한 헤더
 #include <cstdio>
-
+#include <unordered_set>
 
 using namespace std;
 
@@ -60,12 +60,7 @@ using Microsoft::WRL::ComPtr;
 
 extern HINSTANCE						ghAppInstance;
 
-//#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 
-#define FRAME_BUFFER_WIDTH				640
-#define FRAME_BUFFER_HEIGHT				480
-
-#define STR_LENGTH 64
 
 
 #pragma comment(lib, "winmm.lib")
@@ -78,7 +73,44 @@ extern HINSTANCE						ghAppInstance;
 #pragma comment(lib, "d2d1.lib")
 #pragma comment(lib, "dwrite.lib")
 
-// TODO: 프로그램에 필요한 추가 헤더는 여기에서 참조합니다.
+//=============================================
+
+
+//#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
+#define FRAME_BUFFER_WIDTH				1640
+#define FRAME_BUFFER_HEIGHT				480
+
+#define ANIMATION_TYPE_ONCE				0
+#define ANIMATION_TYPE_LOOP				1
+#define ANIMATION_TYPE_PINGPONG			2
+
+
+#define PARAMETER_CAMERA_CBV 0
+#define PARAMETER_SKYBOX_TEXTURE 10
+#define PARAMETER_TERRAIN_BASE_TEXTURE 11
+#define PARAMETER_TERRAIN_DETAIL_TEXTURE 12
+#define PARAMETER_BONE_OFFSET 13
+#define PARAMETER_BONE_TRANSFORM 14
+#define PARAMETER_OOBB_CUBE_CBV 15
+
+
+#define ANIMATION_CALLBACK_EPSILON		0.00165f
+
+// #define _WITH_DISPLAY_TEXTURE_NAME
+// #define _WITH_DISPLAY_BONE_NAME
+
+
+#define STR_LENGTH 64
+
+#define WRITE_TEXT_UI
+ #define RENDER_OBB
+
+//#define DEBUG_MESSAGE
+#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
+#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
+#define DEBUG_MESSAGE_TILE_MAP
+
+//=============================================
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
@@ -121,18 +153,6 @@ inline bool IsEqual(float fA, float fB, float fEpsilon) { return(::IsZero(fA - f
 inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
 inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
 
-#define ANIMATION_TYPE_ONCE				0
-#define ANIMATION_TYPE_LOOP				1
-#define ANIMATION_TYPE_PINGPONG			2
-
-#define ANIMATION_CALLBACK_EPSILON		0.00165f
-
-// #define _WITH_DISPLAY_TEXTURE_NAME
-// #define _WITH_DISPLAY_BONE_NAME
-
-#define WRITE_TEXT_UI
-
-#define DEBUG_MESSAGE
 
 
 namespace Vector3
