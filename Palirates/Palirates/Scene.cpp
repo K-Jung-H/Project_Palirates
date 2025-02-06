@@ -109,7 +109,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 32,3);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 32,2);
 //	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
 
 
@@ -138,7 +138,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
 
 	test_obj->Add_Collider(0.0f);
-	test_obj2->Add_Collider(1.0f);
+	test_obj2->Add_Collider(10.0f);
 
 	//====================================================
 
@@ -230,7 +230,7 @@ void CScene::Update_UI()
 		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
 		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
 
-		// 버퍼에 값 포맷팅
+
 		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos >>%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal >> %.2f,%.2f,%.2f"), tile_normal.x, tile_normal.y, tile_normal.z);
 		_stprintf_s(Tile_Info_Buffer, 100, _T("Tile  >> %d"), tile_n);
@@ -461,7 +461,22 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	ID3DBlob *pd3dSignatureBlob = NULL;
 	ID3DBlob *pd3dErrorBlob = NULL;
 	D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
-	pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
+	HRESULT hr = pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void **)&pd3dGraphicsRootSignature);
+
+	if (FAILED(hr))
+	{
+
+		if (pd3dErrorBlob)
+		{
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+		}
+		else
+		{
+
+			OutputDebugStringA("Failed to create root signature.\n");
+		}
+	}
+
 	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
 	if (pd3dErrorBlob) pd3dErrorBlob->Release();
 
@@ -470,7 +485,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 
 void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256 * N
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
@@ -668,37 +683,34 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 {
 	bool bKeyProcessed = false;
 
-	// W, A, S, D 키 입력 처리
-	if (pKeysBuffer[0x57] & 0xF0) // W 키 확인
+	// W, A, S, D 
+	if (pKeysBuffer[0x57] & 0xF0) // W 
 	{
 		DebugOutput("W key is pressed\n");
 		bKeyProcessed = true;
 	}
 
-	if (pKeysBuffer[0x41] & 0xF0) // A 키 확인
+	if (pKeysBuffer[0x41] & 0xF0) // A 
 	{
 		DebugOutput("A key is pressed\n");
 		bKeyProcessed = true;
 	}
 
-	if (pKeysBuffer[0x53] & 0xF0) // S 키 확인
+	if (pKeysBuffer[0x53] & 0xF0) // S 
 	{
 		DebugOutput("S key is pressed\n");
 		bKeyProcessed = true;
 	}
 
-	if (pKeysBuffer[0x44] & 0xF0) // D 키 확인
+	if (pKeysBuffer[0x44] & 0xF0) // D 
 	{
 		DebugOutput("D key is pressed\n");
 		bKeyProcessed = true;
 	}
 
 
-	// 하나 이상의 키가 처리瑛만 true, 아니면 false 
-	// - true = 프레임워크에서 추가적 동작 x
-	// - false = 프레임워크에서 추가적 동작 o
-	// return bKeyProcessed; 
-	return false; // 프레임 워크에서 플레이어 키 입력 필요
+
+	return false; 
 
 }
 
@@ -706,8 +718,6 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	//obj_manager.Animate_Objects_All(fTimeElapsed);
-	
 	for (int i = 0; i < m_nShaders; i++) 
 		if (m_ppShaders[i]) 
 			m_ppShaders[i]->AnimateObjects(fTimeElapsed);
@@ -724,21 +734,20 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-
 #ifdef RENDER_OBB
 	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
 	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
 	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
-		static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
-		static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
-		vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
-		if (test_button)
-		{
-			temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
-			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
-		}
-		else
-			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_2);
+//		static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+//		static vector<shared_ptr<CGameObject>> temp_list{ test_ptr }; 
+		//vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
+		//if (test_button)
+		//{
+		//	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
+		//	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
+		//}
+		//else
+		//	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_2);
 #endif
 }
 
@@ -773,6 +782,8 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 #ifdef RENDER_OBB
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
 #endif
+
+
 
 }
 
