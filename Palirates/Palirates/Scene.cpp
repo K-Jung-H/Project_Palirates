@@ -580,33 +580,33 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case '1':
 		{
 			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
 		}		break;
 
 		case '2':
 		{
 			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 21")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
 		}		break;
 
 		case '3':
 		{
 			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 42")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
 		}		break;
 
 		case '4':
 		{
 			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
+			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
+			m_pTerrain->FindFrame("tile map - 63")->Set_Active(true);
 		}		break;
 
 		case '5':
@@ -641,8 +641,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case VK_SPACE:
 		{
-			XMFLOAT3 pos = m_pPlayer->GetPosition();
-			m_pTerrain->Get_Tile(pos.x, pos.z);
+			test_button = true;
 		}	break;
 
 		default:
@@ -711,6 +710,26 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 }
 
+void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+
+#ifdef RENDER_OBB
+	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
+	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
+	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
+		static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
+		static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
+		vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (test_button)
+		{
+			temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
+			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
+		}
+		else
+			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_2);
+#endif
+}
+
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 
@@ -739,19 +758,9 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 		if (m_ppShaders[i]) 
 			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
 
-
-	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
-	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
-	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
 #ifdef RENDER_OBB
-	static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
-	static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
-	vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
-	
-	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
-
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
 #endif
+
 }
 
