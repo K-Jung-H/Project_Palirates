@@ -469,17 +469,17 @@ void CGameFramework::ProcessInput()
 		DWORD dwDirection = 0;
 
 		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;   // ¹æÇâÅ° À§ ¶Ç´Â W
+			dwDirection |= DIR_FORWARD;   // ë°©í–¥í‚¤ ìœ„ ë˜ëŠ” W
 		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;  // ¹æÇâÅ° ¾Æ·¡ ¶Ç´Â S
+			dwDirection |= DIR_BACKWARD;  // ë°©í–¥í‚¤ ì•„ëž˜ ë˜ëŠ” S
 		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;      // ¹æÇâÅ° ¿ÞÂÊ ¶Ç´Â A
+			dwDirection |= DIR_LEFT;      // ë°©í–¥í‚¤ ì™¼ìª½ ë˜ëŠ” A
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;     // ¹æÇâÅ° ¿À¸¥ÂÊ ¶Ç´Â D
+			dwDirection |= DIR_RIGHT;     // ë°©í–¥í‚¤ ì˜¤ë¥¸ìª½ ë˜ëŠ” D
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;        // Page Up ¶Ç´Â Q
+			dwDirection |= DIR_UP;        // Page Up ë˜ëŠ” Q
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;      // Page Down ¶Ç´Â E
+			dwDirection |= DIR_DOWN;      // Page Down ë˜ëŠ” E
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -501,7 +501,7 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection) m_pPlayer->Move(dwDirection, 10* 12.25f, true);
+			if (dwDirection) m_pPlayer->Move(dwDirection, 1* 12.25f, true);
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
@@ -549,7 +549,7 @@ void CGameFramework::FrameAdvance()
 	
 	ProcessInput();
 
-	// ¾Ö´Ï¸ÞÀÌ¼Ç + Ãß°¡ÀûÀÎ °´Ã¼ »ý¼º
+	// ì• ë‹ˆë©”ì´ì…˜ + ì¶”ê°€ì ì¸ ê°ì²´ ìƒì„±
 	Update_Scene();
 
 #ifdef WRITE_TEXT_UI
@@ -575,8 +575,10 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
-	// ¾À ¸Þ´ÏÁ®¸¦ ÅëÇÑ ·»´õ¸µ °ü¸®
+
+	// ì”¬ ë©”ë‹ˆì ¸ë¥¼ í†µí•œ ë Œë”ë§ ê´€ë¦¬
 	scene_manager->Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
+
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
@@ -599,7 +601,7 @@ void CGameFramework::FrameAdvance()
 
 #ifdef WRITE_TEXT_UI
 
-	// ¾À ¸Þ´ÏÁ®¸¦ ÅëÇÑ ·»´õ¸µ °ü¸®
+	// ì”¬ ë©”ë‹ˆì ¸ë¥¼ í†µí•œ ë Œë”ë§ ê´€ë¦¬
 	scene_manager->Render_Scene_UI(m_nSwapChainBufferIndex);
 #endif
 

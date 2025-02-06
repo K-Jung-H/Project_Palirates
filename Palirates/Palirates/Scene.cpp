@@ -132,7 +132,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(humanObject_1);
 	
 	//====================================================
-	// Å×½ºÆ®¿ë ÄÚµå	
+	// í…ŒìŠ¤íŠ¸ìš© ì½”ë“œ	
 //	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
 	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
 	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
@@ -230,7 +230,7 @@ void CScene::Update_UI()
 		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
 		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
 
-		// ¹öÆÛ¿¡ °ª Æ÷¸ËÆÃ
+		// ë²„í¼ì— ê°’ í¬ë§·íŒ…
 		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos >>%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal >> %.2f,%.2f,%.2f"), tile_normal.x, tile_normal.y, tile_normal.z);
 		_stprintf_s(Tile_Info_Buffer, 100, _T("Tile  >> %d"), tile_n);
@@ -470,7 +470,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 
 void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ÀÇ ¹è¼ö
+	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256ì˜ ë°°ìˆ˜
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
@@ -580,9 +580,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case '1':
 		{
 			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
+
 			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
 			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
 			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
+
 		}		break;
 
 		case '2':
@@ -591,6 +593,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 21")->Set_Active(true);
 			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
 			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
+
 		}		break;
 
 		case '3':
@@ -599,6 +602,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
 			m_pTerrain->FindFrame("tile map - 42")->Set_Active(true);
 			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
+
 		}		break;
 
 		case '4':
@@ -607,6 +611,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
 			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
 			m_pTerrain->FindFrame("tile map - 63")->Set_Active(true);
+
 		}		break;
 
 		case '5':
@@ -644,6 +649,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			test_button = true;
 		}	break;
 
+		case 'Z':
+		{
+			m_pPlayer->Animate_test();
+			m_pPlayer->FallingTimer_Reset();
+		}		break;
+
 		default:
 			break;
 		}
@@ -657,37 +668,37 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 {
 	bool bKeyProcessed = false;
 
-	// W, A, S, D Å° ÀÔ·Â Ã³¸®
-	if (pKeysBuffer[0x57] & 0xF0) // W Å° È®ÀÎ
+	// W, A, S, D í‚¤ ì…ë ¥ ì²˜ë¦¬
+	if (pKeysBuffer[0x57] & 0xF0) // W í‚¤ í™•ì¸
 	{
 		DebugOutput("W key is pressed\n");
 		bKeyProcessed = true;
 	}
 
-	if (pKeysBuffer[0x41] & 0xF0) // A Å° È®ÀÎ
+	if (pKeysBuffer[0x41] & 0xF0) // A í‚¤ í™•ì¸
 	{
 		DebugOutput("A key is pressed\n");
 		bKeyProcessed = true;
 	}
 
-	if (pKeysBuffer[0x53] & 0xF0) // S Å° È®ÀÎ
+	if (pKeysBuffer[0x53] & 0xF0) // S í‚¤ í™•ì¸
 	{
 		DebugOutput("S key is pressed\n");
 		bKeyProcessed = true;
 	}
 
-	if (pKeysBuffer[0x44] & 0xF0) // D Å° È®ÀÎ
+	if (pKeysBuffer[0x44] & 0xF0) // D í‚¤ í™•ì¸
 	{
 		DebugOutput("D key is pressed\n");
 		bKeyProcessed = true;
 	}
 
 
-	// ÇÏ³ª ÀÌ»óÀÇ Å°°¡ Ã³¸®‰çÀ¸¸é true, ¾Æ´Ï¸é false 
-	// - true = ÇÁ·¹ÀÓ¿öÅ©¿¡¼­ Ãß°¡Àû µ¿ÀÛ x
-	// - false = ÇÁ·¹ÀÓ¿öÅ©¿¡¼­ Ãß°¡Àû µ¿ÀÛ o
+	// í•˜ë‚˜ ì´ìƒì˜ í‚¤ê°€ ì²˜ë¦¬Â‰ç‘›ë§Œ true, ì•„ë‹ˆë©´ false 
+	// - true = í”„ë ˆì„ì›Œí¬ì—ì„œ ì¶”ê°€ì  ë™ì‘ x
+	// - false = í”„ë ˆì„ì›Œí¬ì—ì„œ ì¶”ê°€ì  ë™ì‘ o
 	// return bKeyProcessed; 
-	return false; // ÇÁ·¹ÀÓ ¿öÅ©¿¡¼­ ÇÃ·¹ÀÌ¾î Å° ÀÔ·Â ÇÊ¿ä
+	return false; // í”„ë ˆì„ ì›Œí¬ì—ì„œ í”Œë ˆì´ì–´ í‚¤ ì…ë ¥ í•„ìš”
 
 }
 
@@ -710,13 +721,14 @@ void CScene::AnimateObjects(float fTimeElapsed)
 
 }
 
+
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 
 #ifdef RENDER_OBB
-	// Å×½ºÆ®¿ë - ÅÍ·¹ÀÎ °´Ã¼ ÄÁÅ×ÀÌ³Ê¿Í, ½ºÅ² ¸Ş½Ã °´Ã¼ ÄÁÅ×ÀÌ³Ê¿¡ OBB_Drawer µ¿½Ã Àû¿ë
-	// Å×½ºÆ®¸¦ À§ÇØ ÅÍ·¹ÀÎ °´Ã¼¸¦ ÀÓ½Ã shared_ptr·Î ÇØ¼­, 
-	// ÇÔ¼ö°¡ ³¡³ª¸é ÅÍ·¹ÀÎ °´Ã¼°¡ Á¦°ÅµÇ°í ÀÖÀ½ -> ¿À·ù ¹ß»ı 
+	// í…ŒìŠ¤íŠ¸ìš© - í„°ë ˆì¸ ê°ì²´ ì»¨í…Œì´ë„ˆì™€, ìŠ¤í‚¨ ë©”ì‹œ ê°ì²´ ì»¨í…Œì´ë„ˆì— OBB_Drawer ë™ì‹œ ì ìš©
+	// í…ŒìŠ¤íŠ¸ë¥¼ ìœ„í•´ í„°ë ˆì¸ ê°ì²´ë¥¼ ì„ì‹œ shared_ptrë¡œ í•´ì„œ, 
+	// í•¨ìˆ˜ê°€ ëë‚˜ë©´ í„°ë ˆì¸ ê°ì²´ê°€ ì œê±°ë˜ê³  ìˆìŒ -> ì˜¤ë¥˜ ë°œìƒ 
 		static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
 		static vector<shared_ptr<CGameObject>> temp_list{ test_ptr };
 		vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);

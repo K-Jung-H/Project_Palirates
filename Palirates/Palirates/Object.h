@@ -235,11 +235,15 @@ public:
 	int								m_nAnimationSets = 0;
 	CAnimationSet					**m_pAnimationSet_list = NULL;
 
+	std::vector<int> m_vecUpperBodyBoneIndices;  // 상체
+	std::vector<int> m_vecLowerBodyBoneIndices;  // 하체
+
 	int								m_nBoneFrames = 0; 
 //	std::shared_ptr<CGameObject>						*m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
 //	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
+	void ClassifyBones();
 };
 
 class CAnimationTrack

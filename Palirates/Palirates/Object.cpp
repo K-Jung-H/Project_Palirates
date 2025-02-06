@@ -474,7 +474,26 @@ void CAnimationSets::Bone_Info()
 	}
 }
 
+void CAnimationSets::ClassifyBones()
+{
+	/*for (int i = 0; i < m_nBoneFrames; i++)
+	{
+		std::string boneName = m_ppBoneFrameCaches[i]->GetBoneName();
 
+		if (boneName.find("Spine") != std::string::npos ||
+			boneName.find("Chest") != std::string::npos ||
+			boneName.find("Neck") != std::string::npos)
+		{
+			m_vecUpperBodyBoneIndices.push_back(i);
+		}
+		else if (boneName.find("Pelvis") != std::string::npos ||
+			boneName.find("Thigh") != std::string::npos ||
+			boneName.find("Leg") != std::string::npos)
+		{
+			m_vecLowerBodyBoneIndices.push_back(i);
+		}
+	}*/
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -654,6 +673,65 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3d
 		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];  // 애니메이션 컨트롤러에 저장된 뼈 정보 리소스 포인터를 스킨 메시에 전달
 		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 애니메이션 컨트롤러에 저장된 뼈 변환 행렬을 스킨 메시에 전달
 	}
+}
+
+// 선형 보간 (위치 & 크기)
+XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
+	return XMFLOAT3(
+		a.x + (b.x - a.x) * t,
+		a.y + (b.y - a.y) * t,
+		a.z + (b.z - a.z) * t
+	);
+}
+
+// 사원수 보간 (회전)
+XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
+	XMVECTOR v1 = XMLoadFloat4(&q1);
+	XMVECTOR v2 = XMLoadFloat4(&q2);
+	XMVECTOR result = XMQuaternionSlerp(v1, v2, t);
+
+	XMFLOAT4 out;
+	XMStoreFloat4(&out, result);
+	return out;
+}
+
+// 행렬에서 위치 정보 추출
+XMFLOAT3 GetTranslation(const XMFLOAT4X4& matrix) {
+	return XMFLOAT3(matrix._41, matrix._42, matrix._43);
+}
+
+// 행렬에서 회전 정보 추출
+XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX mat = XMLoadFloat4x4(&matrix);
+	XMMatrixDecompose(&scale, &rotation, &translation, mat);
+
+	XMFLOAT4 rot;
+	XMStoreFloat4(&rot, rotation);
+	return rot;
+}
+
+// 행렬에서 스케일 정보 추출
+XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX mat = XMLoadFloat4x4(&matrix);
+	XMMatrixDecompose(&scale, &rotation, &translation, mat);
+
+	XMFLOAT3 scl;
+	XMStoreFloat3(&scl, scale);
+	return scl;
+}
+
+// 위치, 회전, 크기를 이용해 행렬 재구성
+XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
+	XMMATRIX S = XMMatrixScaling(scale.x, scale.y, scale.z);
+	XMMATRIX R = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
+	XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
+
+	XMMATRIX finalMatrix = S * R * T;
+	XMFLOAT4X4 result;
+	XMStoreFloat4x4(&result, finalMatrix);
+	return result;
 }
 
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
