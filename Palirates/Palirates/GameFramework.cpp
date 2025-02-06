@@ -30,10 +30,8 @@ CGameFramework::CGameFramework()
 	m_nWndClientWidth = FRAME_BUFFER_WIDTH;
 	m_nWndClientHeight = FRAME_BUFFER_HEIGHT;
 
-	m_pScene = NULL;
 	m_pPlayer = NULL;
 
-	_tcscpy_s(m_pszFrameRate, _T("LabProject ("));
 }
 
 CGameFramework::~CGameFramework()
@@ -53,7 +51,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	BuildObjects();
+	scene_manager = new Scene_Manager(m_nSwapChainBuffers, m_pd3dDevice, m_pd3dCommandQueue, m_ppd3dSwapChainBackBuffers, m_nWndClientWidth, m_nWndClientHeight);
+
+	Build_Scenes();
 
 	return(true);
 }
@@ -289,7 +289,9 @@ void CGameFramework::ChangeSwapChainState()
 
 void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (m_pScene) m_pScene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
+
+	if (main_scene) main_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
 		case WM_LBUTTONDOWN:
@@ -310,7 +312,9 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (m_pScene) m_pScene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
+
+	if (main_scene) main_scene->OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 	switch (nMessageID)
 	{
 		case WM_KEYUP:
@@ -371,7 +375,7 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
-    ReleaseObjects();
+	Release_Scenes();
 
 	::CloseHandle(m_hFenceEvent);
 
@@ -410,24 +414,23 @@ void CGameFramework::OnDestroy()
 
 #define _WITH_TERRAIN_PLAYER
 
-void CGameFramework::BuildObjects()
+void CGameFramework::Build_Scenes()
 {
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
-	m_pScene = new CScene();
-	if (m_pScene) m_pScene->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
+	//========================================================
+	std::shared_ptr<CScene> Test_Scene = std::make_shared<CScene>();
+	scene_manager->Register_Scene("Test_Scene_1", Test_Scene);
+	scene_manager->Build_Scene("Test_Scene_1", m_pd3dDevice, m_pd3dCommandList);
 
-#ifdef WRITE_TEXT_UI
-	text_ui_renderer = new Text_UI_Renderer(m_nSwapChainBuffers, m_pd3dDevice, m_pd3dCommandQueue, m_ppd3dSwapChainBackBuffers, m_nWndClientWidth, m_nWndClientHeight);
-	m_pScene->Build_Text_UI(text_ui_renderer);
-#endif
 
-#ifdef _WITH_TERRAIN_PLAYER
-	CTerrainPlayer *pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_pScene->GetGraphicsRootSignature(), m_pScene->m_pTerrain);
-#endif
+	CScene* test_scene_ptr = scene_manager->Load_Scene("Test_Scene_1").get();
+	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain);
 
-	m_pScene->m_pPlayer = m_pPlayer = pPlayer;
+	m_pPlayer = pPlayer;
+	scene_manager->Set_Scene_Player("Test_Scene_1", m_pPlayer);
 	m_pCamera = m_pPlayer->GetCamera();
+	//========================================================
 
 	m_pd3dCommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { m_pd3dCommandList };
@@ -435,19 +438,20 @@ void CGameFramework::BuildObjects()
 
 	WaitForGpuComplete();
 
-	if (m_pScene) m_pScene->ReleaseUploadBuffers();
-	if (m_pPlayer) m_pPlayer->ReleaseUploadBuffers();
+	scene_manager->ReleaseUploadBuffers();
+
+	if (m_pPlayer)
+		m_pPlayer->ReleaseUploadBuffers();
 
 	m_GameTimer.Reset();
 }
 
-void CGameFramework::ReleaseObjects()
+void CGameFramework::Release_Scenes()
 {
 	//if (m_pPlayer) 
 	//	delete m_pPlayer;
 
-	if (m_pScene) m_pScene->ReleaseObjects();
-	if (m_pScene) delete m_pScene;
+	delete scene_manager;
 }
 
 void CGameFramework::ProcessInput()
@@ -455,25 +459,27 @@ void CGameFramework::ProcessInput()
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
 
-	if (GetKeyboardState(pKeysBuffer) && m_pScene)
-		bProcessedByScene = m_pScene->ProcessInput(pKeysBuffer);
+	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
+
+	if (GetKeyboardState(pKeysBuffer) && main_scene)
+		bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
 
 	if (!bProcessedByScene)
 	{
 		DWORD dwDirection = 0;
 
 		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;   // ¹æÇâÅ° À§ ¶Ç´Â W
+			dwDirection |= DIR_FORWARD;   // ë°©í–¥í‚¤ ìœ„ ë˜ëŠ” W
 		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;  // ¹æÇâÅ° ¾Æ·¡ ¶Ç´Â S
+			dwDirection |= DIR_BACKWARD;  // ë°©í–¥í‚¤ ì•„ëž˜ ë˜ëŠ” S
 		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;      // ¹æÇâÅ° ¿ÞÂÊ ¶Ç´Â A
+			dwDirection |= DIR_LEFT;      // ë°©í–¥í‚¤ ì™¼ìª½ ë˜ëŠ” A
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;     // ¹æÇâÅ° ¿À¸¥ÂÊ ¶Ç´Â D
+			dwDirection |= DIR_RIGHT;     // ë°©í–¥í‚¤ ì˜¤ë¥¸ìª½ ë˜ëŠ” D
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;        // Page Up ¶Ç´Â Q
+			dwDirection |= DIR_UP;        // Page Up ë˜ëŠ” Q
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;      // Page Down ¶Ç´Â E
+			dwDirection |= DIR_DOWN;      // Page Down ë˜ëŠ” E
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -501,12 +507,11 @@ void CGameFramework::ProcessInput()
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 }
 
-void CGameFramework::AnimateObjects()
+void CGameFramework::Update_Scene()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	if (m_pScene) m_pScene->AnimateObjects(fTimeElapsed);
-
+	scene_manager->Update_Active_Scene(m_pd3dDevice, m_pd3dCommandList, fTimeElapsed);
 	m_pPlayer->Animate(fTimeElapsed);
 }
 
@@ -544,14 +549,17 @@ void CGameFramework::FrameAdvance()
 	
 	ProcessInput();
 
-    AnimateObjects();
+	// ì• ë‹ˆë©”ì´ì…˜ + ì¶”ê°€ì ì¸ ê°ì²´ ìƒì„±
+	Update_Scene();
 
 #ifdef WRITE_TEXT_UI
-	m_pScene->Update_UI();
+	scene_manager->Update_UI();
 #endif
+
 
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
 
 	::SynchronizeResourceTransition(m_pd3dCommandList, m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -567,12 +575,17 @@ void CGameFramework::FrameAdvance()
 
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
-	if (m_pScene) m_pScene->Render(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
+
+	// ì”¬ ë©”ë‹ˆì ¸ë¥¼ í†µí•œ ë Œë”ë§ ê´€ë¦¬
+	scene_manager->Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
+
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 #endif
-	if (m_pPlayer) m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
+
+	if (m_pPlayer) 
+		m_pPlayer->Render(m_pd3dCommandList, m_pCamera);
 
 
 #ifndef WRITE_TEXT_UI
@@ -587,7 +600,9 @@ void CGameFramework::FrameAdvance()
 	::WaitForGpuComplete(m_pd3dCommandQueue, m_pd3dFence, ++m_nFenceValues[m_nSwapChainBufferIndex], m_hFenceEvent);
 
 #ifdef WRITE_TEXT_UI
-	text_ui_renderer->Render(m_nSwapChainBufferIndex, m_pScene->Get_Text_List());
+
+	// ì”¬ ë©”ë‹ˆì ¸ë¥¼ í†µí•œ ë Œë”ë§ ê´€ë¦¬
+	scene_manager->Render_Scene_UI(m_nSwapChainBufferIndex);
 #endif
 
 #ifdef _WITH_PRESENT_PARAMETERS

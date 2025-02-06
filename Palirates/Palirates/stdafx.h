@@ -1,15 +1,15 @@
-// stdafx.h : ÀÚÁÖ »ç¿ëÇÏÁö¸¸ ÀÚÁÖ º¯°æµÇÁö´Â ¾Ê´Â
-// Ç¥ÁØ ½Ã½ºÅÛ Æ÷ÇÔ ÆÄÀÏ ¹× ÇÁ·ÎÁ§Æ® °ü·Ã Æ÷ÇÔ ÆÄÀÏÀÌ
-// µé¾î ÀÖ´Â Æ÷ÇÔ ÆÄÀÏÀÔ´Ï´Ù.
+// stdafx.h : ìžì£¼ ì‚¬ìš©í•˜ì§€ë§Œ ìžì£¼ ë³€ê²½ë˜ì§€ëŠ” ì•ŠëŠ”
+// í‘œì¤€ ì‹œìŠ¤í…œ í¬í•¨ íŒŒì¼ ë° í”„ë¡œì íŠ¸ ê´€ë ¨ í¬í•¨ íŒŒì¼ì´
+// ë“¤ì–´ ìžˆëŠ” í¬í•¨ íŒŒì¼ìž…ë‹ˆë‹¤.
 
 
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // °ÅÀÇ »ç¿ëµÇÁö ¾Ê´Â ³»¿ëÀº Windows Çì´õ¿¡¼­ Á¦¿ÜÇÕ´Ï´Ù.
-// Windows Çì´õ ÆÄÀÏ:
+#define WIN32_LEAN_AND_MEAN             // ê±°ì˜ ì‚¬ìš©ë˜ì§€ ì•ŠëŠ” ë‚´ìš©ì€ Windows í—¤ë”ì—ì„œ ì œì™¸í•©ë‹ˆë‹¤.
+// Windows í—¤ë” íŒŒì¼:
 #include <windows.h>
 
-// CÀÇ ·±Å¸ÀÓ Çì´õ ÆÄÀÏÀÔ´Ï´Ù.
+// Cì˜ ëŸ°íƒ€ìž„ í—¤ë” íŒŒì¼ìž…ë‹ˆë‹¤.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -23,12 +23,14 @@
 #include <fstream>
 #include <vector>
 
-// Ãß°¡ÇÑ Çì´õ
+// ì¶”ê°€í•œ í—¤ë”
 #include <string>
-#include <cwchar>  // wcsrchr »ç¿ëÀ» À§ÇÑ Çì´õ
-#include <cstring> // wcstombs ÇÔ¼ö »ç¿ëÀ» À§ÇÑ Çì´õ
+#include <cwchar>  // wcsrchr ì‚¬ìš©ì„ ìœ„í•œ í—¤ë”
+#include <cstring> // wcstombs í•¨ìˆ˜ ì‚¬ìš©ì„ ìœ„í•œ í—¤ë”
 #include <cstdio>
 #include <unordered_set>
+
+#include <unordered_map>
 
 using namespace std;
 
