@@ -235,11 +235,15 @@ public:
 	int								m_nAnimationSets = 0;
 	CAnimationSet					**m_pAnimationSet_list = NULL;
 
+	std::vector<int> m_vecUpperBodyBoneIndices;  // 상체
+	std::vector<int> m_vecLowerBodyBoneIndices;  // 하체
+
 	int								m_nBoneFrames = 0; 
 //	std::shared_ptr<CGameObject>						*m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
 //	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
+	void ClassifyBones();
 };
 
 class CAnimationTrack
@@ -353,21 +357,28 @@ public:
 
 class CGameObject
 {
-public:
-	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
-
 private:
-	int								m_nReferences = 0;
-
 	std::shared_ptr<CGameObject> m_pChild = nullptr;     // 자식 노드
 	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // 형제 노드
 
-public:
-	//void AddRef();
-	//void Release();
+	bool Active = true;
 
-	std::shared_ptr<CGameObject> Get_Child();
-	std::shared_ptr<CGameObject> Get_Sibling();
+public:
+	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
+
+	char							m_pstrFrameName[64];
+
+	CMesh* m_pMesh = NULL;
+	CAnimationController* m_pSkinnedAnimationController = NULL;
+
+	int								m_nMaterials = 0;
+	CMaterial** m_ppMaterials = NULL;
+
+	XMFLOAT4X4				m_xmf4x4Parent{};
+	XMFLOAT4X4				m_xmf4x4World{};
+
+	XMFLOAT3 m_xmf3RotationAxis;
+	float m_fRotationSpeed;
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -375,19 +386,11 @@ public:
 
     virtual ~CGameObject();
 
-public:
-	char							m_pstrFrameName[64];
-	bool Active = true;
+	std::shared_ptr<CGameObject> Get_Child();
+	std::shared_ptr<CGameObject> Get_Sibling();
 
-	CMesh							*m_pMesh = NULL;
-
-	int								m_nMaterials = 0;
-	CMaterial						**m_ppMaterials = NULL;
-
-	XMFLOAT4X4				m_xmf4x4Parent{};
-	XMFLOAT4X4				m_xmf4x4World{};
-
-	CAnimationController*			m_pSkinnedAnimationController = NULL;
+	void Set_Active(bool active, bool bIsRoot = true);
+	bool Get_Active() { return Active; }
 
 	void SetMesh(CMesh *pMesh);
 	void SetShader(CShader *pShader);
@@ -434,6 +437,9 @@ public:
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
 
+	void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
+	void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
+
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
@@ -469,39 +475,14 @@ public:
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent);
 
 	virtual int Get_Tile(float x, float z) { return -1; };
+
+	virtual BoundingOrientedBox* Get_Collider();
+	virtual void Add_Collider(float cube_length);
+	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 };
 
 //==================================================================================
 
-
-//class CHeightMapTerrain : public CGameObject
-//{
-//public:
-//	CHeightMapTerrain(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, LPCTSTR pFileName, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color);
-//	virtual ~CHeightMapTerrain();
-//
-//private:
-//	CHeightMapImage				*m_pHeightMapImage;
-//
-//	int							m_nWidth;
-//	int							m_nLength;
-//
-//	XMFLOAT3					m_xmf3Scale;
-//
-//public:
-//	float GetHeight(float x, float z, bool bReverseQuad = false) { return(m_pHeightMapImage->GetHeight(x, z, bReverseQuad) * m_xmf3Scale.y); } //World
-//	XMFLOAT3 GetNormal(float x, float z) { return(m_pHeightMapImage->GetHeightMapNormal(int(x / m_xmf3Scale.x), int(z / m_xmf3Scale.z))); }
-//
-//	int GetHeightMapWidth() { return(m_pHeightMapImage->GetHeightMapWidth()); }
-//	int GetHeightMapLength() { return(m_pHeightMapImage->GetHeightMapLength()); }
-//
-//	XMFLOAT3 GetScale() { return(m_xmf3Scale); }
-//	float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
-//	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
-//
-//	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-//
-//};
 
 class CHeightMapTerrain : public CGameObject
 {
@@ -532,14 +513,17 @@ public:
 
 	void Set_Tile(int n);
 
-
-	float GetHeight(float x, float z, bool bReverseQuad = false);  //World
-	XMFLOAT3 GetNormal(float x, float z);
-	
 	float Get_Mesh_Height(float x, float z, bool bReverseQuad = false);
+	float Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
+
 	XMFLOAT3 Get_Mesh_Normal(float x, float z);
+	XMFLOAT3  Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr);
 
 	int Get_Tile(float x, float z);
+	int Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr);
+
+	virtual BoundingOrientedBox* Get_Collider();
+
 
 	int GetHeightMapWidth() { return(m_pHeightMapImage->GetHeightMapWidth()); }
 	int GetHeightMapLength() { return(m_pHeightMapImage->GetHeightMapLength()); }
