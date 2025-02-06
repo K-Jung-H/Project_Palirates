@@ -545,11 +545,10 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
-	m_GameTimer.Tick(140.0f);
+	m_GameTimer.Tick(0.0f);
 	
 	ProcessInput();
 
-	// 애니메이션 + 추가적인 객체 생성
 	Update_Scene();
 
 #ifdef WRITE_TEXT_UI
@@ -576,7 +575,6 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 
-	// 씬 메니져를 통한 렌더링 관리
 	scene_manager->Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
 
 
@@ -601,7 +599,6 @@ void CGameFramework::FrameAdvance()
 
 #ifdef WRITE_TEXT_UI
 
-	// 씬 메니져를 통한 렌더링 관리
 	scene_manager->Render_Scene_UI(m_nSwapChainBufferIndex);
 #endif
 

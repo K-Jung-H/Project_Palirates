@@ -12,7 +12,12 @@ Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12Comma
 
 Scene_Manager::~Scene_Manager()
 {
+    for (auto& pair : sceneCache)
+    {
+        pair.second->ReleaseObjects();
+    }
     sceneCache.clear();
+
 }
 
 bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene)
