@@ -493,8 +493,10 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (Anime_test_FallingLoop) {
-			if (m_fFallingTimer <= 1.0f) {
+		if (Anime_test_FallingLoop)
+		{
+			if (m_fFallingTimer <= 1.0f)
+			{
 				// Falling 타이머 갱신
 				m_fFallingTimer += fTimeElapsed;
 
@@ -524,8 +526,6 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 				m_pSkinnedAnimationController->SetTrackEnable(0, false);
 				m_pSkinnedAnimationController->SetTrackEnable(1, false);
 				m_pSkinnedAnimationController->SetTrackEnable(2, true);
-
-				m_pSkinnedAnimationController->Bone_Info();
 			}
 			//m_pSkinnedAnimationController->SetTrackPosition(1, 0.0f);
 		}

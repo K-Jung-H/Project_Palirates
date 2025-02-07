@@ -1167,14 +1167,28 @@ void CGameObject::Move(XMFLOAT3 xmf3Offset)
 
 	UpdateTransform(NULL);
 }
-
-void CGameObject::SetScale(float x, float y, float z)
+void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 {
-	XMMATRIX mtxScale = XMMatrixScaling(x, y, z);
-	m_xmf4x4Parent = Matrix4x4::Multiply(mtxScale, m_xmf4x4Parent);
+	XMFLOAT3 originalPosition;
+
+	if (keepPosition) 
+	{
+		originalPosition = { m_xmf4x4Parent._41, m_xmf4x4Parent._42, m_xmf4x4Parent._43 };
+		m_xmf4x4Parent._41 = m_xmf4x4Parent._42 = m_xmf4x4Parent._43 = 0.0f;
+	}
+
+	m_xmf4x4Parent = Matrix4x4::Multiply(XMMatrixScaling(x, y, z), m_xmf4x4Parent);
+
+	if (keepPosition) 
+	{
+		m_xmf4x4Parent._41 = originalPosition.x;
+		m_xmf4x4Parent._42 = originalPosition.y;
+		m_xmf4x4Parent._43 = originalPosition.z;
+	}
 
 	UpdateTransform(NULL);
 }
+
 
 XMFLOAT3 CGameObject::GetPosition()
 {

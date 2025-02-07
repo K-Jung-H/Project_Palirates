@@ -159,23 +159,17 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3);
 
+	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
+	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
 
-
-	//float* pfData = new float[2];
-	//pfData[0] = 0.0f;
-	//pfData[1] = 1.0f;
-	//m_ppHierarchicalGameObjects[6] = new CEthanObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, 1);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKeys(0, 2);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 0, 0.0f, &pfData[0]);
-	//CAnimationSet* pAnimationSet = m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[1];
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 1, pAnimationSet->m_fLength, &pfData[1]);
-	//CRootMotionCallbackHandler* pRootMotionCallbackHandler = new CRootMotionCallbackHandler();
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetAnimationCallbackHandler(1, pRootMotionCallbackHandler);
-	//m_ppHierarchicalGameObjects[6]->SetRootMotion(true);
-	//m_ppHierarchicalGameObjects[6]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 670.0f), 670.0f);
-	//m_ppHierarchicalGameObjects[6]->Rotate(0.0f, -90.0f, 0.0f);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackSpeed(0, 0.75f);
+	float pos_x = 1000.0f;
+	float pos_z = 1000.0f;
+	testModel->m_pModelRootObject->Add_Collider(10.0f);
+	test_OBJ->Set_Child(testModel->m_pModelRootObject);
+	
+	test_OBJ->SetScale(10.0f, 10.0f, 10.0f, true);
+	test_OBJ->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
+	obj_manager->Add_Object(test_OBJ);
 
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
@@ -738,16 +732,10 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
 	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
 	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
-//		static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
-//		static vector<shared_ptr<CGameObject>> temp_list{ test_ptr }; 
-		//vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
-		//if (test_button)
-		//{
-		//	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
-		//	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
-		//}
-		//else
-		//	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_2);
+
+		vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
+			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+
 #endif
 }
 
