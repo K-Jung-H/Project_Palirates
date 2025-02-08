@@ -129,7 +129,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_1->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_1);
+	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
 	
 	//====================================================
 	// 테스트용 코드	
@@ -148,7 +148,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_2->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_2);
+	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
 
 
 	name_view = obj_name_3;
@@ -157,11 +157,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_3->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_3);
+	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
 	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
 	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
-
+	CGameObject::PrintFrameInfo(testModel->m_pModelRootObject.get(), NULL);
 	float pos_x = 1000.0f;
 	float pos_z = 1000.0f;
 	testModel->m_pModelRootObject->Add_Collider(10.0f);
@@ -169,7 +169,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	
 	test_OBJ->SetScale(10.0f, 10.0f, 10.0f, true);
 	test_OBJ->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
-	obj_manager->Add_Object(test_OBJ);
+	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
 
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];

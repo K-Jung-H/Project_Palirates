@@ -101,7 +101,7 @@ extern HINSTANCE						ghAppInstance;
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
 
-
+#define _WITH_DEBUG_FRAME_HIERARCHY
 #define STR_LENGTH 64
 
 #define WRITE_TEXT_UI

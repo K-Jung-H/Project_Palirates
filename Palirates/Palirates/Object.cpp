@@ -1491,11 +1491,6 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
 					if (pChild) 
 						pGameObject->Set_Child(pChild);
-#ifdef _WITH_DEBUG_FRAME_HIERARCHY
-					TCHAR pstrDebug[256] = { 0 };
-					_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pChild, pGameObject);
-					OutputDebugString(pstrDebug);
-#endif
 				}
 			}
 		}
@@ -1653,6 +1648,17 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 #endif
 
 	return(pLoadedModel);
+}
+
+std::string CGameObject::Get_Mesh_Name()
+{
+	if (m_pMesh != NULL)
+		if(m_pMesh->Vertex_Existence())
+			return m_pMesh->Get_Name();
+
+	return string("None");
+
+
 }
 
 BoundingOrientedBox* CGameObject::Get_Collider()

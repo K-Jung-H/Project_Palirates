@@ -287,28 +287,77 @@ Object_Manager::~Object_Manager()
 
 }
 
-void Object_Manager::Add_Object(std::shared_ptr<CGameObject > obj_ptr)
+void Object_Manager::Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Type type)
 {
-	if (obj_ptr->m_pSkinnedAnimationController != NULL)
-		skinned_object_list.push_back(obj_ptr);
-	else
+	switch (type)
+	{
+	case Object_Type::skinned:
+	{
+		if (obj_ptr->m_pSkinnedAnimationController != NULL)
+			skinned_object_list.push_back(obj_ptr);
+	}	break;
+	case Object_Type::non_skinned:
 		non_skinned_object_list.push_back(obj_ptr);
+		break;
+	case Object_Type::fixed:
+	{		
+		Add_Object_To_Unordered_Map(obj_ptr, fixed_object_list_map);
+	}	break;
+	case Object_Type::etc:
+		break;
+	default:
+		break;
+	}
+}
+
+void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, std::vector<std::shared_ptr<CGameObject>>>& container)
+{
+	string name = obj_ptr->Get_Mesh_Name();
+
+	if(name != "None")
+		container[name].push_back(obj_ptr);
+
+	std::shared_ptr<CGameObject> child_ptr = obj_ptr->Get_Child();
+	if (child_ptr != nullptr)
+		Add_Object_To_Unordered_Map(child_ptr, container);
+	
+
+	std::shared_ptr<CGameObject> sibling_ptr = obj_ptr->Get_Sibling();
+	if (sibling_ptr != nullptr)
+		Add_Object_To_Unordered_Map(sibling_ptr, container);
+	
 }
 
 void Object_Manager::Delete_Object(std::shared_ptr<CGameObject > obj_ptr)
 {
+	//===========[fixed]===========
 	auto it = std::find(skinned_object_list.begin(), skinned_object_list.end(), obj_ptr);
 
-	if (it != skinned_object_list.end()) 
+	if (it != skinned_object_list.end())
 		skinned_object_list.erase(it);
-	
 
+
+	//===========[fixed]===========
 	it = std::find(non_skinned_object_list.begin(), non_skinned_object_list.end(), obj_ptr);
 
-	if (it != non_skinned_object_list.end()) 
+	if (it != non_skinned_object_list.end())
 		non_skinned_object_list.erase(it);
-	
 
+	//===========[fixed]===========
+	for (auto iter = fixed_object_list_map.begin(); iter != fixed_object_list_map.end(); )
+	{
+		auto& obj_vector = iter->second;
+
+		obj_vector.erase(
+			std::remove(obj_vector.begin(), obj_vector.end(), obj_ptr),
+			obj_vector.end()
+		);
+
+		if (obj_vector.empty())
+			iter = fixed_object_list_map.erase(iter);
+		else
+			++iter;
+	}
 }
 
 void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
@@ -334,6 +383,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	}
 	break;
 
+	case Object_Type::fixed:
 	case Object_Type::etc:
 	default:
 	{
@@ -378,6 +428,26 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	}
 	break;
 
+	case Object_Type::fixed:
+	{
+		// 같은 메시를 사용하는 객체끼리 모두 벡터에 저장하였음
+		// 이를 이용하여, 사물들을 위치 정보를 인스턴싱하는 업데이트 함수를 작성하고
+		// 사물들의 위치정보를 저장한 인스턴싱 버퍼를 연결하여 렌더링
+		// 최종 목표 == 메시별로 렌더링 함수 1번만 호출하는 것
+		int a = fixed_object_list_map.size();
+		for (auto& [meshName, objVector] : fixed_object_list_map)
+		{
+			for (std::shared_ptr<CGameObject>& obj_ptr : objVector)
+			{
+				if (obj_ptr->Get_Active())
+				{
+					obj_ptr->Render(pd3dCommandList, pCamera);
+				}
+			}
+		}
+	}
+	break;
+
 	case Object_Type::etc:
 	default:
 	{
@@ -394,6 +464,8 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 {
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
+
 }
 
 std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Object_Type type)
@@ -416,6 +488,24 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 	}
 }
 
+std::unordered_map<std::string, std::vector<std::shared_ptr<CGameObject>>>* Object_Manager::Get_Object_List_Map(Object_Type type)
+{
+	switch (type)
+	{
+	case Object_Type::fixed:
+		return &fixed_object_list_map;
+		break;
+
+	case Object_Type::skinned:
+	case Object_Type::non_skinned:
+	case Object_Type::etc:
+	default:
+		DebugOutput("Object_Manager::Get_Object_List_Map() - Using_Wrong_Type");
+		::PostQuitMessage(0);
+		break;
+	}
+}
+
 void Object_Manager::Clear_Object_List(Object_Type type)
 {
 	switch (type)
@@ -428,6 +518,10 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 	case Object_Type::non_skinned:
 		non_skinned_object_list.clear();
 		non_skinned_object_list.shrink_to_fit();
+		break;
+
+	case Object_Type::fixed:
+		fixed_object_list_map.clear();
 		break;
 
 	case Object_Type::etc:
@@ -443,6 +537,8 @@ void Object_Manager::Clear_Object_List_All()
 {
 	Clear_Object_List(Object_Type::skinned);
 	Clear_Object_List(Object_Type::non_skinned);
+	Clear_Object_List(Object_Type::fixed);
+
 }
 
 

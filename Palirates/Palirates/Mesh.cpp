@@ -56,6 +56,19 @@ CMesh::~CMesh()
 		DebugOutput("\nDelete Mesh: ",m_pstrMeshName);
 }
 
+std::string CMesh::Get_Name() const 
+{
+	return std::string(m_pstrMeshName);
+}
+
+bool CMesh::Vertex_Existence() const
+{
+	if (m_nVertices > 0 && m_pxmf3Positions != NULL)
+		return true;
+	else
+		return false;
+}
+
 void CMesh::ReleaseUploadBuffers()
 {
 	if (m_pd3dPositionUploadBuffer) m_pd3dPositionUploadBuffer->Release();
