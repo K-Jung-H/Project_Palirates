@@ -32,6 +32,7 @@ CGameFramework::CGameFramework()
 
 	m_pPlayer = NULL;
 
+	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 }
 
 CGameFramework::~CGameFramework()
@@ -620,7 +621,7 @@ void CGameFramework::FrameAdvance()
 
 	MoveToNextFrame();
 
-	m_GameTimer.GetFrameRate(m_pszFrameRate + 12, 37);
+	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	::SetWindowText(m_hWnd, m_pszFrameRate);
 
 }

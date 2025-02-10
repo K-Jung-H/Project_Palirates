@@ -11,6 +11,8 @@ struct BoundingBox_Instance_Info
 	XMFLOAT4X4 world_4x4transform;
 	XMFLOAT4 box_color;
 	UINT active;
+
+
 };
 
 class BoundingBox_Shader : public CShader
@@ -60,6 +62,32 @@ public:
 
 };
 
+
+struct Instance_Info
+{
+	XMFLOAT4X4 world_4x4transform;
+	UINT active;
+};
+
+struct Fixed_Object_Info
+{
+
+	std::vector<std::shared_ptr<CGameObject>> fixed_obj_list;
+	std::shared_ptr<CMesh> obj_mesh;
+
+
+	int rendering_max_num = DEFAULT_INSTANCE_NUM;
+	ID3D12Resource* Instance_info = NULL;
+	Instance_Info* Mapped_Instance_info = NULL;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
+
+	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Release_Instance_Data_ShaderVariables();
+
+};
+
+
 enum class Object_Type
 {
 	skinned,
@@ -85,12 +113,19 @@ private:
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 
-	// 고정된 사물 객체들
-	std::unordered_map<std::string, std::vector<std::shared_ptr<CGameObject>>> fixed_object_list_map;
+	// 고정된 사물 객체 정보
+	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
+
+	// 중복 검사
+	std::unordered_set<std::string> unique_mesh_names;
+
+	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
 
 
-	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, std::vector<std::shared_ptr<CGameObject>>>& container);
 public:
+	static bool do_instance_update;
+	static	void Reserve_Update() { do_instance_update = true; }
+
 	Object_Manager();
 	~Object_Manager();
 
@@ -99,18 +134,20 @@ public:
 	void Delete_Object(std::shared_ptr<CGameObject > obj_ptr);
 
 	void Animate_Objects_All(float fTimeElapsed);
-		void Animate_Objects(Object_Type type, float fTimeElapsed);
+	void Animate_Objects(Object_Type type, float fTimeElapsed);
 
+	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
-		void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
-	std::unordered_map<std::string, std::vector<std::shared_ptr<CGameObject>>>* Get_Object_List_Map(Object_Type type);
+	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
 
 
 	void Clear_Object_List_All();
 	void Clear_Object_List(Object_Type type);
+
 
 	//========================================================================
 	void Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);

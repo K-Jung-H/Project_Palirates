@@ -171,6 +171,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_OBJ->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
 	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
 
+	Object_Manager::Reserve_Update();
+
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 
@@ -737,6 +739,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
 #endif
+
+			obj_manager->Update(pd3dDevice, pd3dCommandList);
 }
 
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)

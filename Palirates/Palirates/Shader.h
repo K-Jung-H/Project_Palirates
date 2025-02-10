@@ -58,6 +58,7 @@ public:
 	virtual void ReleaseObjects() { }
 
 	int Get_Num_PipelineState() { return m_nPipelineStates; };
+	virtual void Set_Instance_Shader() { };
 protected:
 
 	int															m_nPipelineStates = 0;
@@ -101,6 +102,7 @@ public:
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
 };
 
 
@@ -108,6 +110,8 @@ public:
 //
 class CStandardShader : public CShader
 {
+private:
+	bool is_instace_render = false;
 public:
 	CStandardShader();
 	virtual ~CStandardShader();
@@ -118,7 +122,11 @@ public:
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
+	virtual void Set_Instance_Shader() { is_instace_render = true; }
 };
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
