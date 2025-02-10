@@ -384,7 +384,12 @@ public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");
 
+	CGameObject(const CGameObject& other);
+	CGameObject& operator=(const CGameObject& other);
+
     virtual ~CGameObject();
+
+
 
 	std::shared_ptr<CGameObject> Get_Child();
 	std::shared_ptr<CGameObject> Get_Sibling();

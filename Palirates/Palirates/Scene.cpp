@@ -161,15 +161,26 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
 	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
-	CGameObject::PrintFrameInfo(testModel->m_pModelRootObject.get(), NULL);
 	float pos_x = 1000.0f;
 	float pos_z = 1000.0f;
 	testModel->m_pModelRootObject->Add_Collider(10.0f);
 	test_OBJ->Set_Child(testModel->m_pModelRootObject);
-	
 	test_OBJ->SetScale(10.0f, 10.0f, 10.0f, true);
 	test_OBJ->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
+
+	test_OBJ->UpdateTransform(NULL);
+	//=====================================================
+	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
+	pos_x = 10.0f;
+	pos_z = 10.0f;
+
+	test_OBJ_2->SetScale(1.0f, 1.0f, 1.0f, true);
+	test_OBJ_2->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
+
+	test_OBJ_2->UpdateTransform(NULL);
 	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
+	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
+
 
 	Object_Manager::Reserve_Update();
 
@@ -739,7 +750,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
 #endif
-
 			obj_manager->Update(pd3dDevice, pd3dCommandList);
 }
 

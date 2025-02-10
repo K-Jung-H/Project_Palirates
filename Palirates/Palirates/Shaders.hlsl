@@ -150,10 +150,10 @@ VS_STANDARD_OUTPUT_INSTANCE VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input
 
 
     output.position = mul(mul(mul(float4(input.position, 1.0f), input.instance_worldMatrix), gmtxView), gmtxProjection);
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
-    output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
-    output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
-    output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
+    output.positionW = mul(float4(input.position, 1.0f), input.instance_worldMatrix).xyz;
+    output.normalW = mul(input.normal, (float3x3) input.instance_worldMatrix);
+    output.tangentW = mul(input.tangent, (float3x3) input.instance_worldMatrix);
+    output.bitangentW = mul(input.bitangent, (float3x3) input.instance_worldMatrix);
     output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
     output.uv = input.uv;
 	

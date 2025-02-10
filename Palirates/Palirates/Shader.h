@@ -58,7 +58,6 @@ public:
 	virtual void ReleaseObjects() { }
 
 	int Get_Num_PipelineState() { return m_nPipelineStates; };
-	virtual void Set_Instance_Shader() { };
 protected:
 
 	int															m_nPipelineStates = 0;
@@ -110,8 +109,6 @@ public:
 //
 class CStandardShader : public CShader
 {
-private:
-	bool is_instace_render = false;
 public:
 	CStandardShader();
 	virtual ~CStandardShader();
@@ -124,9 +121,26 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
-	virtual void Set_Instance_Shader() { is_instace_render = true; }
+
 };
 
+class CStandard_Instance_Shader : public CStandardShader
+{
+public:
+	CStandard_Instance_Shader();
+	virtual ~CStandard_Instance_Shader();
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
+
+
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -158,8 +172,12 @@ public:
 	CSkinnedAnimationStandardShader();
 	virtual ~CSkinnedAnimationStandardShader();
 
+	void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -187,14 +187,27 @@ CMaterial::CMaterial(int nTextures)
 
 CMaterial::~CMaterial()
 {
-	if (m_pShader) m_pShader->Release();
+	if (m_pShader)
+	{
+		m_pShader->Release();
+		m_pShader = nullptr;
+	}
 
 	if (m_nTextures > 0)
 	{
-		for (int i = 0; i < m_nTextures; i++) if (m_ppTextures[i]) m_ppTextures[i]->Release();
-		delete[] m_ppTextures;
+		for (int i = 0; i < m_nTextures; i++) 
+			if (m_ppTextures[i])
+				m_ppTextures[i]->Release();
 
-		if (m_ppstrTextureNames) delete[] m_ppstrTextureNames;
+		delete[] m_ppTextures;
+		m_ppTextures = nullptr;
+
+		if (m_ppstrTextureNames)
+		{
+			delete[] m_ppstrTextureNames;
+			m_ppstrTextureNames = nullptr;
+		}
+
 	}
 
 	DebugOutput("\nDelete Material");
@@ -232,9 +245,9 @@ void CMaterial::PrepareShaders(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_pStandardShader = new CStandardShader();
-	m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	Object_Manager::instance_shader = new CStandard_Instance_Shader();
+	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
 	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
@@ -866,12 +879,145 @@ CGameObject::~CGameObject()
 			if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
 		}
 	}
-	if (m_ppMaterials) delete[] m_ppMaterials;
 
-	if (m_pSkinnedAnimationController) delete m_pSkinnedAnimationController;
+	if (m_ppMaterials)
+	{
+		delete[] m_ppMaterials;
+		m_ppMaterials = nullptr;  
+	}
+
+
+	if (m_pSkinnedAnimationController)
+	{
+		delete m_pSkinnedAnimationController;
+		m_pSkinnedAnimationController = nullptr; 
+	}
 
 	DebugOutput("\nDelete GameObject: ", m_pstrFrameName);
 }
+
+CGameObject::CGameObject(const CGameObject& other)
+{
+	// 기본 값 복사
+	m_pParent = other.m_pParent;  // 부모는 복사하지 않음
+	m_xmf4x4Parent = other.m_xmf4x4Parent;
+	m_xmf4x4World = other.m_xmf4x4World;
+	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
+	m_fRotationSpeed = other.m_fRotationSpeed;
+	m_nMaterials = other.m_nMaterials;
+	Active = other.Active;
+
+	// 문자열 복사
+	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
+
+	// 자식 객체 복사 (깊은 복사)
+	m_pChild = (other.m_pChild) ? std::make_shared<CGameObject>(*other.m_pChild) : nullptr;
+
+	// 형제 객체 복사 (깊은 복사)
+	m_pSibling = (other.m_pSibling) ? std::make_shared<CGameObject>(*other.m_pSibling) : nullptr;
+
+	// m_ppMaterials (배열 포인터) 깊은 복사
+	if (other.m_ppMaterials != nullptr)
+	{
+		m_ppMaterials = new CMaterial * [m_nMaterials];
+		for (int i = 0; i < m_nMaterials; ++i)
+		{
+			m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
+		}
+	}
+
+	// m_pMesh와 m_pSkinnedAnimationController 복사
+	if (other.m_pMesh != nullptr)
+	{
+		m_pMesh = new CMesh(*other.m_pMesh);  // 깊은 복사
+	}
+
+	if (other.m_pSkinnedAnimationController != nullptr)
+	{
+		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  // 깊은 복사
+	}
+}
+
+CGameObject& CGameObject::operator=(const CGameObject& other)
+{
+	if (this == &other) return *this;  // 자기 자신에 대입하는 경우를 방지
+
+	// 기본 값 복사
+	m_pParent = other.m_pParent;  // 부모는 복사하지 않음
+	m_xmf4x4Parent = other.m_xmf4x4Parent;
+	m_xmf4x4World = other.m_xmf4x4World;
+	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
+	m_fRotationSpeed = other.m_fRotationSpeed;
+	m_nMaterials = other.m_nMaterials;
+	Active = other.Active;
+
+	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
+
+	// 자식 객체 복사 (깊은 복사)
+	if (other.m_pChild)
+	{
+		if (m_pChild)
+		{
+			// 자식이 이미 있을 경우 삭제
+			m_pChild.reset();
+		}
+		m_pChild = std::make_shared<CGameObject>(*other.m_pChild);
+	}
+	else
+	{
+		m_pChild = nullptr;
+	}
+
+	// 형제 객체 복사 (깊은 복사)
+	if (other.m_pSibling)
+	{
+		if (m_pSibling)
+		{
+			// 형제가 이미 있을 경우 삭제
+			m_pSibling.reset();
+		}
+		m_pSibling = std::make_shared<CGameObject>(*other.m_pSibling);
+	}
+	else
+	{
+		m_pSibling = nullptr;
+	}
+
+	// m_ppMaterials (배열 포인터) 깊은 복사
+	if (other.m_ppMaterials != nullptr)
+	{
+		// 기존 메모리 해제
+		if (m_ppMaterials != nullptr) {
+			for (int i = 0; i < m_nMaterials; ++i) {
+				delete m_ppMaterials[i];
+			}
+			delete[] m_ppMaterials;
+		}
+
+		m_ppMaterials = new CMaterial * [m_nMaterials];
+		for (int i = 0; i < m_nMaterials; ++i)
+		{
+			m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
+		}
+	}
+
+	// m_pMesh와 m_pSkinnedAnimationController 복사
+	if (other.m_pMesh != nullptr)
+	{
+		if (m_pMesh != nullptr) delete m_pMesh;  // 기존 메모리 해제
+		m_pMesh = new CMesh(*other.m_pMesh);  // 깊은 복사
+	}
+
+	if (other.m_pSkinnedAnimationController != nullptr)
+	{
+		if (m_pSkinnedAnimationController != nullptr) delete m_pSkinnedAnimationController;  // 기존 메모리 해제
+		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  // 깊은 복사
+	}
+
+	return *this;
+}
+
+
 
 std::shared_ptr<CGameObject> CGameObject::Get_Child()
 {

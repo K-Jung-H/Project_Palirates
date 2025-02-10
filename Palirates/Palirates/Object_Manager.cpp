@@ -318,7 +318,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 			Mapped_Instance_info[i].active = true;
 		else
 			Mapped_Instance_info[i].active = false;
-
+		XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(XMLoadFloat4x4(&world_matrix)));
 		Mapped_Instance_info[i].world_4x4transform = world_matrix;
 		++i;  
 	}
@@ -336,7 +336,7 @@ void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
 	if (Instance_info) Instance_info->Release();
 }
 
-
+CStandard_Instance_Shader* Object_Manager::instance_shader = NULL;
 bool Object_Manager::do_instance_update = false;
 
 
@@ -378,8 +378,8 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 
 	if (name != "None") 
 	{
-		obj_ptr->m_ppMaterials[0]->m_pShader->Set_Instance_Shader();
 		container[name].fixed_obj_list.push_back(obj_ptr);
+		obj_ptr->m_ppMaterials[0]->m_pShader = instance_shader;
 
 		// 같은 name이 저장되어 있지 않다면 추가 == 메시 중복 검사
 		// name이 처음 추가되었을 경우 true 반환
@@ -480,13 +480,16 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (do_instance_update == false)
 		return;
 	else
-		do_instance_update = true; // 다음 Update 호출 전까지는 인스턴스 정보 유지하기
+		do_instance_update = false; // 다음 Update 호출 전까지는 인스턴스 정보 유지하기
 
 	for (auto& pair : fixed_obj_info_map)
 	{
 		Fixed_Object_Info& info = pair.second;
 		if (info.Instance_info == NULL)
+		{
 			info.Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+			info.Update_Instance_Data(pd3dDevice, pd3dCommandList);
+		}
 		else
 			info.Update_Instance_Data(pd3dDevice, pd3dCommandList);
 	}
@@ -543,7 +546,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 							for (int j = 0; j < pipelineStateNum; ++j)
 							{
 								// PSO 설정
-								pShader->Setting_Render(pd3dCommandList, 1);
+								pShader->Setting_Render(pd3dCommandList, 0);
 
 								// 재료(Material) 셰이더 변수 업데이트
 								pMaterial->UpdateShaderVariable(pd3dCommandList);

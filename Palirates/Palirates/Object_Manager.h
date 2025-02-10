@@ -11,8 +11,6 @@ struct BoundingBox_Instance_Info
 	XMFLOAT4X4 world_4x4transform;
 	XMFLOAT4 box_color;
 	UINT active;
-
-
 };
 
 class BoundingBox_Shader : public CShader
@@ -99,15 +97,7 @@ enum class Object_Type
 class Object_Manager
 {
 private:
-
 	shared_ptr<OBB_Drawer> bounding_box_drawer;
-
-	// 자료 구조를 unordered_map이나 unordered_set 로 관리하면, 애니메이션,렌더링 처리 순서를 관리할 수 있을거 같은데..
-
-	// 다른 곳에서 실수로 shared_ptr<CGameObject>를 delete 연산 한 경우 -> 오류 발생
-	// 이를 방지 하고 싶다면 shared_ptr에 대응되는 weak_ptr를 저장하여, 생명 주기 검사 필요
-	// delete 안쓰면 문제 없음
-
 
 	// 움직이는 객체들
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
@@ -121,8 +111,8 @@ private:
 
 	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
 
-
 public:
+	static CStandard_Instance_Shader* instance_shader;
 	static bool do_instance_update;
 	static	void Reserve_Update() { do_instance_update = true; }
 

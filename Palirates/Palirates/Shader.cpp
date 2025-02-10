@@ -16,7 +16,9 @@ CShader::~CShader()
 //	if (m_pd3dPipelineState) m_pd3dPipelineState->Release();
 	if (m_ppd3dPipelineStates)
 	{
-		for (int i = 0; i < m_nPipelineStates; i++) if (m_ppd3dPipelineStates[i]) m_ppd3dPipelineStates[i]->Release();
+		for (int i = 0; i < m_nPipelineStates; i++) 
+			if (m_ppd3dPipelineStates[i]) 
+				m_ppd3dPipelineStates[i]->Release();
 		delete[] m_ppd3dPipelineStates;
 	}
 }
@@ -224,6 +226,7 @@ DXGI_FORMAT CShader::GetDSVFormat(int nPipelineState)
 void CShader::CreateShader(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
 {
 }
+
 void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
 {
 	ID3DBlob* pd3dVertexShaderBlob = NULL, * pd3dPixelShaderBlob = NULL, * pd3dGeometryShaderBlob = NULL;
@@ -250,6 +253,7 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	d3dPipelineStateDesc.SampleDesc.Count = 1;
 	d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dPipelineStates[nPipelineState]);
+
 
 	if (pd3dVertexShaderBlob) pd3dVertexShaderBlob->Release();
 	if (pd3dGeometryShaderBlob) pd3dGeometryShaderBlob->Release();
@@ -438,12 +442,10 @@ CStandardShader::~CStandardShader()
 
 void CStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 2;
+	m_nPipelineStates = 1;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // 기본 그리기
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 1); // 인스턴싱 그리기
-
 }
 
 D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
@@ -464,7 +466,61 @@ D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
 		d3dInputLayoutDesc.NumElements = nInputElementDescs;
 		return(d3dInputLayoutDesc);
 	}
-	else 	if (nPipelineState == 1)
+}
+
+D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
+{
+	if(nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", VertexShaderBlob));
+	else
+	{
+		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
+		return 		d3dShaderByteCode;
+	}
+
+}
+
+D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", PixelShaderBlob));
+	else
+	{
+		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
+		return 		d3dShaderByteCode;
+	}
+}
+
+void CStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+{
+	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+CStandard_Instance_Shader::CStandard_Instance_Shader()
+{
+}
+
+CStandard_Instance_Shader::~CStandard_Instance_Shader()
+{
+}
+
+void CStandard_Instance_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); 
+
+}
+
+D3D12_INPUT_LAYOUT_DESC CStandard_Instance_Shader::CreateInputLayout(int nPipelineState)
+{
+	if (nPipelineState == 0)
 	{
 		UINT nInputElementDescs = 10;
 		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
@@ -484,7 +540,7 @@ D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
 
 		// 인스턴싱에서 bool 값을 전달하려면 UINT (0, 1)으로 변환
 		pd3dInputElementDescs[9] = { "INSTANCEBOOL", 0, DXGI_FORMAT_R32_UINT, 5, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
-		
+
 		D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 		d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
 		d3dInputLayoutDesc.NumElements = nInputElementDescs;
@@ -492,11 +548,9 @@ D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
 	}
 }
 
-D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CStandard_Instance_Shader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
-	if(nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", VertexShaderBlob));
-	else if(nPipelineState == 1)
+	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard_INSTANCE", "vs_5_1", VertexShaderBlob));
 	else
 	{
@@ -506,11 +560,9 @@ D3D12_SHADER_BYTECODE CStandardShader::CreateVertexShader(ID3DBlob** VertexShade
 
 }
 
-D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE CStandard_Instance_Shader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", PixelShaderBlob));
-	else if (nPipelineState == 1)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard_INSTANCE", "ps_5_1", PixelShaderBlob));
 	else
 	{
@@ -519,11 +571,8 @@ D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(ID3DBlob** PixelShaderB
 	}
 }
 
-void CStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+void CStandard_Instance_Shader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (is_instace_render == false && nPipelineState == 1)
-		return;
-
 	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
 
@@ -532,12 +581,21 @@ void CStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
+
 CSkinnedAnimationStandardShader::CSkinnedAnimationStandardShader()
 {
 }
 
 CSkinnedAnimationStandardShader::~CSkinnedAnimationStandardShader()
 {
+}
+
+void CSkinnedAnimationStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_nPipelineStates = 1;
+	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // 기본 그리기
 }
 
 D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout(int nPipelineState)
@@ -570,6 +628,15 @@ D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreateVertexShader(ID3DBl
 		return 		d3dShaderByteCode;
 	}
 }
+
+
+void CSkinnedAnimationStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+{
+	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
