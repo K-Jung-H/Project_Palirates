@@ -12,8 +12,8 @@ CShader::CShader()
 CShader::~CShader()
 {
 	ReleaseShaderVariables();
+	ReleaseObjects();
 
-//	if (m_pd3dPipelineState) m_pd3dPipelineState->Release();
 	if (m_ppd3dPipelineStates)
 	{
 		for (int i = 0; i < m_nPipelineStates; i++) 
@@ -21,6 +21,8 @@ CShader::~CShader()
 				m_ppd3dPipelineStates[i]->Release();
 		delete[] m_ppd3dPipelineStates;
 	}
+
+	DebugOutput("\n============\ndelete shader\n============\n");
 }
 
 D3D12_SHADER_BYTECODE CShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
@@ -282,7 +284,9 @@ CTerrainShader::CTerrainShader()
 
 CTerrainShader::~CTerrainShader()
 {
+
 }
+
 void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	m_nPipelineStates = 2;

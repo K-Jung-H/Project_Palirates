@@ -187,12 +187,6 @@ CMaterial::CMaterial(int nTextures)
 
 CMaterial::~CMaterial()
 {
-	if (m_pShader)
-	{
-		m_pShader->Release();
-		m_pShader = nullptr;
-	}
-
 	if (m_nTextures > 0)
 	{
 		for (int i = 0; i < m_nTextures; i++) 
@@ -207,18 +201,77 @@ CMaterial::~CMaterial()
 			delete[] m_ppstrTextureNames;
 			m_ppstrTextureNames = nullptr;
 		}
-
 	}
+
 
 	DebugOutput("\nDelete Material");
 
 }
 
-void CMaterial::SetShader(CShader *pShader)
+CMaterial::CMaterial(const CMaterial& other)
 {
-	if (m_pShader) m_pShader->Release();
-	m_pShader = pShader;
-	if (m_pShader) m_pShader->AddRef();
+	m_pShader = other.m_pShader;
+
+	m_xmf4AlbedoColor = other.m_xmf4AlbedoColor;
+	m_xmf4EmissiveColor = other.m_xmf4EmissiveColor;
+	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
+	m_xmf4AmbientColor = other.m_xmf4AmbientColor;
+	m_nType = other.m_nType;
+	m_fGlossiness = other.m_fGlossiness;
+	m_fSmoothness = other.m_fSmoothness;
+	m_fSpecularHighlight = other.m_fSpecularHighlight;
+	m_fMetallic = other.m_fMetallic;
+	m_fGlossyReflection = other.m_fGlossyReflection;
+	m_nTextures = other.m_nTextures;
+
+	if (other.m_ppstrTextureNames != nullptr) 
+	{
+		m_ppstrTextureNames = new _TCHAR[other.m_nTextures][64]; 
+		for (int i = 0; i < other.m_nTextures; ++i) 
+		{
+			std::memcpy(m_ppstrTextureNames[i], other.m_ppstrTextureNames[i], sizeof(_TCHAR) * 64);
+		}
+	}
+	else {
+		m_ppstrTextureNames = nullptr;
+	}
+
+	if (other.m_ppTextures != nullptr)
+	{
+		m_ppTextures = new CTexture * [other.m_nTextures];  
+		for (int i = 0; i < other.m_nTextures; ++i) 
+		{
+			if (other.m_ppTextures[i])
+			{
+				m_ppTextures[i] = new CTexture(*other.m_ppTextures[i]); 
+			}
+			else
+			{
+				m_ppTextures[i] = nullptr;
+			}
+		}
+	}
+	else 
+	{
+		m_ppTextures = nullptr;
+	}
+}
+
+void CMaterial::SetShader(CShader* pShader)
+{
+	if (pShader)
+	{
+		if (pShader != m_pStandardShader && pShader != m_pSkinnedAnimationShader)
+			if(m_pShader != NULL)
+				m_pShader->Release();
+
+		m_pShader = pShader;
+
+		if (pShader != m_pStandardShader && pShader != m_pSkinnedAnimationShader)
+			if (m_pShader != NULL)
+				m_pShader->AddRef();
+	}
+
 }
 
 void CMaterial::SetTexture(CTexture *pTexture, UINT nTexture) 
@@ -245,7 +298,7 @@ void CMaterial::PrepareShaders(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	Object_Manager::instance_shader = new CStandard_Instance_Shader();
+	Object_Manager::instance_shader = std::make_shared<CStandard_Instance_Shader>();
 	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -859,32 +912,46 @@ CGameObject::CGameObject(const std::string_view& name)
 
 CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
 {
-	m_nMaterials = nMaterials;
-	if (m_nMaterials > 0)
+	Material_list.resize(nMaterials);
+	for (std::shared_ptr<CMaterial> material_ptr: Material_list)
 	{
-		m_ppMaterials = new CMaterial*[m_nMaterials];
-		for(int i = 0; i < m_nMaterials; i++) 
-			m_ppMaterials[i] = NULL;
+		material_ptr.reset();
 	}
+
+	//m_nMaterials = nMaterials;
+	//if (m_nMaterials > 0)
+	//{
+	//	m_ppMaterials = new CMaterial*[m_nMaterials];
+	//	for(int i = 0; i < m_nMaterials; i++) 
+	//		m_ppMaterials[i] = NULL;
+	//}
 }
 
 CGameObject::~CGameObject()
 {
-	if (m_pMesh) m_pMesh->Release();
+	if (m_pMesh) 
+		m_pMesh->Release();
 
-	if (m_nMaterials > 0)
-	{
-		for (int i = 0; i < m_nMaterials; i++)
-		{
-			if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
-		}
-	}
+	//for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+	//{
+	//	material_ptr.reset();
+	//}
+	//Material_list.clear();
+	//Material_list.shrink_to_fit();
 
-	if (m_ppMaterials)
-	{
-		delete[] m_ppMaterials;
-		m_ppMaterials = nullptr;  
-	}
+	//if (m_nMaterials > 0)
+	//{
+	//	for (int i = 0; i < m_nMaterials; i++)
+	//	{
+	//		if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
+	//	}
+	//}
+
+	//if (m_ppMaterials)
+	//{
+	//	delete[] m_ppMaterials;
+	//	m_ppMaterials = nullptr;  
+	//}
 
 
 	if (m_pSkinnedAnimationController)
@@ -904,7 +971,7 @@ CGameObject::CGameObject(const CGameObject& other)
 	m_xmf4x4World = other.m_xmf4x4World;
 	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
 	m_fRotationSpeed = other.m_fRotationSpeed;
-	m_nMaterials = other.m_nMaterials;
+//	m_nMaterials = other.m_nMaterials;
 	Active = other.Active;
 
 	// 문자열 복사
@@ -917,14 +984,31 @@ CGameObject::CGameObject(const CGameObject& other)
 	m_pSibling = (other.m_pSibling) ? std::make_shared<CGameObject>(*other.m_pSibling) : nullptr;
 
 	// m_ppMaterials (배열 포인터) 깊은 복사
-	if (other.m_ppMaterials != nullptr)
-	{
-		m_ppMaterials = new CMaterial * [m_nMaterials];
-		for (int i = 0; i < m_nMaterials; ++i)
-		{
-			m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
+	//if (other.m_ppMaterials != nullptr)
+	//{
+	//	m_ppMaterials = new CMaterial * [m_nMaterials];
+	//	for (int i = 0; i < m_nMaterials; ++i)
+	//	{
+	//		m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
+	//	}
+	//}
+
+	
+	if (!other.Material_list.empty()) {
+		Material_list.clear();  // 기존 데이터 제거
+		Material_list.reserve(other.Material_list.size());  // 메모리 할당 최적화
+
+		for (const auto& material : other.Material_list) {
+			if (material) {
+				// CMaterial 객체를 깊은 복사하여 새로운 shared_ptr로 관리
+				Material_list.push_back(std::make_shared<CMaterial>(*material));
+			}
+			else {
+				Material_list.push_back(nullptr);  // nullptr을 유지
+			}
 		}
 	}
+
 
 	// m_pMesh와 m_pSkinnedAnimationController 복사
 	if (other.m_pMesh != nullptr)
@@ -948,7 +1032,7 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 	m_xmf4x4World = other.m_xmf4x4World;
 	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
 	m_fRotationSpeed = other.m_fRotationSpeed;
-	m_nMaterials = other.m_nMaterials;
+//	m_nMaterials = other.m_nMaterials;
 	Active = other.Active;
 
 	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
@@ -984,22 +1068,38 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 	}
 
 	// m_ppMaterials (배열 포인터) 깊은 복사
-	if (other.m_ppMaterials != nullptr)
-	{
-		// 기존 메모리 해제
-		if (m_ppMaterials != nullptr) {
-			for (int i = 0; i < m_nMaterials; ++i) {
-				delete m_ppMaterials[i];
-			}
-			delete[] m_ppMaterials;
-		}
+	//if (other.m_ppMaterials != nullptr)
+	//{
+	//	// 기존 메모리 해제
+	//	if (m_ppMaterials != nullptr) {
+	//		for (int i = 0; i < m_nMaterials; ++i) {
+	//			delete m_ppMaterials[i];
+	//		}
+	//		delete[] m_ppMaterials;
+	//	}
 
-		m_ppMaterials = new CMaterial * [m_nMaterials];
-		for (int i = 0; i < m_nMaterials; ++i)
-		{
-			m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
+	//	m_ppMaterials = new CMaterial * [m_nMaterials];
+	//	for (int i = 0; i < m_nMaterials; ++i)
+	//	{
+	//		m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
+	//	}
+	//}
+
+	if (!other.Material_list.empty()) {
+		Material_list.clear();  // 기존 데이터 제거
+		Material_list.reserve(other.Material_list.size());  // 메모리 할당 최적화
+
+		for (const auto& material : other.Material_list) {
+			if (material) {
+				// CMaterial 객체를 깊은 복사하여 새로운 shared_ptr로 관리
+				Material_list.push_back(std::make_shared<CMaterial>(*material));
+			}
+			else {
+				Material_list.push_back(nullptr);  // nullptr을 유지
+			}
 		}
 	}
+
 
 	// m_pMesh와 m_pSkinnedAnimationController 복사
 	if (other.m_pMesh != nullptr)
@@ -1113,22 +1213,38 @@ void CGameObject::SetMesh(CMesh *pMesh)
 
 void CGameObject::SetShader(CShader *pShader)
 {
-	m_nMaterials = 1;
-	m_ppMaterials = new CMaterial*[m_nMaterials];
-	m_ppMaterials[0] = new CMaterial(0);
-	m_ppMaterials[0]->SetShader(pShader);
+	//m_nMaterials = 1;
+	//m_ppMaterials = new CMaterial*[m_nMaterials];
+	//m_ppMaterials[0] = new CMaterial(0);
+	//m_ppMaterials[0]->SetShader(pShader);
+	std::shared_ptr<CMaterial> material_ptr = std::make_shared<CMaterial>(0);
+	material_ptr->SetShader(pShader);
+	Material_list.push_back(material_ptr);
+
 }
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->SetShader(pShader);
+	//if (m_ppMaterials[nMaterial]) 
+	//	m_ppMaterials[nMaterial]->SetShader(pShader);
+
+	if (Material_list.size() > nMaterial)
+		Material_list[nMaterial]->SetShader(pShader);
+
 }
 
 void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 {
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->Release();
+	/*if (m_ppMaterials[nMaterial]) 
+		m_ppMaterials[nMaterial]->Release();
+
 	m_ppMaterials[nMaterial] = pMaterial;
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->AddRef();
+
+	if (m_ppMaterials[nMaterial]) 
+		m_ppMaterials[nMaterial]->AddRef();*/
+
+	std::shared_ptr<CMaterial> material_ptr(pMaterial);
+	Material_list[nMaterial] = material_ptr;
 }
 
 void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
@@ -1216,15 +1332,49 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-		if (m_nMaterials > 0)
+		//if (m_nMaterials > 0)
+		//{
+		//	// 재료(Material) 처리
+		//	for (int i = 0; i < m_nMaterials; ++i)
+		//	{
+		//		CMaterial* pMaterial = m_ppMaterials[i];
+		//		if (pMaterial)
+		//		{
+		//			shared_ptr<CShader> pShader = pMaterial->m_pShader;
+		//			if (pShader)
+		//			{
+		//				// PSO 순회 및 렌더링
+		//				int pipelineStateNum = pShader->Get_Num_PipelineState();
+		//				for (int j = 0; j < pipelineStateNum; ++j)
+		//				{
+		//					// PSO 설정
+		//					pShader->Setting_Render(pd3dCommandList, j);
+
+		//					// 재료(Material) 셰이더 변수 업데이트
+		//					pMaterial->UpdateShaderVariable(pd3dCommandList);
+
+		//					// 메쉬 렌더링
+		//					m_pMesh->Render(pd3dCommandList, i);
+		//				}
+		//			}
+		//			else
+		//			{
+		//				// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
+		//				pMaterial->UpdateShaderVariable(pd3dCommandList);
+		//				m_pMesh->Render(pd3dCommandList, i);
+		//			}
+		//		}
+		//	}
+		//}
+
+		if (Material_list.size())
 		{
-			// 재료(Material) 처리
-			for (int i = 0; i < m_nMaterials; ++i)
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 			{
-				CMaterial* pMaterial = m_ppMaterials[i];
-				if (pMaterial)
+				if (material_ptr)
 				{
-					CShader* pShader = pMaterial->m_pShader;
+					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 					{
 						// PSO 순회 및 렌더링
@@ -1235,7 +1385,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 							pShader->Setting_Render(pd3dCommandList, j);
 
 							// 재료(Material) 셰이더 변수 업데이트
-							pMaterial->UpdateShaderVariable(pd3dCommandList);
+							material_ptr->UpdateShaderVariable(pd3dCommandList);
 
 							// 메쉬 렌더링
 							m_pMesh->Render(pd3dCommandList, i);
@@ -1244,12 +1394,15 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 					else
 					{
 						// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
-						pMaterial->UpdateShaderVariable(pd3dCommandList);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
 						m_pMesh->Render(pd3dCommandList, i);
 					}
 				}
+
+				++i;
 			}
 		}
+		
 	}
 
 	if (m_pSibling)
@@ -1286,9 +1439,15 @@ void CGameObject::ReleaseUploadBuffers()
 {
 	if (m_pMesh) m_pMesh->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nMaterials; i++)
+	//for (int i = 0; i < m_nMaterials; i++)
+	//{
+	//	if (m_ppMaterials[i]) m_ppMaterials[i]->ReleaseUploadBuffers();
+	//}
+
+	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
-		if (m_ppMaterials[i]) m_ppMaterials[i]->ReleaseUploadBuffers();
+		if(material_ptr!= NULL)
+			material_ptr->ReleaseUploadBuffers();
 	}
 
 	if (m_pSibling) m_pSibling->ReleaseUploadBuffers();
@@ -1420,19 +1579,33 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
-	for (int i = 0; i < m_nMaterials; i++)
+	//for (int i = 0; i < m_nMaterials; i++)
+	//{
+	//	if (m_ppMaterials[i])
+	//	{
+	//		for (int j = 0; j < m_ppMaterials[i]->m_nTextures; j++)
+	//		{
+	//			if (m_ppMaterials[i]->m_ppTextures[j])
+	//			{
+	//				if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) 
+	//					return(m_ppMaterials[i]->m_ppTextures[j]);
+	//			}
+	//		}
+	//	}
+	//}
+
+	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
-		if (m_ppMaterials[i])
+		for (int j = 0; j < material_ptr->m_nTextures; j++)
 		{
-			for (int j = 0; j < m_ppMaterials[i]->m_nTextures; j++)
+			if (material_ptr->m_ppTextures[j])
 			{
-				if (m_ppMaterials[i]->m_ppTextures[j])
-				{
-					if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) return(m_ppMaterials[i]->m_ppTextures[j]);
-				}
+				if (!_tcsncmp(material_ptr->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName)))
+					return(material_ptr->m_ppTextures[j]);
 			}
 		}
 	}
+
 	CTexture *pTexture = NULL;
 	if (m_pSibling) if (pTexture = m_pSibling->FindReplicatedTexture(pstrTextureName)) return(pTexture);
 	if (m_pChild) if (pTexture = m_pChild->FindReplicatedTexture(pstrTextureName)) return(pTexture);
@@ -1465,21 +1638,131 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 	return(nStrLength);
 }
 
-void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, CShader *pShader)
+//void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, CShader *pShader)
+//{
+//	char pstrToken[64] = { '\0' };
+//	int nMaterial = 0;
+//	UINT nReads = 0;
+//
+//	m_nMaterials = ReadIntegerFromFile(pInFile);
+//
+//	m_ppMaterials = new CMaterial*[m_nMaterials];
+//
+//	for (int i = 0; i < m_nMaterials; i++) 
+//		m_ppMaterials[i] = NULL;
+//
+//	CMaterial *pMaterial = NULL;
+//
+//
+//
+//	for ( ; ; )
+//	{
+//		::ReadStringFromFile(pInFile, pstrToken);
+//
+//		if (!strcmp(pstrToken, "<Material>:"))
+//		{
+//			nMaterial = ReadIntegerFromFile(pInFile);
+//
+//			pMaterial = new CMaterial(7); //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+//
+//			if (!pShader)
+//			{
+//				UINT nMeshType = GetMeshType();
+//				if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE)
+//				{
+//					if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT)
+//					{
+//						pMaterial->SetSkinnedAnimationShader();
+//					}
+//					else
+//					{
+//						pMaterial->SetStandardShader();
+//					}
+//				}
+//			}
+//			SetMaterial(nMaterial, pMaterial);
+//		}
+//		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_xmf4AlbedoColor), sizeof(float), 4, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_xmf4EmissiveColor), sizeof(float), 4, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<SpecularColor>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<Glossiness>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<Smoothness>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fSmoothness), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<Metallic>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fSpecularHighlight), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fGlossyReflection), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
+//		{
+//			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3, pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<SpecularMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4, pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<NormalMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5, pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<MetallicMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6, pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<EmissionMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7, pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8, pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9, pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "</Materials>"))
+//		{
+//			break;
+//		}
+//	}
+//}
+
+void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	m_nMaterials = ReadIntegerFromFile(pInFile);
+	// 기존 Material 제거 후 새로운 크기 설정
+	Material_list.clear();
+	int materialCount = ReadIntegerFromFile(pInFile);
+	Material_list.reserve(materialCount);  // 메모리 예약
 
-	m_ppMaterials = new CMaterial*[m_nMaterials];
-	for (int i = 0; i < m_nMaterials; i++) 
-		m_ppMaterials[i] = NULL;
+	std::shared_ptr<CMaterial> pMaterial = nullptr;
 
-	CMaterial *pMaterial = NULL;
-
-	for ( ; ; )
+	for (;;)
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
 
@@ -1487,24 +1770,25 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
 
-			pMaterial = new CMaterial(7); //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
-
+			// 새로운 Material 생성 및 추가
+			pMaterial = std::make_shared<CMaterial>(7);
 			if (!pShader)
 			{
 				UINT nMeshType = GetMeshType();
 				if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE)
 				{
 					if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT)
-					{
 						pMaterial->SetSkinnedAnimationShader();
-					}
 					else
-					{
 						pMaterial->SetStandardShader();
-					}
 				}
 			}
-			SetMaterial(nMaterial, pMaterial);
+
+			// 벡터 크기를 nMaterial 인덱스까지 확장
+			if (nMaterial >= Material_list.size())
+				Material_list.resize(nMaterial + 1);
+
+			Material_list[nMaterial] = pMaterial;
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -1540,31 +1824,45 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3, pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3,
+				pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4, pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4,
+				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5, pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5,
+				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6, pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6,
+				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7, pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7,
+				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8, pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8,
+				pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9, pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9,
+				pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
@@ -1572,6 +1870,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 		}
 	}
 }
+
 
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes)
 {
@@ -1994,20 +2293,33 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		
+		//if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
+		//{
+		//	m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
 
-		if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
+		//	m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
+		//	m_pMesh->Render(pd3dCommandList, 0);
+
+		//	m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
+		//	m_pMesh->Render(pd3dCommandList, 0);
+
+		//	m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
+		//}
+		if (Material_list[0] && Material_list[0]->m_pShader)
 		{
-			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
+			Material_list[0]->UpdateShaderVariable(pd3dCommandList);
 
-			m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
+			Material_list[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
 			m_pMesh->Render(pd3dCommandList, 0);
 
-			m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
+			Material_list[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
 			m_pMesh->Render(pd3dCommandList, 0);
 
-			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
+			Material_list[0]->UpdateShaderVariable(pd3dCommandList);
 		}
 
+		
 
 	}
 

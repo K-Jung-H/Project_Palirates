@@ -113,8 +113,7 @@ public:
 
 	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-	int									m_nShaders = 0;
-	CShader								**m_ppShaders = NULL;
+	std::vector<std::shared_ptr<CShader>> Shader_list;
 
 	CSkyBox								*m_pSkyBox = NULL;
 	CHeightMapTerrain					*m_pTerrain = NULL;

@@ -29,5 +29,20 @@
 - 같은 메시를 사용하는 객체끼리 모두 벡터에 저장하였음
 - 메시별 인스턴스 버퍼 생성 완료 및 렌더링 테스트 완료
 
-CGameObject 깊은 복사 가능하도록 기능 추가 중
--> CMaterial 의 깊은 복사 기능을 추가 안해서, 얕은 복사가 일어나 CShader 소멸 과정에서 오류 발생 중 -> CShader 및 CMaterial 관리를 raw_ptr에서 shared_ptr 로 변경할 것
+CMaterial를 shared_ptr로 관리 및 vector 에 저장하여, 동적 할당 테스트 완료
+
+현재 문제점
+------------------------------------------------------------------------------------------------
+CMaterial 객체들 중, static으로 정의된 일부 객체들이 shared_ptr 에 저장되어, 
+소멸자 동작 중애 오류 발생 원인이 되고 있음.
+
+standard_shader, standardanimation_shader 은 material의 주요 static 변수 -> material의 shader는 raw_ptr로 관리 해야 함
+
++
+
+터레인 클래스의 중복 생성 방지를 위한 일부 static material, texture이 문제가 되고 있음 -> 이 문제 해결 필요.
+
+terrain 객체의 그리기 방식을 변경하던가 // Root 객체에서 하나의 material 만 준비하도록 하고, Leaf 객체에서는 메시 렌더링만 하도록
+아니면, 생성자에서 Material 를 정의 및 설정하도록 하는게 아니라, 생성 후, Leaf 노드에 접근하여 Material 를 별도로 적용하도록 하기
+
+

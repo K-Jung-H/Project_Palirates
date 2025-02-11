@@ -137,6 +137,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
 	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
 
+	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
+	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
+
 	test_obj->Add_Collider(0.0f);
 	test_obj2->Add_Collider(10.0f);
 
@@ -161,8 +164,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
 	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
-	float pos_x = 1000.0f;
-	float pos_z = 1000.0f;
+	float pos_x = 600.0f;
+	float pos_z = 100.0f;
 	testModel->m_pModelRootObject->Add_Collider(10.0f);
 	test_OBJ->Set_Child(testModel->m_pModelRootObject);
 	test_OBJ->SetScale(10.0f, 10.0f, 10.0f, true);
@@ -171,21 +174,31 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_OBJ->UpdateTransform(NULL);
 	//=====================================================
 	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
-	pos_x = 10.0f;
-	pos_z = 10.0f;
+	pos_x = 400.0f;
+	pos_z = 100.0f;
 
 	test_OBJ_2->SetScale(1.0f, 1.0f, 1.0f, true);
 	test_OBJ_2->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
 
 	test_OBJ_2->UpdateTransform(NULL);
+
+
+	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
+	pos_x = 200.0f;
+	pos_z = 100.0f;
+
+	test_OBJ_3->SetScale(1.0f, 1.0f, 1.0f, true);
+	test_OBJ_3->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
+
+	test_OBJ_3->UpdateTransform(NULL);
+
 	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
 	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
-
+	obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
 
 	Object_Manager::Reserve_Update();
 
-	m_nShaders = 0;
-	m_ppShaders = new CShader*[m_nShaders];
+
 
 	if (pHumanModel)
 		delete pHumanModel;
@@ -260,18 +273,13 @@ void CScene::ReleaseObjects()
 	delete text_ui_manager;
 #endif
 
-	if (m_ppShaders)
-	{
-		for (int i = 0; i < m_nShaders; i++)
-		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
-		}
-		delete[] m_ppShaders;
-	}
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr.reset();
+		
+	
 
-	if (m_pTerrain) delete m_pTerrain;
+//	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
 
 
@@ -519,9 +527,10 @@ void CScene::ReleaseUploadBuffers()
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nShaders; i++) 
-	if(m_ppShaders[i] != NULL)
-		m_ppShaders[i]->ReleaseUploadBuffers();
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr->ReleaseUploadBuffers();
+
 	
 	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
 	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager->Get_Object_List(Object_Type::non_skinned);
@@ -725,9 +734,10 @@ void CScene::AnimateObjects(float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	for (int i = 0; i < m_nShaders; i++) 
-		if (m_ppShaders[i]) 
-			m_ppShaders[i]->AnimateObjects(fTimeElapsed);
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr->AnimateObjects(fTimeElapsed);
+
 
 	if (m_pLights)
 	{
@@ -777,9 +787,11 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
-	for (int i = 0; i < m_nShaders; i++) 
-		if (m_ppShaders[i]) 
-			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr->Render_Objects(pd3dCommandList, pCamera);
+
+
 
 #ifdef RENDER_OBB
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);

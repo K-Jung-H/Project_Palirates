@@ -102,17 +102,11 @@ class CMaterial
 {
 public:
 	CMaterial(int nTextures);
+	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
-
-private:
-	int								m_nReferences = 0;
-
 public:
-	void AddRef() { m_nReferences++; }
-	void Release() { if (--m_nReferences <= 0) delete this; }
-
-public:
-	CShader							*m_pShader = NULL;
+	// static 자료형이 연결되어야 하므로, shared_ptr 사용 불가
+	CShader* m_pShader = NULL;
 
 	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -371,8 +365,9 @@ public:
 	CMesh* m_pMesh = NULL;
 	CAnimationController* m_pSkinnedAnimationController = NULL;
 
-	int								m_nMaterials = 0;
-	CMaterial** m_ppMaterials = NULL;
+	//int								m_nMaterials = 0;
+	//CMaterial** m_ppMaterials = NULL;
+	std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
 	XMFLOAT4X4				m_xmf4x4Parent{};
 	XMFLOAT4X4				m_xmf4x4World{};

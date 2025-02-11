@@ -336,7 +336,9 @@ void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
 	if (Instance_info) Instance_info->Release();
 }
 
-CStandard_Instance_Shader* Object_Manager::instance_shader = NULL;
+//CStandard_Instance_Shader* Object_Manager::instance_shader = NULL;
+std::shared_ptr<CShader> Object_Manager::instance_shader = NULL;
+
 bool Object_Manager::do_instance_update = false;
 
 
@@ -379,10 +381,7 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 	if (name != "None") 
 	{
 		container[name].fixed_obj_list.push_back(obj_ptr);
-		obj_ptr->m_ppMaterials[0]->m_pShader = instance_shader;
 
-		// 같은 name이 저장되어 있지 않다면 추가 == 메시 중복 검사
-		// name이 처음 추가되었을 경우 true 반환
 		if (unique_mesh_names.insert(name).second)
 			container[name].obj_mesh = std::shared_ptr<CMesh>(obj_ptr->m_pMesh);
 
@@ -391,7 +390,6 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 	}
 
 	std::shared_ptr<CGameObject> child_ptr = obj_ptr->Get_Child();
-
 	if (child_ptr != nullptr)
 		Add_Object_To_Unordered_Map(child_ptr, container);
 	
@@ -529,24 +527,23 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
-			int Material_N = instance_info.fixed_obj_list[0]->m_nMaterials;
+			int Material_N = instance_info.fixed_obj_list[0]->Material_list.size();
 			if (Material_N > 0)
 			{
 				// 재료(Material) 처리
 				for (int i = 0; i < Material_N; ++i)
 				{					
-					CMaterial* pMaterial = instance_info.fixed_obj_list[0]->m_ppMaterials[i];
+					CMaterial* pMaterial = instance_info.fixed_obj_list[0]->Material_list[i].get();
 					if (pMaterial)
 					{
-						CShader* pShader = pMaterial->m_pShader;
-						if (pShader)
+						if (instance_shader)
 						{
 							// PSO 순회 및 렌더링
-							int pipelineStateNum = pShader->Get_Num_PipelineState();
+							int pipelineStateNum = instance_shader->Get_Num_PipelineState();
 							for (int j = 0; j < pipelineStateNum; ++j)
 							{
 								// PSO 설정
-								pShader->Setting_Render(pd3dCommandList, 0);
+								instance_shader->Setting_Render(pd3dCommandList, 0);
 
 								// 재료(Material) 셰이더 변수 업데이트
 								pMaterial->UpdateShaderVariable(pd3dCommandList);
