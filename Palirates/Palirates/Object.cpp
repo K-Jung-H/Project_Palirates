@@ -965,153 +965,106 @@ CGameObject::~CGameObject()
 
 CGameObject::CGameObject(const CGameObject& other)
 {
-	// 기본 값 복사
-	m_pParent = other.m_pParent;  // 부모는 복사하지 않음
+	m_pParent = other.m_pParent;  
 	m_xmf4x4Parent = other.m_xmf4x4Parent;
 	m_xmf4x4World = other.m_xmf4x4World;
 	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
 	m_fRotationSpeed = other.m_fRotationSpeed;
-//	m_nMaterials = other.m_nMaterials;
 	Active = other.Active;
 
-	// 문자열 복사
+
 	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
 
-	// 자식 객체 복사 (깊은 복사)
-	m_pChild = (other.m_pChild) ? std::make_shared<CGameObject>(*other.m_pChild) : nullptr;
 
-	// 형제 객체 복사 (깊은 복사)
+	m_pChild = (other.m_pChild) ? std::make_shared<CGameObject>(*other.m_pChild) : nullptr;
 	m_pSibling = (other.m_pSibling) ? std::make_shared<CGameObject>(*other.m_pSibling) : nullptr;
 
-	// m_ppMaterials (배열 포인터) 깊은 복사
-	//if (other.m_ppMaterials != nullptr)
-	//{
-	//	m_ppMaterials = new CMaterial * [m_nMaterials];
-	//	for (int i = 0; i < m_nMaterials; ++i)
-	//	{
-	//		m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
-	//	}
-	//}
+	if (!other.Material_list.empty())
+	{
+		Material_list.clear();  
+		Material_list.reserve(other.Material_list.size());  
 
-	
-	if (!other.Material_list.empty()) {
-		Material_list.clear();  // 기존 데이터 제거
-		Material_list.reserve(other.Material_list.size());  // 메모리 할당 최적화
-
-		for (const auto& material : other.Material_list) {
-			if (material) {
-				// CMaterial 객체를 깊은 복사하여 새로운 shared_ptr로 관리
+		for (const auto& material : other.Material_list) 
+		{
+			if (material) 
 				Material_list.push_back(std::make_shared<CMaterial>(*material));
-			}
-			else {
-				Material_list.push_back(nullptr);  // nullptr을 유지
-			}
+			else
+				Material_list.push_back(nullptr);  
 		}
 	}
 
 
-	// m_pMesh와 m_pSkinnedAnimationController 복사
-	if (other.m_pMesh != nullptr)
-	{
-		m_pMesh = new CMesh(*other.m_pMesh);  // 깊은 복사
-	}
+	if (other.m_pMesh != nullptr)	
+		m_pMesh = new CMesh(*other.m_pMesh);  
+	
 
-	if (other.m_pSkinnedAnimationController != nullptr)
-	{
-		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  // 깊은 복사
-	}
+	if (other.m_pSkinnedAnimationController != nullptr)	
+		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController); 
+	
 }
 
 CGameObject& CGameObject::operator=(const CGameObject& other)
 {
-	if (this == &other) return *this;  // 자기 자신에 대입하는 경우를 방지
+	if (this == &other) return *this;
 
-	// 기본 값 복사
-	m_pParent = other.m_pParent;  // 부모는 복사하지 않음
+
+	m_pParent = other.m_pParent;  
 	m_xmf4x4Parent = other.m_xmf4x4Parent;
 	m_xmf4x4World = other.m_xmf4x4World;
 	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
 	m_fRotationSpeed = other.m_fRotationSpeed;
-//	m_nMaterials = other.m_nMaterials;
 	Active = other.Active;
 
 	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
 
-	// 자식 객체 복사 (깊은 복사)
+
 	if (other.m_pChild)
 	{
 		if (m_pChild)
-		{
-			// 자식이 이미 있을 경우 삭제
 			m_pChild.reset();
-		}
 		m_pChild = std::make_shared<CGameObject>(*other.m_pChild);
 	}
 	else
-	{
 		m_pChild = nullptr;
-	}
 
-	// 형제 객체 복사 (깊은 복사)
+
 	if (other.m_pSibling)
 	{
 		if (m_pSibling)
-		{
-			// 형제가 이미 있을 경우 삭제
-			m_pSibling.reset();
-		}
+			m_pSibling.reset();	
 		m_pSibling = std::make_shared<CGameObject>(*other.m_pSibling);
 	}
 	else
-	{
 		m_pSibling = nullptr;
-	}
+	
 
-	// m_ppMaterials (배열 포인터) 깊은 복사
-	//if (other.m_ppMaterials != nullptr)
-	//{
-	//	// 기존 메모리 해제
-	//	if (m_ppMaterials != nullptr) {
-	//		for (int i = 0; i < m_nMaterials; ++i) {
-	//			delete m_ppMaterials[i];
-	//		}
-	//		delete[] m_ppMaterials;
-	//	}
+	if (!other.Material_list.empty())
+	{
+		Material_list.clear();  
+		Material_list.reserve(other.Material_list.size());  
 
-	//	m_ppMaterials = new CMaterial * [m_nMaterials];
-	//	for (int i = 0; i < m_nMaterials; ++i)
-	//	{
-	//		m_ppMaterials[i] = new CMaterial(*other.m_ppMaterials[i]);  // 깊은 복사
-	//	}
-	//}
-
-	if (!other.Material_list.empty()) {
-		Material_list.clear();  // 기존 데이터 제거
-		Material_list.reserve(other.Material_list.size());  // 메모리 할당 최적화
-
-		for (const auto& material : other.Material_list) {
-			if (material) {
-				// CMaterial 객체를 깊은 복사하여 새로운 shared_ptr로 관리
-				Material_list.push_back(std::make_shared<CMaterial>(*material));
-			}
-			else {
-				Material_list.push_back(nullptr);  // nullptr을 유지
-			}
+		for (const auto& material : other.Material_list) 
+		{
+			if (material) 
+				Material_list.push_back(std::make_shared<CMaterial>(*material));	
+			else 
+				Material_list.push_back(nullptr);  // nullptr을 유지		
 		}
 	}
 
 
-	// m_pMesh와 m_pSkinnedAnimationController 복사
 	if (other.m_pMesh != nullptr)
 	{
-		if (m_pMesh != nullptr) delete m_pMesh;  // 기존 메모리 해제
-		m_pMesh = new CMesh(*other.m_pMesh);  // 깊은 복사
+		if (m_pMesh != nullptr) 
+			delete m_pMesh;  
+		m_pMesh = new CMesh(*other.m_pMesh);  
 	}
 
 	if (other.m_pSkinnedAnimationController != nullptr)
 	{
-		if (m_pSkinnedAnimationController != nullptr) delete m_pSkinnedAnimationController;  // 기존 메모리 해제
-		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  // 깊은 복사
+		if (m_pSkinnedAnimationController != nullptr) 
+			delete m_pSkinnedAnimationController;  
+		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  
 	}
 
 	return *this;
@@ -1438,11 +1391,6 @@ void CGameObject::ReleaseShaderVariables()
 void CGameObject::ReleaseUploadBuffers()
 {
 	if (m_pMesh) m_pMesh->ReleaseUploadBuffers();
-
-	//for (int i = 0; i < m_nMaterials; i++)
-	//{
-	//	if (m_ppMaterials[i]) m_ppMaterials[i]->ReleaseUploadBuffers();
-	//}
 
 	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
@@ -2149,14 +2097,73 @@ void CGameObject::Add_Collider(float cube_length)
 
 }
 
-
-
 void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
 	if (m_pMesh == NULL)
 		m_pMesh = new OBBContainer();
 	m_pMesh->Set_BoundingBox(ptr); // ptr이 NULL 인 경우, 기본값 OBB로 생성
 }
+
+void CGameObject::Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr)
+{
+	if (terrain_ptr == NULL)
+		return;
+
+	// 현재 객체의 위치 가져오기
+	XMFLOAT3 obj_pos = GetPosition();
+
+	// 현재 위치에서의 지형의 법선 벡터(새로운 Y축)
+	XMFLOAT3 apply_normal = terrain_ptr->Get_Mesh_Normal(obj_pos.x, obj_pos.z);
+	XMVECTOR up = XMVector3Normalize(XMLoadFloat3(&apply_normal));  // 새로운 Y축 (Up 벡터)
+
+	// 기존 행렬에서 Scale 정보 추출
+	XMVECTOR scaleX = XMVector3Length(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4World._11)));
+	XMVECTOR scaleY = XMVector3Length(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4World._21)));
+	XMVECTOR scaleZ = XMVector3Length(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4World._31)));
+
+	// 기존의 전방 벡터(Z축) 가져오기 (기본적으로 모델의 로컬 Z축을 사용)
+	XMFLOAT3 forward = { m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33 };
+	XMVECTOR zAxis = XMVector3Normalize(XMLoadFloat3(&forward));
+
+	// 새로운 X축 = (Z축 × Y축)
+	XMVECTOR xAxis = XMVector3Normalize(XMVector3Cross(zAxis, up));
+
+	// 새로운 Z축 = (Y축 × X축)
+	XMVECTOR newZAxis = XMVector3Normalize(XMVector3Cross(up, xAxis));
+
+	// Scale 적용
+	xAxis = XMVectorMultiply(xAxis, scaleX);
+	up = XMVectorMultiply(up, scaleY);
+	newZAxis = XMVectorMultiply(newZAxis, scaleZ);
+
+	// XMVECTOR를 XMFLOAT3으로 변환
+	XMFLOAT3 right, new_up, new_forward;
+	XMStoreFloat3(&right, xAxis);
+	XMStoreFloat3(&new_up, up);
+	XMStoreFloat3(&new_forward, newZAxis);
+
+	// 최종 회전 행렬 생성 (위치 정보 유지)
+	XMFLOAT4X4 new_rotation_matrix =
+	{
+		right.x,    right.y,    right.z,    0.0f,  // X축
+		new_up.x,   new_up.y,   new_up.z,   0.0f,  // Y축 (Up 벡터)
+		new_forward.x, new_forward.y, new_forward.z, 0.0f,  // Z축
+		m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43, 1.0f  // 위치 유지
+	};
+
+	// 객체의 회전 적용
+	m_xmf4x4World = new_rotation_matrix;
+
+	// 계층 구조 처리
+	if (m_pSibling)
+		m_pSibling->Rotate_To_Match_Terrain(terrain_ptr);
+
+	if (m_pChild)
+		m_pChild->Rotate_To_Match_Terrain(terrain_ptr);
+}
+
+
+
 
 
 // static 변수 초기화
@@ -2208,7 +2215,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	else
 	{
 		Set_Tile(tile_map_number++);
-		SetMaterial(0, pTerrainMaterial);
 	}
 
 	// ============================================================
@@ -2261,7 +2267,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 					int xStart = start_x_pos + x * blocks_x_size[0];
 					int zStart = start_z_pos + z * blocks_z_size[0];
 
-					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, nMaxDepth - 1);
+					CHeightMapTerrain* part_map_raw_ptr = 
+						new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, nMaxDepth - 1);
 
 					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
 					Set_Child(part_map);
@@ -2294,33 +2301,18 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 		
-		//if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
-		//{
-		//	m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
-
-		//	m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
-		//	m_pMesh->Render(pd3dCommandList, 0);
-
-		//	m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
-		//	m_pMesh->Render(pd3dCommandList, 0);
-
-		//	m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
-		//}
-		if (Material_list[0] && Material_list[0]->m_pShader)
+		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
 		{
-			Material_list[0]->UpdateShaderVariable(pd3dCommandList);
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 
-			Material_list[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
 			m_pMesh->Render(pd3dCommandList, 0);
 
-			Material_list[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
 			m_pMesh->Render(pd3dCommandList, 0);
 
-			Material_list[0]->UpdateShaderVariable(pd3dCommandList);
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 		}
-
-		
-
 	}
 
 	if (Get_Active())

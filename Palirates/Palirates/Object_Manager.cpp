@@ -520,11 +520,6 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::fixed:
 	{
-		// 같은 메시를 사용하는 객체끼리 모두 벡터에 저장하였음
-		// 이를 이용하여, 사물들을 위치 정보를 인스턴싱하는 업데이트 함수를 작성하고
-		// 사물들의 위치정보를 저장한 인스턴싱 버퍼를 연결하여 렌더링
-		// 최종 목표 == 메시별로 렌더링 함수 1번만 호출하는 것
-
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
 			int Material_N = instance_info.fixed_obj_list[0]->Material_list.size();

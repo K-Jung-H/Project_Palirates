@@ -233,8 +233,6 @@ public:
 	std::vector<int> m_vecLowerBodyBoneIndices;  // «œ√º
 
 	int								m_nBoneFrames = 0; 
-//	std::shared_ptr<CGameObject>						*m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
-//	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
 	void ClassifyBones();
@@ -348,6 +346,7 @@ public:
 
 //==================================================================================
 
+class CHeightMapTerrain;
 
 class CGameObject
 {
@@ -480,6 +479,8 @@ public:
 	virtual BoundingOrientedBox* Get_Collider();
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
+
+	virtual void Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr);
 };
 
 //==================================================================================

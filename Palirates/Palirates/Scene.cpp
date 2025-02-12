@@ -162,39 +162,48 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
-	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
-	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
-	float pos_x = 600.0f;
-	float pos_z = 100.0f;
+
+
+
+	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Havana.bin", NULL);
 	testModel->m_pModelRootObject->Add_Collider(10.0f);
+
+	//=====================================================
+	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
+
+	float pos_x = 300.0f;
+	float pos_z = 100.0f;
+
 	test_OBJ->Set_Child(testModel->m_pModelRootObject);
 	test_OBJ->SetScale(10.0f, 10.0f, 10.0f, true);
 	test_OBJ->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
 
+//	test_OBJ->Rotate_To_Match_Terrain(m_pTerrain);
 	test_OBJ->UpdateTransform(NULL);
 	//=====================================================
-	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
-	pos_x = 400.0f;
-	pos_z = 100.0f;
-
-	test_OBJ_2->SetScale(1.0f, 1.0f, 1.0f, true);
-	test_OBJ_2->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
-
-	test_OBJ_2->UpdateTransform(NULL);
-
-
-	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
-	pos_x = 200.0f;
-	pos_z = 100.0f;
-
-	test_OBJ_3->SetScale(1.0f, 1.0f, 1.0f, true);
-	test_OBJ_3->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
-
-	test_OBJ_3->UpdateTransform(NULL);
-
+//	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
+//
+//	pos_x = 600.0f;
+//	pos_z = 100.0f;
+//
+//	test_OBJ_2->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
+//
+//	test_OBJ_2->Rotate_To_Match_Terrain(m_pTerrain);
+//	test_OBJ_2->UpdateTransform(NULL);
+//	//=====================================================
+//	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
+//
+//	pos_x = 900.0f;
+//	pos_z = 100.0f;
+//
+//	test_OBJ_3->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
+////	test_OBJ_3->Rotate_To_Match_Terrain(m_pTerrain);
+//	test_OBJ_3->Rotate(0.0f, 0.0f, 90.0f);
+//	test_OBJ_3->UpdateTransform(NULL);
+	//=====================================================
 	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
-	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
-	obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
+	//obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
+	//obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
 
 	Object_Manager::Reserve_Update();
 
@@ -278,8 +287,7 @@ void CScene::ReleaseObjects()
 			shader_ptr.reset();
 		
 	
-
-//	if (m_pTerrain) delete m_pTerrain;
+	if (m_pTerrain) delete m_pTerrain;
 	if (m_pSkyBox) delete m_pSkyBox;
 
 
