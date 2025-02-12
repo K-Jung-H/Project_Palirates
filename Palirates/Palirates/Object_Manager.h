@@ -112,7 +112,6 @@ private:
 	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
 
 public:
-	//static CStandard_Instance_Shader* instance_shader;
 	static std::shared_ptr<CShader> instance_shader;
 	static bool do_instance_update;
 	static	void Reserve_Update() { do_instance_update = true; }

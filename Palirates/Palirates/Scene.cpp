@@ -107,10 +107,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
-	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
+	XMFLOAT3 xmf3Scale(20.0f, 15.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 32,2);
-//	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8,2);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, - 100.0f * xmf3Scale.y, 0.0f));
 
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
@@ -165,45 +165,56 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Havana.bin", NULL);
+//	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Havana.bin", NULL);
+	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
+
 	testModel->m_pModelRootObject->Add_Collider(10.0f);
 
 	//=====================================================
 	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
-
-	float pos_x = 300.0f;
-	float pos_z = 100.0f;
-
 	test_OBJ->Set_Child(testModel->m_pModelRootObject);
-	test_OBJ->SetScale(10.0f, 10.0f, 10.0f, true);
-	test_OBJ->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
 
-//	test_OBJ->Rotate_To_Match_Terrain(m_pTerrain);
+	float scale_value = 10.0f;
+	XMFLOAT3 scale_vector = { scale_value ,scale_value ,scale_value };
+	float pos_x = 200.0f;
+	float pos_z = 100.0f;
+	float pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+
+	test_OBJ->SetScale(scale_vector, true);
+	test_OBJ->SetPosition(pos_x, pos_y, pos_z);	
+	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+	
 	test_OBJ->UpdateTransform(NULL);
+
 	//=====================================================
-//	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
-//
-//	pos_x = 600.0f;
-//	pos_z = 100.0f;
-//
-//	test_OBJ_2->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
-//
-//	test_OBJ_2->Rotate_To_Match_Terrain(m_pTerrain);
-//	test_OBJ_2->UpdateTransform(NULL);
+	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
+
+	pos_x = 300.0f;
+	pos_z = 100.0f;
+	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+
+	test_OBJ->SetScale(scale_vector, true);
+	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
+	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+
+	test_OBJ->UpdateTransform(NULL);
 //	//=====================================================
-//	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
-//
-//	pos_x = 900.0f;
-//	pos_z = 100.0f;
-//
-//	test_OBJ_3->SetPosition(pos_x, m_pTerrain->Get_Mesh_Height(pos_x, pos_z), pos_z);
-////	test_OBJ_3->Rotate_To_Match_Terrain(m_pTerrain);
+	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
+
+	pos_x = 400.0f;
+	pos_z = 100.0f;
+	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+
+	test_OBJ->SetScale(scale_vector, true);
+	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
+	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+
+	test_OBJ->UpdateTransform(NULL);
 //	test_OBJ_3->Rotate(0.0f, 0.0f, 90.0f);
-//	test_OBJ_3->UpdateTransform(NULL);
 	//=====================================================
 	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
-	//obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
-	//obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
+	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
+	obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
 
 	Object_Manager::Reserve_Update();
 
@@ -809,3 +820,117 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 }
 
+
+
+
+void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
+
+//	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 76); //SuperCobra(17), Gunship(2), Player:Mi24(1), Angrybot()
+
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+
+	BuildDefaultLightsAndMaterials();
+
+	obj_manager = new Object_Manager();
+
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+#endif
+
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+
+
+	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, -100.0f * xmf3Scale.y, 0.0f));
+
+
+	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
+
+	string obj_name_1 = "test_obj_name_1";
+	string obj_name_2 = "test_obj_name_2";
+	string obj_name_3 = "test_obj_name_3";
+
+
+	std::string_view name_view = obj_name_1;
+	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 2);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
+	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
+	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_1->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
+
+	//====================================================
+	// 테스트용 코드	
+//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
+	CGameObject* test_obj = humanObject_1->FindFrame("MiddleFinger3_R");
+	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
+
+	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
+	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
+
+	test_obj->Add_Collider(0.0f);
+	test_obj2->Add_Collider(10.0f);
+
+	//====================================================
+
+	name_view = obj_name_2;
+	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
+	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_2->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
+
+
+	name_view = obj_name_3;
+	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
+	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
+	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_3->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
+
+
+
+
+	//	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Havana.bin", NULL);
+	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Havana.bin", NULL);
+
+	testModel->m_pModelRootObject->Add_Collider(10.0f);
+
+	//=====================================================
+	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
+	test_OBJ->Set_Child(testModel->m_pModelRootObject);
+
+	float scale_value = 10.0f;
+	XMFLOAT3 scale_vector = { scale_value ,scale_value ,scale_value };
+	float pos_x = 200.0f;
+	float pos_z = 100.0f;
+	float pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+
+	test_OBJ->SetScale(scale_vector, true);
+	test_OBJ->SetPosition(pos_x, pos_y+ 500.0f, pos_z);
+//	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+
+	test_OBJ->UpdateTransform(NULL);
+
+	//=====================================================
+	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
+
+
+	Object_Manager::Reserve_Update();
+
+
+
+	if (pHumanModel)
+		delete pHumanModel;
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}

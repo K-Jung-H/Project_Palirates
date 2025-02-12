@@ -324,6 +324,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_ESCAPE:
 					::PostQuitMessage(0);
 					break;
+
+				case VK_SPACE:
+					scene_manager->Load_Scene("Scene_2");
+					Object_Manager::Reserve_Update();
+					break;
+
 				case VK_RETURN:
 					break;
 				case VK_F1:
@@ -420,16 +426,24 @@ void CGameFramework::Build_Scenes()
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
 	//========================================================
-	std::shared_ptr<CScene> Test_Scene = std::make_shared<CScene>();
-	scene_manager->Register_Scene("Test_Scene_1", Test_Scene);
-	scene_manager->Build_Scene("Test_Scene_1", m_pd3dDevice, m_pd3dCommandList);
+	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
+	scene_manager->Register_Scene("Scene_1", Scene_1);
+	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, m_pd3dCommandList);
+
+	std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
+	scene_manager->Register_Scene("Scene_2", Scene_2);
+	scene_manager->Build_Scene("Scene_2", m_pd3dDevice, m_pd3dCommandList);
 
 
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Test_Scene_1").get();
+	
+
+	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
 	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain);
 
 	m_pPlayer = pPlayer;
-	scene_manager->Set_Scene_Player("Test_Scene_1", m_pPlayer);
+	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
+	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
+
 	m_pCamera = m_pPlayer->GetCamera();
 	//========================================================
 

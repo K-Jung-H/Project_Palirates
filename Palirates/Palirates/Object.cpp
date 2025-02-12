@@ -1285,41 +1285,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-		//if (m_nMaterials > 0)
-		//{
-		//	// 재료(Material) 처리
-		//	for (int i = 0; i < m_nMaterials; ++i)
-		//	{
-		//		CMaterial* pMaterial = m_ppMaterials[i];
-		//		if (pMaterial)
-		//		{
-		//			shared_ptr<CShader> pShader = pMaterial->m_pShader;
-		//			if (pShader)
-		//			{
-		//				// PSO 순회 및 렌더링
-		//				int pipelineStateNum = pShader->Get_Num_PipelineState();
-		//				for (int j = 0; j < pipelineStateNum; ++j)
-		//				{
-		//					// PSO 설정
-		//					pShader->Setting_Render(pd3dCommandList, j);
-
-		//					// 재료(Material) 셰이더 변수 업데이트
-		//					pMaterial->UpdateShaderVariable(pd3dCommandList);
-
-		//					// 메쉬 렌더링
-		//					m_pMesh->Render(pd3dCommandList, i);
-		//				}
-		//			}
-		//			else
-		//			{
-		//				// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
-		//				pMaterial->UpdateShaderVariable(pd3dCommandList);
-		//				m_pMesh->Render(pd3dCommandList, i);
-		//			}
-		//		}
-		//	}
-		//}
-
 		if (Material_list.size())
 		{
 			int i = 0;
@@ -1411,6 +1376,7 @@ void CGameObject::SetPosition(float x, float y, float z)
 	UpdateTransform(NULL);
 }
 
+
 void CGameObject::SetPosition(XMFLOAT3 xmf3Position)
 {
 	SetPosition(xmf3Position.x, xmf3Position.y, xmf3Position.z);
@@ -1424,6 +1390,13 @@ void CGameObject::Move(XMFLOAT3 xmf3Offset)
 
 	UpdateTransform(NULL);
 }
+
+void CGameObject::SetScale(XMFLOAT3 scale, bool keepPosition)
+{
+	SetScale(scale.x, scale.y, scale.z, keepPosition);
+}
+
+
 void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 {
 	XMFLOAT3 originalPosition;
@@ -1434,7 +1407,12 @@ void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 		m_xmf4x4Parent._41 = m_xmf4x4Parent._42 = m_xmf4x4Parent._43 = 0.0f;
 	}
 
-	m_xmf4x4Parent = Matrix4x4::Multiply(XMMatrixScaling(x, y, z), m_xmf4x4Parent);
+	XMMATRIX scaleMatrix = XMMatrixScaling(x, y, z);
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4Parent);
+
+	worldMatrix = worldMatrix * scaleMatrix;
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, worldMatrix);
 
 	if (keepPosition) 
 	{
@@ -1458,6 +1436,17 @@ XMFLOAT3 CGameObject::GetPosition()
 XMFLOAT3 CGameObject::GetToParentPosition()
 {
 	return(XMFLOAT3(m_xmf4x4Parent._41, m_xmf4x4Parent._42, m_xmf4x4Parent._43));
+}
+
+XMFLOAT3 CGameObject::Get_World_Position()
+{
+	XMFLOAT3 obj_pos = GetPosition(); 
+	XMFLOAT3 parent_pos = { 0.0f, 0.0f, 0.0f };
+
+	if (m_pParent != NULL)
+		parent_pos = m_pParent->Get_World_Position();
+
+	return XMFLOAT3(obj_pos.x + parent_pos.x, obj_pos.y + parent_pos.y, obj_pos.z + parent_pos.z);
 }
 
 XMFLOAT3 CGameObject::GetLook()
@@ -2162,7 +2151,29 @@ void CGameObject::Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr)
 		m_pChild->Rotate_To_Match_Terrain(terrain_ptr);
 }
 
+void CGameObject::Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* terrain_ptr, CHeightMapTerrain* last_tile_ptr)
+{
+	XMFLOAT3 obj_pos = Get_World_Position();
+	XMFLOAT3 xmf3Scale = terrain_ptr->GetScale();
+	int z = (int)(obj_pos.z / xmf3Scale.z);
+	bool bReverseQuad = ((z % 2) != 0);
 
+	CHeightMapTerrain* temp_ptr = NULL;
+	float new_height = terrain_ptr->Get_Height(obj_pos.x, obj_pos.z, bReverseQuad, last_tile_ptr);
+
+	float temp_y = new_height - start_y;
+	Move({ 0, temp_y,0 });
+
+	obj_pos = Get_World_Position();
+
+	DebugOutput("\nx: - " + to_string(obj_pos.x) + ", y: - " + to_string(obj_pos.y) + ", z: - " + to_string(obj_pos.z));
+
+	if (m_pSibling)
+		m_pSibling->Set_Height_To_Match_Terrain(start_y, terrain_ptr, last_tile_ptr);
+
+	if (m_pChild)
+		m_pChild->Set_Height_To_Match_Terrain(start_y, terrain_ptr, last_tile_ptr);
+}
 
 
 
@@ -2333,6 +2344,24 @@ void CHeightMapTerrain::Set_Tile(int n)
 	Set_Name(tile_name);
 }
 
+float CHeightMapTerrain::Get_Height(float x, float z, bool bReverseQuad)
+{
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Height(x, z, bReverseQuad, last_tile_ptr);
+}
+
+float CHeightMapTerrain::Get_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr)
+{
+	float world_height = Get_World_Position().y;
+	float mesh_height = 0.0f;
+
+	if (last_tile_ptr != NULL)
+		mesh_height = Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
+	else
+		mesh_height = Get_Mesh_Height(x, z, bReverseQuad);
+
+	return world_height + mesh_height;
+}
 
 float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
 {
@@ -2426,7 +2455,7 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*
 			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Normal(x, z);
 	}
 
-	return XMFLOAT3(0.0f, -1.0f, 0.0f);
+	return XMFLOAT3(0.0f, 1.0f, 0.0f);
 }
 
 int CHeightMapTerrain::Get_Tile(float x, float z)

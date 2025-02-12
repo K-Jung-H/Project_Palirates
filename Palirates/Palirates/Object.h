@@ -426,12 +426,14 @@ public:
 	XMFLOAT3 GetRight();
 
 	XMFLOAT3 GetToParentPosition();
+	XMFLOAT3 Get_World_Position();
+
 	void Move(XMFLOAT3 xmf3Offset);
 
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3 xmf3Position);
 	void SetScale(float x, float y, float z, bool keep_pos = false);
-
+	void SetScale(XMFLOAT3 scale, bool keepPosition = false);
 	void MoveStrafe(float fDistance = 1.0f);
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
@@ -481,6 +483,8 @@ public:
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
 	virtual void Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr);
+	virtual void Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* terrain_ptr, CHeightMapTerrain* last_tile_ptr = NULL);
+
 };
 
 //==================================================================================
@@ -515,6 +519,8 @@ public:
 
 	void Set_Tile(int n);
 
+	float Get_Height(float x, float z, bool bReverseQuad = false);
+	float Get_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
 	float Get_Mesh_Height(float x, float z, bool bReverseQuad = false);
 	float Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
 

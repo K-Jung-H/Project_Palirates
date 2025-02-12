@@ -311,7 +311,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetCameraUpdatedContext(pContext);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Mesh_Height(25.0f, 25.0f, last_tile_ptr), 25.0f));
+	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
 	if (pAngrybotModel) delete pAngrybotModel;
@@ -380,7 +380,7 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Mesh_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr) + 0.0f;
+	float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
 
 	if (xmf3PlayerPosition.y < fHeight)
 	{
@@ -413,7 +413,7 @@ void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3CameraPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Mesh_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad, last_tile_ptr) + 5.0f;
+	float fHeight = pTerrain->Get_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad, last_tile_ptr) + 5.0f;
 
 
 	if (xmf3CameraPosition.y <= fHeight)
