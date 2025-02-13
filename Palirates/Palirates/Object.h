@@ -406,6 +406,7 @@ public:
 	virtual void OnPrepareAnimate() { }
 	virtual void Animate(float fTimeElapsed);
 
+	virtual bool IsVisible(CCamera* pCamera);
 	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
@@ -482,6 +483,7 @@ public:
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
+	// 실험중인 함수들
 	virtual void Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr);
 	virtual void Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* terrain_ptr, CHeightMapTerrain* last_tile_ptr = NULL);
 

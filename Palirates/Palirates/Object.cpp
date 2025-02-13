@@ -1272,6 +1272,20 @@ void CGameObject::Animate(float fTimeElapsed)
 		m_pChild->Animate(fTimeElapsed);
 }
 
+bool CGameObject::IsVisible(CCamera* pCamera)
+{
+	bool bIsVisible = false;
+	if (Get_Collider() == NULL) 
+		return true;
+	BoundingOrientedBox xmBoundingBox(*Get_Collider());
+
+	xmBoundingBox.Transform(xmBoundingBox, XMLoadFloat4x4(&m_xmf4x4World));
+
+	if (pCamera) 
+		bIsVisible = pCamera->IsInFrustum(xmBoundingBox);
+	return(bIsVisible);
+}
+
 
 // 셰이더가 PSO를 여러 개 갖는 경우
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1282,6 +1296,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	if (m_pMesh)
 	{
+		if (!IsVisible(pCamera))
+			return;
+
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
@@ -2307,6 +2324,10 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	if (!IsVisible(pCamera))
+		Set_Active(false);
+	else
+		Set_Active(true);
 
 	if (Get_Active() && m_pMesh != NULL)
 	{

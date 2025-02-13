@@ -336,7 +336,6 @@ void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
 	if (Instance_info) Instance_info->Release();
 }
 
-//CStandard_Instance_Shader* Object_Manager::instance_shader = NULL;
 std::shared_ptr<CShader> Object_Manager::instance_shader = NULL;
 
 bool Object_Manager::do_instance_update = false;

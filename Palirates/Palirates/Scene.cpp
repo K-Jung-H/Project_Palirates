@@ -109,8 +109,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	XMFLOAT3 xmf3Scale(20.0f, 15.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8,2);
+	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, - 100.0f * xmf3Scale.y, 0.0f));
+
+//	std::shared_ptr<CGameObject> terrain_ptr = make_shared<CGameObject>(m_pTerrain);
+	std::shared_ptr<CGameObject> terrain_ptr(m_pTerrain);
+	obj_manager->Add_Object(terrain_ptr, Object_Type::non_skinned);
 
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
@@ -298,7 +302,7 @@ void CScene::ReleaseObjects()
 			shader_ptr.reset();
 		
 	
-	if (m_pTerrain) delete m_pTerrain;
+//	if (m_pTerrain) delete m_pTerrain; obj_manager에서 관리할 것
 	if (m_pSkyBox) delete m_pSkyBox;
 
 
@@ -629,72 +633,37 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case '1':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
-
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
-
 		}		break;
 
 		case '2':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
-
 		}		break;
 
 		case '3':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
-
 		}		break;
 
 		case '4':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(true);
-
 		}		break;
 
 		case '5':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
 		}		break;
 
 		case '6':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
 		}		break;
 
 		case '7':
 		{
-			m_pTerrain->FindFrame("tile map - 9")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 14")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 19")->Set_Active(false);
 		}		break;
 
 		case '8':
 		{
-			m_pTerrain->FindFrame("tile map - 9")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 14")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 19")->Set_Active(true);
 		}		break;
 
-		case VK_SPACE:
+		case 'Q':
 		{
 			test_button = true;
 		}	break;
@@ -775,8 +744,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
 	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
 
-		vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
-			obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+	vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
 #endif
 			obj_manager->Update(pd3dDevice, pd3dCommandList);
