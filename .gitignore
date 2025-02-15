@@ -34,4 +34,5 @@
 /Palirates/.vs
 /Palirates/Palirates/x64
 /Palirates/x64
-/Palirates/Palirates/Scene
+/Palirates/Palirates/Scene/Havana.bin
+/Palirates/Palirates/Scene/**/*.txt
