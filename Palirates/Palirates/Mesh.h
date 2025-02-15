@@ -251,6 +251,7 @@ protected:
 
 public:
 	void LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, FILE *pInFile);
+	void LoadMeshFrom_OtherFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const char* pstrFileName);
 
 	virtual void ReleaseUploadBuffers();
 

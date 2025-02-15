@@ -1157,6 +1157,7 @@ void CGameObject::Set_Active(bool active, bool IsRoot)
 	if (!IsRoot && m_pSibling != NULL)
 		m_pSibling->Set_Active(active, false);
 }
+
 void CGameObject::SetMesh(CMesh *pMesh)
 {
 	if (m_pMesh) m_pMesh->Release();
@@ -1333,11 +1334,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						m_pMesh->Render(pd3dCommandList, i);
 					}
 				}
-
 				++i;
 			}
 		}
-		
 	}
 
 	if (m_pSibling)
@@ -1860,6 +1859,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
+
 			CStandardMesh *pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
 			pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			pGameObject->SetMesh(pMesh);
@@ -1904,6 +1904,94 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 	}
 	return(pGameObject);
 }
+
+CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	int nFrame = 0, nTextures = 0;
+
+	CGameObject* pGameObject = new CGameObject();
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<Frame>:"))
+		{
+			nFrame = ::ReadIntegerFromFile(pInFile);
+			nTextures = ::ReadIntegerFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+		}
+		else if (!strcmp(pstrToken, "<Transform>:"))
+		{
+			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
+			XMFLOAT4 xmf4Rotation;
+			nReads = (UINT)::fread(&xmf3Position, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf3Rotation, sizeof(float), 3, pInFile); //Euler Angle
+			nReads = (UINT)::fread(&xmf3Scale, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf4Rotation, sizeof(float), 4, pInFile); //Quaternion
+		}
+		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
+		{
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Mesh>:"))
+		{
+			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
+			// Start here
+			char pstrFileName[64] = { '\0' };
+			if (true)
+				pMesh->LoadMeshFrom_OtherFile(pd3dDevice, pd3dCommandList, pstrFileName);
+			else
+			{
+				pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
+			}
+			pGameObject->SetMesh(pMesh);
+		}
+		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
+		{
+			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
+
+			CSkinnedMesh* pSkinnedMesh = new CSkinnedMesh(pd3dDevice, pd3dCommandList);
+			pSkinnedMesh->LoadSkinInfoFromFile(pd3dDevice, pd3dCommandList, pInFile);
+			pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+			::ReadStringFromFile(pInFile, pstrToken); //<Mesh>:
+			if (!strcmp(pstrToken, "<Mesh>:"))
+				pSkinnedMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
+
+			pGameObject->SetMesh(pSkinnedMesh);
+		}
+		else if (!strcmp(pstrToken, "<Materials>:"))
+		{
+			pGameObject->LoadMaterialsFromFile(pd3dDevice, pd3dCommandList, pParent, pInFile, pShader);
+		}
+		else if (!strcmp(pstrToken, "<Children>:"))
+		{
+			int nChilds = ::ReadIntegerFromFile(pInFile);
+			if (nChilds > 0)
+			{
+				for (int i = 0; i < nChilds; i++)
+				{
+					CGameObject* pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
+
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
+					if (pChild)
+						pGameObject->Set_Child(pChild);
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</Frame>"))
+		{
+			break;
+		}
+	}
+	return(pGameObject);
+}
+
+
 
 void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
 {	
@@ -2170,7 +2258,7 @@ void CGameObject::Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr)
 
 void CGameObject::Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* terrain_ptr, CHeightMapTerrain* last_tile_ptr)
 {
-	XMFLOAT3 obj_pos = Get_World_Position();
+	/*XMFLOAT3 obj_pos = Get_World_Position();
 	XMFLOAT3 xmf3Scale = terrain_ptr->GetScale();
 	int z = (int)(obj_pos.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
@@ -2183,7 +2271,16 @@ void CGameObject::Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* te
 
 	obj_pos = Get_World_Position();
 
-	DebugOutput("\nx: - " + to_string(obj_pos.x) + ", y: - " + to_string(obj_pos.y) + ", z: - " + to_string(obj_pos.z));
+	DebugOutput("\nx: - " + to_string(obj_pos.x) + ", y: - " + to_string(obj_pos.y) + ", z: - " + to_string(obj_pos.z));*/
+
+	XMFLOAT3 obj_pos = Get_World_Position();
+	XMFLOAT3 xmf3Scale = terrain_ptr->GetScale();
+	int z = (int)(obj_pos.z / xmf3Scale.z);
+	bool bReverseQuad = ((z % 2) != 0);
+
+
+	float new_height = terrain_ptr->Get_Height(obj_pos.x, obj_pos.z, bReverseQuad, last_tile_ptr);
+	m_xmf4x4World._42 = new_height;
 
 	if (m_pSibling)
 		m_pSibling->Set_Height_To_Match_Terrain(start_y, terrain_ptr, last_tile_ptr);

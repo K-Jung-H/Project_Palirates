@@ -184,41 +184,51 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	float pos_z = 100.0f;
 	float pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
 
-	test_OBJ->SetScale(scale_vector, true);
 	test_OBJ->SetPosition(pos_x, pos_y, pos_z);	
-	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+
+	XMMATRIX scaleMatrix = XMMatrixScaling(scale_vector.x, scale_vector.y, scale_vector.z);
+	XMFLOAT4X4 scaleMatrixFloat4X4;
+	XMStoreFloat4x4(&scaleMatrixFloat4X4, scaleMatrix);	XMFLOAT4X4 currentWorldMatrix = test_OBJ->m_xmf4x4World;
 	
+	XMFLOAT4X4 newWorldMatrix = Matrix4x4::Multiply(scaleMatrix, currentWorldMatrix);
+
+	// 새로운 월드 행렬을 객체에 설정
+	test_OBJ->m_xmf4x4Parent = (newWorldMatrix);
 	test_OBJ->UpdateTransform(NULL);
+
+	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+
+
 
 	//=====================================================
-	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
-
-	pos_x = 300.0f;
-	pos_z = 100.0f;
-	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
-
-	test_OBJ->SetScale(scale_vector, true);
-	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
-	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
-
-	test_OBJ->UpdateTransform(NULL);
-//	//=====================================================
-	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
-
-	pos_x = 400.0f;
-	pos_z = 100.0f;
-	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
-
-	test_OBJ->SetScale(scale_vector, true);
-	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
-	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
-
-	test_OBJ->UpdateTransform(NULL);
+//	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
+//
+//	pos_x = 300.0f;
+//	pos_z = 100.0f;
+//	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+//
+//	test_OBJ->SetScale(scale_vector, true);
+//	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
+//	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+//
+//	test_OBJ->UpdateTransform(NULL);
+////	//=====================================================
+//	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
+//
+//	pos_x = 400.0f;
+//	pos_z = 100.0f;
+//	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+//
+//	test_OBJ->SetScale(scale_vector, true);
+//	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
+//	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
+//
+//	test_OBJ->UpdateTransform(NULL);
 //	test_OBJ_3->Rotate(0.0f, 0.0f, 90.0f);
 	//=====================================================
 	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
-	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
-	obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
+//	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
+//	obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
 
 	Object_Manager::Reserve_Update();
 
