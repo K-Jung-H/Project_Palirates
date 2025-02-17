@@ -212,6 +212,89 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 
 }
+void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container)
+{
+	int obb_num = 0;
+
+	for (auto& [meshName, instance_info] : gameobj_container)
+	{
+		obb_num += instance_info.fixed_obj_list.size();
+	}
+
+
+	if (obb_num > rendering_max_num)
+	{
+		// 새로운 버퍼 크기 재조정 
+		// == 크기를 키운 새로운 버퍼 생성
+		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
+
+
+		Release_OBB_Data_ShaderVariables();
+
+		// 새로운 최대 크기 업데이트
+		rendering_max_num = obb_num * 2;
+		rendering_max_num = min(rendering_max_num, MAX_INSTANCING_NUM);
+
+		// 새로운 버퍼 생성
+		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+	else
+	{
+		XMFLOAT4X4 world_matrix;
+
+		int i = 0;
+		for (auto& [meshName, instance_info] : gameobj_container)
+		{
+			if (instance_info.obj_mesh->Get_BoundingBox() == NULL)
+				continue;
+		
+
+			for (std::shared_ptr<CGameObject> fixed_obj_ptr : instance_info.fixed_obj_list)
+			{
+				BoundingOrientedBox temp_box(*instance_info.obj_mesh->Get_BoundingBox());
+
+				XMMATRIX worldMatrix = XMLoadFloat4x4(&fixed_obj_ptr->m_xmf4x4World);
+				XMVECTOR scale, rotation, translation;
+				XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix); 
+
+				XMVECTOR extents = XMLoadFloat3(&temp_box.Extents);
+				XMMATRIX scaleMatrix = XMMatrixScaling(
+					2.0f * XMVectorGetX(extents) * XMVectorGetX(scale),
+					2.0f * XMVectorGetY(extents) * XMVectorGetY(scale),
+					2.0f * XMVectorGetZ(extents) * XMVectorGetZ(scale));
+
+				XMStoreFloat4(&temp_box.Orientation, rotation);
+				XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
+
+				XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + XMLoadFloat3(&temp_box.Center));
+
+				XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+
+				XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(finalWorldMatrix));
+				Mapped_Instance_info[i].active = true;
+
+
+				Mapped_Instance_info[i].world_4x4transform = world_matrix;
+				if (fixed_obj_ptr->Get_Active())
+					XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::LimeGreen);
+				else
+					XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
+
+				++i;
+			}
+
+		}
+
+		for (int i = obb_num; i < rendering_max_num; ++i)
+		{
+			Mapped_Instance_info[i].active = false;
+			Mapped_Instance_info[i].world_4x4transform = Matrix4x4::Identity();
+			XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
+
+		}
+	}
+
+}
 
 void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited)
 {
@@ -336,8 +419,8 @@ void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
 	if (Instance_info) Instance_info->Release();
 }
 
-std::shared_ptr<CShader> Object_Manager::instance_shader = NULL;
 
+std::shared_ptr<CShader> Object_Manager::instance_shader = NULL;
 bool Object_Manager::do_instance_update = false;
 
 
@@ -617,6 +700,7 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
+
 void Object_Manager::Clear_Object_List(Object_Type type)
 {
 	switch (type)
@@ -686,6 +770,12 @@ void Object_Manager::Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 {
 	bounding_box_drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, gameobj_container);
 }
+
+void Object_Manager::Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info > gameobj_container)
+{
+	bounding_box_drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, gameobj_container);
+}
+
 void Object_Manager::Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	bounding_box_drawer->Render(pd3dCommandList, pCamera);

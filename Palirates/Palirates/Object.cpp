@@ -1905,7 +1905,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 	return(pGameObject);
 }
 
-CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
+CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -1940,29 +1940,21 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
 			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
-			// Start here
-			char pstrFileName[64] = { '\0' };
-			if (true)
-				pMesh->LoadMeshFrom_OtherFile(pd3dDevice, pd3dCommandList, pstrFileName);
-			else
+
+			::ReadStringFromFile(pInFile, pstrToken);
+			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
-				pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
+				::ReadStringFromFile(pInFile, pstrToken);
+				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken); 
+
+				char pstrFileName[128] = { '\0' };
+				strncpy(pstrFileName, fileName.c_str(), sizeof(pstrFileName) - 1);
+				pstrFileName[sizeof(pstrFileName) - 1] = '\0';
+
+				pMesh->LoadMeshFrom_OtherFile(pd3dDevice, pd3dCommandList, pstrFileName);
 			}
 			pGameObject->SetMesh(pMesh);
-		}
-		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
-		{
-			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
 
-			CSkinnedMesh* pSkinnedMesh = new CSkinnedMesh(pd3dDevice, pd3dCommandList);
-			pSkinnedMesh->LoadSkinInfoFromFile(pd3dDevice, pd3dCommandList, pInFile);
-			pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-			::ReadStringFromFile(pInFile, pstrToken); //<Mesh>:
-			if (!strcmp(pstrToken, "<Mesh>:"))
-				pSkinnedMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
-
-			pGameObject->SetMesh(pSkinnedMesh);
 		}
 		else if (!strcmp(pstrToken, "<Materials>:"))
 		{
@@ -1975,7 +1967,7 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 			{
 				for (int i = 0; i < nChilds; i++)
 				{
-					CGameObject* pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
+					CGameObject* pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader);
 
 					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
 					if (pChild)
@@ -1991,6 +1983,46 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 	return(pGameObject);
 }
 
+CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, pstrFileName, "rb");
+	::rewind(pInFile);
+
+	CLoadedModelInfo* pLoadedModel = new CLoadedModelInfo();
+
+	char pstrToken[64] = { '\0' };
+
+	for (; ; )
+	{
+		if (::ReadStringFromFile(pInFile, pstrToken))
+		{
+			if (!strcmp(pstrToken, "<Hierarchy>:"))
+			{
+				CGameObject* ModelRootObject_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader);
+
+				std::shared_ptr<CGameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
+				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
+
+				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+#ifdef _WITH_DEBUG_FRAME_HIERARCHY
+	TCHAR pstrDebug[256] = { 0 };
+	_stprintf_s(pstrDebug, 256, _T("Frame Hierarchy\n"));
+	OutputDebugString(pstrDebug);
+
+	//	CGameObject::PrintFrameInfo(pGameObject, NULL);
+#endif
+
+	return(pLoadedModel);
+}
 
 
 void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)

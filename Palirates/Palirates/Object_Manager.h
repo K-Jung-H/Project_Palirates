@@ -6,12 +6,42 @@
 #define DEFAULT_INSTANCE_NUM 1
 #define MAX_INSTANCING_NUM 10000  // 최대 인스턴스 개수 제한 
 
+struct BoundingBox_Instance_Info;
+struct Fixed_Object_Info;
+struct Instance_Info;
+
+
+struct Instance_Info
+{
+	XMFLOAT4X4 world_4x4transform;
+	UINT active;
+};
+
 struct BoundingBox_Instance_Info
 {
 	XMFLOAT4X4 world_4x4transform;
 	XMFLOAT4 box_color;
 	UINT active;
 };
+
+struct Fixed_Object_Info
+{
+
+	std::vector<std::shared_ptr<CGameObject>> fixed_obj_list;
+	std::shared_ptr<CMesh> obj_mesh;
+
+
+	int rendering_max_num = DEFAULT_INSTANCE_NUM;
+	ID3D12Resource* Instance_info = NULL;
+	Instance_Info* Mapped_Instance_info = NULL;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
+
+	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Release_Instance_Data_ShaderVariables();
+
+};
+
 
 class BoundingBox_Shader : public CShader
 {
@@ -49,7 +79,10 @@ public:
 	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Release_OBB_Data_ShaderVariables();
 	
-	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
+	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>> gameobj_container);
+	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container);
+
+
 	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited);
 	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
 	
@@ -61,29 +94,7 @@ public:
 };
 
 
-struct Instance_Info
-{
-	XMFLOAT4X4 world_4x4transform;
-	UINT active;
-};
 
-struct Fixed_Object_Info
-{
-
-	std::vector<std::shared_ptr<CGameObject>> fixed_obj_list;
-	std::shared_ptr<CMesh> obj_mesh;
-
-
-	int rendering_max_num = DEFAULT_INSTANCE_NUM;
-	ID3D12Resource* Instance_info = NULL;
-	Instance_Info* Mapped_Instance_info = NULL;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
-
-	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Release_Instance_Data_ShaderVariables();
-
-};
 
 
 enum class Object_Type
@@ -138,10 +149,12 @@ public:
 	void Clear_Object_List_All();
 	void Clear_Object_List(Object_Type type);
 
-
 	//========================================================================
 	void Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
 	void Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
+	void Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info > gameobj_container);
+
 	void Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 };
 

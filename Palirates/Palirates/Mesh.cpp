@@ -847,6 +847,7 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 
 	::ReadStringFromFile(pInFile, m_pstrMeshName);
 
+
 	for ( ; ; )
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
@@ -1005,12 +1006,26 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 void CStandardMesh::LoadMeshFrom_OtherFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const char* pstrFileName)
 {
 	FILE* pInFile = NULL;
-	::fopen_s(&pInFile, pstrFileName, "rb");
+//	::fopen_s(&pInFile, pstrFileName, "rb");
+
+	errno_t err = ::fopen_s(&pInFile, pstrFileName, "rb");
+
+	if (err != 0 || pInFile == NULL) { // 파일 열기 실패 검사
+		DebugOutput("Error: Cannot open file " + string(pstrFileName));
+		return;
+	}
 	::rewind(pInFile);
 
 	char pstrToken[64] = { '\0' };
 	int nPositions = 0, nColors = 0, nNormals = 0, nTangents = 0, nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0, nSubIndices = 0;
 
+	if (::ReadStringFromFile(pInFile, pstrToken))
+	{
+		if (strcmp(pstrToken, "<Mesh>:"))
+		{
+			return;
+		}
+	}
 	UINT nReads = (UINT)::fread(&m_nVertices, sizeof(int), 1, pInFile);
 
 	::ReadStringFromFile(pInFile, m_pstrMeshName);
@@ -1022,6 +1037,7 @@ void CStandardMesh::LoadMeshFrom_OtherFile(ID3D12Device* pd3dDevice, ID3D12Graph
 		{
 			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
 			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
+			bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 		else if (!strcmp(pstrToken, "<Positions>:"))
 		{
@@ -1168,6 +1184,8 @@ void CStandardMesh::LoadMeshFrom_OtherFile(ID3D12Device* pd3dDevice, ID3D12Graph
 			break;
 		}
 	}
+	fclose(pInFile);
+
 }
 
 

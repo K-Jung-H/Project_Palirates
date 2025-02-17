@@ -3,7 +3,7 @@
 // stdafx.obj에는 미리 컴파일된 형식 정보가 포함됩니다.
 
 #include "stdafx.h"
-
+#include <sstream>
 #include "DDSTextureLoader12.h"
 #include "WICTextureLoader12.h"
 
@@ -131,6 +131,15 @@ ID3D12Resource* CreateTextureResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 			pd3dBuffer->Map(0, &d3dReadRange, (void**)&pBufferDataBegin);
 			memcpy(pBufferDataBegin, pData, nBytes);
 			pd3dBuffer->Unmap(0, NULL);
+		}
+
+		if (FAILED(hResult))
+		{
+			HRESULT removeReason = pd3dDevice->GetDeviceRemovedReason();
+			std::stringstream ss;
+			ss << "CreateCommittedResource failed with HRESULT: 0x" << std::hex << hResult;
+			ss << ", Device Removed Reason: 0x" << std::hex << removeReason;
+			DebugOutput(ss.str());
 		}
 		break;
 	}
