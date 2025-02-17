@@ -430,9 +430,9 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Register_Scene("Scene_1", Scene_1);
 	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, m_pd3dCommandList);
 
-	std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
-	scene_manager->Register_Scene("Scene_2", Scene_2);
-	scene_manager->Build_Scene("Scene_2", m_pd3dDevice, m_pd3dCommandList);
+	//std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
+	//scene_manager->Register_Scene("Scene_2", Scene_2);
+	//scene_manager->Build_Scene("Scene_2", m_pd3dDevice, m_pd3dCommandList);
 
 
 	
@@ -442,7 +442,7 @@ void CGameFramework::Build_Scenes()
 
 	m_pPlayer = pPlayer;
 	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
-	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
+//	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
 
 	m_pCamera = m_pPlayer->GetCamera();
 	//========================================================

@@ -428,9 +428,11 @@ public:
 
 	XMFLOAT3 GetToParentPosition();
 	XMFLOAT3 Get_World_Position();
+	XMFLOAT3 Get_Root_Obj_Displacement();
 
 	void Move(XMFLOAT3 xmf3Offset);
 
+	void Modify_World_Position(XMFLOAT3 newPosition);
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3 xmf3Position);
 	void SetScale(float x, float y, float z, bool keep_pos = false);

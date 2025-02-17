@@ -110,7 +110,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT3 xmf3Scale(20.0f, 15.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
-//	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f/*- 100.0f * xmf3Scale.y*/, 0.0f));
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f/*- 100.0f * xmf3Scale.y*/, 0.0f));
 
 //	std::shared_ptr<CGameObject> terrain_ptr = make_shared<CGameObject>(m_pTerrain);
 	std::shared_ptr<CGameObject> terrain_ptr(m_pTerrain);
@@ -162,79 +162,23 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
 	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
-	humanObject_3->SetScale(100.0f, 100.0f, 100.0f);
+	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
 
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
 
-	
+	//=====================================================
+	// Load Scene
 	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Child(Test_Scene_Model->m_pModelRootObject);
-	test_scene->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 10.0f), 10.0f);
-	test_scene->SetScale({ 10.0f,10.0f ,10.0f }, true);
+	test_scene->Set_Name("test_scene");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 
-
-	//CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Test_OBJ.bin", NULL);
-	//testModel->m_pModelRootObject->Add_Collider(10.0f);
-
 	//=====================================================
-	//std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
-	//test_OBJ->Set_Child(testModel->m_pModelRootObject);
-
-	//float scale_value = 10.0f;
-	//XMFLOAT3 scale_vector = { scale_value ,scale_value ,scale_value };
-	//float pos_x = 200.0f;
-	//float pos_z = 100.0f;
-	//float pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
-
-	//test_OBJ->SetPosition(pos_x, pos_y, pos_z);	
-
-	//XMMATRIX scaleMatrix = XMMatrixScaling(scale_vector.x, scale_vector.y, scale_vector.z);
-	//XMFLOAT4X4 scaleMatrixFloat4X4;
-	//XMStoreFloat4x4(&scaleMatrixFloat4X4, scaleMatrix);	XMFLOAT4X4 currentWorldMatrix = test_OBJ->m_xmf4x4World;
-	//
-	//XMFLOAT4X4 newWorldMatrix = Matrix4x4::Multiply(scaleMatrix, currentWorldMatrix);
-
-	//// 새로운 월드 행렬을 객체에 설정
-	//test_OBJ->m_xmf4x4Parent = (newWorldMatrix);
-	//test_OBJ->UpdateTransform(NULL);
-
-	//test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
-
-
-
-	//=====================================================
-//	std::shared_ptr<CGameObject> test_OBJ_2 = std::make_shared<CGameObject>(*test_OBJ);
-//
-//	pos_x = 300.0f;
-//	pos_z = 100.0f;
-//	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
-//
-//	test_OBJ->SetScale(scale_vector, true);
-//	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
-//	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
-//
-//	test_OBJ->UpdateTransform(NULL);
-////	//=====================================================
-//	std::shared_ptr<CGameObject> test_OBJ_3 = std::make_shared<CGameObject>(*test_OBJ);
-//
-//	pos_x = 400.0f;
-//	pos_z = 100.0f;
-//	pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
-//
-//	test_OBJ->SetScale(scale_vector, true);
-//	test_OBJ->SetPosition(pos_x, pos_y, pos_z);
-//	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
-//
-//	test_OBJ->UpdateTransform(NULL);
-//	test_OBJ_3->Rotate(0.0f, 0.0f, 90.0f);
-	//=====================================================
-//	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
-//	obj_manager->Add_Object(test_OBJ_2, Object_Type::fixed);
-//	obj_manager->Add_Object(test_OBJ_3, Object_Type::fixed);
 
 	Object_Manager::Reserve_Update();
 
@@ -317,9 +261,7 @@ void CScene::ReleaseObjects()
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr.reset();
 		
-	
-//	if (m_pTerrain) delete m_pTerrain; obj_manager에서 관리할 것
-	if (m_pSkyBox) delete m_pSkyBox;
+		if (m_pSkyBox) delete m_pSkyBox;
 
 
 	ReleaseShaderVariables();
@@ -677,10 +619,32 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case '8':
 		{
+
 		}		break;
 
 		case 'Q':
 		{
+			if (test_button)
+				break;
+			//=====================================================
+			// Re-Position Scene Obj 
+
+			unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+
+			for (auto& [mesh_name, instance_info] : *temp_list_map)
+			{
+				for (std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
+				{
+					XMFLOAT3 pos = obj_ptr->GetPosition();
+					float height = m_pTerrain->Get_Mesh_Height(pos.x, pos.z);
+					float diff = obj_ptr->Get_Root_Obj_Displacement().y;
+					XMFLOAT3 new_pos = { pos.x,  height + diff, pos.z };
+					obj_ptr->Modify_World_Position(new_pos);
+
+				}
+			}
+
+			Object_Manager::Reserve_Update();
 			test_button = true;
 		}	break;
 
@@ -757,8 +721,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 {
 #ifdef RENDER_OBB
 
-	vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
+	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
 	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);

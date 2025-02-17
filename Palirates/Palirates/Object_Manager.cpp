@@ -604,6 +604,13 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	{
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
+			if (meshName == "SM_Env_Beach_02" ||
+				meshName == "SM_Env_Beach_03" ||
+				meshName == "SM_Env_Beach_04" ||
+				meshName == "SM_Env_Beach_06" ||
+				meshName == "SM_Env_Flat_Sand_02")
+				continue;
+
 			int Material_N = instance_info.fixed_obj_list[0]->Material_list.size();
 			if (Material_N > 0)
 			{

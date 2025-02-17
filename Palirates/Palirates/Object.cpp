@@ -1383,6 +1383,22 @@ void CGameObject::ReleaseUploadBuffers()
 	if (m_pChild) m_pChild->ReleaseUploadBuffers();
 }
 
+void CGameObject::Modify_World_Position(XMFLOAT3 newPosition)
+{
+	XMVECTOR scale, rotation, translation;
+
+
+	XMMatrixDecompose(&scale, &rotation, &translation, XMLoadFloat4x4(&m_xmf4x4World));
+
+	translation = XMLoadFloat3(&newPosition);
+
+	XMMATRIX newWorldMatrix = XMMatrixScalingFromVector(scale) *
+		XMMatrixRotationQuaternion(rotation) *
+		XMMatrixTranslationFromVector(translation);
+
+	XMStoreFloat4x4(&m_xmf4x4World, newWorldMatrix);
+}
+
 void CGameObject::SetPosition(float x, float y, float z)
 {
 	m_xmf4x4Parent._41 = x;
@@ -1443,9 +1459,6 @@ void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 
 XMFLOAT3 CGameObject::GetPosition()
 {
-	//if(m_pParent != NULL)
-	//	GetPosition()
-
 	return(XMFLOAT3(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43));
 }
 
@@ -1459,12 +1472,33 @@ XMFLOAT3 CGameObject::Get_World_Position()
 	XMFLOAT3 obj_pos = GetPosition(); 
 	XMFLOAT3 parent_pos = { 0.0f, 0.0f, 0.0f };
 
-	if (m_pParent != NULL)
+	if (m_pParent != nullptr)
 		parent_pos = m_pParent->Get_World_Position();
 
 	return XMFLOAT3(obj_pos.x + parent_pos.x, obj_pos.y + parent_pos.y, obj_pos.z + parent_pos.z);
 }
 
+XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
+{
+	XMFLOAT3 worldPosition = GetPosition(); // 현재 오브젝트의 월드 위치
+	XMFLOAT3 rootPosition = { 0.0f, 0.0f, 0.0f };
+
+	// 루트 오브젝트까지 탐색
+	CGameObject* root = this;
+	while (root->m_pParent != NULL)
+	{
+		root = root->m_pParent;
+	}
+
+	rootPosition = root->GetPosition(); // 루트의 로컬 위치(초기 위치)
+
+	// 현재 위치에서 루트 위치를 뺀 값이 "루트 프레임 기준 이동량"
+	return XMFLOAT3(
+		worldPosition.x - rootPosition.x,
+		worldPosition.y - rootPosition.y,
+		worldPosition.z - rootPosition.z
+	);
+}
 XMFLOAT3 CGameObject::GetLook()
 {
 	return(Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33)));
