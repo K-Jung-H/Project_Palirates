@@ -116,7 +116,7 @@ public:
 	std::vector<std::shared_ptr<CShader>> Shader_list;
 
 	CSkyBox								*m_pSkyBox = NULL;
-	CHeightMapTerrain					*m_pTerrain = NULL;
+	std::shared_ptr<CHeightMapTerrain> m_pTerrain;
 
 	LIGHT								*m_pLights = NULL;
 	int									m_nLights = 0;

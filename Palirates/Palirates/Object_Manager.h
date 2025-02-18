@@ -109,20 +109,27 @@ class Object_Manager
 {
 private:
 	shared_ptr<OBB_Drawer> bounding_box_drawer;
+	shared_ptr<CHeightMapTerrain> terrain_ptr;
 
 	// 움직이는 객체들
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 
-	// 고정된 사물 객체 정보
-	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
-
-	// 중복 검사
-	std::unordered_set<std::string> unique_mesh_names;
+private:
+	// 고정된 사물 객체
+	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;		// 사물 객체 정보
+	std::unordered_set<std::string> unique_mesh_names; 	// 사물 중복 검사
 
 	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
 
+private:
+	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
+
+
 public:
+	void Reclassify_Objects_By_Tile();
+	void Synchronize_Active_Objects_and_Tile();
+
 	static std::shared_ptr<CShader> instance_shader;
 	static bool do_instance_update;
 	static	void Reserve_Update() { do_instance_update = true; }
@@ -131,8 +138,9 @@ public:
 	~Object_Manager();
 
 	void Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Type type);
-
 	void Delete_Object(std::shared_ptr<CGameObject > obj_ptr);
+	void Set_Terrain_Object(std::shared_ptr<CHeightMapTerrain > obj_ptr) { terrain_ptr = obj_ptr; }
+
 
 	void Animate_Objects_All(float fTimeElapsed);
 	void Animate_Objects(Object_Type type, float fTimeElapsed);

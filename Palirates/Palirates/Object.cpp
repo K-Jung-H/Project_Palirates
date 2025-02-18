@@ -1399,6 +1399,49 @@ void CGameObject::Modify_World_Position(XMFLOAT3 newPosition)
 	XMStoreFloat4x4(&m_xmf4x4World, newWorldMatrix);
 }
 
+void CGameObject::Modify_World_Up_Vector(XMFLOAT3 newUpVector)
+{
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+	// 기존 행렬을 Scale, Rotation, Translation으로 분해
+	XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix);
+
+	// 기존 Forward 및 Right 벡터 추출
+	XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]); // 기존 Z축 (Forward)
+	XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);   // 기존 X축 (Right)
+
+	// 입력받은 Up 벡터를 정규화
+	XMVECTOR newUp = XMVector3Normalize(XMLoadFloat3(&newUpVector));
+
+	// 기존 Forward 벡터와 새 Up 벡터가 같은 방향이면 처리 (기본적으로 Right 벡터 유지)
+	if (XMVector3Equal(forward, newUp) || XMVector3Equal(XMVectorNegate(forward), newUp))
+	{
+		forward = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); // 예외 처리: 기본 Forward 벡터 설정
+	}
+
+	// 새로운 Right 벡터 계산 (newUp과 Forward의 외적)
+	XMVECTOR newRight = XMVector3Normalize(XMVector3Cross(newUp, forward));
+
+	// 새로운 Forward 벡터 계산 (Right와 Up의 외적)
+	XMVECTOR newForward = XMVector3Normalize(XMVector3Cross(newRight, newUp));
+
+	// 새로운 회전 행렬 구성
+	XMMATRIX newRotationMatrix = XMMATRIX(
+		newRight,   // X축 (Right)
+		newUp,      // Y축 (Up)
+		newForward, // Z축 (Forward)
+		XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+
+	// 최종 월드 행렬 계산 (Scale * Rotation * Translation)
+	XMMATRIX newWorldMatrix = XMMatrixScalingFromVector(scale) * newRotationMatrix * XMMatrixTranslationFromVector(translation);
+
+	// 변환된 월드 행렬 저장
+	XMStoreFloat4x4(&m_xmf4x4World, newWorldMatrix);
+}
+
+
 void CGameObject::SetPosition(float x, float y, float z)
 {
 	m_xmf4x4Parent._41 = x;
@@ -1499,6 +1542,7 @@ XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
 		worldPosition.z - rootPosition.z
 	);
 }
+
 XMFLOAT3 CGameObject::GetLook()
 {
 	return(Vector3::Normalize(XMFLOAT3(m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33)));
@@ -2484,43 +2528,6 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 	m_pHeightMapImage = NULL;
 }
 
-
-void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-	if (!IsVisible(pCamera))
-		Set_Active(false);
-	else
-		Set_Active(true);
-
-	if (Get_Active() && m_pMesh != NULL)
-	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-		
-		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
-		{
-			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
-
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
-
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
-
-			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
-		}
-	}
-
-	if (Get_Active())
-	{
-		std::shared_ptr<CGameObject> pChild = Get_Child();
-		if (pChild) pChild->Render(pd3dCommandList, pCamera);
-	}
-
-	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
-	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
-
-}
-
 void CHeightMapTerrain::Set_Tile(int n)
 {
 	tile_number = n;
@@ -2593,15 +2600,11 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad, CH
 	return -1;
 }
 
-
-
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 {
 	CHeightMapTerrain* last_tile_ptr = nullptr;
 	return Get_Mesh_Normal(x, z, last_tile_ptr);
 }
-
-
 
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr)
 {
@@ -2682,6 +2685,24 @@ int CHeightMapTerrain::Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_
 	return -1; 
 }
 
+void CHeightMapTerrain::Get_Active_TileNum_List(std::vector<int>& tile_list)
+{
+	if (Get_Active())
+		tile_list.push_back(tile_number);
+
+	// 자식 노드 탐색
+	CGameObject* child_ptr = Get_Child().get();
+	if (child_ptr)
+		child_ptr->Get_Active_TileNum_List(tile_list);
+
+	// 형제 노드 탐색
+	CGameObject* sibling_ptr = Get_Sibling().get();
+	if (sibling_ptr)
+		sibling_ptr->Get_Active_TileNum_List(tile_list);
+}
+
+
+
 
 BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
 {
@@ -2707,6 +2728,64 @@ BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
 	XMStoreFloat4(&pWorldBoundingBox.Orientation, quaternionRotation);
 
 	return &pWorldBoundingBox;
+}
+
+void CHeightMapTerrain::Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list)
+{
+	for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
+	{
+		XMFLOAT3 pos = obj_ptr->GetPosition();
+		float height = Get_Mesh_Height(pos.x, pos.z);
+		float diff = obj_ptr->Get_Root_Obj_Displacement().y;
+		XMFLOAT3 new_pos = { pos.x,  height + diff, pos.z };
+		obj_ptr->Modify_World_Position(new_pos);
+	}
+}
+
+void CHeightMapTerrain::Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list)
+{
+	for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
+	{
+		XMFLOAT3 pos = obj_ptr->GetPosition();
+		XMFLOAT3 new_normal = Get_Mesh_Normal(pos.x, pos.z);
+		obj_ptr->Modify_World_Up_Vector(new_normal);
+	}
+}
+
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (!IsVisible(pCamera))
+		Set_Active(false);
+	else
+		Set_Active(true);
+
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
+		{
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
+			m_pMesh->Render(pd3dCommandList, 0);
+
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
+			m_pMesh->Render(pd3dCommandList, 0);
+
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

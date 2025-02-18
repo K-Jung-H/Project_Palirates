@@ -438,7 +438,7 @@ void CGameFramework::Build_Scenes()
 	
 
 	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain);
+	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
 
 	m_pPlayer = pPlayer;
 	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);

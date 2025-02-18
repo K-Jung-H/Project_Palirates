@@ -460,6 +460,13 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 {
 	string name = obj_ptr->Get_Mesh_Name();
 
+	if (name == "SM_Env_Beach_02" ||
+		name == "SM_Env_Beach_03" ||
+		name == "SM_Env_Beach_04" ||
+		name == "SM_Env_Beach_06" ||
+		name == "SM_Env_Flat_Sand_02")
+		name = "None";
+
 	if (name != "None") 
 	{
 		container[name].fixed_obj_list.push_back(obj_ptr);
@@ -575,6 +582,51 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 }
 
+void Object_Manager::Reclassify_Objects_By_Tile()
+{	
+	//=============================== 
+	for (auto& [tile_num, obj_list] : obj_list_in_tile)
+		obj_list.clear();
+	obj_list_in_tile.clear();
+	//===============================
+
+	CHeightMapTerrain* last_checked_tile = NULL;
+	int Tile_Num = 0;
+
+	for (auto& [meshName, instance_info] : fixed_obj_info_map)
+	{
+		for (std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
+		{
+			XMFLOAT3 obj_pos = obj_ptr->GetPosition();
+			Tile_Num = terrain_ptr->Get_Tile(obj_pos.x, obj_pos.z, last_checked_tile);
+			obj_list_in_tile[Tile_Num].push_back(obj_ptr);
+		}
+	}
+}
+
+void Object_Manager::Synchronize_Active_Objects_and_Tile()
+{
+	std::vector<int> active_tile_num_list;
+	terrain_ptr->Get_Active_TileNum_List(active_tile_num_list);
+
+	std::unordered_set<int> active_tile_set(active_tile_num_list.begin(), active_tile_num_list.end());
+	for (auto& [tile_num, obj_list] : obj_list_in_tile)
+	{
+		bool tile_active = true;
+		if (active_tile_set.find(tile_num) != active_tile_set.end()) // 활성화 타일 리스트에 포함된 타일인 경우
+			tile_active = true;
+		else
+			tile_active = false;
+
+		for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
+			obj_ptr->Set_Active(tile_active);
+		
+		
+	}
+
+	Reserve_Update();
+}
+
 void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	switch (type)
@@ -602,14 +654,11 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::fixed:
 	{
+		terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
+		Synchronize_Active_Objects_and_Tile();
+
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
-			if (meshName == "SM_Env_Beach_02" ||
-				meshName == "SM_Env_Beach_03" ||
-				meshName == "SM_Env_Beach_04" ||
-				meshName == "SM_Env_Beach_06" ||
-				meshName == "SM_Env_Flat_Sand_02")
-				continue;
 
 			int Material_N = instance_info.fixed_obj_list[0]->Material_list.size();
 			if (Material_N > 0)

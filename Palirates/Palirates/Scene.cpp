@@ -107,14 +107,14 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
-	XMFLOAT3 xmf3Scale(20.0f, 15.0f, 20.0f);
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
-	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f/*- 100.0f * xmf3Scale.y*/, 0.0f));
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+		//CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
-//	std::shared_ptr<CGameObject> terrain_ptr = make_shared<CGameObject>(m_pTerrain);
-	std::shared_ptr<CGameObject> terrain_ptr(m_pTerrain);
-	obj_manager->Add_Object(terrain_ptr, Object_Type::non_skinned);
+//	std::shared_ptr<CHeightMapTerrain> terrain_ptr(m_pTerrain);
+	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
@@ -179,6 +179,14 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 
 	//=====================================================
+
+	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+
+	for (auto& [mesh_name, instance_info] : *temp_list_map)
+	{
+		m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+		m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+	}
 
 	Object_Manager::Reserve_Update();
 
@@ -589,61 +597,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case '1':
-		{
-		}		break;
-
-		case '2':
-		{
-		}		break;
-
-		case '3':
-		{
-		}		break;
-
-		case '4':
-		{
-		}		break;
-
-		case '5':
-		{
-		}		break;
-
-		case '6':
-		{
-		}		break;
-
-		case '7':
-		{
-		}		break;
-
-		case '8':
-		{
-
-		}		break;
-
 		case 'Q':
 		{
 			if (test_button)
 				break;
-			//=====================================================
-			// Re-Position Scene Obj 
-
-			unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-
-			for (auto& [mesh_name, instance_info] : *temp_list_map)
-			{
-				for (std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
-				{
-					XMFLOAT3 pos = obj_ptr->GetPosition();
-					float height = m_pTerrain->Get_Mesh_Height(pos.x, pos.z);
-					float diff = obj_ptr->Get_Root_Obj_Displacement().y;
-					XMFLOAT3 new_pos = { pos.x,  height + diff, pos.z };
-					obj_ptr->Modify_World_Position(new_pos);
-
-				}
-			}
-
+			obj_manager->Reclassify_Objects_By_Tile();
 			Object_Manager::Reserve_Update();
 			test_button = true;
 		}	break;
@@ -724,8 +682,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
 	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
-	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
+	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
@@ -792,7 +750,9 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
+
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
+//	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, -100.0f * xmf3Scale.y, 0.0f));
 
 

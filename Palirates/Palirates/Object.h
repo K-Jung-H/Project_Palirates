@@ -433,6 +433,8 @@ public:
 	void Move(XMFLOAT3 xmf3Offset);
 
 	void Modify_World_Position(XMFLOAT3 newPosition);
+	void Modify_World_Up_Vector(XMFLOAT3 newUpvector);
+
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3 xmf3Position);
 	void SetScale(float x, float y, float z, bool keep_pos = false);
@@ -481,9 +483,11 @@ public:
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent);
 	
 	virtual std::string  Get_Mesh_Name();
-	virtual int Get_Tile(float x, float z) { return -1; };
 
-	virtual BoundingOrientedBox* Get_Collider();
+	virtual int Get_Tile(float x, float z) { return -1; };
+	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
+
+	virtual BoundingOrientedBox* Get_Collider();	
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
@@ -536,6 +540,8 @@ public:
 	int Get_Tile(float x, float z);
 	int Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr);
 
+	int Get_TileNum() { return tile_number; }
+	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list);
 	virtual BoundingOrientedBox* Get_Collider();
 
 
@@ -548,6 +554,8 @@ public:
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
+	void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);
+	void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
 };
 
 
