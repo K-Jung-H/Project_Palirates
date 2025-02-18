@@ -243,6 +243,7 @@ public:
 //	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
+	std::string CAnimationSets::GetBoneName(int index);
 	void ClassifyBones();
 };
 
@@ -338,6 +339,7 @@ public:
 	void SetAnimationCallbackHandler(int nAnimationTrack, CAnimationCallbackHandler *pCallbackHandler);
 
 	void AdvanceTime(float fElapsedTime, CGameObject *pRootGameObject);
+	void AdvanceTime2(float fElapsedTime, CGameObject *pRootGameObject);
 
 public:
 	bool							m_bRootMotion = false;

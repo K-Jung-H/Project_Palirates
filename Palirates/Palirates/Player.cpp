@@ -280,7 +280,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	  
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
-	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters.bin", NULL);
+	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test.bin", NULL);
 	Set_Child(pAngrybotModel->m_pModelRootObject);
 
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, 3, pAngrybotModel);
@@ -465,7 +466,12 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	OnPrepareRender();
 
 	if (m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+	{
+		if (Anime_test_FallingLoop)
+			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
+		else
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+	}
 
 	if (On_Ground)
 	{
@@ -494,7 +500,7 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 	if (m_pSkinnedAnimationController)
 	{
 		if (Anime_test_FallingLoop) {
-			if (m_fFallingTimer <= 1.0f) {
+			if (m_fFallingTimer < 0.0f) {
 				// Falling 타이머 갱신
 				m_fFallingTimer += fTimeElapsed;
 
@@ -516,14 +522,16 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 				if (m_pSkinnedAnimationController->m_pAnimationTracks[2].m_fWeight != 1.0f)
 					m_pSkinnedAnimationController->SetTrackWeight(2, 1.0f);*/
 
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[1].m_fWeight != 0.3f)
-					m_pSkinnedAnimationController->SetTrackWeight(1, 0.3f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[2].m_fWeight != 0.7f)
-					m_pSkinnedAnimationController->SetTrackWeight(2, 0.7f);
+				if (m_pSkinnedAnimationController->m_pAnimationTracks[1].m_fWeight != 0.5f)
+					m_pSkinnedAnimationController->SetTrackWeight(1, 0.5f);
+				if (m_pSkinnedAnimationController->m_pAnimationTracks[2].m_fWeight != 0.5f)
+					m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
 
 				m_pSkinnedAnimationController->SetTrackEnable(0, false);
-				m_pSkinnedAnimationController->SetTrackEnable(1, false);
+				m_pSkinnedAnimationController->SetTrackEnable(1, true);
 				m_pSkinnedAnimationController->SetTrackEnable(2, true);
+
+				//m_pSkinnedAnimationController->Bone_Info();
 			}
 			//m_pSkinnedAnimationController->SetTrackPosition(1, 0.0f);
 		}
