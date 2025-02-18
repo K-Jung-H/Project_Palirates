@@ -5,6 +5,7 @@
 #include "Player.h"
 #include "Scene.h"
 #include "UILayer.h"
+#include "Scene_Manager.h"
 
 class CGameFramework
 {
@@ -26,11 +27,12 @@ public:
 
 	void ChangeSwapChainState();
 
-    void BuildObjects();
-    void ReleaseObjects();
+    void Build_Scenes();
+    void Release_Scenes();
 
     void ProcessInput();
-    void AnimateObjects();
+
+	void Update_Scene();
     void FrameAdvance();
 
 	void WaitForGpuComplete();
@@ -77,7 +79,9 @@ private:
 
 	CGameTimer					m_GameTimer;
 
-	CScene						*m_pScene = NULL;
+	Scene_Manager* scene_manager = NULL;
+
+
 	CPlayer						*m_pPlayer = NULL;
 	CCamera						*m_pCamera = NULL;
 

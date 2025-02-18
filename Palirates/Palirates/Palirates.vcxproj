@@ -146,6 +146,7 @@
     <ClInclude Include="Player.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="Scene_Manager.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="Object_StateMachine.h" />
     <ClInclude Include="stdafx.h" />
@@ -169,6 +170,7 @@
     <ClCompile Include="Palirates.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="Scene_Manager.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Object_StateMachine.cpp" />
     <ClCompile Include="stdafx.cpp">

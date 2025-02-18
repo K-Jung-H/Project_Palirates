@@ -36,8 +36,10 @@ protected:
 	CCamera						*m_pCamera = NULL;
 	CHeightMapTerrain* last_tile_ptr = NULL;
 
+
 	bool Anime_test_FallingLoop = false;
 	float m_fFallingTimer = 0.0f;
+
 
 public:
 	CPlayer();
@@ -71,7 +73,9 @@ public:
 	void Rotate(float x, float y, float z);
 
 //	virtual void Animate(float fTimeElapsed);
+
 	virtual void Animate_test();
+
 	virtual void Update(float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
@@ -92,7 +96,9 @@ public:
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
+
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
+
 };
 
 

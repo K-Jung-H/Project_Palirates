@@ -524,8 +524,6 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 				m_pSkinnedAnimationController->SetTrackEnable(0, false);
 				m_pSkinnedAnimationController->SetTrackEnable(1, false);
 				m_pSkinnedAnimationController->SetTrackEnable(2, true);
-
-				m_pSkinnedAnimationController->Bone_Info();
 			}
 			//m_pSkinnedAnimationController->SetTrackPosition(1, 0.0f);
 		}

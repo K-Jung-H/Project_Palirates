@@ -26,6 +26,10 @@ Text_UI_Manager::~Text_UI_Manager()
     for (TextBlock* block_ptr : TextBlock_list)
         delete block_ptr;
     TextBlock_list.clear();
+
+    for (std::shared_ptr<TextDesign> design_ptr : text_design_list)
+        design_ptr.reset();
+
     text_design_list.clear();
 }
 
