@@ -787,6 +787,14 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
 
+					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+					if (boneName == "Hips")
+					{
+						blendedTransform._41 = 0.0f;
+						blendedTransform._42 = 0.8762761f;
+						blendedTransform._43 = 0.0f;
+					}
+
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 				}
 
@@ -887,6 +895,13 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 
 						float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 						XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
+
+						if (boneName == "Hips")
+						{
+							blendedTransform._41 = 0.0f; 
+							blendedTransform._42 = 0.8762761f;
+							blendedTransform._43 = 0.0f; 
+						}
 
 						m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 					}
