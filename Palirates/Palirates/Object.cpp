@@ -2308,97 +2308,6 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 	m_pMesh->Set_BoundingBox(ptr); // ptr이 NULL 인 경우, 기본값 OBB로 생성
 }
 
-void CGameObject::Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr)
-{
-	if (terrain_ptr == NULL)
-		return;
-
-	// 현재 객체의 위치 가져오기
-	XMFLOAT3 obj_pos = GetPosition();
-
-	// 현재 위치에서의 지형의 법선 벡터(새로운 Y축)
-	XMFLOAT3 apply_normal = terrain_ptr->Get_Mesh_Normal(obj_pos.x, obj_pos.z);
-	XMVECTOR up = XMVector3Normalize(XMLoadFloat3(&apply_normal));  // 새로운 Y축 (Up 벡터)
-
-	// 기존 행렬에서 Scale 정보 추출
-	XMVECTOR scaleX = XMVector3Length(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4World._11)));
-	XMVECTOR scaleY = XMVector3Length(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4World._21)));
-	XMVECTOR scaleZ = XMVector3Length(XMLoadFloat3(reinterpret_cast<XMFLOAT3*>(&m_xmf4x4World._31)));
-
-	// 기존의 전방 벡터(Z축) 가져오기 (기본적으로 모델의 로컬 Z축을 사용)
-	XMFLOAT3 forward = { m_xmf4x4World._31, m_xmf4x4World._32, m_xmf4x4World._33 };
-	XMVECTOR zAxis = XMVector3Normalize(XMLoadFloat3(&forward));
-
-	// 새로운 X축 = (Z축 × Y축)
-	XMVECTOR xAxis = XMVector3Normalize(XMVector3Cross(zAxis, up));
-
-	// 새로운 Z축 = (Y축 × X축)
-	XMVECTOR newZAxis = XMVector3Normalize(XMVector3Cross(up, xAxis));
-
-	// Scale 적용
-	xAxis = XMVectorMultiply(xAxis, scaleX);
-	up = XMVectorMultiply(up, scaleY);
-	newZAxis = XMVectorMultiply(newZAxis, scaleZ);
-
-	// XMVECTOR를 XMFLOAT3으로 변환
-	XMFLOAT3 right, new_up, new_forward;
-	XMStoreFloat3(&right, xAxis);
-	XMStoreFloat3(&new_up, up);
-	XMStoreFloat3(&new_forward, newZAxis);
-
-	// 최종 회전 행렬 생성 (위치 정보 유지)
-	XMFLOAT4X4 new_rotation_matrix =
-	{
-		right.x,    right.y,    right.z,    0.0f,  // X축
-		new_up.x,   new_up.y,   new_up.z,   0.0f,  // Y축 (Up 벡터)
-		new_forward.x, new_forward.y, new_forward.z, 0.0f,  // Z축
-		m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43, 1.0f  // 위치 유지
-	};
-
-	// 객체의 회전 적용
-	m_xmf4x4World = new_rotation_matrix;
-
-	// 계층 구조 처리
-	if (m_pSibling)
-		m_pSibling->Rotate_To_Match_Terrain(terrain_ptr);
-
-	if (m_pChild)
-		m_pChild->Rotate_To_Match_Terrain(terrain_ptr);
-}
-
-void CGameObject::Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* terrain_ptr, CHeightMapTerrain* last_tile_ptr)
-{
-	/*XMFLOAT3 obj_pos = Get_World_Position();
-	XMFLOAT3 xmf3Scale = terrain_ptr->GetScale();
-	int z = (int)(obj_pos.z / xmf3Scale.z);
-	bool bReverseQuad = ((z % 2) != 0);
-
-	CHeightMapTerrain* temp_ptr = NULL;
-	float new_height = terrain_ptr->Get_Height(obj_pos.x, obj_pos.z, bReverseQuad, last_tile_ptr);
-
-	float temp_y = new_height - start_y;
-	Move({ 0, temp_y,0 });
-
-	obj_pos = Get_World_Position();
-
-	DebugOutput("\nx: - " + to_string(obj_pos.x) + ", y: - " + to_string(obj_pos.y) + ", z: - " + to_string(obj_pos.z));*/
-
-	XMFLOAT3 obj_pos = Get_World_Position();
-	XMFLOAT3 xmf3Scale = terrain_ptr->GetScale();
-	int z = (int)(obj_pos.z / xmf3Scale.z);
-	bool bReverseQuad = ((z % 2) != 0);
-
-
-	float new_height = terrain_ptr->Get_Height(obj_pos.x, obj_pos.z, bReverseQuad, last_tile_ptr);
-	m_xmf4x4World._42 = new_height;
-
-	if (m_pSibling)
-		m_pSibling->Set_Height_To_Match_Terrain(start_y, terrain_ptr, last_tile_ptr);
-
-	if (m_pChild)
-		m_pChild->Set_Height_To_Match_Terrain(start_y, terrain_ptr, last_tile_ptr);
-}
-
 
 
 // static 변수 초기화
@@ -2752,13 +2661,27 @@ void CHeightMapTerrain::Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGa
 	}
 }
 
-void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CHeightMapTerrain::Check_Culling(CCamera* pCamera)
 {
 	if (!IsVisible(pCamera))
 		Set_Active(false);
 	else
 		Set_Active(true);
 
+
+	std::shared_ptr<CGameObject> pChild = Get_Child();
+	if (pChild)
+		pChild->Check_Culling(pCamera);
+	
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling)
+		pSibling->Check_Culling(pCamera);
+	
+}
+
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
 	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);

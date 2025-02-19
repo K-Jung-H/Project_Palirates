@@ -110,10 +110,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
-		//CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
-//	std::shared_ptr<CHeightMapTerrain> terrain_ptr(m_pTerrain);
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 
@@ -182,11 +179,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 
+	// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
+
 	for (auto& [mesh_name, instance_info] : *temp_list_map)
 	{
 		m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
 		m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
 	}
+
+	// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
+	obj_manager->Classify_Objects_By_Tile();
 
 	Object_Manager::Reserve_Update();
 
@@ -601,8 +603,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 			if (test_button)
 				break;
-			obj_manager->Reclassify_Objects_By_Tile();
-			Object_Manager::Reserve_Update();
+
 			test_button = true;
 		}	break;
 
@@ -699,6 +700,9 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
+
+	//씬의 객체들 프러스텀 컬링
+	obj_manager->Check_Culling_All(pCamera);
 
 	UpdateShaderVariables(pd3dCommandList);
 
@@ -805,10 +809,6 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
-
-
-
-	//	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Havana.bin", NULL);
 	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Havana.bin", NULL);
 
 	testModel->m_pModelRootObject->Add_Collider(10.0f);
@@ -825,7 +825,6 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	test_OBJ->SetScale(scale_vector, true);
 	test_OBJ->SetPosition(pos_x, pos_y+ 500.0f, pos_z);
-//	test_OBJ->Set_Height_To_Match_Terrain(pos_y, m_pTerrain, NULL);
 
 	test_OBJ->UpdateTransform(NULL);
 

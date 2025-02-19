@@ -4,7 +4,7 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
-#include "UILayer.h"
+#include "UI_Manager.h"
 #include "Scene_Manager.h"
 
 class CGameFramework

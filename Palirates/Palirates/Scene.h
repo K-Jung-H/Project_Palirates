@@ -3,7 +3,7 @@
 //-----------------------------------------------------------------------------
 
 #pragma once
-#include "UILayer.h"
+#include "UI_Manager.h"
 #include "Object_Manager.h"
 #include "Shader.h"
 #include "Player.h"

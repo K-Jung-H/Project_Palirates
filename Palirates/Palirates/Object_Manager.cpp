@@ -363,7 +363,7 @@ void OBB_Drawer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 
 void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT bufferSize = sizeof(Instance_Info) * rendering_max_num;
+	UINT bufferSize = sizeof(Instance_Info) * instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
 	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -375,42 +375,39 @@ void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dD
 
 }
 
+
+
 void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	int instance_obj_num = fixed_obj_list.size();
-	int i = 0;
+	int visible_count = 0;
+
 	XMFLOAT4X4 world_matrix;
 
-	if (instance_obj_num > rendering_max_num)
+	if (instance_obj_num > instance_buffer_max_num)
 	{
 		DebugOutput("\n\nResizing buffer to fit more" + obj_mesh->Get_Name() + "instances\n\n\n");
 
 		Release_Instance_Data_ShaderVariables();
 
-		rendering_max_num = std::min<int>(instance_obj_num * 2, MAX_INSTANCING_NUM);
+		instance_buffer_max_num = std::min<int>(instance_obj_num * 2, MAX_INSTANCING_NUM);
 
 		Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-
+	// 가시성 검사 후, 보이는 인스턴스만 업데이트
 	for (auto& obj_ptr : fixed_obj_list)
 	{
-		world_matrix = obj_ptr->m_xmf4x4World;
+		if (!obj_ptr->Get_Active())
+			continue;
 
-		if (obj_ptr->Get_Active())
-			Mapped_Instance_info[i].active = true;
-		else
-			Mapped_Instance_info[i].active = false;
+		XMFLOAT4X4 world_matrix = obj_ptr->m_xmf4x4World;
 		XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(XMLoadFloat4x4(&world_matrix)));
-		Mapped_Instance_info[i].world_4x4transform = world_matrix;
-		++i;  
+
+		Mapped_Instance_info[visible_count++] = { world_matrix, true };
 	}
 
-	for (int i = instance_obj_num; i < rendering_max_num; ++i)
-	{
-		Mapped_Instance_info[i].active = false;
-		Mapped_Instance_info[i].world_4x4transform = Matrix4x4::Identity();
-	}
+	rendering_num = visible_count; 
 }
 
 void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
@@ -582,8 +579,60 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 }
 
-void Object_Manager::Reclassify_Objects_By_Tile()
+void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
+{
+	switch (obj_type)
+	{
+	case Object_Type::skinned:
+	{
+		bool Is_Visible = false;
+		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
+		{
+			Is_Visible = obj_ptr->IsVisible(pCamera);
+			obj_ptr->Set_Active(Is_Visible);
+			
+		}
+	} break;
+
+	case Object_Type::non_skinned:
+	{
+		bool Is_Visible = false;
+		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
+		{
+			Is_Visible = obj_ptr->IsVisible(pCamera);
+			obj_ptr->Set_Active(Is_Visible);
+
+		}
+	} break;
+
+	case Object_Type::fixed:
+	{
+		Synchronize_Active_Objects_and_Tile();
+	} break;
+
+	case Object_Type::etc:
+		break;
+	}
+
+
+
+}
+
+void Object_Manager::Check_Culling_All(CCamera* pCamera)
+{
+	/// 타일맵 컬링하기
+	if (terrain_ptr != NULL)	
+		terrain_ptr->Check_Culling(pCamera);
+
+	Check_Culling(pCamera, Object_Type::skinned);
+	Check_Culling(pCamera, Object_Type::non_skinned);
+	Check_Culling(pCamera, Object_Type::fixed);
+}
+
+void Object_Manager::Classify_Objects_By_Tile()
 {	
+	// 객체들의 위치에 따라 타일로 분류하는 함수
+	
 	//=============================== 
 	for (auto& [tile_num, obj_list] : obj_list_in_tile)
 		obj_list.clear();
@@ -602,14 +651,20 @@ void Object_Manager::Reclassify_Objects_By_Tile()
 			obj_list_in_tile[Tile_Num].push_back(obj_ptr);
 		}
 	}
+
+	Reserve_Update();
 }
 
 void Object_Manager::Synchronize_Active_Objects_and_Tile()
 {
+	// 활성화된 타일 번호 리스트 생성
 	std::vector<int> active_tile_num_list;
 	terrain_ptr->Get_Active_TileNum_List(active_tile_num_list);
-
 	std::unordered_set<int> active_tile_set(active_tile_num_list.begin(), active_tile_num_list.end());
+
+	// 객체를 갖고 있는 타일 중에서,
+	// 활성화된 타일이 갖는 객체들은 활성화
+	// 비활성화된 타일의 객체들은 비활성화
 	for (auto& [tile_num, obj_list] : obj_list_in_tile)
 	{
 		bool tile_active = true;
@@ -619,9 +674,7 @@ void Object_Manager::Synchronize_Active_Objects_and_Tile()
 			tile_active = false;
 
 		for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
-			obj_ptr->Set_Active(tile_active);
-		
-		
+			obj_ptr->Set_Active(tile_active);		
 	}
 
 	Reserve_Update();
@@ -690,7 +743,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 						// 메쉬 렌더링
 						if (instance_info.obj_mesh)
-							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_max_num);
+							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 					}
 				}
 			}

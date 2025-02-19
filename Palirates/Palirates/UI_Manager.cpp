@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "UILayer.h"
+#include "UI_Manager.h"
 
 using namespace std;
 

@@ -484,17 +484,16 @@ public:
 	
 	virtual std::string  Get_Mesh_Name();
 
-	virtual int Get_Tile(float x, float z) { return -1; };
-	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
 
 	virtual BoundingOrientedBox* Get_Collider();	
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
-	// 실험중인 함수들
-	virtual void Rotate_To_Match_Terrain(CHeightMapTerrain* terrain_ptr);
-	virtual void Set_Height_To_Match_Terrain(int start_y, CHeightMapTerrain* terrain_ptr, CHeightMapTerrain* last_tile_ptr = NULL);
-
+	public:
+	// Using CHeightMapTerrain
+	virtual int Get_Tile(float x, float z) { return -1; };
+	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
+	virtual void Check_Culling(CCamera* pCamera) {};
 };
 
 //==================================================================================
@@ -552,6 +551,7 @@ public:
 	float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
 	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
 
+	void Check_Culling(CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);

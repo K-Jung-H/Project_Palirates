@@ -30,8 +30,8 @@ struct Fixed_Object_Info
 	std::vector<std::shared_ptr<CGameObject>> fixed_obj_list;
 	std::shared_ptr<CMesh> obj_mesh;
 
-
-	int rendering_max_num = DEFAULT_INSTANCE_NUM;
+	int rendering_num = 0;
+	int instance_buffer_max_num = DEFAULT_INSTANCE_NUM;
 	ID3D12Resource* Instance_info = NULL;
 	Instance_Info* Mapped_Instance_info = NULL;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
@@ -124,11 +124,11 @@ private:
 
 private:
 	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
+	void Synchronize_Active_Objects_and_Tile();
 
 
 public:
-	void Reclassify_Objects_By_Tile();
-	void Synchronize_Active_Objects_and_Tile();
+	void Classify_Objects_By_Tile();
 
 	static std::shared_ptr<CShader> instance_shader;
 	static bool do_instance_update;
@@ -146,6 +146,10 @@ public:
 	void Animate_Objects(Object_Type type, float fTimeElapsed);
 
 	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
+	void Check_Culling_All(CCamera* pCamera);
+
+	
 
 	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
