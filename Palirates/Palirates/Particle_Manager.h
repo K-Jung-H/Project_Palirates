@@ -21,6 +21,7 @@ public:
 	~CParticleVertex() { }
 };
 //==============================================================================
+
 #define MAX_PARTICLES				9000
 
 class CParticleMesh : public CMesh
@@ -57,30 +58,40 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
 	virtual void PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
 
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 	virtual void OnPostRender(int nPipelineState);
 
 	ID3D12Resource* CreateUAVBuffer(ID3D12Device* pd3dDevice, size_t bufferSize);
+
+	UINT Get_Num() { return m_nVertices; }
+
 };
 
 //==============================================================================
+
 class CParticleObject : public CGameObject
 {
 private:
-	CMesh* particle_shape_mesh = NULL;
+	CMesh* shape_mesh = NULL;
+	CParticleMesh* particle_mesh = NULL;
+
 public:
 	CParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CParticleObject();
-
+	
 	void ReleaseUploadBuffers();
 
-	virtual void SetShape(CMesh* mesh_ptr) { particle_shape_mesh = mesh_ptr; }
+	virtual void Set_Shape(CMesh* mesh_ptr) { shape_mesh = mesh_ptr; }
 	virtual void Animate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N = 0);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress_n = 0);
 	virtual void OnPostRender();
-	UINT Get_Num() { return ((CParticleMesh*)m_pMesh)->GetNum(); }
+
+	UINT Get_Particle_Num() { return particle_mesh->Get_Num(); }
 };
 
+
 //==============================================================================
+
 struct CB_Particle_Update_Info
 {
 	float gfElapsedTime;
@@ -96,7 +107,6 @@ public:
 
 	// Particle_Object가 갖도록 하기
 	CMesh* particle_shape_mesh = NULL;
-	CParticleMesh* particle_mesh = NULL;
 	CTexture* m_pRandowmValueTexture = NULL;
 	CMaterial* particle_Material;
 
@@ -146,6 +156,6 @@ public:
 //==============================================================================
 class Particle_Manager
 {
-	std::vector<CParticleShader*> particle_shader_list; // 파티클 움직임, GS, SO 타입에 따라 사용해야 할 셰이더가 달라질 것
+	std::vector<CParticleShader*> particle_shader_list; // 파티클 움직임, GS, SO 타입에 따라 사용해야 할 셰이더가 달라질 
 };
 

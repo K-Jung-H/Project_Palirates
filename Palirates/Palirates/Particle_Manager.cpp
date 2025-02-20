@@ -49,51 +49,93 @@ void CParticleObject::Animate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 }
 
-void CParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N)
+void CParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
 {
+	/*
+		if (Material_list.size())
+		{
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+					{
+						// PSO 순회 및 렌더링
+						int pipelineStateNum = pShader->Get_Num_PipelineState();
+						for (int j = 0; j < pipelineStateNum; ++j)
+						{
+							// PSO 설정
+							pShader->Setting_Render(pd3dCommandList, j);
+
+							// 재료(Material) 셰이더 변수 업데이트
+							material_ptr->UpdateShaderVariable(pd3dCommandList);
+
+							// 메쉬 렌더링
+							m_pMesh->Render(pd3dCommandList, i);
+						}
+					}
+	*/
+
+
+
 	OnPrepareRender();
 
-	if (N == 0)
+	if (progress == 0)
 	{
-		if (m_ppMaterials[0])
+		if (Material_list.size())
 		{
-			if (m_ppMaterials[0]->m_pShader)
-				m_ppMaterials[0]->m_pShader->OnPrepareRender(pd3dCommandList, 0);
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+					{
+						pShader->OnPrepareRender(pd3dCommandList, 0); // == SetPipelineState
+					}
 
-			if (m_ppMaterials[0]->m_pTexture)
-				m_ppMaterials[0]->m_pTexture->UpdateShaderVariables(pd3dCommandList);
+					material_ptr->UpdateShaderVariable(pd3dCommandList); // 재질에 저장된 텍스처도 함께 업데이트 되는 함수임, bool 값으로 기능 분리하기
+
+					UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+					if (particle_mesh)
+					{
+						particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
+						particle_mesh->Render(pd3dCommandList, 0); //Stream Output
+						particle_mesh->PostRender(pd3dCommandList, 0); //Stream Output
+					}
+				}
+			}
 		}
+		else if (progress == 1)
+		{
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+						pShader->OnPrepareRender(pd3dCommandList, 1); // == SetPipelineState
+					
 
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-		if (m_pMesh)
-			m_pMesh->PreRender(pd3dCommandList, 0); //Stream Output
+					if (particle_mesh)
+						particle_mesh->PreRender(pd3dCommandList, 1); //Draw
 
-		if (m_pMesh)
-			m_pMesh->Render(pd3dCommandList, 0); //Stream Output
-
-		if (m_pMesh)
-			m_pMesh->PostRender(pd3dCommandList, 0); //Stream Output
-	}
-	else if (N == 1)
-	{
-		if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
-			m_ppMaterials[0]->m_pShader->OnPrepareRender(pd3dCommandList, 1);
-
-		if (m_pMesh)
-			m_pMesh->PreRender(pd3dCommandList, 1); //Draw
-
-
-		int particle_count = m_pMesh->GetNum();
-
-		if (particle_shape_mesh)
-			((CSphereMeshDiffused*)particle_shape_mesh)->Particle_Render(pd3dCommandList, particle_count, ((CParticleMesh*)m_pMesh)->m_d3dParticleBufferView); //Draw
+					if (shape_mesh) 					
+						shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->m_d3dParticleBufferView, particle_mesh->Get_Num()); //Draw
+				}
+			}
+		}
 	}
 }
 
+
 void CParticleObject::OnPostRender()
 {
-	if (m_pMesh)
-		m_pMesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
+	if (particle_mesh)
+		particle_mesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
 }
 
 //==================================================
