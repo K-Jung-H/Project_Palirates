@@ -1,5 +1,7 @@
 #pragma once
 
+//#include "Player.h"
+
 enum class Key_Value
 {
 	None,
@@ -19,6 +21,9 @@ enum class Key_Value
 	Jump_Key_Down,
 	Jump_Key_Up,
 
+	Dive_Key_Down,
+	Dive_Key_Up,
+
 	ETC
 };
 
@@ -31,6 +36,7 @@ struct Key_State
 	bool back; // s 또는 방향키
 	bool left; // a 또는 방향키
 	bool right; // d 또는 방향키
+	bool dive{ false }; // shift
 
 	Key_State()
 	{
@@ -47,13 +53,21 @@ struct Key_State
 enum class State
 {
 	Idle,
-	Run,
+	Run_Forawrd,
+	Run_Backawrd,
+	Run_Left,
+	Run_Right,
+	Knock_Down,
+	Get_Up,
+	Dive,
 	Jump,
 	Attack_Normal,
 	ETC
 };
 
 
+
+class CPlayer;
 class StateMachine
 {
 protected:
@@ -62,21 +76,30 @@ protected:
 
 	Key_State key_state;
 	XMFLOAT3 pos{ 0.0f, 0.0f, 0.0f };
+
 public:
 	bool is_protected = false;
 
-	StateMachine() {
-		currentState = State::Idle;
+	StateMachine() : m_pOwner(nullptr), currentState(State::Idle) {}  // 기본 생성자 추가
+
+	StateMachine(CPlayer* owner)
+		: m_pOwner(owner), currentState(State::Idle) {
 	}
 
 	void start();
 	void update(float Elapsed_time);
 
-	void handleEvent(Key_Value key_event);
+	void handleEvent(UCHAR* pKeysBuffer);
 	void changeState(State newState, Key_Value key_event);
 
 	XMFLOAT3 Get_Pos() { return pos; };
 	State  Get_State() { return currentState; };
+	State  Get_LastState() { return lastState; };
+
+	constexpr int GetStateKey(State state)
+	{
+		return static_cast<int>(state);
+	}
 
 private:
 
@@ -86,6 +109,8 @@ private:
 
 	// 이걸로 애니메이션 처리
 	virtual void doAction(State state, float Elapsed_time) {};
+
+	CPlayer* m_pOwner;
 
 };
 

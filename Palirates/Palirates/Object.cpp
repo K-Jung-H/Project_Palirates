@@ -574,8 +574,11 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 	}
 	case ANIMATION_TYPE_ONCE:
 		m_fPosition = fTrackPosition + fTrackElapsedTime;
-		if (m_fPosition > fAnimationLength) 
-			m_fPosition = fAnimationLength;
+		if (m_fPosition > fAnimationLength) {
+			//m_fPosition = fAnimationLength;
+			m_fPosition = 0.0f;
+			m_bFinished = true;
+		}
 		break;
 	case ANIMATION_TYPE_PINGPONG:
 		break;
@@ -925,7 +928,6 @@ void CAnimationController::Bone_Info()
 	m_pAnimationSets->Bone_Info();
 	
 }
-
 
 //*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
