@@ -149,6 +149,7 @@ public:
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
 struct CALLBACKKEY
 {
    float  							m_fTime = 0.0f;
@@ -364,8 +365,6 @@ public:
 	CMesh* m_pMesh = NULL;
 	CAnimationController* m_pSkinnedAnimationController = NULL;
 
-	//int								m_nMaterials = 0;
-	//CMaterial** m_ppMaterials = NULL;
 	std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
 	XMFLOAT4X4				m_xmf4x4Parent{};

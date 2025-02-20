@@ -1,27 +1,28 @@
 #include "stdafx.h"
 #include "Particle_Manager.h"
 
+ParticleMesh::ParticleMesh()
+{
+
+}
 
 //==============================================================================
 
-CParticleObject::CParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) : CGameObject(1)
-{
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-}
-
-CParticleObject::~CParticleObject()
+ParticleObject::ParticleObject() : CGameObject(1)
 {
 }
 
-void CParticleObject::ReleaseUploadBuffers()
+ParticleObject::~ParticleObject()
+{
+}
+
+void ParticleObject::ReleaseUploadBuffers()
 {
 	CGameObject::ReleaseUploadBuffers();
 }
 
-void CParticleObject::Animate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	CParticleMesh* particle_mesh = (CParticleMesh*)m_pMesh;
-
 	// Draw buffer를 COPY_SOURCE 상태로 전환하고, UAV 버퍼를 COPY_DEST 상태로 전환
 	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->m_pd3dStreamOutputBuffer, D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_SOURCE);
 	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->m_pd3dUAVBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -49,7 +50,7 @@ void CParticleObject::Animate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 }
 
-void CParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
+void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
 {
 	/*
 		if (Material_list.size())
@@ -132,7 +133,7 @@ void CParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera
 }
 
 
-void CParticleObject::OnPostRender()
+void ParticleObject::OnPostRender()
 {
 	if (particle_mesh)
 		particle_mesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
@@ -140,15 +141,15 @@ void CParticleObject::OnPostRender()
 
 //==================================================
 
-CParticleShader::CParticleShader()
+ParticleShader::ParticleShader()
 {
 }
 
-CParticleShader::~CParticleShader()
+ParticleShader::~ParticleShader()
 {
 }
 
-D3D12_PRIMITIVE_TOPOLOGY_TYPE CParticleShader::GetPrimitiveTopologyType(int nPipelineState)
+D3D12_PRIMITIVE_TOPOLOGY_TYPE ParticleShader::GetPrimitiveTopologyType(int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return(D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT);
@@ -156,22 +157,22 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE CParticleShader::GetPrimitiveTopologyType(int nPip
 		return (D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 }
 
-UINT CParticleShader::GetNumRenderTargets(int nPipelineState)
+UINT ParticleShader::GetNumRenderTargets(int nPipelineState)
 {
 	return((nPipelineState == 0) ? 0 : 1);
 }
 
-DXGI_FORMAT CParticleShader::GetRTVFormat(int nPipelineState, int nRenderTarget)
+DXGI_FORMAT ParticleShader::GetRTVFormat(int nPipelineState, int nRenderTarget)
 {
 	return((nPipelineState == 0) ? DXGI_FORMAT_UNKNOWN : DXGI_FORMAT_R8G8B8A8_UNORM);
 }
 
-DXGI_FORMAT CParticleShader::GetDSVFormat(int nPipelineState)
+DXGI_FORMAT ParticleShader::GetDSVFormat(int nPipelineState)
 {
 	return(DXGI_FORMAT_D24_UNORM_S8_UINT);
 }
 
-D3D12_SHADER_BYTECODE CParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE ParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleStreamOutput", "vs_5_1", ppd3dShaderBlob));
@@ -179,7 +180,7 @@ D3D12_SHADER_BYTECODE CParticleShader::CreateVertexShader(ID3DBlob** ppd3dShader
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSParticleDraw", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE ParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleStreamOutput", "gs_5_1", ppd3dShaderBlob));
@@ -187,16 +188,16 @@ D3D12_SHADER_BYTECODE CParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShad
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "GSParticleDraw", "gs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE ParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CreatePixelShader());
+		return(CShader::CreatePixelShader(ppd3dShaderBlob, 0));
 	else
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSParticleDraw", "ps_5_1", ppd3dShaderBlob));
 }
 
 
-D3D12_BLEND_DESC CParticleShader::CreateBlendState(int nPipelineState)
+D3D12_BLEND_DESC ParticleShader::CreateBlendState(int nPipelineState)
 {
 	D3D12_BLEND_DESC d3dBlendDesc;
 	::ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
@@ -216,7 +217,7 @@ D3D12_BLEND_DESC CParticleShader::CreateBlendState(int nPipelineState)
 	return(d3dBlendDesc);
 }
 
-D3D12_DEPTH_STENCIL_DESC CParticleShader::CreateDepthStencilState(int nPipelineState)
+D3D12_DEPTH_STENCIL_DESC ParticleShader::CreateDepthStencilState(int nPipelineState)
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
 	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
@@ -238,7 +239,7 @@ D3D12_DEPTH_STENCIL_DESC CParticleShader::CreateDepthStencilState(int nPipelineS
 	return(d3dDepthStencilDesc);
 }
 
-D3D12_INPUT_LAYOUT_DESC CParticleShader::CreateInputLayout(int nPipelineState)
+D3D12_INPUT_LAYOUT_DESC ParticleShader::CreateInputLayout(int nPipelineState)
 {
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	if (nPipelineState == 0)
@@ -274,7 +275,7 @@ D3D12_INPUT_LAYOUT_DESC CParticleShader::CreateInputLayout(int nPipelineState)
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_STREAM_OUTPUT_DESC CParticleShader::CreateStreamOuputState(int nPipelineState)
+D3D12_STREAM_OUTPUT_DESC ParticleShader::CreateStreamOuputState(int nPipelineState)
 {
 	D3D12_STREAM_OUTPUT_DESC d3dStreamOutputDesc;
 	::ZeroMemory(&d3dStreamOutputDesc, sizeof(D3D12_STREAM_OUTPUT_DESC));
@@ -302,7 +303,26 @@ D3D12_STREAM_OUTPUT_DESC CParticleShader::CreateStreamOuputState(int nPipelineSt
 }
 
 
-void CParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+D3D12_RASTERIZER_DESC ParticleShader::CreateRasterizerState(int nPipelineState)
+{
+	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+	d3dRasterizerDesc.DepthBias = 0;
+	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+	d3dRasterizerDesc.SlopeScaledDepthBias = 0.0f;
+	d3dRasterizerDesc.DepthClipEnable = TRUE;
+	d3dRasterizerDesc.MultisampleEnable = FALSE;
+	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+	d3dRasterizerDesc.ForcedSampleCount = 0;
+	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	return(d3dRasterizerDesc);
+}
+
+void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
 {
 	ID3DBlob* pd3dVertexShaderBlob = NULL, * pd3dPixelShaderBlob = NULL, * pd3dGeometryShaderBlob = NULL;
 
@@ -316,7 +336,7 @@ void CParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D
 		d3dPipelineStateDesc.GS = CreateGeometryShader(&pd3dGeometryShaderBlob, nPipelineState);
 		d3dPipelineStateDesc.StreamOutput = CreateStreamOuputState(nPipelineState);
 	}
-	d3dPipelineStateDesc.RasterizerState = CreateRasterizerState();
+	d3dPipelineStateDesc.RasterizerState = CreateRasterizerState(nPipelineState);
 	d3dPipelineStateDesc.BlendState = CreateBlendState(nPipelineState);
 	d3dPipelineStateDesc.DepthStencilState = CreateDepthStencilState(nPipelineState);
 	d3dPipelineStateDesc.InputLayout = CreateInputLayout(nPipelineState);
@@ -336,7 +356,7 @@ void CParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D
 	if (d3dPipelineStateDesc.InputLayout.pInputElementDescs) delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
-void CParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
 {
 	m_nPipelineStates = 2;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
@@ -352,14 +372,12 @@ void CParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature
 
 }
 
-
-D3D12_SHADER_BYTECODE CParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	return CShader::CompileShaderFromFile(L"ComputeShader.hlsl", "CSMain", "cs_5_1", ppd3dShaderBlob);
 }
 
-
-ID3D12RootSignature* CParticleShader::CreateComputeRootSignature(ID3D12Device* pd3dDevice)
+ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd3dDevice)
 {
 	ID3D12RootSignature* pd3dComputeRootSignature = NULL;
 
@@ -433,7 +451,7 @@ ID3D12RootSignature* CParticleShader::CreateComputeRootSignature(ID3D12Device* p
 	return(pd3dComputeRootSignature);
 }
 
-void CParticleShader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState)
+void ParticleShader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState)
 {
 	ID3DBlob* pd3dComputeShaderBlob = NULL;
 
@@ -450,7 +468,7 @@ void CParticleShader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D1
 	if (pd3dComputeShaderBlob) pd3dComputeShaderBlob->Release();
 }
 
-void CParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+void ParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
 	UINT ncbElementBytes = ((sizeof(CB_Particle_Update_Info) + 255) & ~255); //256의 배수
 	m_pd3dcbParticlenfo = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -459,17 +477,20 @@ void CParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	//=================================================
 
+	//CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture, 0, PARAMETER_DEFAULT_TEXTURE);
+	//CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, 14);
+}
 
-	//CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 2); // texture, random value
+void ParticleShader::Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->SetComputeRootSignature(m_pd3dComputeRootSignature);
+	pd3dCommandList->SetPipelineState(m_ppd3dcomputePipelineStates[0]);
+}
 
-	particle_shape_mesh = new CSphereMeshDiffused(pd3dDevice, pd3dCommandList, 10.0f, 30, 30);
+//===================================================================
 
-	particle_Material = new CMaterial();
-	CTexture* pParticleTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-	pParticleTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"texture/RoundSoftParticle.dds", RESOURCE_TEXTURE2D, 0);
-
-	particle_Material->SetTexture(pParticleTexture);
-
+Particle_Manager::Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
 	srand((unsigned)time(NULL));
 
 	XMFLOAT4* pxmf4RandomValues = new XMFLOAT4[1024];
@@ -481,64 +502,118 @@ void CParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		pxmf4RandomValues[i].w = float((rand() % 10000) - 5000) / 5000.0f;
 	}
 
-	m_pRandowmValueTexture = new CTexture(1, RESOURCE_BUFFER, 0, 1);
-	m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
-
-
-	CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture, 0, PARAMETER_DEFAULT_TEXTURE);
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, 14);
-
-	particle_Material->SetShader(this);
+	//m_pRandowmValueTexture = new CTexture(1, RESOURCE_BUFFER, 0, 1);
+	//m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
 
 }
 
-void CParticleShader::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos, XMFLOAT3 velocity, XMFLOAT3 acceleration, XMFLOAT3 color, XMFLOAT2 size, UINT max_particles)
+Particle_Manager::~Particle_Manager()
 {
-	CParticleObject* new_particle_obj = new CParticleObject(pd3dDevice, pd3dCommandList);
-	CParticleMesh* new_particle_mesh = new CParticleMesh(pd3dDevice, pd3dCommandList, pos, velocity, 0.0f, acceleration, color, size, max_particles);
 
-	new_particle_obj->SetShape(particle_shape_mesh);
-	new_particle_obj->SetMesh(new_particle_mesh);
-	new_particle_obj->SetMaterial(0, particle_Material);
-
-
-	particle_list.push_back(new_particle_obj);
 }
 
-void CParticleShader::AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	pd3dCommandList->SetComputeRootSignature(m_pd3dComputeRootSignature);
-	pd3dCommandList->SetPipelineState(m_ppd3dcomputePipelineStates[0]);
+	//CTexture* pParticleTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
+	//pParticleTexture->LoadTextureFromFile(pd3dDevice, pd3dCommandList, L"texture/RoundSoftParticle.dds", RESOURCE_TEXTURE2D, 0);
+	//particle_Material->SetTexture(pParticleTexture);
+	
+	CMesh* new_shape_mesh = NULL; // -> 인스턴싱 그리기가 가능해야 함
+	//===================================================================
+	ParticleShader* test_shader;
+	test_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	//===================================================================
+	particle_shader_map[Particle_Type::sample_1] = test_shader;
+	particle_shader_map[Particle_Type::sample_2] = NULL;
+	particle_shader_map[Particle_Type::sample_3] = NULL;
+	//===================================================================
+	Particle_Info test_info;
+	test_info.type = Particle_Type::sample_1;
+	test_info.pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	test_info.velocity = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	test_info.acceleration = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	test_info.size = XMFLOAT2(10.0f, 10.0f);
+	test_info.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	//===================================================================
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbParticlenfo->GetGPUVirtualAddress();
-	m_pcbMappedParticleInfo->gfElapsedTime = fTimeElapsed;
+	Add_Particle(pd3dDevice, pd3dCommandList, new_shape_mesh, test_info);
+	//===================================================================
+}
 
-
-
-	for (CParticleObject* particle_obj : particle_list)
+void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	for (auto& [type, shader_ptr] : particle_shader_map)
 	{
-		m_pcbMappedParticleInfo->Particle_N = particle_obj->Get_Num();
-		pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
+		shader_ptr->Set_Compute_Pipeline(pd3dCommandList);
 
-		particle_obj->Animate(pd3dDevice, pd3dCommandList);
+		D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = 
+		shader_ptr->m_pd3dcbParticlenfo->GetGPUVirtualAddress();
+		shader_ptr->m_pcbMappedParticleInfo->gfElapsedTime = fTimeElapsed;
+
+
+		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+		{
+			shader_ptr->m_pcbMappedParticleInfo->Particle_N = particle_obj->Get_Particle_Num();
+			pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
+
+			particle_obj->Animate(pd3dCommandList);
+		}
 	}
 }
 
-void CParticleShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N)
+void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N, Particle_Type type)
 {
-	if (N == 0)
-	{
-		if (m_pRandowmValueTexture)
-			m_pRandowmValueTexture->UpdateShaderVariables(pd3dCommandList);
-	}
+	// N == 1일때 뭐 해야 하는데..
 
-	for (CParticleObject* particle_obj : particle_list)
+
+	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		particle_obj->Render(pd3dCommandList, pCamera, N);
 
-};
+}
 
-void CParticleShader::OnPostRender()
+void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N)
 {
-	for (CParticleObject* particle_obj : particle_list)
-		particle_obj->OnPostRender();
-};
+	if (N == 0 && m_pRandowmValueTexture)
+		m_pRandowmValueTexture->UpdateShaderVariables(pd3dCommandList);
+
+	Render(pd3dCommandList, pCamera, N, Particle_Type::sample_1);
+	Render(pd3dCommandList, pCamera, N, Particle_Type::sample_2);
+	Render(pd3dCommandList, pCamera, N, Particle_Type::sample_3);
+}
+
+void Particle_Manager::OnPostRender(Particle_Type type)
+{
+	switch (type)
+	{
+	case Particle_Type::sample_1:
+		break;
+	case Particle_Type::sample_2:
+		break;
+	case Particle_Type::sample_3:
+		break;
+	case Particle_Type::etc:
+		break;
+	default:
+		break;
+	}
+}
+
+void Particle_Manager::OnPostRender_All()
+{
+	OnPostRender(Particle_Type::sample_1);
+	OnPostRender(Particle_Type::sample_2);
+	OnPostRender(Particle_Type::sample_3);
+}
+
+void Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CMesh* particle_shape_mesh, Particle_Info particle_info)
+{
+	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
+	ParticleMesh* new_particle_mesh = new ParticleMesh(pd3dDevice, pd3dCommandList, particle_info.pos, particle_info.velocity, 0.0f, particle_info.acceleration, particle_info.color, particle_info.size, particle_info.max_particles);
+
+	new_particle_obj->Set_Shape(particle_shape_mesh);
+	new_particle_obj->Set_Particle_Mesh(new_particle_mesh);
+	new_particle_obj->SetMesh(NULL);
+
+	particle_object_list_map[particle_info.type].push_back(new_particle_obj);
+	
+}

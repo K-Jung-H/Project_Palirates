@@ -26,7 +26,6 @@ CScene::CScene()
 CScene::~CScene()
 {
 	DebugOutput("\nDelete Scene");
-
 }
 
 void CScene::BuildDefaultLightsAndMaterials()

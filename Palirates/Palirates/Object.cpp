@@ -1471,7 +1471,6 @@ void CGameObject::SetScale(XMFLOAT3 scale, bool keepPosition)
 	SetScale(scale.x, scale.y, scale.z, keepPosition);
 }
 
-
 void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 {
 	XMFLOAT3 originalPosition;
@@ -1498,7 +1497,6 @@ void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 
 	UpdateTransform(NULL);
 }
-
 
 XMFLOAT3 CGameObject::GetPosition()
 {
@@ -2791,4 +2789,3 @@ CHumanObject::CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 CHumanObject::~CHumanObject()
 {
 }
-

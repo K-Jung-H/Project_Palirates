@@ -4,7 +4,7 @@
 #include "Mesh.h"
 
 class CParticleVertex;
-class CParticleMesh;
+class ParticleMesh;
 class ParticleObject;
 
 //==============================================================================
@@ -24,11 +24,11 @@ public:
 
 #define MAX_PARTICLES				9000
 
-class CParticleMesh : public CMesh
+class ParticleMesh : public CMesh
 {
 public:
-	CParticleMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
-	virtual ~CParticleMesh();
+	ParticleMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
+	virtual ~ParticleMesh();
 
 	bool								m_bStart = true;
 	UINT								m_nStride = 0;
@@ -69,24 +69,32 @@ public:
 
 //==============================================================================
 
-class CParticleObject : public CGameObject
+class ParticleObject : public CGameObject
 {
 private:
 	CMesh* shape_mesh = NULL;
-	CParticleMesh* particle_mesh = NULL;
+	ParticleMesh* particle_mesh = NULL;
+	CMaterial* particle_Material = NULL;
 
 public:
-	CParticleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual ~CParticleObject();
+	ParticleObject();
+	virtual ~ParticleObject();
 	
 	void ReleaseUploadBuffers();
 
-	virtual void Set_Shape(CMesh* mesh_ptr) { shape_mesh = mesh_ptr; }
-	virtual void Animate(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Set_Shape(CMesh* mesh_ptr) { shape_mesh = mesh_ptr; }
+	void Set_Particle_Mesh(ParticleMesh* new_particle_mesh = NULL) { particle_mesh = new_particle_mesh; }
+	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
+
+
+	
+	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress_n = 0);
 	virtual void OnPostRender();
 
 	UINT Get_Particle_Num() { return particle_mesh->Get_Num(); }
+
+
 };
 
 
@@ -99,18 +107,9 @@ struct CB_Particle_Update_Info
 };
 
 
-class CParticleShader : public CShader
+class ParticleShader : public CShader
 {
 public:
-	std::vector<ParticleObject*> particle_list;
-
-
-	// Particle_Object가 갖도록 하기
-	CMesh* particle_shape_mesh = NULL;
-	CTexture* m_pRandowmValueTexture = NULL;
-	CMaterial* particle_Material;
-
-
 	ID3D12Resource* m_pd3dcbParticlenfo = NULL;
 	CB_Particle_Update_Info* m_pcbMappedParticleInfo = NULL;
 
@@ -120,8 +119,8 @@ public:
 	ID3D12RootSignature* m_pd3dComputeRootSignature = NULL;
 
 public:
-	CParticleShader();
-	virtual ~CParticleShader();
+	ParticleShader();
+	virtual ~ParticleShader();
 
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType(int nPipelineState);
 	virtual UINT GetNumRenderTargets(int nPipelineState);
@@ -134,6 +133,7 @@ public:
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
 	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState);
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
 
@@ -145,17 +145,54 @@ public:
 	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
 
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext);
+	void Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual void AnimateObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N);
-	void OnPostRender();
-
-	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 pos, XMFLOAT3 velocity, XMFLOAT3 acceleration, XMFLOAT3 color, XMFLOAT2 size, UINT max_particles);
 };
 
 //==============================================================================
+
+enum class Particle_Type
+{
+	sample_1,
+	sample_2,
+	sample_3,
+	etc
+};
+
+struct Particle_Info
+{
+	Particle_Type type = Particle_Type::etc;
+	XMFLOAT3 pos{};
+	XMFLOAT3 velocity{};
+	XMFLOAT3 acceleration{};
+	XMFLOAT3 color{};
+	XMFLOAT2 size{};
+	UINT max_particles = MAX_PARTICLES;
+
+};
+
 class Particle_Manager
 {
-	std::vector<CParticleShader*> particle_shader_list; // 파티클 움직임, GS, SO 타입에 따라 사용해야 할 셰이더가 달라질 
+private:
+	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
+	std::unordered_map<Particle_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
+
+	CTexture* m_pRandowmValueTexture = NULL;
+
+public:
+	Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	~Particle_Manager();
+
+	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N, Particle_Type type);
+	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N);
+	void OnPostRender(Particle_Type type);
+	void OnPostRender_All();
+
+
+	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CMesh* particle_shape_mesh, Particle_Info particle_info);
+
 };
 
