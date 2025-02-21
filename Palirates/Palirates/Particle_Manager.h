@@ -3,12 +3,12 @@
 #include "Shader.h"
 #include "Mesh.h"
 
-class CParticleVertex;
+class ParticleVertex;
 class ParticleMesh;
 class ParticleObject;
 
 //==============================================================================
-class CParticleVertex
+class ParticleVertex
 {
 public:
 	XMFLOAT3						m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -17,10 +17,16 @@ public:
 	UINT							m_nType = 0;
 
 public:
-	CParticleVertex() { }
-	~CParticleVertex() { }
+	ParticleVertex() { }
+	~ParticleVertex() { }
 };
 //==============================================================================
+
+#define PARTICLE_TYPE_EMITTER		0
+#define PARTICLE_TYPE_SHELL			1
+#define PARTICLE_TYPE_FLARE01		2
+#define PARTICLE_TYPE_FLARE02		3
+#define PARTICLE_TYPE_FLARE03		4
 
 #define MAX_PARTICLES				9000
 
@@ -33,7 +39,7 @@ public:
 	bool								m_bStart = true;
 	UINT								m_nStride = 0;
 	UINT								m_nMaxParticles = MAX_PARTICLES;
-
+	UINT								m_nCurrentParticles = 0;
 	ID3D12Resource* m_pd3dUAVBuffer = NULL;
 
 	ID3D12Resource* m_pd3dParticleBuffer = NULL;
@@ -58,7 +64,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
 	virtual void PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
 
-	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num) {}
 	virtual void OnPostRender(int nPipelineState);
 
 	ID3D12Resource* CreateUAVBuffer(ID3D12Device* pd3dDevice, size_t bufferSize);
@@ -67,6 +73,31 @@ public:
 
 };
 
+//==============================================================================
+
+class Particle_Shape_Mesh : public CStandardMesh
+{
+protected:
+	ID3D12Resource* m_pd3dColorBuffer = NULL;
+	ID3D12Resource* m_pd3dColorUploadBuffer = NULL;
+	D3D12_VERTEX_BUFFER_VIEW		m_d3dColorBufferView;
+
+public:
+	Particle_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual ~Particle_Shape_Mesh();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet) {};
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num) {}
+};
+
+class Sphere_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius = 2.0f, int nSlices = 20, int nStacks = 20);
+	virtual ~Sphere_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
 //==============================================================================
 
 class ParticleObject : public CGameObject

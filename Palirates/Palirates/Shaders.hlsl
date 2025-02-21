@@ -20,6 +20,26 @@ cbuffer cbGameObjectInfo : register(b2)
 	uint					gnTexturesMask : packoffset(c8);
 };
 
+cbuffer cbUnifiedBuffer : register(b3)
+{
+    // 16바이트 (float4 단위)
+    float gfCurrentTime; // c0.x
+    float gfElapsedTime; // c0.y
+    int Scene_Type; // c0.z
+    uint gnRenderMode; // c0.w (패딩 없음)
+
+    // 16바이트
+    float gfSecondsPerFirework; // c1.x
+    int gnFlareParticlesToEmit; // c1.y
+    int gnMaxFlareType2Particles; // c1.z
+    float padding1; // c1.w (패딩 추가)
+
+    // 16바이트
+    float3 gf3Gravity; // c2.x, c2.y, c2.z
+    float padding2; // c2.w (float3의 패딩)
+};
+
+
 #include "Light.hlsl"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -41,8 +61,8 @@ Texture2D gtxtSpecularTexture : register(t7);
 Texture2D gtxtNormalTexture : register(t8);
 Texture2D gtxtMetallicTexture : register(t9);
 Texture2D gtxtEmissionTexture : register(t10);
-Texture2D gtxtDetailAlbedoTexture : register(t11);
-Texture2D gtxtDetailNormalTexture : register(t12);
+
+
 TextureCube gtxtSkyCubeTexture : register(t13);
 
 

@@ -88,6 +88,19 @@ extern HINSTANCE						ghAppInstance;
 
 
 #define PARAMETER_CAMERA_CBV 0
+#define PARAMETER_GAMEOBJECT_TRANSFORM 1
+#define PARAMETER_LIGHT_CBV 2
+#define PARAMETER_TEST 3
+
+#define PARAMETER_ALBEDO_TEXTURE 3
+#define PARAMETER_SPECULAR_TEXTURE 4
+#define PARAMETER_NORMAL_TEXTURE 5
+#define PARAMETER_METALLIC_TEXTURE 6
+#define PARAMETER_EMISSION_TEXTURE 7
+
+
+
+
 #define PARAMETER_SKYBOX_TEXTURE 10
 #define PARAMETER_TERRAIN_BASE_TEXTURE 11
 #define PARAMETER_TERRAIN_DETAIL_TEXTURE 12
@@ -106,6 +119,7 @@ extern HINSTANCE						ghAppInstance;
 
 #define WRITE_TEXT_UI
 #define RENDER_OBB
+// #define RENDER_PARTICLE
 
 #define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
@@ -119,6 +133,7 @@ extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
+extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);
 extern void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 extern void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 

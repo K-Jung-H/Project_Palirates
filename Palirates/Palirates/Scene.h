@@ -5,6 +5,7 @@
 #pragma once
 #include "UI_Manager.h"
 #include "Object_Manager.h"
+#include "Particle_Manager.h"
 #include "Shader.h"
 #include "Player.h"
 
@@ -102,21 +103,16 @@ public:
 
 	float								m_fElapsedTime = 0.0f;
 
-#ifdef WRITE_TEXT_UI
-	Text_UI_Manager* text_ui_manager = NULL;
-	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);
-	std::vector<TextBlock*>* Get_Text_List();
-	void Update_UI();
-#endif
 
+	Particle_Manager* particle_manager = NULL;
 	Object_Manager* obj_manager = NULL;
 
-	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	std::vector<std::shared_ptr<CShader>> Shader_list;
 
 	CSkyBox								*m_pSkyBox = NULL;
 	std::shared_ptr<CHeightMapTerrain> m_pTerrain;
+
 
 	LIGHT								*m_pLights = NULL;
 	int									m_nLights = 0;
@@ -127,6 +123,13 @@ public:
 	LIGHTS								*m_pcbMappedLights = NULL;
 
 	bool test_button = false;
+
+#ifdef WRITE_TEXT_UI
+	Text_UI_Manager* text_ui_manager = NULL;
+	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);
+	std::vector<TextBlock*>* Get_Text_List();
+	void Update_UI();
+#endif
 };
 
 class Test_Scene : public CScene
