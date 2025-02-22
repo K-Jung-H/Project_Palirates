@@ -891,6 +891,7 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	{
 		shader_ptr->Set_Compute_Pipeline(pd3dCommandList);
 
+		// Begin_Here
 		D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = 
 		shader_ptr->m_pd3dcbParticlenfo->GetGPUVirtualAddress();
 		shader_ptr->m_pcbMappedParticleInfo->gfElapsedTime = fTimeElapsed;

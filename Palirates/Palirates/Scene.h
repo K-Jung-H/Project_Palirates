@@ -60,7 +60,7 @@ public:
 	ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
-    void AnimateObjects(float fTimeElapsed);
+	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 
 	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 

@@ -131,8 +131,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_1->SetPosition(100.0f, m_pTerrain->Get_Mesh_Height(100.0f, 100.0f), 100.0f);
 	humanObject_1->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
 	
@@ -153,8 +153,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	name_view = obj_name_2;
 	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_2->SetPosition(150.0f, m_pTerrain->Get_Mesh_Height(150.0f, 150.0f), 150.0f);
 	humanObject_2->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
 
@@ -162,8 +162,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_3->SetPosition(200.0f, m_pTerrain->Get_Mesh_Height(200.0f, 200.0f), 200.0f);
 
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
@@ -292,145 +292,141 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[0].NumDescriptors = 1;
-		pd3dDescriptorRanges[0].BaseShaderRegister = 6; //t6: gtxtAlbedoTexture
+		pd3dDescriptorRanges[0].BaseShaderRegister = 0; //t0: gtxtAlbedoTexture
 		pd3dDescriptorRanges[0].RegisterSpace = 0;
 		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[1].NumDescriptors = 1;
-		pd3dDescriptorRanges[1].BaseShaderRegister = 7; //t7: gtxtSpecularTexture
+		pd3dDescriptorRanges[1].BaseShaderRegister = 1; //t1: gtxtSpecularTexture
 		pd3dDescriptorRanges[1].RegisterSpace = 0;
 		pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[2].NumDescriptors = 1;
-		pd3dDescriptorRanges[2].BaseShaderRegister = 8; //t8: gtxtNormalTexture
+		pd3dDescriptorRanges[2].BaseShaderRegister = 2; //t2: gtxtNormalTexture
 		pd3dDescriptorRanges[2].RegisterSpace = 0;
 		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[3].NumDescriptors = 1;
-		pd3dDescriptorRanges[3].BaseShaderRegister = 9; //t9: gtxtMetallicTexture
+		pd3dDescriptorRanges[3].BaseShaderRegister = 3; //t3: gtxtMetallicTexture
 		pd3dDescriptorRanges[3].RegisterSpace = 0;
 		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[4].NumDescriptors = 1;
-		pd3dDescriptorRanges[4].BaseShaderRegister = 10; //t10: gtxtEmissionTexture
+		pd3dDescriptorRanges[4].BaseShaderRegister = 4; //t4: gtxtEmissionTexture
 		pd3dDescriptorRanges[4].RegisterSpace = 0;
 		pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[5].NumDescriptors = 1;
-		pd3dDescriptorRanges[5].BaseShaderRegister = 13; //t13: gtxtSkyBoxTexture
+		pd3dDescriptorRanges[5].BaseShaderRegister = 5; //t5: gtxtTerrainBaseTexture
 		pd3dDescriptorRanges[5].RegisterSpace = 0;
 		pd3dDescriptorRanges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[6].NumDescriptors = 1;
-		pd3dDescriptorRanges[6].BaseShaderRegister = 1; //t1: gtxtTerrainBaseTexture
+		pd3dDescriptorRanges[6].BaseShaderRegister = 6; //t6: gtxtTerrainDetailTexture
 		pd3dDescriptorRanges[6].RegisterSpace = 0;
 		pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
 		pd3dDescriptorRanges[7].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[7].NumDescriptors = 1;
-		pd3dDescriptorRanges[7].BaseShaderRegister = 2; //t2: gtxtTerrainDetailTexture
+		pd3dDescriptorRanges[7].BaseShaderRegister = 7; //t7: gtxtSkyBoxTexture
 		pd3dDescriptorRanges[7].RegisterSpace = 0;
 		pd3dDescriptorRanges[7].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[16];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[14];
 	{
-		// 0 = Frame_Info
-		//pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		//pd3dRootParameters[2].Descriptor.ShaderRegister = 3; //Frame_Info
-		//pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
-		//pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 0, b0 = Frame_Info
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// 0
-		pd3dRootParameters[PARAMETER_CAMERA_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.ShaderRegister = 1; //Camera
-		pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[PARAMETER_CAMERA_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 1, b1 = GameObject
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 33;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1; 
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// 1
-		pd3dRootParameters[PARAMETER_GAMEOBJECT_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[PARAMETER_GAMEOBJECT_TRANSFORM].Constants.Num32BitValues = 33;
-		pd3dRootParameters[PARAMETER_GAMEOBJECT_TRANSFORM].Constants.ShaderRegister = 2; //GameObject
-		pd3dRootParameters[PARAMETER_GAMEOBJECT_TRANSFORM].Constants.RegisterSpace = 0;
-		pd3dRootParameters[PARAMETER_GAMEOBJECT_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 2, b4 = Skinned Bone Offsets
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].Descriptor.ShaderRegister = 4;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-		// 2
-		pd3dRootParameters[PARAMETER_LIGHT_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[PARAMETER_LIGHT_CBV].Descriptor.ShaderRegister = 4; //Lights
-		pd3dRootParameters[PARAMETER_LIGHT_CBV].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[PARAMETER_LIGHT_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 3, b5 = Skinned Bone Transforms
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].Descriptor.ShaderRegister = 5; 
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-		// 3
-		pd3dRootParameters[PARAMETER_ALBEDO_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_ALBEDO_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_ALBEDO_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-		pd3dRootParameters[PARAMETER_ALBEDO_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 4, b2 = Camera
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 2; 
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// 4
-		pd3dRootParameters[PARAMETER_SPECULAR_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_SPECULAR_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_SPECULAR_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
-		pd3dRootParameters[PARAMETER_SPECULAR_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 5
-		pd3dRootParameters[PARAMETER_NORMAL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_NORMAL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_NORMAL_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
-		pd3dRootParameters[PARAMETER_NORMAL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 5, b3 = Lights
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].Descriptor.ShaderRegister = 3; //Lights
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// 6
-		pd3dRootParameters[PARAMETER_METALLIC_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_METALLIC_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_METALLIC_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
-		pd3dRootParameters[PARAMETER_METALLIC_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 6, t0 = Albeo_Texture
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 7
-		pd3dRootParameters[PARAMETER_EMISSION_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_EMISSION_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_EMISSION_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
-		pd3dRootParameters[PARAMETER_EMISSION_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 7, t1 = Specular_Texture
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 10
-		pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
-		pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 8, t2 = Normal_Texture
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 11
-		pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
-		pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 9, t3 = Metallic_Texture
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 12
-		pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
-		pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 10, t4 = Emission_Texture
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 13
-		pd3dRootParameters[PARAMETER_BONE_OFFSET].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
-		pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[PARAMETER_BONE_OFFSET].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		// n = 11, t5 = Terrain_Base_Texture
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 14
-		pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-		pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		// n = 12, t6 = Terrain_Base_Texture
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// 15
-		pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.ShaderRegister = 6; //Bounding Box Renderer
-		pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 13,  t17 = Sky_Box
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -510,7 +506,7 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_LIGHT_CBV, d3dcbLightsGpuVirtualAddress); //Lights
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_LIGHT_CBV_INDEX, d3dcbLightsGpuVirtualAddress); //Lights
 }
 
 void CScene::ReleaseShaderVariables()
@@ -666,7 +662,7 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 }
 
-void CScene::AnimateObjects(float fTimeElapsed)
+void CScene::AnimateObjects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
@@ -681,7 +677,7 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
+	particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
 }
 
 
@@ -689,7 +685,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 {
 #ifdef RENDER_OBB
 
-	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::non_skinned);
+	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
 	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
 	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
@@ -720,9 +716,9 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 
 //	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
 
 	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+	obj_manager->Render_Terrain(pd3dCommandList, pCamera);
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 

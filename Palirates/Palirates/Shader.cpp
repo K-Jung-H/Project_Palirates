@@ -526,7 +526,7 @@ D3D12_INPUT_LAYOUT_DESC CStandard_Instance_Shader::CreateInputLayout(int nPipeli
 {
 	if (nPipelineState == 0)
 	{
-		UINT nInputElementDescs = 10;
+		UINT nInputElementDescs = 9;
 		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 		// 정점 정보를 위한 입력 원소들
@@ -541,9 +541,6 @@ D3D12_INPUT_LAYOUT_DESC CStandard_Instance_Shader::CreateInputLayout(int nPipeli
 		pd3dInputElementDescs[6] = { "WORLDMATRIX", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 		pd3dInputElementDescs[7] = { "WORLDMATRIX", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 		pd3dInputElementDescs[8] = { "WORLDMATRIX", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
-
-		// 인스턴싱에서 bool 값을 전달하려면 UINT (0, 1)으로 변환
-		pd3dInputElementDescs[9] = { "INSTANCEBOOL", 0, DXGI_FORMAT_R32_UINT, 5, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
 		D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 		d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;

@@ -91,7 +91,7 @@ void Scene_Manager::Update_Active_Scene(ID3D12Device* pd3dDevice, ID3D12Graphics
 {
     if (activeScene) 
     {
-        activeScene->AnimateObjects(fTimeElapsed);
+        activeScene->AnimateObjects(pd3dCommandList, fTimeElapsed);
         activeScene->Update_Objects(pd3dDevice, pd3dCommandList);
     }
     else

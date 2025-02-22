@@ -24,7 +24,7 @@ void BoundingBox_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState)
 {
-	UINT nInputElementDescs = 8;  
+	UINT nInputElementDescs = 7;  
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 	// 정점 정보를 위한 입력 원소들
@@ -40,8 +40,6 @@ D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState
 	// 인스턴스 색상
 	pd3dInputElementDescs[6] = { "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
-	// 인스턴싱에서 bool 값을 전달하려면 UINT (0, 1)으로 변환
-	pd3dInputElementDescs[7] = { "INSTANCEBOOL", 0, DXGI_FORMAT_R32_UINT, 1, 80, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
@@ -142,7 +140,7 @@ OBB_Drawer::~OBB_Drawer()
 
 void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * rendering_max_num;
+	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
 	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -159,13 +157,14 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::unordered_set<CGameObject*> visited;  // 중복 검사를 위한 컨테이너
 
 	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
-	{
 		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
-	}
+	
+
 
 	int obb_num = obb_obj_ptr_list.size();
+	int visible_count = 0;
 
-	if (obb_num > rendering_max_num)
+	if (obb_num > obb_instance_buffer_max_num)
 	{
 		// 새로운 버퍼 크기 재조정 
 		// == 크기를 키운 새로운 버퍼 생성
@@ -175,8 +174,7 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		Release_OBB_Data_ShaderVariables();
 
 		// 새로운 최대 크기 업데이트
-		rendering_max_num = obb_num * 2;
-		rendering_max_num = min(rendering_max_num, MAX_INSTANCING_NUM);
+		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
 
 		// 새로운 버퍼 생성
 		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
@@ -184,34 +182,28 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	else
 	{
 		XMFLOAT4X4 world_matrix;
-		for (int i = 0; i < obb_num; ++i)
+
+		for (std::shared_ptr<CGameObject> obj_ptr : obb_obj_ptr_list)
 		{
-			// 오류 방지
-			if (Get_OBB_WorldMatrix(obb_obj_ptr_list[i].get(), &world_matrix))
-				Mapped_Instance_info[i].active = true;
+			if (!Get_OBB_WorldMatrix(obj_ptr.get(), &world_matrix))
+				continue;
 			else
-				Mapped_Instance_info[i].active = false;
+				Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
 
-			Mapped_Instance_info[i].world_4x4transform = world_matrix; 
-			
-			if(obb_obj_ptr_list[i]->Get_Active())
-				XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::LimeGreen);
+			if (obj_ptr->Get_Active())
+				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
 			else
-				XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
+				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
 
+			++visible_count;
 		}
 
-		for (int i = obb_num; i < rendering_max_num; ++i)
-		{
-			Mapped_Instance_info[i].active = false;
-			Mapped_Instance_info[i].world_4x4transform = Matrix4x4::Identity();
-			XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
-
-		}
+		rendering_num = visible_count;
 	}
 
-
 }
+
+
 void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container)
 {
 	int obb_num = 0;
@@ -221,8 +213,7 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		obb_num += instance_info.fixed_obj_list.size();
 	}
 
-
-	if (obb_num > rendering_max_num)
+	if (obb_num > obb_instance_buffer_max_num)
 	{
 		// 새로운 버퍼 크기 재조정 
 		// == 크기를 키운 새로운 버퍼 생성
@@ -232,8 +223,7 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		Release_OBB_Data_ShaderVariables();
 
 		// 새로운 최대 크기 업데이트
-		rendering_max_num = obb_num * 2;
-		rendering_max_num = min(rendering_max_num, MAX_INSTANCING_NUM);
+		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
 
 		// 새로운 버퍼 생성
 		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
@@ -242,7 +232,7 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	{
 		XMFLOAT4X4 world_matrix;
 
-		int i = 0;
+		int visible_count = 0;
 		for (auto& [meshName, instance_info] : gameobj_container)
 		{
 			if (instance_info.obj_mesh->Get_BoundingBox() == NULL)
@@ -271,27 +261,21 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 				XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
 				XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(finalWorldMatrix));
-				Mapped_Instance_info[i].active = true;
 
 
-				Mapped_Instance_info[i].world_4x4transform = world_matrix;
+				Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
+
 				if (fixed_obj_ptr->Get_Active())
-					XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::LimeGreen);
+					XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
 				else
-					XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
+					XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
 
-				++i;
+				++visible_count;
 			}
 
 		}
 
-		for (int i = obb_num; i < rendering_max_num; ++i)
-		{
-			Mapped_Instance_info[i].active = false;
-			Mapped_Instance_info[i].world_4x4transform = Matrix4x4::Identity();
-			XMStoreFloat4(&Mapped_Instance_info[i].box_color, Colors::Crimson);
-
-		}
+		rendering_num = visible_count;
 	}
 
 }
@@ -353,7 +337,7 @@ void OBB_Drawer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCa
 	obb_shader->Setting_Render(pd3dCommandList, 0);
 
 	if (obb_Mesh)
-		obb_Mesh->Render(pd3dCommandList, m_d3dInstancingBufferView, rendering_max_num);
+		obb_Mesh->Render(pd3dCommandList, m_d3dInstancingBufferView, rendering_num);
 
 };
 
@@ -762,9 +746,14 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 
 }
-
+void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (terrain_ptr) 
+		terrain_ptr->Render(pd3dCommandList, pCamera);
+}
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+
 //	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 //	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);

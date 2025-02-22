@@ -6,21 +6,7 @@ struct MATERIAL
 	float4					m_cEmissive;
 };
 
-cbuffer cbCameraInfo : register(b1)
-{
-	matrix					gmtxView : packoffset(c0);
-	matrix					gmtxProjection : packoffset(c4);
-	float3					gvCameraPosition : packoffset(c8);
-};
-
-cbuffer cbGameObjectInfo : register(b2)
-{
-	matrix					gmtxGameObject : packoffset(c0);
-	MATERIAL				gMaterial : packoffset(c4);
-	uint					gnTexturesMask : packoffset(c8);
-};
-
-cbuffer cbUnifiedBuffer : register(b3)
+cbuffer Frame_Info : register(b0)
 {
     // 16바이트 (float4 단위)
     float gfCurrentTime; // c0.x
@@ -39,6 +25,22 @@ cbuffer cbUnifiedBuffer : register(b3)
     float padding2; // c2.w (float3의 패딩)
 };
 
+cbuffer cbGameObjectInfo : register(b1)
+{
+	matrix					gmtxGameObject : packoffset(c0);
+	MATERIAL				gMaterial : packoffset(c4);
+	uint					gnTexturesMask : packoffset(c8);
+};
+
+cbuffer cbCameraInfo : register(b2)
+{
+	matrix					gmtxView : packoffset(c0);
+	matrix					gmtxProjection : packoffset(c4);
+	float3					gvCameraPosition : packoffset(c8);
+};
+
+
+
 
 #include "Light.hlsl"
 
@@ -54,16 +56,15 @@ cbuffer cbUnifiedBuffer : register(b3)
 #define MATERIAL_DETAIL_ALBEDO_MAP	0x20
 #define MATERIAL_DETAIL_NORMAL_MAP	0x40
 
-Texture2D gtxtTerrainBaseTexture : register(t1);
-Texture2D gtxtTerrainDetailTexture : register(t2);
-Texture2D gtxtAlbedoTexture : register(t6);
-Texture2D gtxtSpecularTexture : register(t7);
-Texture2D gtxtNormalTexture : register(t8);
-Texture2D gtxtMetallicTexture : register(t9);
-Texture2D gtxtEmissionTexture : register(t10);
+Texture2D gtxtAlbedoTexture : register(t0);
+Texture2D gtxtSpecularTexture : register(t1);
+Texture2D gtxtNormalTexture : register(t2);
+Texture2D gtxtMetallicTexture : register(t3);
+Texture2D gtxtEmissionTexture : register(t4);
 
-
-TextureCube gtxtSkyCubeTexture : register(t13);
+Texture2D gtxtTerrainBaseTexture : register(t5);
+Texture2D gtxtTerrainDetailTexture : register(t6);
+TextureCube gtxtSkyCubeTexture : register(t7);
 
 
 SamplerState gssWrap : register(s0);
@@ -148,7 +149,6 @@ struct VS_STANDARD_INPUT_INSTANCE
     float3 bitangent : BITANGENT;
 	
     float4x4 instance_worldMatrix : WORLDMATRIX;
-    uint instance_Bool : INSTANCEBOOL;
 };
 
 struct VS_STANDARD_OUTPUT_INSTANCE
@@ -159,8 +159,6 @@ struct VS_STANDARD_OUTPUT_INSTANCE
     float3 tangentW : TANGENT;
     float3 bitangentW : BITANGENT;
     float2 uv : TEXCOORD;
-	
-    uint instance_Bool : INSTANCEBOOL;
 
 };
 
@@ -176,16 +174,13 @@ VS_STANDARD_OUTPUT_INSTANCE VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input
     output.bitangentW = mul(input.bitangent, (float3x3) input.instance_worldMatrix);
     output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
     output.uv = input.uv;
-	
-    output.instance_Bool = input.instance_Bool;
-	
+		
     return (output);
 }
 
 float4 PSStandard_INSTANCE(VS_STANDARD_OUTPUT_INSTANCE input) : SV_TARGET
 {
-    if (input.instance_Bool == 0)
-        discard;
+
 	
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -227,12 +222,12 @@ float4 PSStandard_INSTANCE(VS_STANDARD_OUTPUT_INSTANCE input) : SV_TARGET
 #define MAX_VERTEX_INFLUENCES			4
 #define SKINNED_ANIMATION_BONES			256
 
-cbuffer cbBoneOffsets : register(b7)
+cbuffer cbBoneOffsets : register(b4)
 {
 	float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
 };
 
-cbuffer cbBoneTransforms : register(b8)
+cbuffer cbBoneTransforms : register(b5)
 {
 	float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
 };
@@ -255,15 +250,12 @@ VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 	float4x4 mtxVertexToBoneWorld = (float4x4)0.0f;
 	for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
 	{
-//		mtxVertexToBoneWorld += input.weights[i] * gpmtxBoneTransforms[input.indices[i]];
 		mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
 	}
 	output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
 	output.normalW = mul(input.normal, (float3x3)mtxVertexToBoneWorld).xyz;
 	output.tangentW = mul(input.tangent, (float3x3)mtxVertexToBoneWorld).xyz;
 	output.bitangentW = mul(input.bitangent, (float3x3)mtxVertexToBoneWorld).xyz;
-
-//	output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
 	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
 	output.uv = input.uv;
@@ -370,14 +362,12 @@ struct VS_OBB_INPUT
     
     float4x4 obb_worldMatrix : WORLDMATRIX; // 월드 변환 행렬
     float4 instanceColor : INSTANCECOLOR; // 색상
-    uint instanceBool : INSTANCEBOOL;
 };
 
 struct VS_OBB_OUTPUT
 {
     float4 position : SV_POSITION; 
     float4 color : COLOR; 
-    uint instanceBool : INSTANCEBOOL;
 };
 
 VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
@@ -385,7 +375,6 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
     VS_OBB_OUTPUT output;
 	output.position = mul(mul(mul(float4(input.position, 1.0f), input.obb_worldMatrix), gmtxView), gmtxProjection);
     output.color = input.instanceColor;
-    output.instanceBool = input.instanceBool;
 	
     return (output);
 }
@@ -394,9 +383,6 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 
 float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
 {
-    if (input.instanceBool == 0)
-        discard;
-	
     float4 cColor = input.color;
         
     return (cColor);

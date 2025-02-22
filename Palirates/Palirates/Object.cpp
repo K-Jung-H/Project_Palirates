@@ -1358,7 +1358,7 @@ void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandLis
 {
 	XMFLOAT4X4 xmf4x4World;
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(pxmf4x4World)));
-	pd3dCommandList->SetGraphicsRoot32BitConstants(PARAMETER_GAMEOBJECT_TRANSFORM, 16, &xmf4x4World, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 16, &xmf4x4World, 0);
 }
 
 void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList, CMaterial *pMaterial)
@@ -1853,46 +1853,47 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX, 
 				pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
 				pParent, pInFile, pShader);
 		}
-		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
-		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8,
-				pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]),
-				pParent, pInFile, pShader);
-		}
-		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
-		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9,
-				pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]),
-				pParent, pInFile, pShader);
-		}
+		//else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
+		//{
+		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX,
+		//		pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]),
+		//		pParent, pInFile, pShader);
+		//}
+		//else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
+		//{
+		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX,
+		//		pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]),
+		//		pParent, pInFile, pShader);
+		//}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
 			break;
@@ -2338,8 +2339,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		// 셰이더 리소스 뷰 생성
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, PARAMETER_TERRAIN_BASE_TEXTURE);
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, PARAMETER_TERRAIN_DETAIL_TEXTURE);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 		// 재사용 가능한 Material 객체 생성
 		pTerrainMaterial = new CMaterial(2);
@@ -2725,7 +2726,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, PARAMETER_SKYBOX_TEXTURE);
+	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
 
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);

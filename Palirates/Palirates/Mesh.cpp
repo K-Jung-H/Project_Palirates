@@ -1249,13 +1249,13 @@ void CSkinnedMesh::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandL
 	if (m_pd3dcbBindPoseBoneOffsets)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneOffsetsGpuVirtualAddress = m_pd3dcbBindPoseBoneOffsets->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_BONE_OFFSET, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
+		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX, d3dcbBoneOffsetsGpuVirtualAddress); //Skinned Bone Offsets
 	}
 
 	if (m_pd3dcbSkinningBoneTransforms)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbBoneTransformsGpuVirtualAddress = m_pd3dcbSkinningBoneTransforms->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_BONE_TRANSFORM, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
+		pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX, d3dcbBoneTransformsGpuVirtualAddress); //Skinned Bone Transforms
 	}
 
 	// 뼈들의 변환 행렬 정보를 애니메이션 컨트롤러의 m_pcbxmf4x4MappedSkinningBoneTransforms에 전달

@@ -21,7 +21,6 @@ struct BoundingBox_Instance_Info
 {
 	XMFLOAT4X4 world_4x4transform;
 	XMFLOAT4 box_color;
-	UINT active;
 };
 
 struct Fixed_Object_Info
@@ -67,7 +66,8 @@ protected:
 	BoundingBox_Instance_Info* Mapped_Instance_info = NULL;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
 
-	int rendering_max_num = DEFAULT_INSTANCE_NUM;
+	int obb_instance_buffer_max_num = DEFAULT_INSTANCE_NUM;
+	int rendering_num = 1;
 
 public:
 	static CubeMesh* obb_Mesh;
@@ -150,7 +150,7 @@ public:
 	void Check_Culling_All(CCamera* pCamera);
 
 	
-
+	void Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
