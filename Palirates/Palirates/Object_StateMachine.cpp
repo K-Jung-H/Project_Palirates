@@ -79,34 +79,56 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
         return;
     }
 
-    std::vector<std::pair<int, Key_Value>> keyMappings = {
-        { VK_UP, Key_Value::Forward_Key_Down },  // 방향키 위
-        { 0x57, Key_Value::Forward_Key_Down },   // W 키
-        { VK_DOWN, Key_Value::Back_Key_Down },   // 방향키 아래
-        { 0x53, Key_Value::Back_Key_Down },      // S 키
-        { VK_LEFT, Key_Value::Left_Key_Down },   // 방향키 왼쪽
-        { 0x41, Key_Value::Left_Key_Down },      // A 키
-        { VK_RIGHT, Key_Value::Right_Key_Down },  // 방향키 오른쪽
-        { 0x44, Key_Value::Right_Key_Down },     // D 키
-        { VK_SPACE, Key_Value::Jump_Key_Down },   // Space 키
-        { VK_SHIFT, Key_Value::Dive_Key_Down }
+    //std::vector<std::pair<int, Key_Value>> keyMappings = {
+    //    { VK_UP, Key_Value::Forward_Key_Down },  
+    //    { 0x57, Key_Value::Forward_Key_Down },   // W 키
+    //    { VK_DOWN, Key_Value::Back_Key_Down },   
+    //    { 0x53, Key_Value::Back_Key_Down },      // S 키
+    //    { VK_LEFT, Key_Value::Left_Key_Down },  
+    //    { 0x41, Key_Value::Left_Key_Down },      // A 키
+    //    { VK_RIGHT, Key_Value::Right_Key_Down }, 
+    //    { 0x44, Key_Value::Right_Key_Down },     // D 키
+    //    { VK_SPACE, Key_Value::Jump_Key_Down },   
+    //    { VK_SHIFT, Key_Value::Dive_Key_Down }
+    //};
+
+    //for (const auto& mapping : keyMappings)
+    //{
+    //    int key = mapping.first;
+    //    Key_Value key_value = mapping.second;
+
+    //    // 키가 눌렸을 때
+    //    if (pKeysBuffer[key] & 0xF0)
+    //    {
+    //        key_state.update(key_value);
+    //    }
+    //    // 키가 떼어졌을 때
+    //    else
+    //    {
+    //        key_state.update(static_cast<Key_Value>(static_cast<int>(key_value) + 1));  // _Up 상태
+    //    }
+    //}
+
+    std::unordered_map<int, std::pair<Key_Value, Key_Value>> keyMappings = {
+    { VK_UP,    { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
+    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  // W 키
+
+    { VK_DOWN,  { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },
+    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  // S 키
+
+    { VK_LEFT,  { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },
+    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },  // A 키
+
+    { VK_RIGHT, { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
+    { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },  // D 키
+
+    { VK_SPACE, { Key_Value::Jump_Key_Down, Key_Value::Jump_Key_Up } },
+    { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } }
     };
 
-    for (const auto& mapping : keyMappings)
+    for (const auto& [key, keyPair] : keyMappings)
     {
-        int key = mapping.first;
-        Key_Value key_value = mapping.second;
-
-        // 키가 눌렸을 때
-        if (pKeysBuffer[key] & 0xF0)
-        {
-            key_state.update(key_value);
-        }
-        // 키가 떼어졌을 때
-        else
-        {
-            key_state.update(static_cast<Key_Value>(static_cast<int>(key_value) + 1));  // _Up 상태
-        }
+        key_state.update(pKeysBuffer[key] & 0xF0 ? keyPair.first : keyPair.second);
     }
 
     switch (currentState)
