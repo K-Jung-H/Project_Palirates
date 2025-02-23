@@ -527,8 +527,23 @@ void CGameFramework::Update_Scene()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	scene_manager->Update_Active_Scene(m_pd3dDevice, m_pd3dCommandList, fTimeElapsed);
+	scene_manager->Update_Active_Objects(m_pd3dDevice, m_pd3dCommandList, fTimeElapsed);
+
+	//===============================================================
+	// 나중에 연산 담당 커멘드 리스트 정의하여 활용하기
+	HRESULT hResult = m_pd3dCommandAllocator->Reset();
+	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
+
+	scene_manager->Update_Active_Particles(m_pd3dDevice, m_pd3dCommandList, fTimeElapsed);
+
+	hResult = m_pd3dCommandList->Close();
+	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
+	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
+	WaitForGpuComplete();
+	//===============================================================
+
 	m_pPlayer->Animate(fTimeElapsed);
+
 }
 
 void CGameFramework::WaitForGpuComplete()

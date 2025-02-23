@@ -60,11 +60,15 @@ public:
 	ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
-	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 
+	
 	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	void Pre_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+	void Post_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	void ReleaseUploadBuffers();
 

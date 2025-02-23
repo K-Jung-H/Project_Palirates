@@ -170,15 +170,17 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	//=====================================================
+#ifdef LOAD_SCENE
 	// Load Scene
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
-	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
-	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 
+	//CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	//std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	//test_scene->Set_Name("test_scene");
+	//test_scene = Test_Scene_Model->m_pModelRootObject;
+	//test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+	//test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
+	//obj_manager->Add_Object(test_scene, Object_Type::fixed);
+#endif
 	//=====================================================
 
 	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
@@ -662,7 +664,7 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 }
 
-void CScene::AnimateObjects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
+void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
@@ -677,9 +679,7 @@ void CScene::AnimateObjects(ID3D12GraphicsCommandList *pd3dCommandList, float fT
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-	particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
 }
-
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -693,6 +693,19 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
+}
+
+void CScene::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+#ifdef RENDER_PARTICLE
+	particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
+
+#endif
+}
+
+void CScene::Pre_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+
 }
 
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -727,6 +740,11 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 			shader_ptr->Render_Objects(pd3dCommandList, pCamera);
 
 
+#ifdef RENDER_PARTICLE
+	particle_manager->Render_All(pd3dCommandList, pCamera, 0);
+	particle_manager->Render_All(pd3dCommandList, pCamera, 1);
+#endif
+
 
 #ifdef RENDER_OBB
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
@@ -736,7 +754,12 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 }
 
-
+void CScene::Post_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+#ifdef RENDER_PARTICLE
+	particle_manager->OnPostRender_All();
+#endif
+}
 
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

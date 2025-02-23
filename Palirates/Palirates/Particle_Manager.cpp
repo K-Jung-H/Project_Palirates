@@ -393,34 +393,6 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
 {
-	/*
-		if (Material_list.size())
-		{
-			int i = 0;
-			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
-			{
-				if (material_ptr)
-				{
-					CShader* pShader = material_ptr->m_pShader;
-					if (pShader)
-					{
-						// PSO 순회 및 렌더링
-						int pipelineStateNum = pShader->Get_Num_PipelineState();
-						for (int j = 0; j < pipelineStateNum; ++j)
-						{
-							// PSO 설정
-							pShader->Setting_Render(pd3dCommandList, j);
-
-							// 재료(Material) 셰이더 변수 업데이트
-							material_ptr->UpdateShaderVariable(pd3dCommandList);
-
-							// 메쉬 렌더링
-							m_pMesh->Render(pd3dCommandList, i);
-						}
-					}
-	*/
-
-
 
 	OnPrepareRender();
 
@@ -440,18 +412,23 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 					material_ptr->UpdateShaderVariable(pd3dCommandList); // 재질에 저장된 텍스처도 함께 업데이트 되는 함수임, bool 값으로 기능 분리하기
 
-					UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+				}
 
-					if (particle_mesh)
-					{
-						particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
-						particle_mesh->Render(pd3dCommandList, 0); //Stream Output
-						particle_mesh->PostRender(pd3dCommandList, 0); //Stream Output
-					}
+				UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+				if (particle_mesh)
+				{
+					particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
+					particle_mesh->Render(pd3dCommandList, 0); //Stream Output
+					particle_mesh->PostRender(pd3dCommandList, 0); //Stream Output
+
 				}
 			}
 		}
-		else if (progress == 1)
+	}
+	else if (progress == 1)
+	{
+		if (Material_list.size())
 		{
 			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 			{
@@ -460,18 +437,22 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 						pShader->OnPrepareRender(pd3dCommandList, 1); // == SetPipelineState
-					
-
-					if (particle_mesh)
-						particle_mesh->PreRender(pd3dCommandList, 1); //Draw
-
-					if (shape_mesh) 					
-						shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->m_d3dParticleBufferView, particle_mesh->Get_Num()); //Draw
+					material_ptr->UpdateShaderVariable(pd3dCommandList);
 				}
 			}
+
+			if (particle_mesh)
+				particle_mesh->PreRender(pd3dCommandList, 1); //Draw
+
+			if (shape_mesh)
+				shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->m_d3dParticleBufferView, particle_mesh->Get_Num()); //Draw
+
+
 		}
-	}
+	} 
 }
+
+
 
 
 void ParticleObject::OnPostRender()
@@ -488,6 +469,7 @@ ParticleShader::ParticleShader()
 
 ParticleShader::~ParticleShader()
 {
+	Release_Compute_ShaderVariables();
 }
 
 D3D12_PRIMITIVE_TOPOLOGY_TYPE ParticleShader::GetPrimitiveTopologyType(int nPipelineState)
@@ -700,7 +682,7 @@ void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D1
 	if (d3dPipelineStateDesc.InputLayout.pInputElementDescs) delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
-void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
+void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
 {
 	m_nPipelineStates = 2;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
@@ -714,6 +696,7 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature*
 	m_pd3dComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
 	CreateComputePipelineState(pd3dDevice, m_pd3dComputeRootSignature);
 
+	Create_Compute_ShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 D3D12_SHADER_BYTECODE ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
@@ -814,10 +797,7 @@ void ParticleShader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12
 
 void ParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	UINT ncbElementBytes = ((sizeof(CB_Particle_Update_Info) + 255) & ~255); //256의 배수
-	m_pd3dcbParticlenfo = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbParticlenfo->Map(0, NULL, (void**)&m_pcbMappedParticleInfo);
 
 	//=================================================
 
@@ -829,6 +809,29 @@ void ParticleShader::Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommand
 {
 	pd3dCommandList->SetComputeRootSignature(m_pd3dComputeRootSignature);
 	pd3dCommandList->SetPipelineState(m_ppd3dcomputePipelineStates[0]);
+}
+
+void ParticleShader::Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(CB_Particle_Update_Info) + 255) & ~255); //256의 배수
+	Particle_Update_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	Particle_Update_Info->Map(0, NULL, (void**)&Mapped_Particle_Update_Info);
+}
+
+void ParticleShader::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, UINT particle_count, float fTimeElapsed)
+{
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = Particle_Update_Info->GetGPUVirtualAddress();
+	Mapped_Particle_Update_Info->Particle_N = particle_count;
+	Mapped_Particle_Update_Info->ElapsedTime = fTimeElapsed;
+
+	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
+}
+
+void ParticleShader::Release_Compute_ShaderVariables()
+{
+	if (Particle_Update_Info) Particle_Update_Info->Unmap(0, NULL);
+	if (Particle_Update_Info) Particle_Update_Info->Release();
 }
 
 //===================================================================
@@ -866,7 +869,7 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList);
 	//===================================================================
 	ParticleShader* test_shader = new ParticleShader();
-	test_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature);
+	test_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	//===================================================================
 	particle_shader_map[Particle_Type::sample_1] = test_shader;
 	particle_shader_map[Particle_Type::sample_2] = NULL;
@@ -889,18 +892,16 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 {
 	for (auto& [type, shader_ptr] : particle_shader_map)
 	{
+		if (!shader_ptr)
+			continue;
+
 		shader_ptr->Set_Compute_Pipeline(pd3dCommandList);
-
-		// Begin_Here
-		D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = 
-		shader_ptr->m_pd3dcbParticlenfo->GetGPUVirtualAddress();
-		shader_ptr->m_pcbMappedParticleInfo->gfElapsedTime = fTimeElapsed;
-
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			shader_ptr->m_pcbMappedParticleInfo->Particle_N = particle_obj->Get_Particle_Num();
-			pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
+			int particle_num = particle_obj->Get_Particle_Num();
+
+			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, particle_num, fTimeElapsed); // CS에 파티클 정보 버퍼 업데이트 및 연결
 
 			particle_obj->Animate(pd3dCommandList);
 		}
@@ -909,8 +910,10 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 
 void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N, Particle_Type type)
 {
-	// N == 1일때 뭐 해야 하는데..
+	if (!particle_shader_map[type])
+		return;
 
+	particle_shader_map[type]->Setting_Render(pd3dCommandList, N);
 
 	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		particle_obj->Render(pd3dCommandList, pCamera, N);
@@ -929,19 +932,8 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 
 void Particle_Manager::OnPostRender(Particle_Type type)
 {
-	switch (type)
-	{
-	case Particle_Type::sample_1:
-		break;
-	case Particle_Type::sample_2:
-		break;
-	case Particle_Type::sample_3:
-		break;
-	case Particle_Type::etc:
-		break;
-	default:
-		break;
-	}
+	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+		particle_obj->OnPostRender();
 }
 
 void Particle_Manager::OnPostRender_All()

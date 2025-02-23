@@ -116,11 +116,15 @@ extern HINSTANCE						ghAppInstance;
 // #define _WITH_DISPLAY_BONE_NAME
 
 #define _WITH_DEBUG_FRAME_HIERARCHY
+
 #define STR_LENGTH 64
 
-#define WRITE_TEXT_UI
- #define RENDER_OBB
+
+//#define WRITE_TEXT_UI
+//#define RENDER_OBB
+//#define LOAD_SCENE
 #define RENDER_PARTICLE
+
 
 #define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO

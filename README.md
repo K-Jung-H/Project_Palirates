@@ -25,10 +25,17 @@
 - 파티클의 타입에 따라 셰이더와 객체들 리스트를 관리하는 매니저 시스템 만들기
 	- 셰이더에 연결된 GS, SO, Compute Shader에 따라 파티클의 동작 결정, 셰이더  == 파티클 타입
 
+- 용도에 맞는 커멘드 큐와 커멘드 리스트 정의하기 - 계산/렌더링
+
 - 다른 플레이어가 연결되어 있다면, 해당 플레이어 랜더링하기
 
 진행 상황
 ------------------------------------------------------------------------------------------------
-- 파티클 매니저의 셰이더 및 파티클 객체 생성 구조화
-- Particle_Mesh 추가해야 함
-- 루트 시그니처 재정리 중 -> Frame_Info 를 0번으로 연결하기 위함 -> GS, SO의 파티클 생성에서 필요한 정보임
+- 파티클 객체 인스턴싱 시도 중 오류 발생
+	 D3D12 ERROR: ID3D12CommandList::DrawInstanced: The primitive topology does not belong to the appropriate group specified by the current pipeline state. [ EXECUTION ERROR #611: PRIMITIVE_TOPOLOGY_MISMATCH_PIPELINE_STATE]
+
+- 렌더링 파이프라인 분리
+	-Pre_Render
+	-Render
+	-Post_Render
+

@@ -131,9 +131,10 @@ public:
 
 //==============================================================================
 
+// CS에 전달할 정보
 struct CB_Particle_Update_Info
 {
-	float gfElapsedTime;
+	float ElapsedTime;
 	int Particle_N;
 };
 
@@ -141,8 +142,8 @@ struct CB_Particle_Update_Info
 class ParticleShader : public CShader
 {
 public:
-	ID3D12Resource* m_pd3dcbParticlenfo = NULL;
-	CB_Particle_Update_Info* m_pcbMappedParticleInfo = NULL;
+	ID3D12Resource* Particle_Update_Info = NULL;
+	CB_Particle_Update_Info* Mapped_Particle_Update_Info = NULL;
 
 
 	int									m_ncomputePipelineStates = 0;
@@ -168,7 +169,9 @@ public:
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
 
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
+
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
 	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState);
 
 	D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
@@ -178,6 +181,9 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext);
 	void Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual void Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, UINT particle_count, float fTimeElapsed);
+	virtual void Release_Compute_ShaderVariables();
 };
 
 //==============================================================================
