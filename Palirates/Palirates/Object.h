@@ -243,6 +243,7 @@ public:
 //	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
+	std::string CAnimationSets::GetBoneName(int index);
 	void ClassifyBones();
 };
 
@@ -257,6 +258,7 @@ public:
     float 							m_fSpeed = 1.0f;
     float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 	float 							m_fWeight = 1.0f;
+	bool m_bFinished{ false };
 
 	int 							m_nAnimationSet = 0; //AnimationSet Index
 
@@ -338,6 +340,7 @@ public:
 	void SetAnimationCallbackHandler(int nAnimationTrack, CAnimationCallbackHandler *pCallbackHandler);
 
 	void AdvanceTime(float fElapsedTime, CGameObject *pRootGameObject);
+	void AdvanceTime2(float fElapsedTime, CGameObject *pRootGameObject);
 
 public:
 	bool							m_bRootMotion = false;
@@ -379,6 +382,8 @@ public:
 
 	XMFLOAT3 m_xmf3RotationAxis;
 	float m_fRotationSpeed;
+
+	int n_Animation = 0;
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -479,6 +484,8 @@ public:
 	virtual BoundingOrientedBox* Get_Collider();
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
+
+	CAnimationController* GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
 };
 
 //==================================================================================

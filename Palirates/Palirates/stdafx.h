@@ -108,9 +108,9 @@ extern HINSTANCE						ghAppInstance;
 #define RENDER_OBB
 
 #define DEBUG_MESSAGE
-#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
-#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
-#define DEBUG_MESSAGE_TILE_MAP
+//#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
+//#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
+//#define DEBUG_MESSAGE_TILE_MAP
 
 //=============================================
 

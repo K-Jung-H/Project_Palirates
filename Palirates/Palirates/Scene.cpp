@@ -686,25 +686,25 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 	// W, A, S, D 
 	if (pKeysBuffer[0x57] & 0xF0) // W 
 	{
-		DebugOutput("W key is pressed\n");
+		//DebugOutput("W key is pressed\n");
 		bKeyProcessed = true;
 	}
 
 	if (pKeysBuffer[0x41] & 0xF0) // A 
 	{
-		DebugOutput("A key is pressed\n");
+		//DebugOutput("A key is pressed\n");
 		bKeyProcessed = true;
 	}
 
 	if (pKeysBuffer[0x53] & 0xF0) // S 
 	{
-		DebugOutput("S key is pressed\n");
+		//DebugOutput("S key is pressed\n");
 		bKeyProcessed = true;
 	}
 
 	if (pKeysBuffer[0x44] & 0xF0) // D 
 	{
-		DebugOutput("D key is pressed\n");
+		//DebugOutput("D key is pressed\n");
 		bKeyProcessed = true;
 	}
 

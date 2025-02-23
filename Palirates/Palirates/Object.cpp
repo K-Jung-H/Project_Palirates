@@ -474,6 +474,18 @@ void CAnimationSets::Bone_Info()
 	}
 }
 
+std::string CAnimationSets::GetBoneName(int index)
+{
+	if (index < 0 || index >= m_nBoneFrames) return "";
+
+	if (m_ppBoneFrameCaches[index] && m_ppBoneFrameCaches[index]->m_pstrFrameName)
+	{
+		return std::string(m_ppBoneFrameCaches[index]->m_pstrFrameName);
+	}
+
+	return "";
+}
+
 void CAnimationSets::ClassifyBones()
 {
 	/*for (int i = 0; i < m_nBoneFrames; i++)
@@ -562,8 +574,11 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 	}
 	case ANIMATION_TYPE_ONCE:
 		m_fPosition = fTrackPosition + fTrackElapsedTime;
-		if (m_fPosition > fAnimationLength) 
-			m_fPosition = fAnimationLength;
+		if (m_fPosition > fAnimationLength) {
+			//m_fPosition = fAnimationLength;
+			m_fPosition = 0.0f;
+			m_bFinished = true;
+		}
 		break;
 	case ANIMATION_TYPE_PINGPONG:
 		break;
@@ -775,6 +790,14 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
 
+					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+					if (boneName == "Hips")
+					{
+						blendedTransform._41 = 0.0f;
+						blendedTransform._42 = 0.8762761f;
+						blendedTransform._43 = 0.0f;
+					}
+
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 				}
 
@@ -795,12 +818,116 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 	}
 }
 
+bool IsUpperBodyBone(const std::string& boneName)
+{
+    static const std::unordered_set<std::string> upperBodyBones =
+    {
+        "Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows", "Eyebrows", "Clavicle_L", 
+		"Shoulder_L", "Elbow_L", "Hand_L", /* tumb */ "Clavicle_R", "Shoulder_R", "Elbow_R", "Hand_R",  /* tumb */"SM_Wep_Sabre_01",
+
+    };
+    return upperBodyBones.find(boneName) != upperBodyBones.end();
+}
+
+bool IsLowerBodyBone(const std::string& boneName)
+{
+    static const std::unordered_set<std::string> lowerBodyBones =
+    {
+        "UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
+		"UpperLeg_L", "LowerLeg_L", "Ankle_L", "Ball_L", "Toes_L"
+    };
+    return lowerBodyBones.find(boneName) != lowerBodyBones.end();
+}
+
+void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGameObject)
+{
+	m_fTime += fTimeElapsed;
+
+	if (m_pAnimationTracks)
+	{
+		// Bone 정보 초기화
+		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+		{
+			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
+		}
+
+		// 활성화된 트랙의 전체 가중치 계산 (상체/하체 따로)
+		float totalWeightUpper = 0.0f;
+		float totalWeightLower = 0.0f;
+		for (int k = 0; k < m_nAnimationTracks; k++)
+		{
+			if (m_pAnimationTracks[k].m_bEnable)
+			{
+				if (m_pAnimationTracks[k].m_nAnimationSet == 2) // 2번 트랙 (상체 애니메이션)
+					totalWeightUpper += m_pAnimationTracks[k].m_fWeight;
+				else if (m_pAnimationTracks[k].m_nAnimationSet == 1) // 1번 트랙 (하체 애니메이션)
+					totalWeightLower += m_pAnimationTracks[k].m_fWeight;
+			}
+		}
+
+		// 애니메이션 트랙을 순회하면서 본 변환 적용
+		for (int k = 0; k < m_nAnimationTracks; k++)
+		{
+			if (m_pAnimationTracks[k].m_bEnable)
+			{
+				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
+
+				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+				{
+					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+
+					bool isLowerBody = IsLowerBodyBone(boneName);
+
+					float totalWeight = 0.0f;
+					
+					if (isLowerBody)
+					{
+						totalWeight = totalWeightLower;  // 하체 애니메이션 가중치
+					}
+					else {
+						totalWeight = totalWeightUpper;  // 상체 애니메이션 가중치
+					}
+
+					// 본에 맞는 애니메이션만 적용
+					if ((!isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 2) ||
+						(isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 1))
+					{
+						XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
+						XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+
+						float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+						XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
+
+						if (boneName == "Hips")
+						{
+							blendedTransform._41 = 0.0f; 
+							blendedTransform._42 = 0.8762761f;
+							blendedTransform._43 = 0.0f; 
+						}
+
+						m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
+					}
+				}
+
+				m_pAnimationTracks[k].HandleCallback();
+			}
+		}
+
+		// 최종적으로 Transform 업데이트
+		pRootGameObject->UpdateTransform(NULL);
+
+		// 추가 애니메이션 처리
+		OnRootMotion(pRootGameObject);
+		OnAnimationIK(pRootGameObject);
+	}
+}
+
 void CAnimationController::Bone_Info()
 {
 	m_pAnimationSets->Bone_Info();
 	
 }
-
 
 //*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
