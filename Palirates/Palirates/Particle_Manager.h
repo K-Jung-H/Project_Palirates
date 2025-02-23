@@ -2,6 +2,9 @@
 #include "stdafx.h"
 #include "Shader.h"
 #include "Mesh.h"
+ #include "Scene.h"
+
+class CScene;
 
 class ParticleVertex;
 class ParticleMesh;
@@ -88,6 +91,15 @@ public:
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet) {};
 	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num) {}
+};
+
+class Cube_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize = 2.0f);
+	virtual ~Cube_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 };
 
 class Sphere_Shape_Mesh : public Particle_Shape_Mesh

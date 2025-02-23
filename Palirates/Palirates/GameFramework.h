@@ -7,6 +7,17 @@
 #include "UI_Manager.h"
 #include "Scene_Manager.h"
 
+struct CB_FRAMEWORK_INFO
+{
+	float m_fCurrentTime;      
+	float m_fElapsedTime;         
+
+	float m_fSecondsPerFirework;    
+	int m_nFlareParticlesToEmit;     
+	int m_nMaxFlareType2Particles;   
+	XMFLOAT3 m_xmf3Gravity;          
+};
+
 class CGameFramework
 {
 public:
@@ -26,6 +37,10 @@ public:
 	void CreateDepthStencilView();
 
 	void ChangeSwapChainState();
+
+	void CreateShaderVariables();
+	void UpdateShaderVariables();
+	void ReleaseShaderVariables();
 
     void Build_Scenes();
     void Release_Scenes();
@@ -56,7 +71,7 @@ private:
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
 
-	static const UINT			m_nSwapChainBuffers = 2;
+	static const UINT			m_nSwapChainBuffers = 4;
 	UINT						m_nSwapChainBufferIndex;
 
 	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
@@ -92,5 +107,9 @@ private:
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;
 #endif 
+
+protected:
+	ID3D12Resource* FrameworkInfo = NULL;
+	CB_FRAMEWORK_INFO* MappedFrameworkInfo = NULL;
 };
 

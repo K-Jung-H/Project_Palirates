@@ -421,10 +421,45 @@ void CGameFramework::OnDestroy()
 
 #define _WITH_TERRAIN_PLAYER
 
+void CGameFramework::CreateShaderVariables()
+{
+	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
+	FrameworkInfo = ::CreateBufferResource(m_pd3dDevice, m_pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	FrameworkInfo->Map(0, NULL, (void**)&MappedFrameworkInfo);
+
+}
+
+void CGameFramework::UpdateShaderVariables()
+{
+	MappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GetTotalTime();
+	MappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
+
+
+	MappedFrameworkInfo->m_fSecondsPerFirework = 0.4f;
+	MappedFrameworkInfo->m_nFlareParticlesToEmit = 100;
+	MappedFrameworkInfo->m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
+	MappedFrameworkInfo->m_nMaxFlareType2Particles = 15 * 1.5f;
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = FrameworkInfo->GetGPUVirtualAddress();
+	m_pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAME_CBV_INDEX, d3dGpuVirtualAddress);
+
+}
+
+void CGameFramework::ReleaseShaderVariables()
+{
+	if (FrameworkInfo)
+	{
+		FrameworkInfo->Unmap(0, NULL);
+		FrameworkInfo->Release();
+	}
+}
+
+
 void CGameFramework::Build_Scenes()
 {
 	m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
+	CreateShaderVariables();
 	//========================================================
 	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
 	scene_manager->Register_Scene("Scene_1", Scene_1);
@@ -467,6 +502,8 @@ void CGameFramework::Release_Scenes()
 	//	delete m_pPlayer;
 
 	delete scene_manager;
+	
+	ReleaseShaderVariables();
 }
 
 void CGameFramework::ProcessInput()
@@ -531,6 +568,7 @@ void CGameFramework::Update_Scene()
 
 	//===============================================================
 	// 나중에 연산 담당 커멘드 리스트 정의하여 활용하기
+	WaitForGpuComplete();
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
@@ -540,6 +578,7 @@ void CGameFramework::Update_Scene()
 	ID3D12CommandList* ppd3dCommandLists[] = { m_pd3dCommandList };
 	m_pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
 	WaitForGpuComplete();
+
 	//===============================================================
 
 	m_pPlayer->Animate(fTimeElapsed);
@@ -576,7 +615,7 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::FrameAdvance()
 {    
-	m_GameTimer.Tick(0.0f);
+	m_GameTimer.Tick(100.0f);
 	
 	ProcessInput();
 
@@ -606,8 +645,12 @@ void CGameFramework::FrameAdvance()
 	m_pd3dCommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 
+	scene_manager->Pre_Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
+	UpdateShaderVariables();
+
 	scene_manager->Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
 
+	scene_manager->Post_Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
 
 #ifdef _WITH_PLAYER_TOP
 	m_pd3dCommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);

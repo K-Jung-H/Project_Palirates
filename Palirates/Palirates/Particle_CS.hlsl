@@ -29,5 +29,6 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     particle.position += particle.velocity * gfElapsedTime;
     particle.lifetime -= gfElapsedTime;
 
-    ParticleBuffer[index] = particle;
+    
+        ParticleBuffer[index] = particle;
 }

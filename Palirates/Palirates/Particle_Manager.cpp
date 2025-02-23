@@ -211,6 +211,134 @@ Particle_Shape_Mesh::~Particle_Shape_Mesh()
 
 //==============================================================================
 
+Cube_Shape_Mesh::Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize)
+	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
+{
+	XMFLOAT4 color1 = { 0.8f, 0.2f, 0.2f, 1.0f }; // 예시 색상
+	XMFLOAT4 color2 = { 0.2f, 0.8f, 0.2f, 1.0f };
+
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// Cube는 8개의 정점 (8개의 꼭짓점)과 6개의 면을 가짐
+	m_nVertices = 8;
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
+
+	// 큐브 정점 위치 정의
+	float halfSize = fSize / 2.0f;
+
+	m_pxmf3Positions[0] = XMFLOAT3(-halfSize, -halfSize, -halfSize);
+	m_pxmf3Positions[1] = XMFLOAT3(halfSize, -halfSize, -halfSize);
+	m_pxmf3Positions[2] = XMFLOAT3(halfSize, halfSize, -halfSize);
+	m_pxmf3Positions[3] = XMFLOAT3(-halfSize, halfSize, -halfSize);
+	m_pxmf3Positions[4] = XMFLOAT3(-halfSize, -halfSize, halfSize);
+	m_pxmf3Positions[5] = XMFLOAT3(halfSize, -halfSize, halfSize);
+	m_pxmf3Positions[6] = XMFLOAT3(halfSize, halfSize, halfSize);
+	m_pxmf3Positions[7] = XMFLOAT3(-halfSize, halfSize, halfSize);
+
+	// 각 정점에 색상 할당 (예시로 두 색상을 번갈아 할당)
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		m_pxmf4Colors[i] = XMFLOAT4(rand() % 2 == 0 ? color1 : color2);
+	}
+
+	// 서브메쉬의 개수는 1개만 사용하도록 설정
+	m_nSubMeshes = 1;
+
+	// 서브메쉬 인덱스 개수 및 할당
+	int nSubMeshIndices = 36; // 큐브는 6개의 면, 각 면은 2개의 삼각형, 한 면당 6개의 인덱스 => 6 * 6 = 36
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+	m_pnSubSetIndices[0] = nSubMeshIndices; // 첫 번째 서브메쉬의 인덱스 개수 설정
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // 첫 번째 서브메쉬의 인덱스 배열 할당
+
+	int k = 0;
+	
+	// 큐브의 면에 대한 인덱스를 설정 (각 면을 2개의 삼각형으로 나눔)
+	// 아래 6개의 면을 정의 (각 면은 2개의 삼각형으로 나누어 6개의 인덱스를 가짐)
+	// 앞면
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 2;
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3;
+	// 뒷면
+	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
+	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 7;
+	// 왼쪽 면
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 7;
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 3;
+	// 오른쪽 면
+	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
+	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 2;
+	// 위쪽 면
+	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3; m_ppnSubSetIndices[0][k++] = 7;
+	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 6;
+	// 아래쪽 면
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5;
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 4;
+
+	// 서브메쉬 인덱스 버퍼 및 업로드 버퍼 생성
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+
+	// 첫 번째 서브메쉬의 인덱스 버퍼 생성
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
+		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		&m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	// 서브메쉬 인덱스 버퍼 뷰 설정
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
+
+	//===========================================================
+	// Position Buffer 생성
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	//===========================================================
+	// Color Buffer 생성
+	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+
+	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
+}
+
+Cube_Shape_Mesh::~Cube_Shape_Mesh()
+{
+}
+
+void Cube_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+	pd3dCommandList->SOSetTargets(0, 1, NULL);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[3] = { m_d3dPositionBufferView, m_d3dColorBufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 3, pVertexBufferViews);
+
+	if (m_ppd3dSubSetIndexBuffers[0] != nullptr)
+	{
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = m_pd3dSubSetIndexBufferViews[0]; 
+		pd3dCommandList->IASetIndexBuffer(&indexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+	
+
+
+
+}
+
+
+//==============================================================================
 Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)
 	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
 {
@@ -393,43 +521,29 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
 {
-
 	OnPrepareRender();
 
 	if (progress == 0)
 	{
-		if (Material_list.size())
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (particle_mesh)
 		{
-			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
-			{
-				if (material_ptr)
-				{
-					CShader* pShader = material_ptr->m_pShader;
-					if (pShader)
-					{
-						pShader->OnPrepareRender(pd3dCommandList, 0); // == SetPipelineState
-					}
+			particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
+			particle_mesh->Render(pd3dCommandList, 0); //Stream Output
+			particle_mesh->PostRender(pd3dCommandList, 0); //Stream Output
 
-					material_ptr->UpdateShaderVariable(pd3dCommandList); // 재질에 저장된 텍스처도 함께 업데이트 되는 함수임, bool 값으로 기능 분리하기
-
-				}
-
-				UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-				if (particle_mesh)
-				{
-					particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
-					particle_mesh->Render(pd3dCommandList, 0); //Stream Output
-					particle_mesh->PostRender(pd3dCommandList, 0); //Stream Output
-
-				}
-			}
 		}
+
 	}
 	else if (progress == 1)
 	{
 		if (Material_list.size())
 		{
+			if (particle_mesh)
+				particle_mesh->PreRender(pd3dCommandList, 1); //Draw
+
+			// shape_mesh에 적용할 material
 			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 			{
 				if (material_ptr)
@@ -441,8 +555,7 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 				}
 			}
 
-			if (particle_mesh)
-				particle_mesh->PreRender(pd3dCommandList, 1); //Draw
+
 
 			if (shape_mesh)
 				shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->m_d3dParticleBufferView, particle_mesh->Get_Num()); //Draw
@@ -849,9 +962,10 @@ Particle_Manager::Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		pxmf4RandomValues[i].w = float((rand() % 10000) - 5000) / 5000.0f;
 	}
 
-	//m_pRandowmValueTexture = new CTexture(1, RESOURCE_BUFFER, 0, 1);
-	//m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
-
+	m_pRandowmValueTexture = new CTexture(1, RESOURCE_BUFFER, 0, 1);
+	m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX);
+	
 }
 
 Particle_Manager::~Particle_Manager()
@@ -866,7 +980,9 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	//particle_Material->SetTexture(pParticleTexture);
 	
 	CMesh* new_shape_mesh = NULL; // -> 인스턴싱 그리기가 가능해야 함
-	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList);
+	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList);
+
 	//===================================================================
 	ParticleShader* test_shader = new ParticleShader();
 	test_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
@@ -877,14 +993,14 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	//===================================================================
 	Particle_Info test_info;
 	test_info.type = Particle_Type::sample_1;
-	test_info.pos = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	test_info.pos = XMFLOAT3(10.0f, 10.0f, 10.0f);
 	test_info.velocity = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	test_info.acceleration = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	test_info.size = XMFLOAT2(10.0f, 10.0f);
 	test_info.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 	//===================================================================
 
-	Add_Particle(pd3dDevice, pd3dCommandList, sphere_shape_mesh, test_info);
+	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info);
 	//===================================================================
 }
 

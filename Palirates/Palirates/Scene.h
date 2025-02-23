@@ -15,6 +15,8 @@
 #define SPOT_LIGHT						2
 #define DIRECTIONAL_LIGHT				3
 
+class Particle_Manager;
+
 struct LIGHT
 {
 	XMFLOAT4							m_xmf4Ambient;

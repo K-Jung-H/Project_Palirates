@@ -123,18 +123,37 @@ void Scene_Manager::Unload_Scene()
     activeScene.reset();
 }
 
-void Scene_Manager::Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Pre_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     if (activeScene)
-    {
         activeScene->Pre_Render(pd3dDevice, pd3dCommandList, pCamera);
-        activeScene->Render(pd3dDevice, pd3dCommandList, pCamera);
-        activeScene->Post_Render(pd3dDevice, pd3dCommandList, pCamera);
-    }
+    
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 }
+
+
+void Scene_Manager::Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)
+        activeScene->Render(pd3dDevice, pd3dCommandList, pCamera);
+
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
+void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)  
+        activeScene->Post_Render(pd3dDevice, pd3dCommandList, pCamera);
+    
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
 
 void Scene_Manager::Render_Scene_UI(UINT nFrame)
 {

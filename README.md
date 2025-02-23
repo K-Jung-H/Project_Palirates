@@ -31,11 +31,16 @@
 
 진행 상황
 ------------------------------------------------------------------------------------------------
-- 파티클 객체 인스턴싱 시도 중 오류 발생
-	 D3D12 ERROR: ID3D12CommandList::DrawInstanced: The primitive topology does not belong to the appropriate group specified by the current pipeline state. [ EXECUTION ERROR #611: PRIMITIVE_TOPOLOGY_MISMATCH_PIPELINE_STATE]
-
 - 렌더링 파이프라인 분리
 	-Pre_Render
 	-Render
 	-Post_Render
 
+- 파티클 처리 방식:
+	- 1. 입자들의 배열을 렌더링 -> GS, SO 단계를 거쳐 일부 입자들이 소멸되고, 새로운 입자들이 배열에 추가됨
+	- 2. 입자들을 각 설정된 값에 따라 업데이트 -> 입자들의 배열을 UAV로 연결하여 CS 단계로 전달하고, CS단계에서 동일한 연산을 병렬 처리
+	- 3. 입자들의 배열을 렌더링 -> 업데이트된 입자들의 정보가 담긴 배열을 다시 CBV로 연결하여, 그래픽스 파이프라인에서 인스턴싱 기반 렌더링 처리
+
+
+- 계산 파이프라인을 추가하여, 파티클의 움직임 업데이트
+- 파티클이 의도한대로 움직이지는 않지만, 예제와 유사한 움직임 확인됨
