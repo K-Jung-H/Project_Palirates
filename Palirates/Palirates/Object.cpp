@@ -573,11 +573,15 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 		break;
 	}
 	case ANIMATION_TYPE_ONCE:
-		m_fPosition = fTrackPosition + fTrackElapsedTime;
-		if (m_fPosition > fAnimationLength) {
-			//m_fPosition = fAnimationLength;
+		if (m_fPosition < 0.0f)
 			m_fPosition = 0.0f;
-			m_bFinished = true;
+		else {
+			m_fPosition = fTrackPosition + fTrackElapsedTime;
+			if (m_fPosition > fAnimationLength) {
+				//m_fPosition = fAnimationLength;
+				m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+				m_bFinished = true;
+			}
 		}
 		break;
 	case ANIMATION_TYPE_PINGPONG:
