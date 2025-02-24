@@ -64,6 +64,8 @@ enum class State
 	ETC
 };
 
+
+
 extern std::map<State, std::wstring> stateToStringMap;
 
 class CPlayer;

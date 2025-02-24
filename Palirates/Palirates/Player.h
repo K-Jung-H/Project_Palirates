@@ -131,6 +131,9 @@ public:
 	void SetMoveZ(float x) { moveZ = x; }
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
+
+	std::vector<float> prevWeights;
+	std::vector<float> targetWeights;
 };
 
 
