@@ -301,7 +301,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	n_Animation = 12;
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
-	//m_pSkinnedAnimationController->SetTrackWeight(0, 0.5f);
+	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
 	for (int i = 0; i < n_Animation; ++i) {

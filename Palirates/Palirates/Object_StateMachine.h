@@ -1,4 +1,6 @@
 #pragma once
+//#include <map>
+//#include <string>
 
 //#include "Player.h"
 
@@ -62,7 +64,7 @@ enum class State
 	ETC
 };
 
-
+extern std::map<State, std::wstring> stateToStringMap;
 
 class CPlayer;
 class StateMachine

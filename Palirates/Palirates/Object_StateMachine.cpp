@@ -2,6 +2,16 @@
 #include "Object_StateMachine.h"
 #include "Player.h"
 
+std::map<State, std::wstring> stateToStringMap = {
+    {State::Idle, L"Idle"},
+    {State::Run, L"Run"},
+    {State::Knock_Down, L"Knock Down"},
+    {State::Get_Up, L"Get Up"},
+    {State::Dive, L"Dive"},
+    {State::Jump, L"Jump"},
+    {State::Attack_Normal, L"Attack Normal"},
+    {State::ETC, L"ETC"}
+};
 
 void Key_State::update(Key_Value key_state)
 {
@@ -71,12 +81,27 @@ void StateMachine::update(float Elapsed_time)
     auto* animController = m_pOwner->GetSkinnedAnimationController();
     int n_Ani = m_pOwner->n_Animation;
 
-    float blendSpeed = 5.0f * Elapsed_time; // 보간 속도 (Elapsed_time을 곱해 시간 기반 변환)
+    float blendSpeed = 8.0f * Elapsed_time; // 보간 속도 (Elapsed_time을 곱해 시간 기반 변환)
+
+    // 최초 실행 여부를 체크하는 플래그
+    static bool isFirstUpdate = true;
 
     // 기존 트랙 가중치 저장
     float prevWeights[12];
-    for (int i = 0; i < n_Ani; i++) {
-        prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+    if (isFirstUpdate) {
+        // 최초 실행 시에는 모든 애니메이션의 가중치를 0으로 초기화하고 idle만 1로 설정
+        for (int i = 0; i < n_Ani; i++) {
+            prevWeights[i] = 0.0f;
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        prevWeights[TRACK_IDLE] = 1.0f;
+        animController->SetTrackWeight(TRACK_IDLE, 1.0f);
+    }
+    else {
+        // 이후부터는 기존 트랙 가중치 저장
+        for (int i = 0; i < n_Ani; i++) {
+            prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+        }
     }
 
     float targetWeights[12] = { 0.0f }; // 목표 가중치 초기화
@@ -88,9 +113,11 @@ void StateMachine::update(float Elapsed_time)
     if (moveX == 0.0f && moveZ == 0.0f)
     {
         targetWeights[TRACK_IDLE] = 1.0f;
+        if (Get_State() != State::Idle) changeState(State::Idle, Key_Value::None);
     }
     else
     {
+        if (Get_State() != State::Run) changeState(State::Run, Key_Value::None);
         // 2. 방향 벡터 정규화
         float length = sqrtf(moveX * moveX + moveZ * moveZ);
         float normX = moveX / length;
@@ -149,6 +176,9 @@ void StateMachine::update(float Elapsed_time)
         float newWeight = prevWeights[i] + (targetWeights[i] - prevWeights[i]) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
     }
+
+    // 첫 번째 업데이트가 끝났으므로 플래그 해제
+    isFirstUpdate = false;
 
     // 현재 상태에 따른 동작 수행
     doAction(currentState, Elapsed_time);
