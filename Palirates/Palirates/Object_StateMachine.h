@@ -78,9 +78,6 @@ protected:
 	bool canMove{ true };
 	bool moveEnabled{ false };
 
-	float moveX{ 0.0f };
-	float moveZ{ 0.0f };
-
 public:
 	bool is_protected = false;
 
@@ -107,9 +104,6 @@ public:
 
 	void SetCaMove(bool b) { canMove = b; }
 	void SetMoveEnabled(bool b) { moveEnabled = b; }
-
-	void AddToMoveX(float x) { moveX += x; }
-	void AddToMoveZ(float x) { moveZ += x; }
 
 private:
 

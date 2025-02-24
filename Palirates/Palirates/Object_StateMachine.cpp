@@ -66,8 +66,91 @@ void StateMachine::start()
 
 void StateMachine::update(float Elapsed_time)
 {
-    if (key_state.forward) AddToMoveZ(Elapsed_time);
-    // 현재 상태에 따른 동작 or 애니메이션을 수행
+    if (!m_pOwner || !m_pOwner->GetSkinnedAnimationController()) return;
+
+    auto* animController = m_pOwner->GetSkinnedAnimationController();
+    int n_Ani = m_pOwner->n_Animation;
+
+    float blendSpeed = 5.0f * Elapsed_time; // 보간 속도 (Elapsed_time을 곱해 시간 기반 변환)
+
+    // 기존 트랙 가중치 저장
+    float prevWeights[12];
+    for (int i = 0; i < n_Ani; i++) {
+        prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+    }
+
+    float targetWeights[12] = { 0.0f }; // 목표 가중치 초기화
+
+    float moveX = m_pOwner->GetMoveX();
+    float moveZ = m_pOwner->GetMoveZ();
+
+    // 1. Idle 상태 (움직이지 않을 때)
+    if (moveX == 0.0f && moveZ == 0.0f)
+    {
+        targetWeights[TRACK_IDLE] = 1.0f;
+    }
+    else
+    {
+        // 2. 방향 벡터 정규화
+        float length = sqrtf(moveX * moveX + moveZ * moveZ);
+        float normX = moveX / length;
+        float normZ = moveZ / length;
+
+        // 3. 8방향 벡터
+        struct Direction {
+            float x, z;
+            AnimationTrack track;
+        };
+
+        Direction directions[8] = {
+            { -0.707f,  0.707f, TRACK_RUN_FORWARD_LEFT },  // Left-Front
+            {  0.000f,  1.000f, TRACK_RUN_FORWARD },       // Front
+            {  0.707f,  0.707f, TRACK_RUN_FORWARD_RIGHT }, // Right-Front
+            { -0.707f, -0.707f, TRACK_RUN_BACKWARD_LEFT }, // Left-Back
+            {  0.000f, -1.000f, TRACK_RUN_BACKWARD },      // Back
+            {  0.707f, -0.707f, TRACK_RUN_BACKWARD_RIGHT },// Right-Back
+            { -1.000f,  0.000f, TRACK_RUN_LEFT },          // Left
+            {  1.000f,  0.000f, TRACK_RUN_RIGHT }          // Right
+        };
+
+        // 4. 가장 가까운 방향 2개 찾기
+        int bestIndex = -1, secondIndex = -1;
+        float bestDot = -1.0f, secondDot = -1.0f;
+
+        for (int i = 0; i < 8; i++)
+        {
+            float dot = normX * directions[i].x + normZ * directions[i].z;
+            if (dot > bestDot)
+            {
+                secondDot = bestDot;
+                secondIndex = bestIndex;
+                bestDot = dot;
+                bestIndex = i;
+            }
+            else if (dot > secondDot)
+            {
+                secondDot = dot;
+                secondIndex = i;
+            }
+        }
+
+        // 5. 두 개의 방향을 보간하여 목표 가중치 설정
+        float totalDot = bestDot + secondDot;
+        float weight1 = bestDot / totalDot;
+        float weight2 = secondDot / totalDot;
+
+        targetWeights[directions[bestIndex].track] = weight1;
+        targetWeights[directions[secondIndex].track] = weight2;
+    }
+
+    // 6. 가중치 부드럽게 변환 (LERP 적용)
+    for (int i = 0; i < n_Ani; i++)
+    {
+        float newWeight = prevWeights[i] + (targetWeights[i] - prevWeights[i]) * blendSpeed;
+        animController->SetTrackWeight(i, newWeight);
+    }
+
+    // 현재 상태에 따른 동작 수행
     doAction(currentState, Elapsed_time);
 }
 
@@ -103,7 +186,7 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
     }
 
     // 이따구로 하면 안될 듯? x z 변수로 컨트롤 해야됨
-    if (!key_state.forward && !key_state.back && !key_state.left && !key_state.right) {
+    /*if (!key_state.forward && !key_state.back && !key_state.left && !key_state.right) {
         DebugOutput("Change Idle\n");
         changeState(State::Idle, Key_Value::None);
     }
@@ -112,7 +195,7 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
     {
         DebugOutput("Idle->Dive\n");
         changeState(State::Dive, Key_Value::Dive_Key_Down);
-    }
+    }*/
 
     switch (currentState)
     {
