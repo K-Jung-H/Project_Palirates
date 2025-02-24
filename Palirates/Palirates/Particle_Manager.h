@@ -25,6 +25,7 @@ public:
 };
 //==============================================================================
 
+#define _WITH_QUERY_DATA_SO_STATISTICS
 #define PARTICLE_TYPE_EMITTER		0
 #define PARTICLE_TYPE_SHELL			1
 #define PARTICLE_TYPE_FLARE01		2
@@ -39,26 +40,35 @@ public:
 	ParticleMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
 	virtual ~ParticleMesh();
 
-	bool								m_bStart = true;
+	bool								b_reset = true;
 	UINT								m_nStride = 0;
 	UINT								m_nMaxParticles = MAX_PARTICLES;
 	UINT								m_nCurrentParticles = 0;
-	ID3D12Resource* m_pd3dUAVBuffer = NULL;
 
-	ID3D12Resource* m_pd3dParticleBuffer = NULL;
-	ID3D12Resource* m_pd3dParticleUploadBuffer = NULL;
-	D3D12_VERTEX_BUFFER_VIEW		m_d3dParticleBufferView;
+	ID3D12Resource* CS_UAV_Buffer = NULL;
 
-	ID3D12Resource* m_pd3dStreamOutputBuffer = NULL;
-	ID3D12Resource* m_pd3dDrawBuffer = NULL;
+	ID3D12Resource* Particle_Init_Buffer = NULL;
+	ID3D12Resource* Particle_Draw_Buffer = NULL;
+	ID3D12Resource* ParticleUploadBuffer = NULL;
+	D3D12_VERTEX_BUFFER_VIEW		Particle_Info_Buffer_View;
+
+	ID3D12Resource* StreamOutputBuffer = NULL;
+	D3D12_STREAM_OUTPUT_BUFFER_VIEW		StreamOutputBuffer_View;
+
 
 	ID3D12Resource* m_pd3dDefaultBufferFilledSize = NULL;
 	ID3D12Resource* m_pd3dUploadBufferFilledSize = NULL;
 	UINT64* m_pnUploadBufferFilledSize = NULL;
 
-	ID3D12Resource* m_pd3dReadBackBufferFilledSize = NULL;
 
-	D3D12_STREAM_OUTPUT_BUFFER_VIEW		m_d3dStreamOutputBufferView;
+#ifdef _WITH_QUERY_DATA_SO_STATISTICS
+	ID3D12QueryHeap* m_pd3dSOQueryHeap = NULL;
+	ID3D12Resource* m_pd3dSOQueryBuffer = NULL;
+	D3D12_QUERY_DATA_SO_STATISTICS* m_pd3dSOQueryDataStatistics = NULL;
+#else
+	ID3D12Resource* m_pd3dReadBackBufferFilledSize = NULL;
+#endif
+
 
 	virtual void CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size);
 	virtual void CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles);
@@ -115,7 +125,7 @@ public:
 class ParticleObject : public CGameObject
 {
 private:
-	CMesh* shape_mesh = NULL;
+	Particle_Shape_Mesh* shape_mesh = NULL;
 	ParticleMesh* particle_mesh = NULL;
 	CMaterial* particle_Material = NULL;
 
@@ -125,7 +135,7 @@ public:
 	
 	void ReleaseUploadBuffers();
 
-	void Set_Shape(CMesh* mesh_ptr) { shape_mesh = mesh_ptr; }
+	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
 	void Set_Particle_Mesh(ParticleMesh* new_particle_mesh = NULL) { particle_mesh = new_particle_mesh; }
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
 
@@ -241,7 +251,7 @@ public:
 	void OnPostRender_All();
 
 
-	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CMesh* particle_shape_mesh, Particle_Info particle_info);
+	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Info particle_info);
 
 };
 

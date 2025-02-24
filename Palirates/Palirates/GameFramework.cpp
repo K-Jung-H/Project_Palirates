@@ -647,7 +647,11 @@ void CGameFramework::FrameAdvance()
 
 	scene_manager->Pre_Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
 	UpdateShaderVariables();
+	//============================================================
 
+//	scene_manager->Update_Active_Particles(m_pd3dDevice, m_pd3dCommandList, m_GameTimer.GetTimeElapsed());
+
+	//============================================================
 	scene_manager->Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);
 
 	scene_manager->Post_Render_Scene(m_pd3dDevice, m_pd3dCommandList, m_pCamera);

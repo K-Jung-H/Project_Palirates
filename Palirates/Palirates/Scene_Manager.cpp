@@ -126,8 +126,9 @@ void Scene_Manager::Unload_Scene()
 void Scene_Manager::Pre_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     if (activeScene)
+    {
         activeScene->Pre_Render(pd3dDevice, pd3dCommandList, pCamera);
-    
+    }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
