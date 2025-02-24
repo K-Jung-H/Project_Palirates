@@ -59,6 +59,9 @@ protected:
 	bool Anime_test_FallingLoop = false;
 	float m_fFallingTimer = 0.0f;
 
+	float moveX{ 0.0f };
+	float moveZ{ 0.0f };
+
 private:
 	std::unique_ptr<StateMachine> m_StateMachine;
 
@@ -124,6 +127,10 @@ public:
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 
+	void SetMoveX(float x) { moveX = x; }
+	void SetMoveZ(float x) { moveZ = x; }
+	float GetMoveX() { return moveX; }
+	float GetMoveZ() { return moveZ; }
 };
 
 

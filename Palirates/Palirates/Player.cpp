@@ -165,6 +165,18 @@ void CPlayer::Update(float fTimeElapsed)
 		m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
 	}
 
+	XMFLOAT3 look = GetLook();   
+	XMFLOAT3 right = GetRight();
+
+	// 5. XZ 속도를 정규화 (크기를 1로)
+	XMFLOAT3 velocityXZ = XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z);
+	float velocityLength = Vector3::Length(velocityXZ);
+	XMFLOAT3 normalizedVelocity = velocityLength > 0.0f ? Vector3::Normalize(velocityXZ) : XMFLOAT3(0, 0, 0);
+
+	// 6. Look 및 Right 벡터를 기준으로 moveZ, moveX 값 계산 (-1 ~ 1 범위)
+	moveZ = Vector3::DotProduct(normalizedVelocity, look);  // 전후 움직임
+	moveX = Vector3::DotProduct(normalizedVelocity, right); // 좌우 움직임
+
 	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
 
 	if (fLength > m_fMaxVelocityY) 
@@ -295,10 +307,13 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 	}
-	m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, true);
+	/*m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, true);
 	m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, false);
 	for (int i = 2; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackEnable(i, false);
+	}*/
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
 
 	// Once type Setting
@@ -561,19 +576,19 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 			//float weight1 = speedRatio;        // 달리기 가중치
 
 			// 블렌딩 시간 설정 (초 단위)
-			const float blendDuration = 0.2f;
+			//const float blendDuration = 0.2f;
 
-			// 현재 상태 지속 시간 (애니메이션 상태가 바뀌면 0으로 초기화)
-			stateElapsedTime += fTimeElapsed;
+			//// 현재 상태 지속 시간 (애니메이션 상태가 바뀌면 0으로 초기화)
+			//stateElapsedTime += fTimeElapsed;
 
-			// 블렌딩 비율 계산 (0 ~ 1 사이 값)
-			float blendRatio = min(1.0f, stateElapsedTime / blendDuration);
+			//// 블렌딩 비율 계산 (0 ~ 1 사이 값)
+			//float blendRatio = min(1.0f, stateElapsedTime / blendDuration);
 
-			float weight1 = 1.0f - blendRatio; // Idle 가중치
-			float weight0 = blendRatio;        // 달리기 가중치
+			//float weight1 = 1.0f - blendRatio; 
+			//float weight0 = blendRatio;        
 
-			m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
-			m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_State()), weight0);
+			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
+			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_State()), weight0);
 
 			//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, weight1); 
 			//

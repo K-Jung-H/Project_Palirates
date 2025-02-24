@@ -66,6 +66,7 @@ void StateMachine::start()
 
 void StateMachine::update(float Elapsed_time)
 {
+    if (key_state.forward) AddToMoveZ(Elapsed_time);
     // 현재 상태에 따른 동작 or 애니메이션을 수행
     doAction(currentState, Elapsed_time);
 }
@@ -78,36 +79,6 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
 
         return;
     }
-
-    //std::vector<std::pair<int, Key_Value>> keyMappings = {
-    //    { VK_UP, Key_Value::Forward_Key_Down },  
-    //    { 0x57, Key_Value::Forward_Key_Down },   // W 키
-    //    { VK_DOWN, Key_Value::Back_Key_Down },   
-    //    { 0x53, Key_Value::Back_Key_Down },      // S 키
-    //    { VK_LEFT, Key_Value::Left_Key_Down },  
-    //    { 0x41, Key_Value::Left_Key_Down },      // A 키
-    //    { VK_RIGHT, Key_Value::Right_Key_Down }, 
-    //    { 0x44, Key_Value::Right_Key_Down },     // D 키
-    //    { VK_SPACE, Key_Value::Jump_Key_Down },   
-    //    { VK_SHIFT, Key_Value::Dive_Key_Down }
-    //};
-
-    //for (const auto& mapping : keyMappings)
-    //{
-    //    int key = mapping.first;
-    //    Key_Value key_value = mapping.second;
-
-    //    // 키가 눌렸을 때
-    //    if (pKeysBuffer[key] & 0xF0)
-    //    {
-    //        key_state.update(key_value);
-    //    }
-    //    // 키가 떼어졌을 때
-    //    else
-    //    {
-    //        key_state.update(static_cast<Key_Value>(static_cast<int>(key_value) + 1));  // _Up 상태
-    //    }
-    //}
 
     std::unordered_map<int, std::pair<Key_Value, Key_Value>> keyMappings = {
     { VK_UP,    { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
@@ -131,11 +102,23 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
         key_state.update(pKeysBuffer[key] & 0xF0 ? keyPair.first : keyPair.second);
     }
 
+    // 이따구로 하면 안될 듯? x z 변수로 컨트롤 해야됨
+    if (!key_state.forward && !key_state.back && !key_state.left && !key_state.right) {
+        DebugOutput("Change Idle\n");
+        changeState(State::Idle, Key_Value::None);
+    }
+
+    if (key_state.dive)
+    {
+        DebugOutput("Idle->Dive\n");
+        changeState(State::Dive, Key_Value::Dive_Key_Down);
+    }
+
     switch (currentState)
     {
     // 이딴식으로 하면 안됨
     case State::Idle:
-        if (key_state.forward)
+        /*if (key_state.forward)
         {
             DebugOutput("Idle->Run_forward\n");
             changeState(State::Run_Forawrd, Key_Value::Forward_Key_Down);
@@ -155,14 +138,21 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
             DebugOutput("Idle->Run_right\n");
             changeState(State::Run_Right, Key_Value::Right_Key_Down);
         }
-        else if (key_state.dive)
+        else *//*if (key_state.dive)
         {
             DebugOutput("Idle->Dive\n");
             changeState(State::Dive, Key_Value::Dive_Key_Down);
-        }
+        }*/
         break;
 
-    case State::Run_Forawrd:
+    case State::Run:
+       /* if (!key_state.forward)
+        {
+            DebugOutput("Run_forward->Idle\n");
+            changeState(State::Idle, Key_Value::Forward_Key_Up);
+        }*/
+        break;
+   /* case State::Run_Forawrd:
         if (!key_state.forward)
         {
             DebugOutput("Run_forward->Idle\n");
@@ -192,7 +182,7 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
             DebugOutput("Run_right->Idle\n");
             changeState(State::Idle, Key_Value::Right_Key_Up);
         }
-        break;
+        break;*/
 
     case State::Jump:
         // 점프 상태에서 키 입력 처리
@@ -225,11 +215,11 @@ void StateMachine::enterState(State state, Key_Value key_event)
 
     m_pOwner->SetStateElapsedTime(0.0f);
 
-    for (int i = 0; i < n_Ani; ++i) {
+    /*for (int i = 0; i < n_Ani; ++i) {
          animController->SetTrackEnable(i, false);
-     }
-     animController->SetTrackEnable(GetStateKey(Get_State()), true);
-     animController->SetTrackEnable(GetStateKey(Get_LastState()), true);
+     }*/
+     /*animController->SetTrackEnable(GetStateKey(Get_State()), true);
+     animController->SetTrackEnable(GetStateKey(Get_LastState()), true);*/
 
     switch (state)
     {
@@ -261,42 +251,7 @@ void StateMachine::enterState(State state, Key_Value key_event)
         }*/
         
         break;
-    case State::Run_Forawrd:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-        for (int i = 2; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-
-        ///*for (int i = 0; i < n_Ani; ++i) {
-        //    animController->SetTrackEnable(i, false);
-        //}
-        //animController->SetTrackEnable(GetStateKey(Get_State()), true);
-        //animController->SetTrackEnable(GetStateKey(Get_LastState()), true);*/
-        break;
-    case State::Run_Backawrd:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-        for (int i = 3; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-        break;
-    case State::Run_Left:
-        /*animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_BACKWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_LEFT, true);
-        for (int i = 4; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-        break;
-    case State::Run_Right:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        for (int i = 1; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }
-        animController->SetTrackEnable(TRACK_RUN_RIGHT, true);*/
+    case State::Run:
         break;
     case State::Dive:
         /*animController->SetTrackEnable(TRACK_IDLE, true);
@@ -327,15 +282,7 @@ void StateMachine::exitState(State state, Key_Value key_event)
     {
     case State::Idle:
         break;
-    case State::Run_Forawrd:
-       // animController->SetTrackWeight(1, 0.0f);
-        break;
-    case State::Run_Backawrd:
-       // animController->SetTrackWeight(2, 0.0f);
-        break;
-    case State::Run_Left:
-        break;
-    case State::Run_Right:
+    case State::Run:
         break;
     case State::Dive:
         key_state.dive = false;

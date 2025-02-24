@@ -53,10 +53,7 @@ struct Key_State
 enum class State
 {
 	Idle,
-	Run_Forawrd,
-	Run_Backawrd,
-	Run_Left,
-	Run_Right,
+	Run,
 	Knock_Down,
 	Get_Up,
 	Dive,
@@ -76,6 +73,13 @@ protected:
 
 	Key_State key_state;
 	XMFLOAT3 pos{ 0.0f, 0.0f, 0.0f };
+
+
+	bool canMove{ true };
+	bool moveEnabled{ false };
+
+	float moveX{ 0.0f };
+	float moveZ{ 0.0f };
 
 public:
 	bool is_protected = false;
@@ -100,6 +104,12 @@ public:
 	{
 		return static_cast<int>(state);
 	}
+
+	void SetCaMove(bool b) { canMove = b; }
+	void SetMoveEnabled(bool b) { moveEnabled = b; }
+
+	void AddToMoveX(float x) { moveX += x; }
+	void AddToMoveZ(float x) { moveZ += x; }
 
 private:
 

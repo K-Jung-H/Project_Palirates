@@ -198,14 +198,17 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		D2D1_RECT_F player_pos_text_area = D2D1::RectF(0.0f, 0.0f, 400.0f, 30.0f);
 		D2D1_RECT_F player_normal_text_area = D2D1::RectF(0.0f, 30.0f, 400.0f, 60.0f);
 		D2D1_RECT_F tile_info_text_area = D2D1::RectF(0.0f, 60.0f, 200.0f, 90.0f);
+		D2D1_RECT_F player_xz = D2D1::RectF(0.0f, 90.0f, 400.0f, 120.0f);
 
 		TextBlock* player_pos_text_block_ptr = new TextBlock(design_ptr, L"Player_pos: ", player_pos_text_area);
 		TextBlock* player_normal_text_block_ptr = new TextBlock(design_ptr, L"Player_normal: ", player_normal_text_area);
 		TextBlock* tile_info_text_block_ptr = new TextBlock(design_ptr, L"Tile: : ", tile_info_text_area);
+		TextBlock* player_xz_ptr = new TextBlock(design_ptr, L"Player_XZ: : ", player_xz);
 
 		text_ui_manager->Add_TextBlock(player_pos_text_block_ptr);
 		text_ui_manager->Add_TextBlock(player_normal_text_block_ptr);
 		text_ui_manager->Add_TextBlock(tile_info_text_block_ptr);
+		text_ui_manager->Add_TextBlock(player_xz_ptr);
 
 	}
 }
@@ -223,21 +226,26 @@ void CScene::Update_UI()
 	static wchar_t Player_pos_Buffer[100];
 	static wchar_t Player_normal_Buffer[100];
 	static wchar_t Tile_Info_Buffer[100];
+	static wchar_t Player_XZ_Buffer[100];
 
 	if (text_ui_manager)
 	{
 		XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
 		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
 		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
+		float player_x = m_pPlayer->GetMoveX();
+		float player_z = m_pPlayer->GetMoveZ();
 
 
 		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos >>%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
 		_stprintf_s(Player_normal_Buffer, 100, _T("Player_normal >> %.2f,%.2f,%.2f"), tile_normal.x, tile_normal.y, tile_normal.z);
 		_stprintf_s(Tile_Info_Buffer, 100, _T("Tile  >> %d"), tile_n);
+		_stprintf_s(Player_XZ_Buffer, 100, _T("Player_XZ  >> %.2f,%.2f"), player_x, player_z);
 
 		text_ui_manager->UpdateTextBlock(0, Player_pos_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(1, Player_normal_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(2, Tile_Info_Buffer, NULL, NULL);
+		text_ui_manager->UpdateTextBlock(3, Player_XZ_Buffer, NULL, NULL);
 	}
 }
 

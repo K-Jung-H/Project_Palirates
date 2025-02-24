@@ -507,6 +507,7 @@ void CGameFramework::ProcessInput()
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	m_pPlayer->GetStateMachine()->update(m_GameTimer.GetTimeElapsed());
 }
 
 void CGameFramework::Update_Scene()
