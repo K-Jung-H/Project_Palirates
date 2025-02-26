@@ -78,12 +78,12 @@ void Key_State::update(Key_Value key_state)
 
 bool Key_State::check_move()
 {
-    // ¼­·Î ¹İ´ëµÇ´Â Å°¸¦ ´©¸¥ °æ¿ì´Â ¿òÁ÷ÀÓ Ãë±Ş x
+    // ì„œë¡œ ë°˜ëŒ€ë˜ëŠ” í‚¤ë¥¼ ëˆ„ë¥¸ ê²½ìš°ëŠ” ì›€ì§ì„ ì·¨ê¸‰ x
     return (left != right) || (forward != back);
 }
 
 //========================================================
-// »óÅÂ ¸Ó½Å
+// ìƒíƒœ ë¨¸ì‹ 
 
 void StateMachine::start()
 {
@@ -97,13 +97,13 @@ void StateMachine::update(float Elapsed_time)
     auto* animController = m_pOwner->GetSkinnedAnimationController();
     int n_Ani = m_pOwner->n_Animation;
 
-    float blendSpeed = 8.0f * Elapsed_time; // º¸°£ ¼Óµµ (Elapsed_timeÀ» °öÇØ ½Ã°£ ±â¹İ º¯È¯)
+    float blendSpeed = 8.0f * Elapsed_time; // ë³´ê°„ ì†ë„ (Elapsed_timeì„ ê³±í•´ ì‹œê°„ ê¸°ë°˜ ë³€í™˜)
 
-    // ÃÖÃÊ ½ÇÇà ¿©ºÎ¸¦ Ã¼Å©ÇÏ´Â ÇÃ·¡±×
+    // ìµœì´ˆ ì‹¤í–‰ ì—¬ë¶€ë¥¼ ì²´í¬í•˜ëŠ” í”Œë˜ê·¸
     static bool isFirstUpdate = true;
 
     if (isFirstUpdate) {
-        // ÃÖÃÊ ½ÇÇà ½Ã¿¡´Â ¸ğµç ¾Ö´Ï¸ŞÀÌ¼ÇÀÇ °¡ÁßÄ¡¸¦ 0À¸·Î ÃÊ±âÈ­ÇÏ°í idle¸¸ 1·Î ¼³Á¤
+        // ìµœì´ˆ ì‹¤í–‰ ì‹œì—ëŠ” ëª¨ë“  ì• ë‹ˆë©”ì´ì…˜ì˜ ê°€ì¤‘ì¹˜ë¥¼ 0ìœ¼ë¡œ ì´ˆê¸°í™”í•˜ê³  idleë§Œ 1ë¡œ ì„¤ì •
         for (int i = 0; i < n_Ani; i++) {
             m_pOwner->prevWeights[i] = 0.0f;
             animController->SetTrackWeight(i, 0.0f);
@@ -112,14 +112,14 @@ void StateMachine::update(float Elapsed_time)
         animController->SetTrackWeight(TRACK_IDLE, 1.0f);
     }
     else {
-        // ÀÌÈÄºÎÅÍ´Â ±âÁ¸ Æ®·¢ °¡ÁßÄ¡ ÀúÀå
+        // ì´í›„ë¶€í„°ëŠ” ê¸°ì¡´ íŠ¸ë™ ê°€ì¤‘ì¹˜ ì €ì¥
         for (int i = 0; i < n_Ani; i++) {
             m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
         }
     }
 
     std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
-    // ¸ñÇ¥ °¡ÁßÄ¡ ÃÊ±âÈ­
+    // ëª©í‘œ ê°€ì¤‘ì¹˜ ì´ˆê¸°í™”
 
     float moveX = m_pOwner->GetMoveX();
     float moveZ = m_pOwner->GetMoveZ();
@@ -147,12 +147,12 @@ void StateMachine::update(float Elapsed_time)
             changeState(State::Idle, Key_Value::None);
         }
         else {
-            // ¹æÇâ º¤ÅÍ Á¤±ÔÈ­
+            // ë°©í–¥ ë²¡í„° ì •ê·œí™”
             float length = sqrtf(moveX * moveX + moveZ * moveZ);
             float normX = moveX / length;
             float normZ = moveZ / length;
 
-            // °¡Àå °¡±î¿î ¹æÇâ 2°³ Ã£±â
+            // ê°€ì¥ ê°€ê¹Œìš´ ë°©í–¥ 2ê°œ ì°¾ê¸°
             int bestIndex = -1, secondIndex = -1;
             float bestDot = -1.0f, secondDot = -1.0f;
 
@@ -170,7 +170,7 @@ void StateMachine::update(float Elapsed_time)
                 }
             }
 
-            // µÎ °³ÀÇ ¹æÇâÀ» º¸°£ÇÏ¿© ¸ñÇ¥ °¡ÁßÄ¡ ¼³Á¤
+            // ë‘ ê°œì˜ ë°©í–¥ì„ ë³´ê°„í•˜ì—¬ ëª©í‘œ ê°€ì¤‘ì¹˜ ì„¤ì •
             float totalDot = bestDot + secondDot;
             float weight1 = bestDot / totalDot;
             float weight2 = secondDot / totalDot;
@@ -184,7 +184,7 @@ void StateMachine::update(float Elapsed_time)
         
     	float fFixedSpeed = 300.0f; 
 
-    	// Dive »óÅÂÀÏ ¶§ ¹«Á¶°Ç Àü¹æ ÀÌµ¿
+    	// Dive ìƒíƒœì¼ ë•Œ ë¬´ì¡°ê±´ ì „ë°© ì´ë™
         m_pOwner->Move(DIR_FORWARD, fFixedSpeed * Elapsed_time, false);
 
         if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
@@ -198,17 +198,17 @@ void StateMachine::update(float Elapsed_time)
     }
     
 
-    // °¡ÁßÄ¡ ºÎµå·´°Ô º¯È¯ (LERP Àû¿ë)
+    // ê°€ì¤‘ì¹˜ ë¶€ë“œëŸ½ê²Œ ë³€í™˜ (LERP ì ìš©)
     for (int i = 0; i < n_Ani; i++)
     {
         float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
     }
 
-    // Ã¹ ¹øÂ° ¾÷µ¥ÀÌÆ®°¡ ³¡³µÀ¸¹Ç·Î ÇÃ·¡±× ÇØÁ¦
+    // ì²« ë²ˆì§¸ ì—…ë°ì´íŠ¸ê°€ ëë‚¬ìœ¼ë¯€ë¡œ í”Œë˜ê·¸ í•´ì œ
     isFirstUpdate = false;
 
-    // ÇöÀç »óÅÂ¿¡ µû¸¥ µ¿ÀÛ ¼öÇà
+    // í˜„ì¬ ìƒíƒœì— ë”°ë¥¸ ë™ì‘ ìˆ˜í–‰
     doAction(currentState, Elapsed_time);
 }
 
@@ -223,16 +223,16 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
 
     std::unordered_map<int, std::pair<Key_Value, Key_Value>> keyMappings = {
     { VK_UP,    { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
-    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  // W Å°
+    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  // W í‚¤
 
     { VK_DOWN,  { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },
-    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  // S Å°
+    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  // S í‚¤
 
     { VK_LEFT,  { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },
-    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },  // A Å°
+    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },  // A í‚¤
 
     { VK_RIGHT, { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
-    { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },  // D Å°
+    { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },  // D í‚¤
 
     { VK_SPACE, { Key_Value::Jump_Key_Down, Key_Value::Jump_Key_Up } },
     { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } }
@@ -243,7 +243,7 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
         key_state.update(pKeysBuffer[key] & 0xF0 ? keyPair.first : keyPair.second);
     }
 
-    // ÀÌµû±¸·Î ÇÏ¸é ¾ÈµÉ µí? x z º¯¼ö·Î ÄÁÆ®·Ñ ÇØ¾ßµÊ
+    // ì´ë”°êµ¬ë¡œ í•˜ë©´ ì•ˆë  ë“¯? x z ë³€ìˆ˜ë¡œ ì»¨íŠ¸ë¡¤ í•´ì•¼ë¨
     /*if (!key_state.forward && !key_state.back && !key_state.left && !key_state.right) {
         DebugOutput("Change Idle\n");
         changeState(State::Idle, Key_Value::None);
@@ -257,7 +257,7 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
 
     switch (currentState)
     {
-    // ÀÌµı½ÄÀ¸·Î ÇÏ¸é ¾ÈµÊ
+    // ì´ë”´ì‹ìœ¼ë¡œ í•˜ë©´ ì•ˆë¨
     case State::Idle:
         /*if (key_state.forward)
         {
@@ -324,13 +324,12 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
             changeState(State::Idle, Key_Value::Right_Key_Up);
         }
         break;*/
-
     case State::Jump:
-        // Á¡ÇÁ »óÅÂ¿¡¼­ Å° ÀÔ·Â Ã³¸®
+        // ì í”„ ìƒíƒœì—ì„œ í‚¤ ì…ë ¥ ì²˜ë¦¬
         break;
 
     case State::Attack_Normal:
-        // °ø°İ »óÅÂ¿¡¼­ Å° ÀÔ·Â Ã³¸®
+        // ê³µê²© ìƒíƒœì—ì„œ í‚¤ ì…ë ¥ ì²˜ë¦¬
         break;
 
     default:
@@ -390,7 +389,49 @@ void StateMachine::enterState(State state, Key_Value key_event)
         }*/
         
         break;
-    case State::Run:
+    case State::Run_Forawrd:
+       /* animController->SetTrackEnable(TRACK_IDLE, true);
+        animController->SetTrackEnable(TRACK_RUN_FORWARD, true);
+        for (int i = 2; i < n_Ani; ++i) {
+            animController->SetTrackEnable(i, false);
+        }*/
+
+        ///*for (int i = 0; i < n_Ani; ++i) {
+        //    animController->SetTrackEnable(i, false);
+        //}
+        //animController->SetTrackEnable(GetStateKey(Get_State()), true);
+        //animController->SetTrackEnable(GetStateKey(Get_LastState()), true);*/
+        break;
+    case State::Run_Backawrd:
+       /* animController->SetTrackEnable(TRACK_IDLE, true);
+        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
+        animController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
+        for (int i = 3; i < n_Ani; ++i) {
+            animController->SetTrackEnable(i, false);
+        }*/
+        break;
+    case State::Run_Left:
+        /*animController->SetTrackEnable(TRACK_IDLE, true);
+        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
+        animController->SetTrackEnable(TRACK_RUN_BACKWARD, false);
+        animController->SetTrackEnable(TRACK_RUN_LEFT, true);
+        for (int i = 4; i < n_Ani; ++i) {
+            animController->SetTrackEnable(i, false);
+        }*/
+        break;
+    case State::Run_Right:
+       /* animController->SetTrackEnable(TRACK_IDLE, true);
+        for (int i = 1; i < n_Ani; ++i) {
+            animController->SetTrackEnable(i, false);
+        }
+        animController->SetTrackEnable(TRACK_RUN_RIGHT, true);*/
+        break;
+    case State::Dive:
+        /*animController->SetTrackEnable(TRACK_IDLE, true);
+        for (int i = 1; i < n_Ani; ++i) {
+            animController->SetTrackEnable(i, false);
+        }
+        animController->SetTrackEnable(TRACK_DIVEROLL_FORWARD, true);*/
         break;
     case State::Dive:
         /*animController->SetTrackEnable(TRACK_IDLE, true);
@@ -421,7 +462,21 @@ void StateMachine::exitState(State state, Key_Value key_event)
     {
     case State::Idle:
         break;
-    case State::Run:
+    case State::Run_Forawrd:
+       // animController->SetTrackWeight(1, 0.0f);
+        break;
+    case State::Run_Backawrd:
+       // animController->SetTrackWeight(2, 0.0f);
+        break;
+    case State::Run_Left:
+        break;
+    case State::Run_Right:
+        break;
+    case State::Dive:
+        key_state.dive = false;
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
+        DebugOutput("Dive->Idle\n");
         break;
     case State::Dive:
        
