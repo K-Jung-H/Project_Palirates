@@ -429,15 +429,15 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	Particle_Info test_info_2;
 	test_info_2.type = Particle_Type::sample_1;
-	test_info_2.pos = XMFLOAT3(20.0f, 10.0f, 10.0f);
-	test_info_2.velocity = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	test_info_2.pos = XMFLOAT3(10.0f, 10.0f, 10.0f);
+	test_info_2.velocity = XMFLOAT3(1.0f, 0.0f, 0.0f);
 	test_info_2.acceleration = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	test_info_2.size = XMFLOAT2(10.0f, 10.0f);
 	test_info_2.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 	//===================================================================
 
 	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info);
-//	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info_2);
+	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info_2);
 
 	//===================================================================
 }

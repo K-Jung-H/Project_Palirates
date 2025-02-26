@@ -173,13 +173,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 #ifdef LOAD_SCENE
 	// Load Scene
 
-	//CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	//std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	//test_scene->Set_Name("test_scene");
-	//test_scene = Test_Scene_Model->m_pModelRootObject;
-	//test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	//test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
-	//obj_manager->Add_Object(test_scene, Object_Type::fixed);
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("test_scene");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
 	//=====================================================
 
@@ -711,7 +711,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 void CScene::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 #ifdef RENDER_PARTICLE
-	particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
+	if (particle_manager)
+		particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
 
 #endif
 }
@@ -754,9 +755,11 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 
 #ifdef RENDER_PARTICLE
-	particle_manager->Render_All(pd3dCommandList, pCamera, 0);
-	particle_manager->Render_All(pd3dCommandList, pCamera, 1);
-	particle_manager->OnPostRender_All();
+	if (particle_manager)
+	{
+		particle_manager->Render_All(pd3dCommandList, pCamera, 0);
+		particle_manager->Render_All(pd3dCommandList, pCamera, 1);
+	}
 
 #endif
 
@@ -772,6 +775,9 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 void CScene::Post_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 #ifdef RENDER_PARTICLE
+	if (particle_manager)
+		particle_manager->OnPostRender_All();
+
 #endif
 }
 

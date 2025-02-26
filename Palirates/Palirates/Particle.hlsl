@@ -151,34 +151,6 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
         GenerateEmberParticles(particle, output);
 }
 
-//[maxvertexcount(128)]
-//void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<VS_PARTICLE_INPUT> output)
-//{
-//    VS_PARTICLE_INPUT particle = input[0];
-    
-//    if (particle.type == PARTICLE_TYPE_EMITTER)
-//    {
-//        float4 f4Random = RandomDirection(particle.type);
-//        if (particle.lifetime >= 0.0f)
-//        {
-//            VS_PARTICLE_INPUT particle_2 = particle;
-
-//            particle_2.type = PARTICLE_TYPE_SHELL;
-
-//            particle_2.velocity = particle.velocity + (f4Random.xyz * 16.0f);
-//            particle_2.lifetime = SHELL_PARTICLE_LIFETIME;
-
-//            output.Append(particle_2);
-//        }
-//        output.Append(particle);
-//    }
-//    else
-//    {
-//        output.Append(particle);
-//    }
-   
-//}
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 

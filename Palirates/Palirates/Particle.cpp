@@ -379,7 +379,6 @@ void ParticleMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPi
 		StreamOutputBuffer_View.BufferFilledSizeLocation = Default_BufferFilled_Size->GetGPUVirtualAddress();
 
 		*Upload_BufferFilled_Size_N = 0;
-		//*Upload_BufferFilled_Size_N = m_nStride * m_nVertices;
 
 		::SynchronizeResourceTransition(pd3dCommandList, Default_BufferFilled_Size, D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_DEST);
 		pd3dCommandList->CopyResource(Default_BufferFilled_Size, Upload_BufferFilled_Size);

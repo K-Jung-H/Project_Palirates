@@ -27,7 +27,7 @@ public:
 #define PARTICLE_TYPE_FLARE02		3
 #define PARTICLE_TYPE_FLARE03		4
 
-#define MAX_PARTICLES				9000
+#define MAX_PARTICLES				90000
 
 class ParticleMesh : public CMesh
 {

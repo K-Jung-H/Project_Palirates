@@ -52,6 +52,8 @@ public:
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
+	void Clear_RenderTarget(XMFLOAT3 background_color);
+
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -80,9 +82,18 @@ private:
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
 
-	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
-	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
-	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	ID3D12CommandQueue			*p_CommandQueue = NULL;
+
+	ID3D12CommandAllocator		*Compute_CommandAllocator = NULL;
+	ID3D12CommandAllocator		*Render_CommandAllocator = NULL;
+
+	ID3D12GraphicsCommandList	*Compute_CommandList = NULL;
+	ID3D12GraphicsCommandList* Render_CommandList = NULL;
+
+	// 사용할 커멘드 할당자, 큐로 연결하여 사용
+	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
+	ID3D12GraphicsCommandList* Active_CommandList = NULL;
+
 
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];

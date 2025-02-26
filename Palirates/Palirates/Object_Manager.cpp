@@ -591,7 +591,8 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 
 	case Object_Type::fixed:
 	{
-		Synchronize_Active_Objects_and_Tile();
+		if(terrain_ptr)
+			Synchronize_Active_Objects_and_Tile();
 	} break;
 
 	case Object_Type::etc:
@@ -691,8 +692,11 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::fixed:
 	{
-		terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
-		Synchronize_Active_Objects_and_Tile();
+		if (terrain_ptr)
+		{
+			terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
+			Synchronize_Active_Objects_and_Tile();
+		}
 
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
