@@ -22,8 +22,8 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     uint index = dispatchThreadID.x;
 
-    if (index >= MaxParticle)
-        return;
+    //if (index >= MaxParticle)
+    //    return;
 
     VS_PARTICLE_INPUT particle = ParticleBuffer[index];
     particle.position += particle.velocity * gfElapsedTime;

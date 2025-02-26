@@ -528,7 +528,7 @@ D3D12_INPUT_LAYOUT_DESC CStandard_Instance_Shader::CreateInputLayout(int nPipeli
 	{
 		UINT nInputElementDescs = 9;
 		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
-
+		
 		// 정점 정보를 위한 입력 원소들
 		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };

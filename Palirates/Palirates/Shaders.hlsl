@@ -6,23 +6,17 @@ struct MATERIAL
 	float4					m_cEmissive;
 };
 
+
 cbuffer Frame_Info : register(b0)
 {
-    // 16바이트 (float4 단위)
-    float gfCurrentTime; // c0.x
-    float gfElapsedTime; // c0.y
-    int Scene_Type; // c0.z
-    uint gnRenderMode; // c0.w (패딩 없음)
+    float gfCurrentTime; 
+    float gfElapsedTime; 
 
-    // 16바이트
-    float gfSecondsPerFirework; // c1.x
-    int gnFlareParticlesToEmit; // c1.y
-    int gnMaxFlareType2Particles; // c1.z
-    float padding1; // c1.w (패딩 추가)
+    float gfSecondsPerFirework; 
+    int gnFlareParticlesToEmit; 
+    int gnMaxFlareType2Particles; 
+    float3 gf3Gravity; 
 
-    // 16바이트
-    float3 gf3Gravity; // c2.x, c2.y, c2.z
-    float padding2; // c2.w (float3의 패딩)
 };
 
 cbuffer cbGameObjectInfo : register(b1)

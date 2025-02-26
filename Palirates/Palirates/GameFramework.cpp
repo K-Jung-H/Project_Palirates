@@ -435,7 +435,7 @@ void CGameFramework::UpdateShaderVariables()
 	MappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
 
 
-	MappedFrameworkInfo->m_fSecondsPerFirework = 0.4f;
+	MappedFrameworkInfo->m_fSecondsPerFirework = 1.0f;
 	MappedFrameworkInfo->m_nFlareParticlesToEmit = 100;
 	MappedFrameworkInfo->m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
 	MappedFrameworkInfo->m_nMaxFlareType2Particles = 15 * 1.5f;

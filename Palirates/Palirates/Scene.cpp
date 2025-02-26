@@ -734,6 +734,9 @@ void CScene::Pre_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 	UpdateShaderVariables(pd3dCommandList);
 
 	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+
+
+
 }
 
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -753,6 +756,8 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 #ifdef RENDER_PARTICLE
 	particle_manager->Render_All(pd3dCommandList, pCamera, 0);
 	particle_manager->Render_All(pd3dCommandList, pCamera, 1);
+	particle_manager->OnPostRender_All();
+
 #endif
 
 
@@ -767,7 +772,6 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 void CScene::Post_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 #ifdef RENDER_PARTICLE
-	particle_manager->OnPostRender_All();
 #endif
 }
 
