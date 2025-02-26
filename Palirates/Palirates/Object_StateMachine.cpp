@@ -2,6 +2,32 @@
 #include "Object_StateMachine.h"
 #include "Player.h"
 
+std::map<State, std::wstring> stateToStringMap = {
+    {State::Idle, L"Idle"},
+    {State::Run, L"Run"},
+    {State::Knock_Down, L"Knock Down"},
+    {State::Get_Up, L"Get Up"},
+    {State::Dive, L"Dive"},
+    {State::Jump, L"Jump"},
+    {State::Attack_Normal, L"Attack Normal"},
+    {State::ETC, L"ETC"}
+};
+
+struct Direction {
+    float x, z;
+    AnimationTrack track;
+};
+
+Direction directions[8] = {
+    { -0.707f,  0.707f, TRACK_RUN_FORWARD_LEFT },  // Left-Front
+    {  0.000f,  1.000f, TRACK_RUN_FORWARD },       // Front
+    {  0.707f,  0.707f, TRACK_RUN_FORWARD_RIGHT }, // Right-Front
+    { -0.707f, -0.707f, TRACK_RUN_BACKWARD_LEFT }, // Left-Back
+    {  0.000f, -1.000f, TRACK_RUN_BACKWARD },      // Back
+    {  0.707f, -0.707f, TRACK_RUN_BACKWARD_RIGHT },// Right-Back
+    { -1.000f,  0.000f, TRACK_RUN_LEFT },          // Left
+    {  1.000f,  0.000f, TRACK_RUN_RIGHT }          // Right
+};
 
 void Key_State::update(Key_Value key_state)
 {
@@ -52,12 +78,12 @@ void Key_State::update(Key_Value key_state)
 
 bool Key_State::check_move()
 {
-    // ¼­·Î ¹İ´ëµÇ´Â Å°¸¦ ´©¸¥ °æ¿ì´Â ¿òÁ÷ÀÓ Ãë±Ş x
+    // ì„œë¡œ ë°˜ëŒ€ë˜ëŠ” í‚¤ë¥¼ ëˆ„ë¥¸ ê²½ìš°ëŠ” ì›€ì§ì„ ì·¨ê¸‰ x
     return (left != right) || (forward != back);
 }
 
 //========================================================
-// »óÅÂ ¸Ó½Å
+// ìƒíƒœ ë¨¸ì‹ 
 
 void StateMachine::start()
 {
@@ -66,7 +92,123 @@ void StateMachine::start()
 
 void StateMachine::update(float Elapsed_time)
 {
-    // ÇöÀç »óÅÂ¿¡ µû¸¥ µ¿ÀÛ or ¾Ö´Ï¸ŞÀÌ¼ÇÀ» ¼öÇà
+    if (!m_pOwner || !m_pOwner->GetSkinnedAnimationController()) return;
+
+    auto* animController = m_pOwner->GetSkinnedAnimationController();
+    int n_Ani = m_pOwner->n_Animation;
+
+    float blendSpeed = 8.0f * Elapsed_time; // ë³´ê°„ ì†ë„ (Elapsed_timeì„ ê³±í•´ ì‹œê°„ ê¸°ë°˜ ë³€í™˜)
+
+    // ìµœì´ˆ ì‹¤í–‰ ì—¬ë¶€ë¥¼ ì²´í¬í•˜ëŠ” í”Œë˜ê·¸
+    static bool isFirstUpdate = true;
+
+    if (isFirstUpdate) {
+        // ìµœì´ˆ ì‹¤í–‰ ì‹œì—ëŠ” ëª¨ë“  ì• ë‹ˆë©”ì´ì…˜ì˜ ê°€ì¤‘ì¹˜ë¥¼ 0ìœ¼ë¡œ ì´ˆê¸°í™”í•˜ê³  idleë§Œ 1ë¡œ ì„¤ì •
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = 0.0f;
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+        animController->SetTrackWeight(TRACK_IDLE, 1.0f);
+    }
+    else {
+        // ì´í›„ë¶€í„°ëŠ” ê¸°ì¡´ íŠ¸ë™ ê°€ì¤‘ì¹˜ ì €ì¥
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+        }
+    }
+
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+    // ëª©í‘œ ê°€ì¤‘ì¹˜ ì´ˆê¸°í™”
+
+    float moveX = m_pOwner->GetMoveX();
+    float moveZ = m_pOwner->GetMoveZ();
+
+    if (key_state.dive && Get_State() != State::Dive) {
+        m_pOwner->SetStateElapsedTime(0.0f);
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+        changeState(State::Dive, Key_Value::None);
+    }
+
+    switch (Get_State()) {
+    case State::Idle:
+        if (moveX == 0.0f && moveZ == 0.0f) {
+            m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+        }
+        else {
+            if (Get_State() != State::Run) {
+                changeState(State::Run, Key_Value::None);
+            }
+        }
+        break;
+
+    case State::Run:
+        if (moveX == 0.0f && moveZ == 0.0f) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        else {
+            // ë°©í–¥ ë²¡í„° ì •ê·œí™”
+            float length = sqrtf(moveX * moveX + moveZ * moveZ);
+            float normX = moveX / length;
+            float normZ = moveZ / length;
+
+            // ê°€ì¥ ê°€ê¹Œìš´ ë°©í–¥ 2ê°œ ì°¾ê¸°
+            int bestIndex = -1, secondIndex = -1;
+            float bestDot = -1.0f, secondDot = -1.0f;
+
+            for (int i = 0; i < 8; i++) {
+                float dot = normX * directions[i].x + normZ * directions[i].z;
+                if (dot > bestDot) {
+                    secondDot = bestDot;
+                    secondIndex = bestIndex;
+                    bestDot = dot;
+                    bestIndex = i;
+                }
+                else if (dot > secondDot) {
+                    secondDot = dot;
+                    secondIndex = i;
+                }
+            }
+
+            // ë‘ ê°œì˜ ë°©í–¥ì„ ë³´ê°„í•˜ì—¬ ëª©í‘œ ê°€ì¤‘ì¹˜ ì„¤ì •
+            float totalDot = bestDot + secondDot;
+            float weight1 = bestDot / totalDot;
+            float weight2 = secondDot / totalDot;
+
+            m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
+            m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
+        }
+        break;
+    case State::Dive:
+        m_pOwner->targetWeights[TRACK_DIVEROLL_FORWARD] = 1.0f;
+        
+    	float fFixedSpeed = 300.0f; 
+
+    	// Dive ìƒíƒœì¼ ë•Œ ë¬´ì¡°ê±´ ì „ë°© ì´ë™
+        m_pOwner->Move(DIR_FORWARD, fFixedSpeed * Elapsed_time, false);
+
+        if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
+            key_state.dive = false;
+            animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
+            animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+            changeState(State::Idle, Key_Value::None);
+        }
+       
+        break;
+    }
+    
+
+    // ê°€ì¤‘ì¹˜ ë¶€ë“œëŸ½ê²Œ ë³€í™˜ (LERP ì ìš©)
+    for (int i = 0; i < n_Ani; i++)
+    {
+        float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
+        animController->SetTrackWeight(i, newWeight);
+    }
+
+    // ì²« ë²ˆì§¸ ì—…ë°ì´íŠ¸ê°€ ëë‚¬ìœ¼ë¯€ë¡œ í”Œë˜ê·¸ í•´ì œ
+    isFirstUpdate = false;
+
+    // í˜„ì¬ ìƒíƒœì— ë”°ë¥¸ ë™ì‘ ìˆ˜í–‰
     doAction(currentState, Elapsed_time);
 }
 
@@ -79,41 +221,45 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
         return;
     }
 
-    std::vector<std::pair<int, Key_Value>> keyMappings = {
-        { VK_UP, Key_Value::Forward_Key_Down },  // ¹æÇâÅ° À§
-        { 0x57, Key_Value::Forward_Key_Down },   // W Å°
-        { VK_DOWN, Key_Value::Back_Key_Down },   // ¹æÇâÅ° ¾Æ·¡
-        { 0x53, Key_Value::Back_Key_Down },      // S Å°
-        { VK_LEFT, Key_Value::Left_Key_Down },   // ¹æÇâÅ° ¿ŞÂÊ
-        { 0x41, Key_Value::Left_Key_Down },      // A Å°
-        { VK_RIGHT, Key_Value::Right_Key_Down },  // ¹æÇâÅ° ¿À¸¥ÂÊ
-        { 0x44, Key_Value::Right_Key_Down },     // D Å°
-        { VK_SPACE, Key_Value::Jump_Key_Down },   // Space Å°
-        { VK_SHIFT, Key_Value::Dive_Key_Down }
+    std::unordered_map<int, std::pair<Key_Value, Key_Value>> keyMappings = {
+    { VK_UP,    { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
+    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  // W í‚¤
+
+    { VK_DOWN,  { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },
+    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  // S í‚¤
+
+    { VK_LEFT,  { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },
+    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },  // A í‚¤
+
+    { VK_RIGHT, { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
+    { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },  // D í‚¤
+
+    { VK_SPACE, { Key_Value::Jump_Key_Down, Key_Value::Jump_Key_Up } },
+    { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } }
     };
 
-    for (const auto& mapping : keyMappings)
+    for (const auto& [key, keyPair] : keyMappings)
     {
-        int key = mapping.first;
-        Key_Value key_value = mapping.second;
-
-        // Å°°¡ ´­·ÈÀ» ¶§
-        if (pKeysBuffer[key] & 0xF0)
-        {
-            key_state.update(key_value);
-        }
-        // Å°°¡ ¶¼¾îÁ³À» ¶§
-        else
-        {
-            key_state.update(static_cast<Key_Value>(static_cast<int>(key_value) + 1));  // _Up »óÅÂ
-        }
+        key_state.update(pKeysBuffer[key] & 0xF0 ? keyPair.first : keyPair.second);
     }
+
+    // ì´ë”°êµ¬ë¡œ í•˜ë©´ ì•ˆë  ë“¯? x z ë³€ìˆ˜ë¡œ ì»¨íŠ¸ë¡¤ í•´ì•¼ë¨
+    /*if (!key_state.forward && !key_state.back && !key_state.left && !key_state.right) {
+        DebugOutput("Change Idle\n");
+        changeState(State::Idle, Key_Value::None);
+    }
+
+    if (key_state.dive)
+    {
+        DebugOutput("Idle->Dive\n");
+        changeState(State::Dive, Key_Value::Dive_Key_Down);
+    }*/
 
     switch (currentState)
     {
-    // ÀÌµı½ÄÀ¸·Î ÇÏ¸é ¾ÈµÊ
+    // ì´ë”´ì‹ìœ¼ë¡œ í•˜ë©´ ì•ˆë¨
     case State::Idle:
-        if (key_state.forward)
+        /*if (key_state.forward)
         {
             DebugOutput("Idle->Run_forward\n");
             changeState(State::Run_Forawrd, Key_Value::Forward_Key_Down);
@@ -133,14 +279,21 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
             DebugOutput("Idle->Run_right\n");
             changeState(State::Run_Right, Key_Value::Right_Key_Down);
         }
-        else if (key_state.dive)
+        else *//*if (key_state.dive)
         {
             DebugOutput("Idle->Dive\n");
             changeState(State::Dive, Key_Value::Dive_Key_Down);
-        }
+        }*/
         break;
 
-    case State::Run_Forawrd:
+    case State::Run:
+       /* if (!key_state.forward)
+        {
+            DebugOutput("Run_forward->Idle\n");
+            changeState(State::Idle, Key_Value::Forward_Key_Up);
+        }*/
+        break;
+   /* case State::Run_Forawrd:
         if (!key_state.forward)
         {
             DebugOutput("Run_forward->Idle\n");
@@ -170,14 +323,13 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
             DebugOutput("Run_right->Idle\n");
             changeState(State::Idle, Key_Value::Right_Key_Up);
         }
-        break;
-
+        break;*/
     case State::Jump:
-        // Á¡ÇÁ »óÅÂ¿¡¼­ Å° ÀÔ·Â Ã³¸®
+        // ì í”„ ìƒíƒœì—ì„œ í‚¤ ì…ë ¥ ì²˜ë¦¬
         break;
 
     case State::Attack_Normal:
-        // °ø°İ »óÅÂ¿¡¼­ Å° ÀÔ·Â Ã³¸®
+        // ê³µê²© ìƒíƒœì—ì„œ í‚¤ ì…ë ¥ ì²˜ë¦¬
         break;
 
     default:
@@ -201,13 +353,11 @@ void StateMachine::enterState(State state, Key_Value key_event)
 
     int n_Ani = m_pOwner->n_Animation;
 
-    m_pOwner->SetStateElapsedTime(0.0f);
-
-    for (int i = 0; i < n_Ani; ++i) {
+    /*for (int i = 0; i < n_Ani; ++i) {
          animController->SetTrackEnable(i, false);
-     }
-     animController->SetTrackEnable(GetStateKey(Get_State()), true);
-     animController->SetTrackEnable(GetStateKey(Get_LastState()), true);
+     }*/
+     /*animController->SetTrackEnable(GetStateKey(Get_State()), true);
+     animController->SetTrackEnable(GetStateKey(Get_LastState()), true);*/
 
     switch (state)
     {
@@ -283,6 +433,13 @@ void StateMachine::enterState(State state, Key_Value key_event)
         }
         animController->SetTrackEnable(TRACK_DIVEROLL_FORWARD, true);*/
         break;
+    case State::Dive:
+        /*animController->SetTrackEnable(TRACK_IDLE, true);
+        for (int i = 1; i < n_Ani; ++i) {
+            animController->SetTrackEnable(i, false);
+        }
+        animController->SetTrackEnable(TRACK_DIVEROLL_FORWARD, true);*/
+        break;
     case State::Jump:
         break;
     case State::Attack_Normal:
@@ -319,6 +476,10 @@ void StateMachine::exitState(State state, Key_Value key_event)
         key_state.dive = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
+        DebugOutput("Dive->Idle\n");
+        break;
+    case State::Dive:
+       
         DebugOutput("Dive->Idle\n");
         break;
     case State::Jump:

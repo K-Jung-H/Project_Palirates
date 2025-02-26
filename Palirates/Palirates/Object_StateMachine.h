@@ -1,4 +1,8 @@
 #pragma once
+//#include <map>
+//#include <string>
+
+//#include "Player.h"
 
 //#include "Player.h"
 
@@ -32,10 +36,10 @@ struct Key_State
 	// true == Key_Down
 	// false == Key_Up
 
-	bool forward; // w ¶Ç´Â ¹æÇâÅ°
-	bool back; // s ¶Ç´Â ¹æÇâÅ°
-	bool left; // a ¶Ç´Â ¹æÇâÅ°
-	bool right; // d ¶Ç´Â ¹æÇâÅ°
+	bool forward; // w ë˜ëŠ” ë°©í–¥í‚¤
+	bool back; // s ë˜ëŠ” ë°©í–¥í‚¤
+	bool left; // a ë˜ëŠ” ë°©í–¥í‚¤
+	bool right; // d ë˜ëŠ” ë°©í–¥í‚¤
 	bool dive{ false }; // shift
 
 	Key_State()
@@ -53,10 +57,7 @@ struct Key_State
 enum class State
 {
 	Idle,
-	Run_Forawrd,
-	Run_Backawrd,
-	Run_Left,
-	Run_Right,
+	Run,
 	Knock_Down,
 	Get_Up,
 	Dive,
@@ -65,22 +66,26 @@ enum class State
 	ETC
 };
 
-
+extern std::map<State, std::wstring> stateToStringMap;
 
 class CPlayer;
 class StateMachine
 {
 protected:
-	State lastState = State::Idle; // ÀÌÀü »óÅÂ
-	State currentState = State::Idle; // ÇöÀç »óÅÂ
+	State lastState = State::Idle; // ì´ì „ ìƒíƒœ
+	State currentState = State::Idle; // í˜„ì¬ ìƒíƒœ
 
 	Key_State key_state;
 	XMFLOAT3 pos{ 0.0f, 0.0f, 0.0f };
 
+
+	bool canMove{ true };
+	bool moveEnabled{ false };
+
 public:
 	bool is_protected = false;
 
-	StateMachine() : m_pOwner(nullptr), currentState(State::Idle) {}  // ±âº» »ı¼ºÀÚ Ãß°¡
+	StateMachine() : m_pOwner(nullptr), currentState(State::Idle) {}  // ê¸°ë³¸ ìƒì„±ì ì¶”ê°€
 
 	StateMachine(CPlayer* owner)
 		: m_pOwner(owner), currentState(State::Idle) {
@@ -101,13 +106,16 @@ public:
 		return static_cast<int>(state);
 	}
 
+	void SetCaMove(bool b) { canMove = b; }
+	void SetMoveEnabled(bool b) { moveEnabled = b; }
+
 private:
 
 	void enterState(State state, Key_Value key_event);
 
 	void exitState(State state, Key_Value key_event);
 
-	// ÀÌ°É·Î ¾Ö´Ï¸ŞÀÌ¼Ç Ã³¸®
+	// ì´ê±¸ë¡œ ì• ë‹ˆë©”ì´ì…˜ ì²˜ë¦¬
 	virtual void doAction(State state, float Elapsed_time) {};
 
 	CPlayer* m_pOwner;

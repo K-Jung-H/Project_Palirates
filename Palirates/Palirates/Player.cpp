@@ -165,6 +165,18 @@ void CPlayer::Update(float fTimeElapsed)
 		m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
 	}
 
+	XMFLOAT3 look = GetLook();   
+	XMFLOAT3 right = GetRight();
+
+	// 5. XZ ì†ë„ë¥¼ ì •ê·œí™” (í¬ê¸°ë¥¼ 1ë¡œ)
+	XMFLOAT3 velocityXZ = XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z);
+	float velocityLength = Vector3::Length(velocityXZ);
+	XMFLOAT3 normalizedVelocity = velocityLength > 0.0f ? Vector3::Normalize(velocityXZ) : XMFLOAT3(0, 0, 0);
+
+	// 6. Look ë° Right ë²¡í„°ë¥¼ ê¸°ì¤€ìœ¼ë¡œ moveZ, moveX ê°’ ê³„ì‚° (-1 ~ 1 ë²”ìœ„)
+	moveZ = Vector3::DotProduct(normalizedVelocity, look);  // ì „í›„ ì›€ì§ìž„
+	moveX = Vector3::DotProduct(normalizedVelocity, right); // ì¢Œìš° ì›€ì§ìž„
+
 	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
 
 	if (fLength > m_fMaxVelocityY) 
@@ -283,21 +295,27 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters.bin", NULL);
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test.bin", NULL);
-	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test_ani8.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test_ani8.bin", NULL);
+	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
 	Set_Child(pAngrybotModel->m_pModelRootObject);
 
-	n_Animation = 8;
+	n_Animation = 12;
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
 	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
-	//m_pSkinnedAnimationController->SetTrackWeight(0, 0.5f);
+	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 	}
-	m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, true);
+	/*m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, true);
 	m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, false);
 	for (int i = 2; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackEnable(i, false);
+	}*/
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
 
 	// Once type Setting
@@ -449,18 +467,18 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 		//sprintf_s(debugMsg, "Current Speed: %.2f\n", fSpeed);  
 		//OutputDebugStringA(debugMsg);  
 
-		//const float maxSpeed = 100.0f; // ÃÖ´ë ¼Óµµ 
-		//const float minSpeed = 0.0f;  // ÃÖ¼Ò ¼Óµµ 
+		//const float maxSpeed = 100.0f; // ìµœëŒ€ ì†ë„ 
+		//const float minSpeed = 0.0f;  // ìµœì†Œ ì†ë„ 
 
-		//// ¼Óµµ ºñÀ²À» 0°ú 1 »çÀÌ·Î Á¤±ÔÈ­
+		//// ì†ë„ ë¹„ìœ¨ì„ 0ê³¼ 1 ì‚¬ì´ë¡œ ì •ê·œí™”
 		//float speedRatio = (fSpeed - minSpeed) / (maxSpeed - minSpeed);
 		//speedRatio = max(0.0f, min(speedRatio, 1.0f)); 
 
-		//float weight0 = 1.0f - speedRatio; // idle °¡ÁßÄ¡
-		//float weight1 = speedRatio;        // ´Þ¸®±â °¡ÁßÄ¡
+		//float weight0 = 1.0f - speedRatio; // idle ê°€ì¤‘ì¹˜
+		//float weight1 = speedRatio;        // ë‹¬ë¦¬ê¸° ê°€ì¤‘ì¹˜
 
 		//m_pSkinnedAnimationController->SetTrackWeight(0, weight0); // idle
-		//m_pSkinnedAnimationController->SetTrackWeight(1, weight1); // ´Þ¸®±â
+		//m_pSkinnedAnimationController->SetTrackWeight(1, weight1); // ë‹¬ë¦¬ê¸°
 
 		//m_pSkinnedAnimationController->SetTrackEnable(0, true);
 		//m_pSkinnedAnimationController->SetTrackEnable(1, true);
@@ -512,15 +530,15 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 
 		if (Anime_test_FallingLoop) {
 			if (m_fFallingTimer < 0.0f) {
-				// Falling Å¸ÀÌ¸Ó °»½Å
+				// Falling íƒ€ì´ë¨¸ ê°±ì‹ 
 				m_fFallingTimer += fTimeElapsed;
 
-				// Æ®·¢ 0ÀÇ °¡ÁßÄ¡¸¦ 1.0¿¡¼­ 0.0À¸·Î ÁÙÀÓ
-				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); // 0ÃÊÀÏ ¶§ 1.0, 2ÃÊÀÏ ¶§ 0.0
+				// íŠ¸ëž™ 0ì˜ ê°€ì¤‘ì¹˜ë¥¼ 1.0ì—ì„œ 0.0ìœ¼ë¡œ ì¤„ìž„
+				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); // 0ì´ˆì¼ ë•Œ 1.0, 2ì´ˆì¼ ë•Œ 0.0
 				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
 
-				// Æ®·¢ 2ÀÇ °¡ÁßÄ¡¸¦ 0.0¿¡¼­ 1.0À¸·Î ´Ã¸²
-				float weight2 = m_fFallingTimer / 1.0f; // 0ÃÊÀÏ ¶§ 0.0, 2ÃÊÀÏ ¶§ 1.0
+				// íŠ¸ëž™ 2ì˜ ê°€ì¤‘ì¹˜ë¥¼ 0.0ì—ì„œ 1.0ìœ¼ë¡œ ëŠ˜ë¦¼
+				float weight2 = m_fFallingTimer / 1.0f; // 0ì´ˆì¼ ë•Œ 0.0, 2ì´ˆì¼ ë•Œ 1.0
 				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight2);
 
 				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
@@ -549,30 +567,30 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 		else {
 			//float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
 
-			//const float maxSpeed = 100.0f; // ÃÖ´ë ¼Óµµ 
-			//const float minSpeed = 0.0f;  // ÃÖ¼Ò ¼Óµµ 
+			//const float maxSpeed = 100.0f; // ìµœëŒ€ ì†ë„ 
+			//const float minSpeed = 0.0f;  // ìµœì†Œ ì†ë„ 
 
-			//// ¼Óµµ ºñÀ²À» 0°ú 1 »çÀÌ·Î Á¤±ÔÈ­
+			//// ì†ë„ ë¹„ìœ¨ì„ 0ê³¼ 1 ì‚¬ì´ë¡œ ì •ê·œí™”
 			//float speedRatio = (fLength - minSpeed) / (maxSpeed - minSpeed);
 			//speedRatio = max(0.0f, min(speedRatio, 1.0f));
 
-			//float weight0 = 1.0f - speedRatio; // idle °¡ÁßÄ¡
-			//float weight1 = speedRatio;        // ´Þ¸®±â °¡ÁßÄ¡
+			//float weight0 = 1.0f - speedRatio; // idle ê°€ì¤‘ì¹˜
+			//float weight1 = speedRatio;        // ë‹¬ë¦¬ê¸° ê°€ì¤‘ì¹˜
 
-			// ºí·»µù ½Ã°£ ¼³Á¤ (ÃÊ ´ÜÀ§)
-			const float blendDuration = 0.2f;
+			// ë¸”ë Œë”© ì‹œê°„ ì„¤ì • (ì´ˆ ë‹¨ìœ„)
+			//const float blendDuration = 0.2f;
 
-			// ÇöÀç »óÅÂ Áö¼Ó ½Ã°£ (¾Ö´Ï¸ÞÀÌ¼Ç »óÅÂ°¡ ¹Ù²î¸é 0À¸·Î ÃÊ±âÈ­)
-			stateElapsedTime += fTimeElapsed;
+			//// í˜„ìž¬ ìƒíƒœ ì§€ì† ì‹œê°„ (ì• ë‹ˆë©”ì´ì…˜ ìƒíƒœê°€ ë°”ë€Œë©´ 0ìœ¼ë¡œ ì´ˆê¸°í™”)
+			//stateElapsedTime += fTimeElapsed;
 
-			// ºí·»µù ºñÀ² °è»ê (0 ~ 1 »çÀÌ °ª)
-			float blendRatio = min(1.0f, stateElapsedTime / blendDuration);
+			//// ë¸”ë Œë”© ë¹„ìœ¨ ê³„ì‚° (0 ~ 1 ì‚¬ì´ ê°’)
+			//float blendRatio = min(1.0f, stateElapsedTime / blendDuration);
 
-			float weight1 = 1.0f - blendRatio; // Idle °¡ÁßÄ¡
-			float weight0 = blendRatio;        // ´Þ¸®±â °¡ÁßÄ¡
+			//float weight1 = 1.0f - blendRatio; 
+			//float weight0 = blendRatio;        
 
-			m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
-			m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_State()), weight0);
+			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
+			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_State()), weight0);
 
 			//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, weight1); 
 			//
@@ -594,7 +612,7 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 			//	
 			//	float fFixedSpeed = 300.0f; 
 
-			//	// Dive »óÅÂÀÏ ¶§ ¹«Á¶°Ç Àü¹æ ÀÌµ¿
+			//	// Dive ìƒíƒœì¼ ë•Œ ë¬´ì¡°ê±´ ì „ë°© ì´ë™
 			//	Move(DIR_FORWARD, fFixedSpeed * fTimeElapsed, false);
 
 			//	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 0.0f);
