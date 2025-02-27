@@ -529,7 +529,12 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 
 	// Draw buffer에 대해 UAV 뷰를 설정하고, Compute Shader 실행
 	pd3dCommandList->SetComputeRootUnorderedAccessView(1, particle_mesh->CS_UAV_Buffer->GetGPUVirtualAddress());
-	pd3dCommandList->Dispatch(1, 1, 1);
+
+	int cs_threadGroup_Size = 256;
+	int dispatch_Size = (Get_Particle_Num() + cs_threadGroup_Size - 1) / cs_threadGroup_Size;
+
+
+	pd3dCommandList->Dispatch(dispatch_Size, 1, 1);
 
 	// UAV 버퍼를 COPY_SOURCE 상태로 전환하고, Draw buffer를 COPY_DEST 상태로 전환
 	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);

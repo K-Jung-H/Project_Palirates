@@ -451,9 +451,9 @@ void CGameFramework::UpdateShaderVariables()
 
 
 	MappedFrameworkInfo->m_fSecondsPerFirework = 1.0f;
-	MappedFrameworkInfo->m_nFlareParticlesToEmit = 100;
+	MappedFrameworkInfo->m_nFlareParticlesToEmit = 10;
 	MappedFrameworkInfo->m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
-	MappedFrameworkInfo->m_nMaxFlareType2Particles = 15 * 1.5f;
+	MappedFrameworkInfo->m_nMaxFlareType2Particles = 10;
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = FrameworkInfo->GetGPUVirtualAddress();
 	Active_CommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAME_CBV_INDEX, d3dGpuVirtualAddress);

@@ -122,7 +122,7 @@ void GenerateEmberParticles(VS_PARTICLE_INPUT input, inout PointStream<VS_PARTIC
         particle.type = PARTICLE_TYPE_FLARE03;
         particle.lifetime = FLARE03_PARTICLE_LIFETIME;
         
-        for (int i = 0; i < 128; i++)
+        for (int i = 0; i < 100; i++)
         {
             float4 f4Random = RandomDirectionOnSphere(input.type + i);
             particle.velocity = input.velocity + (f4Random.xyz * 25.0f);
