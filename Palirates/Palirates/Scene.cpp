@@ -882,15 +882,15 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
-	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Havana.bin", NULL);
+	//CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Havana.bin", NULL);
 
-	testModel->m_pModelRootObject->Add_Collider(10.0f);
+	//testModel->m_pModelRootObject->Add_Collider(10.0f);
 
 	//=====================================================
-	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
-	test_OBJ->Set_Child(testModel->m_pModelRootObject);
+	//std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
+	//test_OBJ->Set_Child(testModel->m_pModelRootObject);
 
-	float scale_value = 10.0f;
+	/*float scale_value = 10.0f;
 	XMFLOAT3 scale_vector = { scale_value ,scale_value ,scale_value };
 	float pos_x = 200.0f;
 	float pos_z = 100.0f;
@@ -899,10 +899,10 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	test_OBJ->SetScale(scale_vector, true);
 	test_OBJ->SetPosition(pos_x, pos_y+ 500.0f, pos_z);
 
-	test_OBJ->UpdateTransform(NULL);
+	test_OBJ->UpdateTransform(NULL);*/
 
 	//=====================================================
-	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
+	//obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
 
 
 	Object_Manager::Reserve_Update();
