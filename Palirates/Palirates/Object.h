@@ -20,12 +20,13 @@ class CStandardShader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-#define RESOURCE_TEXTURE2D			0x01
-#define RESOURCE_TEXTURE2D_ARRAY	0x02	//[]
-#define RESOURCE_TEXTURE2DARRAY		0x03
-#define RESOURCE_TEXTURE_CUBE		0x04
-#define RESOURCE_BUFFER				0x05
-
+#define RESOURCE_TEXTURE1D			0x01
+#define RESOURCE_TEXTURE2D			0x02
+#define RESOURCE_TEXTURE2D_ARRAY	0x03	//[]
+#define RESOURCE_TEXTURE2DARRAY		0x04
+#define RESOURCE_TEXTURE_CUBE		0x05
+#define RESOURCE_BUFFER				0x06
+#define RESOURCE_STRUCTURED_BUFFER 0x07
 class CTexture
 {
 public:
@@ -38,15 +39,17 @@ private:
 	char m_pstrTextureName[64] = { 0 };
 
 	UINT							m_nTextureType;
+	UINT* m_pnResourceTypes = NULL;
 
 	int								m_nTextures = 0;
 	ID3D12Resource** m_ppd3dTextures = NULL;
 	ID3D12Resource** m_ppd3dTextureUploadBuffers;
 
-	UINT* m_pnResourceTypes = NULL;
 
 	DXGI_FORMAT* m_pdxgiBufferFormats = NULL;
 	int* m_pnBufferElements = NULL;
+	int* m_pnBufferStrides = NULL;
+
 
 	int								m_nRootParameters = 0;
 	UINT* m_pnRootParameterIndices = NULL;
@@ -67,6 +70,8 @@ public:
 
 	void LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex);
 	void LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, UINT nIndex);
+	void CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
+
 	ID3D12Resource* CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
 
 	void SetRootParameterIndex(int nIndex, UINT nRootParameterIndex);
@@ -102,17 +107,11 @@ class CMaterial
 {
 public:
 	CMaterial(int nTextures);
+	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
-
-private:
-	int								m_nReferences = 0;
-
 public:
-	void AddRef() { m_nReferences++; }
-	void Release() { if (--m_nReferences <= 0) delete this; }
-
-public:
-	CShader							*m_pShader = NULL;
+	// static 자료형이 연결되어야 하므로, shared_ptr 사용 불가
+	CShader* m_pShader = NULL;
 
 	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -155,6 +154,7 @@ public:
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
 struct CALLBACKKEY
 {
    float  							m_fTime = 0.0f;
@@ -239,8 +239,6 @@ public:
 	std::vector<int> m_vecLowerBodyBoneIndices;  // 하체
 
 	int								m_nBoneFrames = 0; 
-//	std::shared_ptr<CGameObject>						*m_ppBoneFrameCaches = NULL; //[m_nBoneFrames]
-//	std::vector<std::shared_ptr<CGameObject>> m_ppBoneFrameCaches;
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
 	void ClassifyBones();
@@ -354,6 +352,7 @@ public:
 
 //==================================================================================
 
+class CHeightMapTerrain;
 
 class CGameObject
 {
@@ -371,8 +370,7 @@ public:
 	CMesh* m_pMesh = NULL;
 	CAnimationController* m_pSkinnedAnimationController = NULL;
 
-	int								m_nMaterials = 0;
-	CMaterial** m_ppMaterials = NULL;
+	std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
 	XMFLOAT4X4				m_xmf4x4Parent{};
 	XMFLOAT4X4				m_xmf4x4World{};
@@ -384,7 +382,12 @@ public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");
 
+	CGameObject(const CGameObject& other);
+	CGameObject& operator=(const CGameObject& other);
+
     virtual ~CGameObject();
+
+
 
 	std::shared_ptr<CGameObject> Get_Child();
 	std::shared_ptr<CGameObject> Get_Sibling();
@@ -407,6 +410,7 @@ public:
 	virtual void OnPrepareAnimate() { }
 	virtual void Animate(float fTimeElapsed);
 
+	virtual bool IsVisible(CCamera* pCamera);
 	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
@@ -427,12 +431,18 @@ public:
 	XMFLOAT3 GetRight();
 
 	XMFLOAT3 GetToParentPosition();
+	XMFLOAT3 Get_World_Position();
+	XMFLOAT3 Get_Root_Obj_Displacement();
+
 	void Move(XMFLOAT3 xmf3Offset);
+
+	void Modify_World_Position(XMFLOAT3 newPosition);
+	void Modify_World_Up_Vector(XMFLOAT3 newUpvector);
 
 	virtual void SetPosition(float x, float y, float z);
 	virtual void SetPosition(XMFLOAT3 xmf3Position);
-	void SetScale(float x, float y, float z);
-
+	void SetScale(float x, float y, float z, bool keep_pos = false);
+	void SetScale(XMFLOAT3 scale, bool keepPosition = false);
 	void MoveStrafe(float fDistance = 1.0f);
 	void MoveUp(float fDistance = 1.0f);
 	void MoveForward(float fDistance = 1.0f);
@@ -469,16 +479,25 @@ public:
 
 	static void LoadAnimationFromFile(FILE *pInFile, CLoadedModelInfo *pLoadedModel);
 	static CGameObject *LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes);
-
 	static CLoadedModelInfo *LoadGeometryAndAnimationFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, char *pstrFileName,  CShader *pShader);
 
+	static CGameObject* Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader);
+	static CLoadedModelInfo* Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
+
 	static void PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent);
+	
+	virtual std::string  Get_Mesh_Name();
 
-	virtual int Get_Tile(float x, float z) { return -1; };
 
-	virtual BoundingOrientedBox* Get_Collider();
+	virtual BoundingOrientedBox* Get_Collider();	
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
+
+	public:
+	// Using CHeightMapTerrain
+	virtual int Get_Tile(float x, float z) { return -1; };
+	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
+	virtual void Check_Culling(CCamera* pCamera) {};
 };
 
 //==================================================================================
@@ -513,6 +532,8 @@ public:
 
 	void Set_Tile(int n);
 
+	float Get_Height(float x, float z, bool bReverseQuad = false);
+	float Get_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
 	float Get_Mesh_Height(float x, float z, bool bReverseQuad = false);
 	float Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
 
@@ -522,6 +543,8 @@ public:
 	int Get_Tile(float x, float z);
 	int Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr);
 
+	int Get_TileNum() { return tile_number; }
+	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list);
 	virtual BoundingOrientedBox* Get_Collider();
 
 
@@ -532,8 +555,11 @@ public:
 	float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
 	float GetLength() { return(m_nLength * m_xmf3Scale.z); }
 
+	void Check_Culling(CCamera* pCamera);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
+	void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);
+	void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
 };
 
 

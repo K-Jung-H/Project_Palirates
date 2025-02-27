@@ -86,39 +86,60 @@ extern HINSTANCE						ghAppInstance;
 #define ANIMATION_TYPE_LOOP				1
 #define ANIMATION_TYPE_PINGPONG			2
 
-
-#define PARAMETER_CAMERA_CBV 0
-#define PARAMETER_SKYBOX_TEXTURE 10
-#define PARAMETER_TERRAIN_BASE_TEXTURE 11
-#define PARAMETER_TERRAIN_DETAIL_TEXTURE 12
-#define PARAMETER_BONE_OFFSET 13
-#define PARAMETER_BONE_TRANSFORM 14
-#define PARAMETER_OOBB_CUBE_CBV 15
-
-
 #define ANIMATION_CALLBACK_EPSILON		0.00165f
+
+//=====================================
+#define ROOT_PARAMETER_FRAME_CBV_INDEX 0 
+#define ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX 1
+#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 2
+#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 3
+#define ROOT_PARAMETER_CAMERA_CBV_INDEX 4
+#define ROOT_PARAMETER_LIGHT_CBV_INDEX 5
+//=====================================
+#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 6
+#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 7
+#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 8
+#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 10
+
+#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 11
+#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 12
+#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
+#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 14
+//=====================================
+//#define ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX 11
+//#define ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX 12
+#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 14
+#define PARAMETER_TEST 3
+
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
 
+#define _WITH_DEBUG_FRAME_HIERARCHY
 
 #define STR_LENGTH 64
 
+
 #define WRITE_TEXT_UI
 #define RENDER_OBB
+#define LOAD_SCENE
+#define RENDER_PARTICLE
+
 
 #define DEBUG_MESSAGE
-#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
-#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
-#define DEBUG_MESSAGE_TILE_MAP
+//#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
+//#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
+//#define DEBUG_MESSAGE_TILE_MAP
 
-//=============================================
+//=====================================
 
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
+extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);
 extern void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 extern void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 

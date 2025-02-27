@@ -3,8 +3,9 @@
 //-----------------------------------------------------------------------------
 
 #pragma once
-#include "UILayer.h"
+#include "UI_Manager.h"
 #include "Object_Manager.h"
+#include "Particle_Manager.h"
 #include "Shader.h"
 #include "Player.h"
 
@@ -13,6 +14,8 @@
 #define POINT_LIGHT						1
 #define SPOT_LIGHT						2
 #define DIRECTIONAL_LIGHT				3
+
+class Particle_Manager;
 
 struct LIGHT
 {
@@ -52,18 +55,22 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	void BuildDefaultLightsAndMaterials();
-	void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void ReleaseObjects();
 
 	ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
-    void AnimateObjects(float fTimeElapsed);
+	void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 
+	
 	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	void Pre_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+	void Post_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	void ReleaseUploadBuffers();
 
@@ -102,22 +109,16 @@ public:
 
 	float								m_fElapsedTime = 0.0f;
 
-#ifdef WRITE_TEXT_UI
-	Text_UI_Manager* text_ui_manager = NULL;
-	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);
-	std::vector<TextBlock*>* Get_Text_List();
-	void Update_UI();
-#endif
 
+	Particle_Manager* particle_manager = NULL;
 	Object_Manager* obj_manager = NULL;
 
-	XMFLOAT3							m_xmf3RotatePosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-	int									m_nShaders = 0;
-	CShader								**m_ppShaders = NULL;
+	std::vector<std::shared_ptr<CShader>> Shader_list;
 
 	CSkyBox								*m_pSkyBox = NULL;
-	CHeightMapTerrain					*m_pTerrain = NULL;
+	std::shared_ptr<CHeightMapTerrain> m_pTerrain;
+
 
 	LIGHT								*m_pLights = NULL;
 	int									m_nLights = 0;
@@ -128,5 +129,16 @@ public:
 	LIGHTS								*m_pcbMappedLights = NULL;
 
 	bool test_button = false;
+
+#ifdef WRITE_TEXT_UI
+	Text_UI_Manager* text_ui_manager = NULL;
+	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);
+	std::vector<TextBlock*>* Get_Text_List();
+	void Update_UI();
+#endif
 };
 
+class Test_Scene : public CScene
+{
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+};
