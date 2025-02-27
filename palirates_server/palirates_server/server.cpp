@@ -6,15 +6,90 @@
 #include <ws2tcpip.h>
 #include "LobbyManager.h"
 #include "Player.h"
+#include "Monster.h"
+#include "server.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
 const int PORT = 9000;
 const int BUFFER_SIZE = 1024;
 
-extern std::unordered_map<int, SOCKET> clients;
-extern std::mutex dataMutex;
-extern LobbyManager lobbyManager; 
+std::unordered_map<int, SOCKET> clients;
+std::mutex dataMutex;
+LobbyManager lobbyManager;
+std::unordered_map<int, Player> players;
+std::unordered_map<int, Monster> monsters;
+
+void HandleClient(SOCKET clientSocket, int clientId)
+{
+    char buffer[BUFFER_SIZE];
+
+    while (true)
+    {
+        int bytesReceived = recv(clientSocket, buffer, BUFFER_SIZE, 0);
+        if (bytesReceived > 0)
+        {
+            buffer[bytesReceived] = '\0';
+            std::string packet(buffer);
+            std::cout << "[서버] 수신 패킷: " << packet << std::endl;
+
+            HandleGamePacket(clientSocket, packet, clientId);
+        }
+        else if (bytesReceived == 0)
+        {
+            std::cout << "[서버] 클라이언트 연결 종료 (ID: " << clientId << ")" << std::endl;
+            closesocket(clientSocket);
+            clients.erase(clientId);
+            break;
+        }
+    }
+}
+
+void HandleGamePacket(SOCKET clientSocket, const std::string& packet, int clientId)
+{
+    if (packet == "JOIN_LOBBY")
+    {
+        std::cout << "[서버] 클라이언트 " << clientId << " 로비 입장" << std::endl;
+        lobbyManager.JoinRoom(clientId, 1);
+    }
+    else if (packet == "READY")
+    {
+        std::cout << "[서버] 클라이언트 " << clientId << " 준비 완료" << std::endl;
+        lobbyManager.StartGame(1);
+    }
+    else if (packet.find("MOVE") != std::string::npos)
+    {
+        float x, y, z;
+        sscanf_s(packet.c_str(), "MOVE,%f,%f,%f", &x, &y, &z);
+
+        players[clientId].update(x, y, z, 1);
+        std::string updatePacket = players[clientId].Serialize();
+
+        for (const auto& [id, socket] : clients)
+        {
+            if (id != clientId)
+            {
+                send(socket, updatePacket.c_str(), updatePacket.size(), 0);
+            }
+        }
+    }
+    else if (packet.find("ATTACK_MONSTER") != std::string::npos)
+    {
+        int monsterId, damage;
+        sscanf_s(packet.c_str(), "ATTACK_MONSTER,%d,%d", &monsterId, &damage);
+
+        if (monsters.find(monsterId) != monsters.end())
+        {
+            monsters[monsterId].hp -= damage;
+            std::string updatePacket = monsters[monsterId].Serialize();
+
+            for (const auto& [id, socket] : clients)
+            {
+                send(socket, updatePacket.c_str(), updatePacket.size(), 0);
+            }
+        }
+    }
+}
 
 int main()
 {
@@ -59,12 +134,27 @@ int main()
 
     std::cout << "[서버] 클라이언트 연결을 기다립니다..." << std::endl;
 
+    int clientId = 1;
+
     while (true)
     {
         sockaddr_in clientAddr;
         int clientSize = sizeof(clientAddr);
         SOCKET clientSocket = accept(serverSocket, (sockaddr*)&clientAddr, &clientSize);
-        std::cout << "[서버] 클라이언트 연결 성공!" << std::endl;
+
+        if (clientSocket == INVALID_SOCKET)
+        {
+            std::cerr << "[서버] 클라이언트 연결 실패!" << std::endl;
+            continue;
+        }
+
+        std::cout << "[서버] 클라이언트 " << clientId << " 연결 성공!" << std::endl;
+        clients[clientId] = clientSocket;
+
+        std::thread clientThread(HandleClient, clientSocket, clientId);
+        clientThread.detach();
+
+        clientId++;
     }
 
     closesocket(serverSocket);
