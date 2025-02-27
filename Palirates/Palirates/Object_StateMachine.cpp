@@ -97,7 +97,9 @@ void StateMachine::update(float Elapsed_time)
     auto* animController = m_pOwner->GetSkinnedAnimationController();
     int n_Ani = m_pOwner->n_Animation;
 
-    float blendSpeed = 8.0f * Elapsed_time; // 보간 속도 (Elapsed_time을 곱해 시간 기반 변환)
+   // float blendSpeed = 8.0f * Elapsed_time; // 보간 속도 (Elapsed_time을 곱해 시간 기반 변환)
+    float blendSpeed = (currentState == State::Dive && nextState == State::Idle) ? 4.0f * Elapsed_time : 8.0f * Elapsed_time;
+
 
     // 최초 실행 여부를 체크하는 플래그
     static bool isFirstUpdate = true;
@@ -125,6 +127,7 @@ void StateMachine::update(float Elapsed_time)
     float moveZ = m_pOwner->GetMoveZ();
 
     if (key_state.dive && Get_State() != State::Dive) {
+        nextState = State::Idle;
         m_pOwner->SetStateElapsedTime(0.0f);
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
         changeState(State::Dive, Key_Value::None);
@@ -191,24 +194,23 @@ void StateMachine::update(float Elapsed_time)
             key_state.dive = false;
             animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
             animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+            m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+            m_pOwner->targetWeights[TRACK_DIVEROLL_FORWARD] = 0.0f;  
             changeState(State::Idle, Key_Value::None);
         }
        
         break;
     }
     
-
-    // 가중치 부드럽게 변환 (LERP 적용)
+    // 가중치 부드럽게 변환 
     for (int i = 0; i < n_Ani; i++)
     {
         float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
     }
 
-    // 첫 번째 업데이트가 끝났으므로 플래그 해제
     isFirstUpdate = false;
 
-    // 현재 상태에 따른 동작 수행
     doAction(currentState, Elapsed_time);
 }
 
@@ -389,49 +391,7 @@ void StateMachine::enterState(State state, Key_Value key_event)
         }*/
         
         break;
-    case State::Run_Forawrd:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-        for (int i = 2; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-
-        ///*for (int i = 0; i < n_Ani; ++i) {
-        //    animController->SetTrackEnable(i, false);
-        //}
-        //animController->SetTrackEnable(GetStateKey(Get_State()), true);
-        //animController->SetTrackEnable(GetStateKey(Get_LastState()), true);*/
-        break;
-    case State::Run_Backawrd:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-        for (int i = 3; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-        break;
-    case State::Run_Left:
-        /*animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_BACKWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_LEFT, true);
-        for (int i = 4; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-        break;
-    case State::Run_Right:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        for (int i = 1; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }
-        animController->SetTrackEnable(TRACK_RUN_RIGHT, true);*/
-        break;
-    case State::Dive:
-        /*animController->SetTrackEnable(TRACK_IDLE, true);
-        for (int i = 1; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }
-        animController->SetTrackEnable(TRACK_DIVEROLL_FORWARD, true);*/
+    case State::Run:
         break;
     case State::Dive:
         /*animController->SetTrackEnable(TRACK_IDLE, true);
@@ -462,24 +422,12 @@ void StateMachine::exitState(State state, Key_Value key_event)
     {
     case State::Idle:
         break;
-    case State::Run_Forawrd:
-       // animController->SetTrackWeight(1, 0.0f);
-        break;
-    case State::Run_Backawrd:
-       // animController->SetTrackWeight(2, 0.0f);
-        break;
-    case State::Run_Left:
-        break;
-    case State::Run_Right:
+    case State::Run:
         break;
     case State::Dive:
         key_state.dive = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
-        DebugOutput("Dive->Idle\n");
-        break;
-    case State::Dive:
-       
         DebugOutput("Dive->Idle\n");
         break;
     case State::Jump:

@@ -1,10 +1,4 @@
 #pragma once
-//#include <map>
-//#include <string>
-
-//#include "Player.h"
-
-//#include "Player.h"
 
 enum class Key_Value
 {
@@ -74,6 +68,7 @@ class StateMachine
 protected:
 	State lastState = State::Idle; // 이전 상태
 	State currentState = State::Idle; // 현재 상태
+	State nextState = State::Idle; // 다음 상태
 
 	Key_State key_state;
 	XMFLOAT3 pos{ 0.0f, 0.0f, 0.0f };
