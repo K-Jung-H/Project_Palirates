@@ -32,7 +32,6 @@ CPlayer::CPlayer()
 	m_pPlayerUpdatedContext = NULL;
 	m_pCameraUpdatedContext = NULL;
 
-	//m_StateMachine = std::make_unique<StateMachine>(this);
 }
 
 CPlayer::~CPlayer()
@@ -168,14 +167,12 @@ void CPlayer::Update(float fTimeElapsed)
 	XMFLOAT3 look = GetLook();   
 	XMFLOAT3 right = GetRight();
 
-	// 5. XZ 瑜 �洹 (ш린瑜 1濡)
 	XMFLOAT3 velocityXZ = XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z);
 	float velocityLength = Vector3::Length(velocityXZ);
 	XMFLOAT3 normalizedVelocity = velocityLength > 0.0f ? Vector3::Normalize(velocityXZ) : XMFLOAT3(0, 0, 0);
 
-	// 6. Look 諛 Right 踰≫곕� 湲곗쇰 moveZ, moveX 媛 怨 (-1 ~ 1 踰)
-	moveZ = Vector3::DotProduct(normalizedVelocity, look);  // � 吏
-	moveX = Vector3::DotProduct(normalizedVelocity, right); // 醫 吏
+	moveZ = Vector3::DotProduct(normalizedVelocity, look);  
+	moveX = Vector3::DotProduct(normalizedVelocity, right); 
 
 	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
 
@@ -461,28 +458,6 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 {
 	if (dwDirection)
 	{
-		//float fSpeed = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-
-		//char debugMsg[256];
-		//sprintf_s(debugMsg, "Current Speed: %.2f\n", fSpeed);  
-		//OutputDebugStringA(debugMsg);  
-
-		//const float maxSpeed = 100.0f; // 理  
-		//const float minSpeed = 0.0f;  // 理  
-
-		////  鍮⑥ 0怨 1 ъ대 �洹
-		//float speedRatio = (fSpeed - minSpeed) / (maxSpeed - minSpeed);
-		//speedRatio = max(0.0f, min(speedRatio, 1.0f)); 
-
-		//float weight0 = 1.0f - speedRatio; // idle 媛以移
-		//float weight1 = speedRatio;        // щ━湲 媛以移
-
-		//m_pSkinnedAnimationController->SetTrackWeight(0, weight0); // idle
-		//m_pSkinnedAnimationController->SetTrackWeight(1, weight1); // щ━湲
-
-		//m_pSkinnedAnimationController->SetTrackEnable(0, true);
-		//m_pSkinnedAnimationController->SetTrackEnable(1, true);
-		//m_pSkinnedAnimationController->SetTrackEnable(2, false);
 	}
 
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
@@ -530,15 +505,14 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 
 		if (Anime_test_FallingLoop) {
 			if (m_fFallingTimer < 0.0f) {
-				// Falling 대㉧ 媛깆
+
 				m_fFallingTimer += fTimeElapsed;
 
-				// 몃 0 媛以移瑜 1.0 0.0쇰 以
-				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); // 0珥  1.0, 2珥  0.0
+				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); 
 				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
 
-				// 몃 2 媛以移瑜 0.0 1.0쇰 由
-				float weight2 = m_fFallingTimer / 1.0f; // 0珥  0.0, 2珥  1.0
+	
+				float weight2 = m_fFallingTimer / 1.0f; 
 				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight2);
 
 				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
@@ -546,10 +520,6 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
 			}
 			else {
-				/*if (m_pSkinnedAnimationController->m_pAnimationTracks[1].m_fWeight != 1.0f)
-					m_pSkinnedAnimationController->SetTrackWeight(1, 1.0f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[2].m_fWeight != 1.0f)
-					m_pSkinnedAnimationController->SetTrackWeight(2, 1.0f);*/
 
 				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_fWeight != 0.5f)
 					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, 0.5f);
@@ -560,72 +530,11 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
 				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
 
-				//m_pSkinnedAnimationController->Bone_Info();
-
+				
 			}
-			//m_pSkinnedAnimationController->SetTrackPosition(1, 0.0f);
 		}
 		else {
-			//float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-
-			//const float maxSpeed = 100.0f; // 理  
-			//const float minSpeed = 0.0f;  // 理  
-
-			////  鍮⑥ 0怨 1 ъ대 �洹
-			//float speedRatio = (fLength - minSpeed) / (maxSpeed - minSpeed);
-			//speedRatio = max(0.0f, min(speedRatio, 1.0f));
-
-			//float weight0 = 1.0f - speedRatio; // idle 媛以移
-			//float weight1 = speedRatio;        // щ━湲 媛以移
-
-			// 釉� 媛 ㅼ (珥 ⑥)
-			//const float blendDuration = 0.2f;
-
-			////   吏 媛 (硫댁 媛 諛硫 0쇰 珥湲고)
-			//stateElapsedTime += fTimeElapsed;
-
-			//// 釉� 鍮 怨 (0 ~ 1 ъ 媛)
-			//float blendRatio = min(1.0f, stateElapsedTime / blendDuration);
-
-			//float weight1 = 1.0f - blendRatio; 
-			//float weight0 = blendRatio;        
-
-			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
-			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_State()), weight0);
-
-			//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, weight1); 
-			//
-			//if (GetStateMachine()->Get_State() == State::Idle) {
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, weight0);
-			//	if (GetStateMachine()->Get_LastState() != State::Idle)
-			//	m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
-			//}
-			//else if (GetStateMachine()->Get_State() == State::Run_Forawrd)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Run_Backawrd)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Run_Left)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_LEFT, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Run_Right)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_RIGHT, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Dive) {
-			//	
-			//	
-			//	float fFixedSpeed = 300.0f; 
-
-			//	// Dive   臾댁“嫄 �諛 대
-			//	Move(DIR_FORWARD, fFixedSpeed * fTimeElapsed, false);
-
-			//	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 0.0f);
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_DIVEROLL_FORWARD, weight0);
-
-			//	if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
-			//		GetStateMachine()->changeState(State::Idle, Key_Value::None);
-			//	}
-			//	}
-			/*m_pSkinnedAnimationController->SetTrackEnable(0, true);
-			m_pSkinnedAnimationController->SetTrackEnable(1, true);
-			m_pSkinnedAnimationController->SetTrackEnable(2, false);*/
+		
 		}
 	}
 

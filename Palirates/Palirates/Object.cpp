@@ -1447,11 +1447,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 					{
-						// PSO  諛 �留
 						int pipelineStateNum = pShader->Get_Num_PipelineState();
 						for (int j = 0; j < pipelineStateNum; ++j)
 						{
-							// PSO ㅼ
 							pShader->Setting_Render(pd3dCommandList, j);
 
 
@@ -1459,7 +1457,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 							material_ptr->UpdateShaderVariable(pd3dCommandList);
 
 
-							// 硫 �留
 							m_pMesh->Render(pd3dCommandList, i);
 						}
 					}
@@ -2105,7 +2102,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 				{
 					CGameObject *pChild_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
 					
-					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 沅 댁
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); 
 					if (pChild) 
 						pGameObject->Set_Child(pChild);
 				}
@@ -2441,7 +2438,7 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
 	if (m_pMesh == NULL)
 		m_pMesh = new OBBContainer();
-	m_pMesh->Set_BoundingBox(ptr); // ptr NULL  寃쎌, 湲곕낯媛 OBB濡 
+	m_pMesh->Set_BoundingBox(ptr); 
 }
 
 
@@ -2456,10 +2453,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 {
 	static int tile_map_number = 0;
 
-	// 곗대 諛 ㅼ ㅼ (泥 몄 留 ㅽ)
+
 	if (pTerrainBaseTexture == nullptr)
 	{
-		// 곗대 諛 ㅼ 濡
+
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
@@ -2468,24 +2465,20 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
-		// 곗대 
 		pTerrainShader = new CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
-		// 셰이더 리소스 뷰 생성
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 
-		// ъъ 媛ν Material 媛泥 
 		pTerrainMaterial = new CMaterial(2);
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 		pTerrainMaterial->SetShader(pTerrainShader);
 
-		//  留 대�吏 濡
 		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
 
@@ -2514,10 +2507,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
-	// 源닿 0대㈃ 1媛 硫щ 泥由ы怨, 1 댁대㈃ 4깅 怨痢 援ъ“濡 泥由
 	if (nMaxDepth == 0)
 	{
-		// 源닿 0대㈃ 1媛 硫щ 泥由
 		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth +1, nLength +1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);
 	}
@@ -2675,8 +2666,6 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*
 			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
 		else
 		{
-			// 踰 諛 쇰㈃
-			// ш린  �ν댁 
 			return m_pMesh->Get_Normal(x, z);
 		}
 	}
@@ -2726,7 +2715,7 @@ int CHeightMapTerrain::Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_
 			return sibling_ptr->Get_Tile(x, z);
 	}
 
-	// 臾몄 諛  -1 諛
+
 	return -1; 
 }
 
@@ -2735,12 +2724,10 @@ void CHeightMapTerrain::Get_Active_TileNum_List(std::vector<int>& tile_list)
 	if (Get_Active())
 		tile_list.push_back(tile_number);
 
-	// 자식 노드 탐색
 	CGameObject* child_ptr = Get_Child().get();
 	if (child_ptr)
 		child_ptr->Get_Active_TileNum_List(tile_list);
 
-	// 형제 노드 탐색
 	CGameObject* sibling_ptr = Get_Sibling().get();
 	if (sibling_ptr)
 		sibling_ptr->Get_Active_TileNum_List(tile_list);
@@ -2902,7 +2889,7 @@ void CAngrybotAnimationController::OnRootMotion(CGameObject* pRootGameObject)
 CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks)
 {
 	CLoadedModelInfo *pAngrybotModel = pModel;
-	if (!pAngrybotModel) // ㅻ 諛⑹
+	if (!pAngrybotModel) 
 		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
 
 	Set_Child(pAngrybotModel->m_pModelRootObject);
