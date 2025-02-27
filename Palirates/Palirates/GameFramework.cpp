@@ -551,6 +551,8 @@ void CGameFramework::ProcessInput()
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
 			dwDirection |= DIR_DOWN;      // Page Down 또는 E
 
+		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
 		if (GetCapture() == m_hWnd)
@@ -576,6 +578,7 @@ void CGameFramework::ProcessInput()
 		}
 	}
 	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	m_pPlayer->GetStateMachine()->update(m_GameTimer.GetTimeElapsed());
 }
 
 void CGameFramework::Update_Scene()

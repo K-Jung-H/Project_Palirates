@@ -19,6 +19,9 @@ enum class Key_Value
 	Jump_Key_Down,
 	Jump_Key_Up,
 
+	Dive_Key_Down,
+	Dive_Key_Up,
+
 	ETC
 };
 
@@ -27,10 +30,11 @@ struct Key_State
 	// true == Key_Down
 	// false == Key_Up
 
-	bool forward; // w ¶Ç´Â ¹æÇâÅ°
-	bool back; // s ¶Ç´Â ¹æÇâÅ°
-	bool left; // a ¶Ç´Â ¹æÇâÅ°
-	bool right; // d ¶Ç´Â ¹æÇâÅ°
+	bool forward; // w ë˜ëŠ” ë°©í–¥í‚¤
+	bool back; // s ë˜ëŠ” ë°©í–¥í‚¤
+	bool left; // a ë˜ëŠ” ë°©í–¥í‚¤
+	bool right; // d ë˜ëŠ” ë°©í–¥í‚¤
+	bool dive{ false }; // shift
 
 	Key_State()
 	{
@@ -48,35 +52,57 @@ enum class State
 {
 	Idle,
 	Run,
+	Knock_Down,
+	Get_Up,
+	Dive,
 	Jump,
 	Attack_Normal,
 	ETC
 };
 
+extern std::map<State, std::wstring> stateToStringMap;
 
+class CPlayer;
 class StateMachine
 {
 protected:
-	State lastState = State::Idle; // ÀÌÀü »óÅÂ
-	State currentState = State::Idle; // ÇöÀç »óÅÂ
+	State lastState = State::Idle; // ì´ì „ ìƒíƒœ
+	State currentState = State::Idle; // í˜„ì¬ ìƒíƒœ
+	State nextState = State::Idle; // ë‹¤ìŒ ìƒíƒœ
 
 	Key_State key_state;
 	XMFLOAT3 pos{ 0.0f, 0.0f, 0.0f };
+
+
+	bool canMove{ true };
+	bool moveEnabled{ false };
+
 public:
 	bool is_protected = false;
 
-	StateMachine() {
-		currentState = State::Idle;
+	StateMachine() : m_pOwner(nullptr), currentState(State::Idle) {}  // ê¸°ë³¸ ìƒì„±ì ì¶”ê°€
+
+	StateMachine(CPlayer* owner)
+		: m_pOwner(owner), currentState(State::Idle) {
 	}
 
 	void start();
 	void update(float Elapsed_time);
 
-	void handleEvent(Key_Value key_event);
+	void handleEvent(UCHAR* pKeysBuffer);
 	void changeState(State newState, Key_Value key_event);
 
 	XMFLOAT3 Get_Pos() { return pos; };
 	State  Get_State() { return currentState; };
+	State  Get_LastState() { return lastState; };
+
+	constexpr int GetStateKey(State state)
+	{
+		return static_cast<int>(state);
+	}
+
+	void SetCaMove(bool b) { canMove = b; }
+	void SetMoveEnabled(bool b) { moveEnabled = b; }
 
 private:
 
@@ -84,7 +110,11 @@ private:
 
 	void exitState(State state, Key_Value key_event);
 
-	// ÀÌ°É·Î ¾Ö´Ï¸ŞÀÌ¼Ç Ã³¸®
+	// ì´ê±¸ë¡œ ì• ë‹ˆë©”ì´ì…˜ ì²˜ë¦¬
 	virtual void doAction(State state, float Elapsed_time) {};
+
+
+	CPlayer* m_pOwner;
+
 };
 
