@@ -18,19 +18,31 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers, int nRootPar
 	{
 		m_ppd3dTextureUploadBuffers = new ID3D12Resource * [m_nTextures];
 		m_ppd3dTextures = new ID3D12Resource * [m_nTextures];
-		for (int i = 0; i < m_nTextures; i++) m_ppd3dTextureUploadBuffers[i] = m_ppd3dTextures[i] = NULL;
-
 		m_pd3dSrvGpuDescriptorHandles = new D3D12_GPU_DESCRIPTOR_HANDLE[m_nTextures];
-
 		m_pnResourceTypes = new UINT[m_nTextures];
 		m_pdxgiBufferFormats = new DXGI_FORMAT[m_nTextures];
 		m_pnBufferElements = new int[m_nTextures];
+		m_pnBufferStrides = new int[m_nTextures];
+
+
+		for (int i = 0; i < m_nTextures; i++) 
+			m_ppd3dTextureUploadBuffers[i] = m_ppd3dTextures[i] = NULL;
+
+		for (int i = 0; i < m_nTextures; i++)
+			m_pd3dSrvGpuDescriptorHandles[i].ptr = NULL;
+
+		for (int i = 0; i < m_nTextures; i++) 
+			m_pnBufferStrides[i] = 0;
 	}
 	m_nRootParameters = nRootParameters;
-	if (nRootParameters > 0) m_pnRootParameterIndices = new UINT[nRootParameters];
+
+	if (nRootParameters > 0)
+		m_pnRootParameterIndices = new UINT[nRootParameters];
 
 	m_nSamplers = nSamplers;
-	if (m_nSamplers > 0) m_pd3dSamplerGpuDescriptorHandles = new D3D12_GPU_DESCRIPTOR_HANDLE[m_nSamplers];
+
+	if (m_nSamplers > 0) 
+		m_pd3dSamplerGpuDescriptorHandles = new D3D12_GPU_DESCRIPTOR_HANDLE[m_nSamplers];
 }
 
 CTexture::~CTexture()
@@ -104,7 +116,7 @@ void CTexture::ReleaseUploadBuffers()
 
 void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex)
 {
-	Get_File_Name_From_Address(pszFileName, m_pstrTextureName); // 클래스에 이름 저장하는 char[64] 추가하고 저장하기
+	Get_File_Name_From_Address(pszFileName, m_pstrTextureName);
 	m_pnResourceTypes[nIndex] = nResourceType;
 	m_ppd3dTextures[nIndex] = ::CreateTextureResourceFromDDSFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
 }
@@ -116,6 +128,16 @@ void CTexture::LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pnBufferElements[nIndex] = nElements;
 	m_ppd3dTextures[nIndex] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pData, nElements * nStride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, &m_ppd3dTextureUploadBuffers[nIndex]);
 }
+
+void CTexture::CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex)
+{
+	m_pnResourceTypes[nIndex] = RESOURCE_BUFFER;
+	m_pdxgiBufferFormats[nIndex] = ndxgiFormat;
+	m_pnBufferElements[nIndex] = nElements;
+	m_pnBufferStrides[nIndex] = nStride;
+	m_ppd3dTextures[nIndex] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pData, nElements * nStride, d3dHeapType, d3dResourceStates, &m_ppd3dTextureUploadBuffers[nIndex]);
+}
+
 
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue)
 {
@@ -169,6 +191,15 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 		d3dShaderResourceViewDesc.Buffer.StructureByteStride = 0;
 		d3dShaderResourceViewDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 		break;
+
+	case RESOURCE_STRUCTURED_BUFFER: //(d3dResourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		d3dShaderResourceViewDesc.Format = m_pdxgiBufferFormats[nIndex];
+		d3dShaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		d3dShaderResourceViewDesc.Buffer.FirstElement = 0;
+		d3dShaderResourceViewDesc.Buffer.NumElements = m_pnBufferElements[nIndex];
+		d3dShaderResourceViewDesc.Buffer.StructureByteStride = m_pnBufferStrides[nIndex];
+		d3dShaderResourceViewDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		break;
 	}
 	return(d3dShaderResourceViewDesc);
 }
@@ -187,25 +218,91 @@ CMaterial::CMaterial(int nTextures)
 
 CMaterial::~CMaterial()
 {
-	if (m_pShader) m_pShader->Release();
-
 	if (m_nTextures > 0)
 	{
-		for (int i = 0; i < m_nTextures; i++) if (m_ppTextures[i]) m_ppTextures[i]->Release();
-		delete[] m_ppTextures;
+		for (int i = 0; i < m_nTextures; i++) 
+			if (m_ppTextures[i])
+				m_ppTextures[i]->Release();
 
-		if (m_ppstrTextureNames) delete[] m_ppstrTextureNames;
+		delete[] m_ppTextures;
+		m_ppTextures = nullptr;
+
+		if (m_ppstrTextureNames)
+		{
+			delete[] m_ppstrTextureNames;
+			m_ppstrTextureNames = nullptr;
+		}
 	}
+
 
 	DebugOutput("\nDelete Material");
 
 }
 
-void CMaterial::SetShader(CShader *pShader)
+CMaterial::CMaterial(const CMaterial& other)
 {
-	if (m_pShader) m_pShader->Release();
-	m_pShader = pShader;
-	if (m_pShader) m_pShader->AddRef();
+	m_pShader = other.m_pShader;
+
+	m_xmf4AlbedoColor = other.m_xmf4AlbedoColor;
+	m_xmf4EmissiveColor = other.m_xmf4EmissiveColor;
+	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
+	m_xmf4AmbientColor = other.m_xmf4AmbientColor;
+	m_nType = other.m_nType;
+	m_fGlossiness = other.m_fGlossiness;
+	m_fSmoothness = other.m_fSmoothness;
+	m_fSpecularHighlight = other.m_fSpecularHighlight;
+	m_fMetallic = other.m_fMetallic;
+	m_fGlossyReflection = other.m_fGlossyReflection;
+	m_nTextures = other.m_nTextures;
+
+	if (other.m_ppstrTextureNames != nullptr) 
+	{
+		m_ppstrTextureNames = new _TCHAR[other.m_nTextures][64]; 
+		for (int i = 0; i < other.m_nTextures; ++i) 
+		{
+			std::memcpy(m_ppstrTextureNames[i], other.m_ppstrTextureNames[i], sizeof(_TCHAR) * 64);
+		}
+	}
+	else {
+		m_ppstrTextureNames = nullptr;
+	}
+
+	if (other.m_ppTextures != nullptr)
+	{
+		m_ppTextures = new CTexture * [other.m_nTextures];  
+		for (int i = 0; i < other.m_nTextures; ++i) 
+		{
+			if (other.m_ppTextures[i])
+			{
+				m_ppTextures[i] = new CTexture(*other.m_ppTextures[i]); 
+			}
+			else
+			{
+				m_ppTextures[i] = nullptr;
+			}
+		}
+	}
+	else 
+	{
+		m_ppTextures = nullptr;
+	}
+}
+
+void CMaterial::SetShader(CShader* pShader)
+{
+	if (pShader)
+	{
+		if (pShader != m_pStandardShader && pShader != m_pSkinnedAnimationShader)
+			if(m_pShader != NULL)
+				m_pShader->Release();
+
+		m_pShader = pShader;
+
+		if (pShader != m_pStandardShader && pShader != m_pSkinnedAnimationShader)
+			if (m_pShader != NULL)
+				m_pShader->AddRef();
+	}
+
 }
 
 void CMaterial::SetTexture(CTexture *pTexture, UINT nTexture) 
@@ -232,6 +329,10 @@ void CMaterial::PrepareShaders(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	Object_Manager::instance_shader = std::make_shared<CStandard_Instance_Shader>();
+	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 	m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
 	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -248,8 +349,8 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
-		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
-		//		if (m_ppTextures[i]) m_ppTextures[i]->UpdateShaderVariable(pd3dCommandList, 0, 0);
+		if (m_ppTextures[i])
+			m_ppTextures[i]->UpdateShaderVariables(pd3dCommandList);
 	}
 }
 
@@ -613,7 +714,7 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes];
 	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes];
 
-	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
 		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -690,12 +791,11 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3d
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];  // 애니메이션 컨트롤러에 저장된 뼈 정보 리소스 포인터를 스킨 메시에 전달
-		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // 애니메이션 컨트롤러에 저장된 뼈 변환 행렬을 스킨 메시에 전달
+		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i]; 
+		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; 
 	}
 }
 
-// 선형 보간 (위치 & 크기)
 XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
 	return XMFLOAT3(
 		a.x + (b.x - a.x) * t,
@@ -704,7 +804,6 @@ XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
 	);
 }
 
-// 사원수 보간 (회전)
 XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
 	XMVECTOR v1 = XMLoadFloat4(&q1);
 	XMVECTOR v2 = XMLoadFloat4(&q2);
@@ -715,12 +814,10 @@ XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
 	return out;
 }
 
-// 행렬에서 위치 정보 추출
 XMFLOAT3 GetTranslation(const XMFLOAT4X4& matrix) {
 	return XMFLOAT3(matrix._41, matrix._42, matrix._43);
 }
 
-// 행렬에서 회전 정보 추출
 XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
 	XMVECTOR scale, rotation, translation;
 	XMMATRIX mat = XMLoadFloat4x4(&matrix);
@@ -731,7 +828,6 @@ XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
 	return rot;
 }
 
-// 행렬에서 스케일 정보 추출
 XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
 	XMVECTOR scale, rotation, translation;
 	XMMATRIX mat = XMLoadFloat4x4(&matrix);
@@ -742,7 +838,6 @@ XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
 	return scl;
 }
 
-// 위치, 회전, 크기를 이용해 행렬 재구성
 XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	XMMATRIX S = XMMatrixScaling(scale.x, scale.y, scale.z);
 	XMMATRIX R = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
@@ -760,14 +855,11 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 	if (m_pAnimationTracks)
 	{
-		// Bone 정보 초기화
-		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
-		// 활성화된 트랙의 전체 가중치 크기 -> 가중치 정규화에 사용
 		float totalWeight = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
@@ -785,15 +877,14 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
-				// 각 bone 마다 변환행렬 업데이트
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
 					
-					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
-					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
+					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; 
+					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); 
 
 					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (boneName == "Hips")
@@ -810,14 +901,9 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 			}
 		}
 
-		// 4. Transform 업데이트
-		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)이므로, 
-		// 자식 객체에 부모 객체의 변환 정보를 상속하면서 뼈 객체마다 업데이트 된 m_xmf4x4Parent가 반영되어, 각 뼈의 정보 반영
-		// == 각 뼈들의 변환 행렬 정보 업데이트
 		pRootGameObject->UpdateTransform(NULL);
 
 
-		// 5. 추가 애니메이션 처리
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
@@ -850,27 +936,24 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 
 	if (m_pAnimationTracks)
 	{
-		// Bone 정보 초기화
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
-		// 활성화된 트랙의 전체 가중치 계산 (상체/하체 따로)
 		float totalWeightUpper = 0.0f;
 		float totalWeightLower = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
 			if (m_pAnimationTracks[k].m_bEnable)
 			{
-				if (m_pAnimationTracks[k].m_nAnimationSet == 2) // 2번 트랙 (상체 애니메이션)
+				if (m_pAnimationTracks[k].m_nAnimationSet == 2) 
 					totalWeightUpper += m_pAnimationTracks[k].m_fWeight;
-				else if (m_pAnimationTracks[k].m_nAnimationSet == 1) // 1번 트랙 (하체 애니메이션)
+				else if (m_pAnimationTracks[k].m_nAnimationSet == 1) 
 					totalWeightLower += m_pAnimationTracks[k].m_fWeight;
 			}
 		}
 
-		// 애니메이션 트랙을 순회하면서 본 변환 적용
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
 			if (m_pAnimationTracks[k].m_bEnable)
@@ -888,13 +971,12 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 					
 					if (isLowerBody)
 					{
-						totalWeight = totalWeightLower;  // 하체 애니메이션 가중치
+						totalWeight = totalWeightLower;  
 					}
 					else {
-						totalWeight = totalWeightUpper;  // 상체 애니메이션 가중치
+						totalWeight = totalWeightUpper;  
 					}
 
-					// 본에 맞는 애니메이션만 적용
 					if ((!isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 2) ||
 						(isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 1))
 					{
@@ -919,10 +1001,8 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 			}
 		}
 
-		// 최종적으로 Transform 업데이트
 		pRootGameObject->UpdateTransform(NULL);
 
-		// 추가 애니메이션 처리
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
@@ -974,32 +1054,165 @@ CGameObject::CGameObject(const std::string_view& name)
 
 CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
 {
-	m_nMaterials = nMaterials;
-	if (m_nMaterials > 0)
+	Material_list.resize(nMaterials);
+	for (std::shared_ptr<CMaterial> material_ptr: Material_list)
 	{
-		m_ppMaterials = new CMaterial*[m_nMaterials];
-		for(int i = 0; i < m_nMaterials; i++) 
-			m_ppMaterials[i] = NULL;
+		material_ptr.reset();
 	}
+
+	//m_nMaterials = nMaterials;
+	//if (m_nMaterials > 0)
+	//{
+	//	m_ppMaterials = new CMaterial*[m_nMaterials];
+	//	for(int i = 0; i < m_nMaterials; i++) 
+	//		m_ppMaterials[i] = NULL;
+	//}
 }
 
 CGameObject::~CGameObject()
 {
-	if (m_pMesh) m_pMesh->Release();
+	if (m_pMesh) 
+		m_pMesh->Release();
 
-	if (m_nMaterials > 0)
+	//for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+	//{
+	//	material_ptr.reset();
+	//}
+	//Material_list.clear();
+	//Material_list.shrink_to_fit();
+
+	//if (m_nMaterials > 0)
+	//{
+	//	for (int i = 0; i < m_nMaterials; i++)
+	//	{
+	//		if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
+	//	}
+	//}
+
+	//if (m_ppMaterials)
+	//{
+	//	delete[] m_ppMaterials;
+	//	m_ppMaterials = nullptr;  
+	//}
+
+
+	if (m_pSkinnedAnimationController)
 	{
-		for (int i = 0; i < m_nMaterials; i++)
-		{
-			if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
-		}
+		delete m_pSkinnedAnimationController;
+		m_pSkinnedAnimationController = nullptr; 
 	}
-	if (m_ppMaterials) delete[] m_ppMaterials;
-
-	if (m_pSkinnedAnimationController) delete m_pSkinnedAnimationController;
 
 	DebugOutput("\nDelete GameObject: ", m_pstrFrameName);
 }
+
+CGameObject::CGameObject(const CGameObject& other)
+{
+	m_pParent = other.m_pParent;  
+	m_xmf4x4Parent = other.m_xmf4x4Parent;
+	m_xmf4x4World = other.m_xmf4x4World;
+	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
+	m_fRotationSpeed = other.m_fRotationSpeed;
+	Active = other.Active;
+
+
+	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
+
+
+	m_pChild = (other.m_pChild) ? std::make_shared<CGameObject>(*other.m_pChild) : nullptr;
+	m_pSibling = (other.m_pSibling) ? std::make_shared<CGameObject>(*other.m_pSibling) : nullptr;
+
+	if (!other.Material_list.empty())
+	{
+		Material_list.clear();  
+		Material_list.reserve(other.Material_list.size());  
+
+		for (const auto& material : other.Material_list) 
+		{
+			if (material) 
+				Material_list.push_back(std::make_shared<CMaterial>(*material));
+			else
+				Material_list.push_back(nullptr);  
+		}
+	}
+
+
+	if (other.m_pMesh != nullptr)	
+		m_pMesh = new CMesh(*other.m_pMesh);  
+	
+
+	if (other.m_pSkinnedAnimationController != nullptr)	
+		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController); 
+	
+}
+
+CGameObject& CGameObject::operator=(const CGameObject& other)
+{
+	if (this == &other) return *this;
+
+
+	m_pParent = other.m_pParent;  
+	m_xmf4x4Parent = other.m_xmf4x4Parent;
+	m_xmf4x4World = other.m_xmf4x4World;
+	m_xmf3RotationAxis = other.m_xmf3RotationAxis;
+	m_fRotationSpeed = other.m_fRotationSpeed;
+	Active = other.Active;
+
+	std::memcpy(m_pstrFrameName, other.m_pstrFrameName, sizeof(m_pstrFrameName));
+
+
+	if (other.m_pChild)
+	{
+		if (m_pChild)
+			m_pChild.reset();
+		m_pChild = std::make_shared<CGameObject>(*other.m_pChild);
+	}
+	else
+		m_pChild = nullptr;
+
+
+	if (other.m_pSibling)
+	{
+		if (m_pSibling)
+			m_pSibling.reset();	
+		m_pSibling = std::make_shared<CGameObject>(*other.m_pSibling);
+	}
+	else
+		m_pSibling = nullptr;
+	
+
+	if (!other.Material_list.empty())
+	{
+		Material_list.clear();  
+		Material_list.reserve(other.Material_list.size());  
+
+		for (const auto& material : other.Material_list) 
+		{
+			if (material) 
+				Material_list.push_back(std::make_shared<CMaterial>(*material));	
+			else 
+				Material_list.push_back(nullptr);  // nullptr을 유지		
+		}
+	}
+
+
+	if (other.m_pMesh != nullptr)
+	{
+		if (m_pMesh != nullptr) 
+			delete m_pMesh;  
+		m_pMesh = new CMesh(*other.m_pMesh);  
+	}
+
+	if (other.m_pSkinnedAnimationController != nullptr)
+	{
+		if (m_pSkinnedAnimationController != nullptr) 
+			delete m_pSkinnedAnimationController;  
+		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  
+	}
+
+	return *this;
+}
+
+
 
 std::shared_ptr<CGameObject> CGameObject::Get_Child()
 {
@@ -1027,28 +1240,23 @@ void CGameObject::Obj_Info(int depth)
 	for (int i = 0; i < depth; ++i)
 		_tcscat_s(indent, _T("  "));
 
-	// char 배열을 TCHAR*로 직접 사용
 	TCHAR tFrameName[64];
 	MultiByteToWideChar(CP_ACP, 0, m_pstrFrameName, -1, tFrameName, 64);
 
-	// 출력할 문자열
 	TCHAR pstrDebug[256] = { 0 };
 	_stprintf_s(pstrDebug, 256, _T("%s%s\n"), indent, tFrameName);
 
-	// 디버그 출력
 	OutputDebugString(pstrDebug);
 
 
-	// 자식 객체 출력
 	if (m_pChild)
 	{
-		m_pChild->Obj_Info(depth + 1); // 자식은 깊이를 하나 늘려 호출
+		m_pChild->Obj_Info(depth + 1); 
 	}
 
-	// 형제 객체 출력
 	if (m_pSibling)
 	{
-		m_pSibling->Obj_Info(depth); // 형제는 같은 깊이에서 호출
+		m_pSibling->Obj_Info(depth); 
 	}
 }
 
@@ -1061,13 +1269,13 @@ void CGameObject::Set_Name(std::string_view name)
 void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild) 
 {
 	if (pChild) 
-		pChild->m_pParent = this; // 부모 설정
+		pChild->m_pParent = this;
 	
 
 	if (m_pChild) 
 	{
 		if (pChild) 
-			pChild->m_pSibling = m_pChild->m_pSibling; // 기존 형제 연결
+			pChild->m_pSibling = m_pChild->m_pSibling; 
 		
 		m_pChild->m_pSibling = pChild;
 	}
@@ -1086,6 +1294,7 @@ void CGameObject::Set_Active(bool active, bool IsRoot)
 	if (!IsRoot && m_pSibling != NULL)
 		m_pSibling->Set_Active(active, false);
 }
+
 void CGameObject::SetMesh(CMesh *pMesh)
 {
 	if (m_pMesh) m_pMesh->Release();
@@ -1095,22 +1304,38 @@ void CGameObject::SetMesh(CMesh *pMesh)
 
 void CGameObject::SetShader(CShader *pShader)
 {
-	m_nMaterials = 1;
-	m_ppMaterials = new CMaterial*[m_nMaterials];
-	m_ppMaterials[0] = new CMaterial(0);
-	m_ppMaterials[0]->SetShader(pShader);
+	//m_nMaterials = 1;
+	//m_ppMaterials = new CMaterial*[m_nMaterials];
+	//m_ppMaterials[0] = new CMaterial(0);
+	//m_ppMaterials[0]->SetShader(pShader);
+	std::shared_ptr<CMaterial> material_ptr = std::make_shared<CMaterial>(0);
+	material_ptr->SetShader(pShader);
+	Material_list.push_back(material_ptr);
+
 }
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->SetShader(pShader);
+	//if (m_ppMaterials[nMaterial]) 
+	//	m_ppMaterials[nMaterial]->SetShader(pShader);
+
+	if (Material_list.size() > nMaterial)
+		Material_list[nMaterial]->SetShader(pShader);
+
 }
 
 void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 {
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->Release();
+	/*if (m_ppMaterials[nMaterial]) 
+		m_ppMaterials[nMaterial]->Release();
+
 	m_ppMaterials[nMaterial] = pMaterial;
-	if (m_ppMaterials[nMaterial]) m_ppMaterials[nMaterial]->AddRef();
+
+	if (m_ppMaterials[nMaterial]) 
+		m_ppMaterials[nMaterial]->AddRef();*/
+
+	std::shared_ptr<CMaterial> material_ptr(pMaterial);
+	Material_list[nMaterial] = material_ptr;
 }
 
 void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
@@ -1146,7 +1371,6 @@ CGameObject* CGameObject::FindFrame(char* pstrFrameName)
 			return pFrameObject;
 	}
 
-	// 찾지 못한 경우 nullptr 반환
 	return nullptr;
 }
 
@@ -1185,51 +1409,69 @@ void CGameObject::Animate(float fTimeElapsed)
 		m_pChild->Animate(fTimeElapsed);
 }
 
+bool CGameObject::IsVisible(CCamera* pCamera)
+{
+	bool bIsVisible = false;
+	if (Get_Collider() == NULL) 
+		return true;
+	BoundingOrientedBox xmBoundingBox(*Get_Collider());
 
-// 셰이더가 PSO를 여러 개 갖는 경우
+	xmBoundingBox.Transform(xmBoundingBox, XMLoadFloat4x4(&m_xmf4x4World));
+
+	if (pCamera) 
+		bIsVisible = pCamera->IsInFrustum(xmBoundingBox);
+	return(bIsVisible);
+}
+
+
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// 애니메이션 컨트롤러 셰이더 변수 업데이트
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
 	if (m_pMesh)
 	{
+		if (!IsVisible(pCamera))
+			return;
+
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-		if (m_nMaterials > 0)
+		if (Material_list.size())
 		{
-			// 재료(Material) 처리
-			for (int i = 0; i < m_nMaterials; ++i)
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 			{
-				CMaterial* pMaterial = m_ppMaterials[i];
-				if (pMaterial)
+				if (material_ptr)
 				{
-					CShader* pShader = pMaterial->m_pShader;
+					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 					{
-						// PSO 순회 및 렌더링
+						// PSO  諛 �留
 						int pipelineStateNum = pShader->Get_Num_PipelineState();
 						for (int j = 0; j < pipelineStateNum; ++j)
 						{
-							// PSO 설정
+							// PSO ㅼ
 							pShader->Setting_Render(pd3dCommandList, j);
 
-							// 재료(Material) 셰이더 변수 업데이트
-							pMaterial->UpdateShaderVariable(pd3dCommandList);
 
-							// 메쉬 렌더링
+							// 재료(Material) 셰이더 변수 업데이트
+							material_ptr->UpdateShaderVariable(pd3dCommandList);
+
+
+							// 硫 �留
 							m_pMesh->Render(pd3dCommandList, i);
 						}
 					}
 					else
 					{
+
 						// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
-						pMaterial->UpdateShaderVariable(pd3dCommandList);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
 						m_pMesh->Render(pd3dCommandList, i);
 					}
 				}
+				++i;
 			}
 		}
 	}
@@ -1253,7 +1495,7 @@ void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandLis
 {
 	XMFLOAT4X4 xmf4x4World;
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(pxmf4x4World)));
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 16, &xmf4x4World, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 16, &xmf4x4World, 0);
 }
 
 void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList, CMaterial *pMaterial)
@@ -1268,14 +1510,74 @@ void CGameObject::ReleaseUploadBuffers()
 {
 	if (m_pMesh) m_pMesh->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nMaterials; i++)
+	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
-		if (m_ppMaterials[i]) m_ppMaterials[i]->ReleaseUploadBuffers();
+		if(material_ptr!= NULL)
+			material_ptr->ReleaseUploadBuffers();
 	}
 
 	if (m_pSibling) m_pSibling->ReleaseUploadBuffers();
 	if (m_pChild) m_pChild->ReleaseUploadBuffers();
 }
+
+void CGameObject::Modify_World_Position(XMFLOAT3 newPosition)
+{
+	XMVECTOR scale, rotation, translation;
+
+
+	XMMatrixDecompose(&scale, &rotation, &translation, XMLoadFloat4x4(&m_xmf4x4World));
+
+	translation = XMLoadFloat3(&newPosition);
+
+	XMMATRIX newWorldMatrix = XMMatrixScalingFromVector(scale) *
+		XMMatrixRotationQuaternion(rotation) *
+		XMMatrixTranslationFromVector(translation);
+
+	XMStoreFloat4x4(&m_xmf4x4World, newWorldMatrix);
+}
+
+void CGameObject::Modify_World_Up_Vector(XMFLOAT3 newUpVector)
+{
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+	// 기존 행렬을 Scale, Rotation, Translation으로 분해
+	XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix);
+
+	// 기존 Forward 및 Right 벡터 추출
+	XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]); // 기존 Z축 (Forward)
+	XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);   // 기존 X축 (Right)
+
+	// 입력받은 Up 벡터를 정규화
+	XMVECTOR newUp = XMVector3Normalize(XMLoadFloat3(&newUpVector));
+
+	// 기존 Forward 벡터와 새 Up 벡터가 같은 방향이면 처리 (기본적으로 Right 벡터 유지)
+	if (XMVector3Equal(forward, newUp) || XMVector3Equal(XMVectorNegate(forward), newUp))
+	{
+		forward = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); // 예외 처리: 기본 Forward 벡터 설정
+	}
+
+	// 새로운 Right 벡터 계산 (newUp과 Forward의 외적)
+	XMVECTOR newRight = XMVector3Normalize(XMVector3Cross(newUp, forward));
+
+	// 새로운 Forward 벡터 계산 (Right와 Up의 외적)
+	XMVECTOR newForward = XMVector3Normalize(XMVector3Cross(newRight, newUp));
+
+	// 새로운 회전 행렬 구성
+	XMMATRIX newRotationMatrix = XMMATRIX(
+		newRight,   // X축 (Right)
+		newUp,      // Y축 (Up)
+		newForward, // Z축 (Forward)
+		XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+
+	// 최종 월드 행렬 계산 (Scale * Rotation * Translation)
+	XMMATRIX newWorldMatrix = XMMatrixScalingFromVector(scale) * newRotationMatrix * XMMatrixTranslationFromVector(translation);
+
+	// 변환된 월드 행렬 저장
+	XMStoreFloat4x4(&m_xmf4x4World, newWorldMatrix);
+}
+
 
 void CGameObject::SetPosition(float x, float y, float z)
 {
@@ -1285,6 +1587,7 @@ void CGameObject::SetPosition(float x, float y, float z)
 
 	UpdateTransform(NULL);
 }
+
 
 void CGameObject::SetPosition(XMFLOAT3 xmf3Position)
 {
@@ -1300,25 +1603,79 @@ void CGameObject::Move(XMFLOAT3 xmf3Offset)
 	UpdateTransform(NULL);
 }
 
-void CGameObject::SetScale(float x, float y, float z)
+void CGameObject::SetScale(XMFLOAT3 scale, bool keepPosition)
 {
-	XMMATRIX mtxScale = XMMatrixScaling(x, y, z);
-	m_xmf4x4Parent = Matrix4x4::Multiply(mtxScale, m_xmf4x4Parent);
+	SetScale(scale.x, scale.y, scale.z, keepPosition);
+}
+
+void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
+{
+	XMFLOAT3 originalPosition;
+
+	if (keepPosition) 
+	{
+		originalPosition = { m_xmf4x4Parent._41, m_xmf4x4Parent._42, m_xmf4x4Parent._43 };
+		m_xmf4x4Parent._41 = m_xmf4x4Parent._42 = m_xmf4x4Parent._43 = 0.0f;
+	}
+
+	XMMATRIX scaleMatrix = XMMatrixScaling(x, y, z);
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4Parent);
+
+	worldMatrix = worldMatrix * scaleMatrix;
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, worldMatrix);
+
+	if (keepPosition) 
+	{
+		m_xmf4x4Parent._41 = originalPosition.x;
+		m_xmf4x4Parent._42 = originalPosition.y;
+		m_xmf4x4Parent._43 = originalPosition.z;
+	}
 
 	UpdateTransform(NULL);
 }
 
 XMFLOAT3 CGameObject::GetPosition()
 {
-	//if(m_pParent != NULL)
-	//	GetPosition()
-
 	return(XMFLOAT3(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43));
 }
 
 XMFLOAT3 CGameObject::GetToParentPosition()
 {
 	return(XMFLOAT3(m_xmf4x4Parent._41, m_xmf4x4Parent._42, m_xmf4x4Parent._43));
+}
+
+XMFLOAT3 CGameObject::Get_World_Position()
+{
+	XMFLOAT3 obj_pos = GetPosition(); 
+	XMFLOAT3 parent_pos = { 0.0f, 0.0f, 0.0f };
+
+	if (m_pParent != nullptr)
+		parent_pos = m_pParent->Get_World_Position();
+
+	return XMFLOAT3(obj_pos.x + parent_pos.x, obj_pos.y + parent_pos.y, obj_pos.z + parent_pos.z);
+}
+
+XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
+{
+	XMFLOAT3 worldPosition = GetPosition(); // 현재 오브젝트의 월드 위치
+	XMFLOAT3 rootPosition = { 0.0f, 0.0f, 0.0f };
+
+	// 루트 오브젝트까지 탐색
+	CGameObject* root = this;
+	while (root->m_pParent != NULL)
+	{
+		root = root->m_pParent;
+	}
+
+	rootPosition = root->GetPosition(); // 루트의 로컬 위치(초기 위치)
+
+	// 현재 위치에서 루트 위치를 뺀 값이 "루트 프레임 기준 이동량"
+	return XMFLOAT3(
+		worldPosition.x - rootPosition.x,
+		worldPosition.y - rootPosition.y,
+		worldPosition.z - rootPosition.z
+	);
 }
 
 XMFLOAT3 CGameObject::GetLook()
@@ -1388,19 +1745,33 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
-	for (int i = 0; i < m_nMaterials; i++)
+	//for (int i = 0; i < m_nMaterials; i++)
+	//{
+	//	if (m_ppMaterials[i])
+	//	{
+	//		for (int j = 0; j < m_ppMaterials[i]->m_nTextures; j++)
+	//		{
+	//			if (m_ppMaterials[i]->m_ppTextures[j])
+	//			{
+	//				if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) 
+	//					return(m_ppMaterials[i]->m_ppTextures[j]);
+	//			}
+	//		}
+	//	}
+	//}
+
+	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
-		if (m_ppMaterials[i])
+		for (int j = 0; j < material_ptr->m_nTextures; j++)
 		{
-			for (int j = 0; j < m_ppMaterials[i]->m_nTextures; j++)
+			if (material_ptr->m_ppTextures[j])
 			{
-				if (m_ppMaterials[i]->m_ppTextures[j])
-				{
-					if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) return(m_ppMaterials[i]->m_ppTextures[j]);
-				}
+				if (!_tcsncmp(material_ptr->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName)))
+					return(material_ptr->m_ppTextures[j]);
 			}
 		}
 	}
+
 	CTexture *pTexture = NULL;
 	if (m_pSibling) if (pTexture = m_pSibling->FindReplicatedTexture(pstrTextureName)) return(pTexture);
 	if (m_pChild) if (pTexture = m_pChild->FindReplicatedTexture(pstrTextureName)) return(pTexture);
@@ -1433,21 +1804,131 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 	return(nStrLength);
 }
 
-void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, CShader *pShader)
+//void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, CShader *pShader)
+//{
+//	char pstrToken[64] = { '\0' };
+//	int nMaterial = 0;
+//	UINT nReads = 0;
+//
+//	m_nMaterials = ReadIntegerFromFile(pInFile);
+//
+//	m_ppMaterials = new CMaterial*[m_nMaterials];
+//
+//	for (int i = 0; i < m_nMaterials; i++) 
+//		m_ppMaterials[i] = NULL;
+//
+//	CMaterial *pMaterial = NULL;
+//
+//
+//
+//	for ( ; ; )
+//	{
+//		::ReadStringFromFile(pInFile, pstrToken);
+//
+//		if (!strcmp(pstrToken, "<Material>:"))
+//		{
+//			nMaterial = ReadIntegerFromFile(pInFile);
+//
+//			pMaterial = new CMaterial(7); //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+//
+//			if (!pShader)
+//			{
+//				UINT nMeshType = GetMeshType();
+//				if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE)
+//				{
+//					if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT)
+//					{
+//						pMaterial->SetSkinnedAnimationShader();
+//					}
+//					else
+//					{
+//						pMaterial->SetStandardShader();
+//					}
+//				}
+//			}
+//			SetMaterial(nMaterial, pMaterial);
+//		}
+//		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_xmf4AlbedoColor), sizeof(float), 4, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_xmf4EmissiveColor), sizeof(float), 4, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<SpecularColor>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<Glossiness>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<Smoothness>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fSmoothness), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<Metallic>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fSpecularHighlight), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
+//		{
+//			nReads = (UINT)::fread(&(pMaterial->m_fGlossyReflection), sizeof(float), 1, pInFile);
+//		}
+//		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
+//		{
+//			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3, pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<SpecularMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4, pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<NormalMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5, pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<MetallicMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6, pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<EmissionMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7, pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8, pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
+//		{
+//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9, pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]), pParent, pInFile, pShader);
+//		}
+//		else if (!strcmp(pstrToken, "</Materials>"))
+//		{
+//			break;
+//		}
+//	}
+//}
+
+void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	m_nMaterials = ReadIntegerFromFile(pInFile);
+	// 기존 Material 제거 후 새로운 크기 설정
+	Material_list.clear();
+	int materialCount = ReadIntegerFromFile(pInFile);
+	Material_list.reserve(materialCount);  // 메모리 예약
 
-	m_ppMaterials = new CMaterial*[m_nMaterials];
-	for (int i = 0; i < m_nMaterials; i++) 
-		m_ppMaterials[i] = NULL;
+	std::shared_ptr<CMaterial> pMaterial = nullptr;
 
-	CMaterial *pMaterial = NULL;
-
-	for ( ; ; )
+	for (;;)
 	{
 		::ReadStringFromFile(pInFile, pstrToken);
 
@@ -1455,24 +1936,25 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
 
-			pMaterial = new CMaterial(7); //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
-
+			// 새로운 Material 생성 및 추가
+			pMaterial = std::make_shared<CMaterial>(7);
 			if (!pShader)
 			{
 				UINT nMeshType = GetMeshType();
 				if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE)
 				{
 					if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT)
-					{
 						pMaterial->SetSkinnedAnimationShader();
-					}
 					else
-					{
 						pMaterial->SetStandardShader();
-					}
 				}
 			}
-			SetMaterial(nMaterial, pMaterial);
+
+			// 벡터 크기를 nMaterial 인덱스까지 확장
+			if (nMaterial >= Material_list.size())
+				Material_list.resize(nMaterial + 1);
+
+			Material_list[nMaterial] = pMaterial;
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -1508,38 +1990,54 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3, pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX, 
+				pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4, pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5, pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6, pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
+				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7, pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]), pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
+				pParent, pInFile, pShader);
 		}
-		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
-		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8, pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]), pParent, pInFile, pShader);
-		}
-		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
-		{
-			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9, pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]), pParent, pInFile, pShader);
-		}
+		//else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
+		//{
+		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX,
+		//		pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]),
+		//		pParent, pInFile, pShader);
+		//}
+		//else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
+		//{
+		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX,
+		//		pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]),
+		//		pParent, pInFile, pShader);
+		//}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
 			break;
 		}
 	}
 }
+
 
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes)
 {
@@ -1575,6 +2073,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
+
 			CStandardMesh *pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
 			pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			pGameObject->SetMesh(pMesh);
@@ -1606,14 +2105,9 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 				{
 					CGameObject *pChild_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
 					
-					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 沅 댁
 					if (pChild) 
 						pGameObject->Set_Child(pChild);
-#ifdef _WITH_DEBUG_FRAME_HIERARCHY
-					TCHAR pstrDebug[256] = { 0 };
-					_stprintf_s(pstrDebug, 256, _T("(Frame: %p) (Parent: %p)\n"), pChild, pGameObject);
-					OutputDebugString(pstrDebug);
-#endif
 				}
 			}
 		}
@@ -1624,6 +2118,126 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 	}
 	return(pGameObject);
 }
+
+CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	int nFrame = 0, nTextures = 0;
+
+	CGameObject* pGameObject = new CGameObject();
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<Frame>:"))
+		{
+			nFrame = ::ReadIntegerFromFile(pInFile);
+			nTextures = ::ReadIntegerFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+		}
+		else if (!strcmp(pstrToken, "<Transform>:"))
+		{
+			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
+			XMFLOAT4 xmf4Rotation;
+			nReads = (UINT)::fread(&xmf3Position, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf3Rotation, sizeof(float), 3, pInFile); //Euler Angle
+			nReads = (UINT)::fread(&xmf3Scale, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf4Rotation, sizeof(float), 4, pInFile); //Quaternion
+		}
+		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
+		{
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Mesh>:"))
+		{
+			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
+
+			::ReadStringFromFile(pInFile, pstrToken);
+			if (!strcmp(pstrToken, "<Mesh_Name>:"))
+			{
+				::ReadStringFromFile(pInFile, pstrToken);
+				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken); 
+
+				char pstrFileName[128] = { '\0' };
+				strncpy(pstrFileName, fileName.c_str(), sizeof(pstrFileName) - 1);
+				pstrFileName[sizeof(pstrFileName) - 1] = '\0';
+
+				pMesh->LoadMeshFrom_OtherFile(pd3dDevice, pd3dCommandList, pstrFileName);
+			}
+			pGameObject->SetMesh(pMesh);
+
+		}
+		else if (!strcmp(pstrToken, "<Materials>:"))
+		{
+			pGameObject->LoadMaterialsFromFile(pd3dDevice, pd3dCommandList, pParent, pInFile, pShader);
+		}
+		else if (!strcmp(pstrToken, "<Children>:"))
+		{
+			int nChilds = ::ReadIntegerFromFile(pInFile);
+			if (nChilds > 0)
+			{
+				for (int i = 0; i < nChilds; i++)
+				{
+					CGameObject* pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader);
+
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
+					if (pChild)
+						pGameObject->Set_Child(pChild);
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</Frame>"))
+		{
+			break;
+		}
+	}
+	return(pGameObject);
+}
+
+CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, pstrFileName, "rb");
+	::rewind(pInFile);
+
+	CLoadedModelInfo* pLoadedModel = new CLoadedModelInfo();
+
+	char pstrToken[64] = { '\0' };
+
+	for (; ; )
+	{
+		if (::ReadStringFromFile(pInFile, pstrToken))
+		{
+			if (!strcmp(pstrToken, "<Hierarchy>:"))
+			{
+				CGameObject* ModelRootObject_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader);
+
+				std::shared_ptr<CGameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
+				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
+
+				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+#ifdef _WITH_DEBUG_FRAME_HIERARCHY
+	TCHAR pstrDebug[256] = { 0 };
+	_stprintf_s(pstrDebug, 256, _T("Frame Hierarchy\n"));
+	OutputDebugString(pstrDebug);
+
+	//	CGameObject::PrintFrameInfo(pGameObject, NULL);
+#endif
+
+	return(pLoadedModel);
+}
+
 
 void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
 {	
@@ -1773,6 +2387,17 @@ CLoadedModelInfo *CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device *pd
 	return(pLoadedModel);
 }
 
+std::string CGameObject::Get_Mesh_Name()
+{
+	if (m_pMesh != NULL)
+		if(m_pMesh->Vertex_Existence())
+			return m_pMesh->Get_Name();
+
+	return string("None");
+
+
+}
+
 BoundingOrientedBox* CGameObject::Get_Collider()
 {
 	if (m_pMesh == NULL)
@@ -1812,17 +2437,14 @@ void CGameObject::Add_Collider(float cube_length)
 
 }
 
-
-
 void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
 	if (m_pMesh == NULL)
 		m_pMesh = new OBBContainer();
-	m_pMesh->Set_BoundingBox(ptr); // ptr이 NULL 인 경우, 기본값 OBB로 생성
+	m_pMesh->Set_BoundingBox(ptr); // ptr NULL  寃쎌, 湲곕낯媛 OBB濡 
 }
 
 
-// static 변수 초기화
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
@@ -1834,10 +2456,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 {
 	static int tile_map_number = 0;
 
-	// 셰이더 및 텍스처 설정 (첫 호출 시에만 실행됨)
+	// 곗대 諛 ㅼ ㅼ (泥 몄 留 ㅽ)
 	if (pTerrainBaseTexture == nullptr)
 	{
-		// 셰이더 및 텍스처 로딩
+		// 곗대 諛 ㅼ 濡
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
@@ -1846,22 +2468,24 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
-		// 셰이더 생성
+		// 곗대 
 		pTerrainShader = new CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		// 셰이더 리소스 뷰 생성
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, PARAMETER_TERRAIN_BASE_TEXTURE);
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, PARAMETER_TERRAIN_DETAIL_TEXTURE);
 
-		// 재사용 가능한 Material 객체 생성
+		// 셰이더 리소스 뷰 생성
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
+
+
+		// ъъ 媛ν Material 媛泥 
 		pTerrainMaterial = new CMaterial(2);
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 		pTerrainMaterial->SetShader(pTerrainShader);
 
-		// 높이 맵 이미지 로드
+		//  留 대�吏 濡
 		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
 
@@ -1871,7 +2495,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	else
 	{
 		Set_Tile(tile_map_number++);
-		SetMaterial(0, pTerrainMaterial);
 	}
 
 	// ============================================================
@@ -1891,10 +2514,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
-	// 깊이가 0이면 1개의 메쉬로 처리하고, 1 이상이면 4등분하여 계층 구조로 처리
+	// 源닿 0대㈃ 1媛 硫щ 泥由ы怨, 1 댁대㈃ 4깅 怨痢 援ъ“濡 泥由
 	if (nMaxDepth == 0)
 	{
-		// 깊이가 0이면 1개의 메쉬로 처리
+		// 源닿 0대㈃ 1媛 硫щ 泥由
 		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth +1, nLength +1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);
 	}
@@ -1924,7 +2547,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 					int xStart = start_x_pos + x * blocks_x_size[0];
 					int zStart = start_z_pos + z * blocks_z_size[0];
 
-					CHeightMapTerrain* part_map_raw_ptr = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, nMaxDepth - 1);
+					CHeightMapTerrain* part_map_raw_ptr = 
+						new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, nMaxDepth - 1);
 
 					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
 					Set_Child(part_map);
@@ -1949,41 +2573,6 @@ CHeightMapTerrain::~CHeightMapTerrain(void)
 	m_pHeightMapImage = NULL;
 }
 
-
-void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-
-	if (Get_Active() && m_pMesh != NULL)
-	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-		if (m_ppMaterials[0] && m_ppMaterials[0]->m_pShader)
-		{
-			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
-
-			m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
-
-			m_ppMaterials[0]->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
-
-			m_ppMaterials[0]->UpdateShaderVariable(pd3dCommandList);
-		}
-
-
-	}
-
-	if (Get_Active())
-	{
-		std::shared_ptr<CGameObject> pChild = Get_Child();
-		if (pChild) pChild->Render(pd3dCommandList, pCamera);
-	}
-
-	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
-	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
-
-}
-
 void CHeightMapTerrain::Set_Tile(int n)
 {
 	tile_number = n;
@@ -1991,6 +2580,24 @@ void CHeightMapTerrain::Set_Tile(int n)
 	Set_Name(tile_name);
 }
 
+float CHeightMapTerrain::Get_Height(float x, float z, bool bReverseQuad)
+{
+	CHeightMapTerrain* last_tile_ptr = nullptr;
+	return Get_Height(x, z, bReverseQuad, last_tile_ptr);
+}
+
+float CHeightMapTerrain::Get_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr)
+{
+	float world_height = Get_World_Position().y;
+	float mesh_height = 0.0f;
+
+	if (last_tile_ptr != NULL)
+		mesh_height = Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
+	else
+		mesh_height = Get_Mesh_Height(x, z, bReverseQuad);
+
+	return world_height + mesh_height;
+}
 
 float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad)
 {
@@ -2038,15 +2645,11 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad, CH
 	return -1;
 }
 
-
-
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
 {
 	CHeightMapTerrain* last_tile_ptr = nullptr;
 	return Get_Mesh_Normal(x, z, last_tile_ptr);
 }
-
-
 
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr)
 {
@@ -2072,8 +2675,8 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*
 			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
 		else
 		{
-			// 범위 밖이 아니라면
-			// 여기서 타일 저장해야 함
+			// 踰 諛 쇰㈃
+			// ш린  �ν댁 
 			return m_pMesh->Get_Normal(x, z);
 		}
 	}
@@ -2084,7 +2687,7 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*
 			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Normal(x, z);
 	}
 
-	return XMFLOAT3(0.0f, -1.0f, 0.0f);
+	return XMFLOAT3(0.0f, 1.0f, 0.0f);
 }
 
 int CHeightMapTerrain::Get_Tile(float x, float z)
@@ -2123,9 +2726,27 @@ int CHeightMapTerrain::Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_
 			return sibling_ptr->Get_Tile(x, z);
 	}
 
-	// 문제 발생 시 -1 반환
+	// 臾몄 諛  -1 諛
 	return -1; 
 }
+
+void CHeightMapTerrain::Get_Active_TileNum_List(std::vector<int>& tile_list)
+{
+	if (Get_Active())
+		tile_list.push_back(tile_number);
+
+	// 자식 노드 탐색
+	CGameObject* child_ptr = Get_Child().get();
+	if (child_ptr)
+		child_ptr->Get_Active_TileNum_List(tile_list);
+
+	// 형제 노드 탐색
+	CGameObject* sibling_ptr = Get_Sibling().get();
+	if (sibling_ptr)
+		sibling_ptr->Get_Active_TileNum_List(tile_list);
+}
+
+
 
 
 BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
@@ -2154,6 +2775,78 @@ BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
 	return &pWorldBoundingBox;
 }
 
+void CHeightMapTerrain::Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list)
+{
+	for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
+	{
+		XMFLOAT3 pos = obj_ptr->GetPosition();
+		float height = Get_Mesh_Height(pos.x, pos.z);
+		float diff = obj_ptr->Get_Root_Obj_Displacement().y;
+		XMFLOAT3 new_pos = { pos.x,  height + diff, pos.z };
+		obj_ptr->Modify_World_Position(new_pos);
+	}
+}
+
+void CHeightMapTerrain::Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list)
+{
+	for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
+	{
+		XMFLOAT3 pos = obj_ptr->GetPosition();
+		XMFLOAT3 new_normal = Get_Mesh_Normal(pos.x, pos.z);
+		obj_ptr->Modify_World_Up_Vector(new_normal);
+	}
+}
+
+void CHeightMapTerrain::Check_Culling(CCamera* pCamera)
+{
+	if (!IsVisible(pCamera))
+		Set_Active(false);
+	else
+		Set_Active(true);
+
+
+	std::shared_ptr<CGameObject> pChild = Get_Child();
+	if (pChild)
+		pChild->Check_Culling(pCamera);
+	
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling)
+		pSibling->Check_Culling(pCamera);
+	
+}
+
+void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
+		{
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
+			m_pMesh->Render(pd3dCommandList, 0);
+
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
+			m_pMesh->Render(pd3dCommandList, 0);
+
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
@@ -2170,7 +2863,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, PARAMETER_SKYBOX_TEXTURE);
+	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
 
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
@@ -2209,7 +2902,7 @@ void CAngrybotAnimationController::OnRootMotion(CGameObject* pRootGameObject)
 CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks)
 {
 	CLoadedModelInfo *pAngrybotModel = pModel;
-	if (!pAngrybotModel) // 오류 방지
+	if (!pAngrybotModel) // ㅻ 諛⑹
 		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
 
 	Set_Child(pAngrybotModel->m_pModelRootObject);
@@ -2234,4 +2927,3 @@ CHumanObject::CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 CHumanObject::~CHumanObject()
 {
 }
-

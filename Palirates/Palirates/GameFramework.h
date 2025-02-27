@@ -4,8 +4,19 @@
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
-#include "UILayer.h"
+#include "UI_Manager.h"
 #include "Scene_Manager.h"
+
+struct CB_FRAMEWORK_INFO
+{
+	float m_fCurrentTime;      
+	float m_fElapsedTime;         
+
+	float m_fSecondsPerFirework;    
+	int m_nFlareParticlesToEmit;     
+	int m_nMaxFlareType2Particles;   
+	XMFLOAT3 m_xmf3Gravity;          
+};
 
 class CGameFramework
 {
@@ -27,6 +38,10 @@ public:
 
 	void ChangeSwapChainState();
 
+	void CreateShaderVariables();
+	void UpdateShaderVariables();
+	void ReleaseShaderVariables();
+
     void Build_Scenes();
     void Release_Scenes();
 
@@ -37,6 +52,8 @@ public:
 
 	void WaitForGpuComplete();
 	void MoveToNextFrame();
+	void Clear_RenderTarget(XMFLOAT3 background_color);
+
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -56,7 +73,7 @@ private:
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
 
-	static const UINT			m_nSwapChainBuffers = 2;
+	static const UINT			m_nSwapChainBuffers = 4;
 	UINT						m_nSwapChainBufferIndex;
 
 	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
@@ -65,9 +82,18 @@ private:
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
 
-	ID3D12CommandAllocator		*m_pd3dCommandAllocator = NULL;
-	ID3D12CommandQueue			*m_pd3dCommandQueue = NULL;
-	ID3D12GraphicsCommandList	*m_pd3dCommandList = NULL;
+	ID3D12CommandQueue			*p_CommandQueue = NULL;
+
+	ID3D12CommandAllocator		*Compute_CommandAllocator = NULL;
+	ID3D12CommandAllocator		*Render_CommandAllocator = NULL;
+
+	ID3D12GraphicsCommandList	*Compute_CommandList = NULL;
+	ID3D12GraphicsCommandList* Render_CommandList = NULL;
+
+	// 사용할 커멘드 할당자, 큐로 연결하여 사용
+	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
+	ID3D12GraphicsCommandList* Active_CommandList = NULL;
+
 
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[m_nSwapChainBuffers];
@@ -92,5 +118,9 @@ private:
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;
 #endif 
+
+protected:
+	ID3D12Resource* FrameworkInfo = NULL;
+	CB_FRAMEWORK_INFO* MappedFrameworkInfo = NULL;
 };
 

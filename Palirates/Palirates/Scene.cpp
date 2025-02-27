@@ -26,7 +26,6 @@ CScene::CScene()
 CScene::~CScene()
 {
 	DebugOutput("\nDelete Scene");
-
 }
 
 void CScene::BuildDefaultLightsAndMaterials()
@@ -98,8 +97,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	BuildDefaultLightsAndMaterials();
 
-	obj_manager = new Object_Manager();
+#ifdef RENDER_PARTICLE
+	particle_manager = new Particle_Manager(pd3dDevice, pd3dCommandList);
+	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+#endif
 
+
+	obj_manager = new Object_Manager();
 #ifdef RENDER_OBB
 	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 #endif
@@ -107,10 +111,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
-	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 32,2);
-//	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 
 	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
@@ -126,16 +131,19 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
 	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
 	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_1->SetPosition(100.0f, m_pTerrain->Get_Mesh_Height(100.0f, 100.0f), 100.0f);
 	humanObject_1->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_1);
+	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
 	
 	//====================================================
 	// 테스트용 코드	
 //	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
 	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
 	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
+
+	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
+	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
 
 	test_obj->Add_Collider(0.0f);
 	test_obj2->Add_Collider(10.0f);
@@ -145,46 +153,59 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	name_view = obj_name_2;
 	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_2->SetPosition(150.0f, m_pTerrain->Get_Mesh_Height(150.0f, 150.0f), 150.0f);
 	humanObject_2->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_2);
+	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
 
 
 	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
 	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_3->SetPosition(200.0f, m_pTerrain->Get_Mesh_Height(200.0f, 200.0f), 200.0f);
+
 	humanObject_3->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_3);
+	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
 
+	//=====================================================
+#ifdef LOAD_SCENE
+	// Load Scene
 
-	//float* pfData = new float[2];
-	//pfData[0] = 0.0f;
-	//pfData[1] = 1.0f;
-	//m_ppHierarchicalGameObjects[6] = new CEthanObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, 1);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKeys(0, 2);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 0, 0.0f, &pfData[0]);
-	//CAnimationSet* pAnimationSet = m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[1];
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 1, pAnimationSet->m_fLength, &pfData[1]);
-	//CRootMotionCallbackHandler* pRootMotionCallbackHandler = new CRootMotionCallbackHandler();
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetAnimationCallbackHandler(1, pRootMotionCallbackHandler);
-	//m_ppHierarchicalGameObjects[6]->SetRootMotion(true);
-	//m_ppHierarchicalGameObjects[6]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 670.0f), 670.0f);
-	//m_ppHierarchicalGameObjects[6]->Rotate(0.0f, -90.0f, 0.0f);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackSpeed(0, 0.75f);
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("test_scene");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+#endif
+	//=====================================================
 
-	m_nShaders = 0;
-	m_ppShaders = new CShader*[m_nShaders];
+	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+
+	// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
+
+	for (auto& [mesh_name, instance_info] : *temp_list_map)
+	{
+		m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+		m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+	}
+
+	// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
+	obj_manager->Classify_Objects_By_Tile();
+
+	Object_Manager::Reserve_Update();
+
+
 
 	if (pHumanModel)
 		delete pHumanModel;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
+
 #ifdef WRITE_TEXT_UI
 void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 {
@@ -277,19 +298,11 @@ void CScene::ReleaseObjects()
 	delete text_ui_manager;
 #endif
 
-	if (m_ppShaders)
-	{
-		for (int i = 0; i < m_nShaders; i++)
-		{
-			m_ppShaders[i]->ReleaseShaderVariables();
-			m_ppShaders[i]->ReleaseObjects();
-			m_ppShaders[i]->Release();
-		}
-		delete[] m_ppShaders;
-	}
-
-	if (m_pTerrain) delete m_pTerrain;
-	if (m_pSkyBox) delete m_pSkyBox;
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr.reset();
+		
+		if (m_pSkyBox) delete m_pSkyBox;
 
 
 	ReleaseShaderVariables();
@@ -301,150 +314,160 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 {
 	ID3D12RootSignature *pd3dGraphicsRootSignature = NULL;
 
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[10];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[9];
+	{
+		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[0].NumDescriptors = 1;
+		pd3dDescriptorRanges[0].BaseShaderRegister = 0; //t0: gtxtAlbedoTexture
+		pd3dDescriptorRanges[0].RegisterSpace = 0;
+		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[0].NumDescriptors = 1;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 6; //t6: gtxtAlbedoTexture
-	pd3dDescriptorRanges[0].RegisterSpace = 0;
-	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[1].NumDescriptors = 1;
+		pd3dDescriptorRanges[1].BaseShaderRegister = 1; //t1: gtxtSpecularTexture
+		pd3dDescriptorRanges[1].RegisterSpace = 0;
+		pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[1].NumDescriptors = 1;
-	pd3dDescriptorRanges[1].BaseShaderRegister = 7; //t7: gtxtSpecularTexture
-	pd3dDescriptorRanges[1].RegisterSpace = 0;
-	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[2].NumDescriptors = 1;
+		pd3dDescriptorRanges[2].BaseShaderRegister = 2; //t2: gtxtNormalTexture
+		pd3dDescriptorRanges[2].RegisterSpace = 0;
+		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[2].NumDescriptors = 1;
-	pd3dDescriptorRanges[2].BaseShaderRegister = 8; //t8: gtxtNormalTexture
-	pd3dDescriptorRanges[2].RegisterSpace = 0;
-	pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[3].NumDescriptors = 1;
+		pd3dDescriptorRanges[3].BaseShaderRegister = 3; //t3: gtxtMetallicTexture
+		pd3dDescriptorRanges[3].RegisterSpace = 0;
+		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[3].NumDescriptors = 1;
-	pd3dDescriptorRanges[3].BaseShaderRegister = 9; //t9: gtxtMetallicTexture
-	pd3dDescriptorRanges[3].RegisterSpace = 0;
-	pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[4].NumDescriptors = 1;
+		pd3dDescriptorRanges[4].BaseShaderRegister = 4; //t4: gtxtEmissionTexture
+		pd3dDescriptorRanges[4].RegisterSpace = 0;
+		pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[4].NumDescriptors = 1;
-	pd3dDescriptorRanges[4].BaseShaderRegister = 10; //t10: gtxtEmissionTexture
-	pd3dDescriptorRanges[4].RegisterSpace = 0;
-	pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[5].NumDescriptors = 1;
+		pd3dDescriptorRanges[5].BaseShaderRegister = 5; //t5: gtxtTerrainBaseTexture
+		pd3dDescriptorRanges[5].RegisterSpace = 0;
+		pd3dDescriptorRanges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[5].NumDescriptors = 1;
-	pd3dDescriptorRanges[5].BaseShaderRegister = 11; //t11: gtxtEmissionTexture
-	pd3dDescriptorRanges[5].RegisterSpace = 0;
-	pd3dDescriptorRanges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[6].NumDescriptors = 1;
+		pd3dDescriptorRanges[6].BaseShaderRegister = 6; //t6: gtxtTerrainDetailTexture
+		pd3dDescriptorRanges[6].RegisterSpace = 0;
+		pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[6].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[6].NumDescriptors = 1;
-	pd3dDescriptorRanges[6].BaseShaderRegister = 12; //t12: gtxtEmissionTexture
-	pd3dDescriptorRanges[6].RegisterSpace = 0;
-	pd3dDescriptorRanges[6].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[7].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[7].NumDescriptors = 1;
+		pd3dDescriptorRanges[7].BaseShaderRegister = 7; //t7: gtxtSkyBoxTexture
+		pd3dDescriptorRanges[7].RegisterSpace = 0;
+		pd3dDescriptorRanges[7].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	pd3dDescriptorRanges[7].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[7].NumDescriptors = 1;
-	pd3dDescriptorRanges[7].BaseShaderRegister = 13; //t13: gtxtSkyBoxTexture
-	pd3dDescriptorRanges[7].RegisterSpace = 0;
-	pd3dDescriptorRanges[7].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		pd3dDescriptorRanges[8].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[8].NumDescriptors = 1;
+		pd3dDescriptorRanges[8].BaseShaderRegister = 8; //t8: random value for particle move
+		pd3dDescriptorRanges[8].RegisterSpace = 0;
+		pd3dDescriptorRanges[8].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		//=======================================================================
+	}
 
-	pd3dDescriptorRanges[8].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[8].NumDescriptors = 1;
-	pd3dDescriptorRanges[8].BaseShaderRegister = 1; //t1: gtxtTerrainBaseTexture
-	pd3dDescriptorRanges[8].RegisterSpace = 0;
-	pd3dDescriptorRanges[8].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+	D3D12_ROOT_PARAMETER pd3dRootParameters[15];
+	{
+		// n = 0, b0 = Frame_Info
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	pd3dDescriptorRanges[9].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[9].NumDescriptors = 1;
-	pd3dDescriptorRanges[9].BaseShaderRegister = 2; //t2: gtxtTerrainDetailTexture
-	pd3dDescriptorRanges[9].RegisterSpace = 0;
-	pd3dDescriptorRanges[9].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+		// n = 1, b1 = GameObject
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 33;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1; 
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[16];
+		// n = 2, b4 = Skinned Bone Offsets
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].Descriptor.ShaderRegister = 4;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-	pd3dRootParameters[PARAMETER_CAMERA_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.ShaderRegister = 1; //Camera
-	pd3dRootParameters[PARAMETER_CAMERA_CBV].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[PARAMETER_CAMERA_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 3, b5 = Skinned Bone Transforms
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].Descriptor.ShaderRegister = 5; 
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 
-	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-	pd3dRootParameters[1].Constants.Num32BitValues = 33;
-	pd3dRootParameters[1].Constants.ShaderRegister = 2; //GameObject
-	pd3dRootParameters[1].Constants.RegisterSpace = 0;
-	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		// n = 4, b2 = Camera
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 2; 
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights
-	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-	pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 5, b3 = Lights
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].Descriptor.ShaderRegister = 3; //Lights
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_LIGHT_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
-	pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 6, t0 = Albeo_Texture
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
+		pd3dRootParameters[ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[5].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
-	pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 7, t1 = Specular_Texture
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
+		pd3dRootParameters[ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[6].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
-	pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 8, t2 = Normal_Texture
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
+		pd3dRootParameters[ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[7].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[7].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
-	pd3dRootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 9, t3 = Metallic_Texture
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
+		pd3dRootParameters[ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[8].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[8].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[8].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
-	pd3dRootParameters[8].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 10, t4 = Emission_Texture
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
+		pd3dRootParameters[ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[9].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[9].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[9].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
-	pd3dRootParameters[9].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 11, t5 = Terrain_Base_Texture
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
-	pd3dRootParameters[PARAMETER_SKYBOX_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 12, t6 = Terrain_Base_Texture
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
+		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
-	pd3dRootParameters[PARAMETER_TERRAIN_BASE_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 13,  t7 = Sky_Box
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
+		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[9]);
-	pd3dRootParameters[PARAMETER_TERRAIN_DETAIL_TEXTURE].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 14,  t8 = RandomValue
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY;
 
-	pd3dRootParameters[PARAMETER_BONE_OFFSET].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.ShaderRegister = 7; //Skinned Bone Offsets
-	pd3dRootParameters[PARAMETER_BONE_OFFSET].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[PARAMETER_BONE_OFFSET].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	}
 
-	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.ShaderRegister = 8; //Skinned Bone Transforms
-	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[PARAMETER_BONE_TRANSFORM].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-
-	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.ShaderRegister = 6; //Bounding Box Renderer
-	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[PARAMETER_OOBB_CUBE_CBV].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
 
 	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -473,7 +496,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dSamplerDescs[1].RegisterSpace = 0;
 	pd3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT;
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
 	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
 	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
@@ -520,6 +543,9 @@ void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	::memcpy(m_pcbMappedLights->m_pLights, m_pLights, sizeof(LIGHT) * m_nLights);
 	::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
 	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_LIGHT_CBV_INDEX, d3dcbLightsGpuVirtualAddress); //Lights
 }
 
 void CScene::ReleaseShaderVariables()
@@ -536,9 +562,10 @@ void CScene::ReleaseUploadBuffers()
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
 
-	for (int i = 0; i < m_nShaders; i++) 
-	if(m_ppShaders[i] != NULL)
-		m_ppShaders[i]->ReleaseUploadBuffers();
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr->ReleaseUploadBuffers();
+
 	
 	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
 	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager->Get_Object_List(Object_Type::non_skinned);
@@ -616,75 +643,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case '1':
+		case 'Q':
 		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
+			if (test_button)
+				break;
 
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
-
-		}		break;
-
-		case '2':
-		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
-
-		}		break;
-
-		case '3':
-		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(false);
-
-		}		break;
-
-		case '4':
-		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 21")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 42")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 63")->Set_Active(true);
-
-		}		break;
-
-		case '5':
-		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(false);
-		}		break;
-
-		case '6':
-		{
-			m_pTerrain->FindFrame("tile map - 0")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 5")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 10")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 15")->Set_Active(true);
-		}		break;
-
-		case '7':
-		{
-			m_pTerrain->FindFrame("tile map - 9")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 14")->Set_Active(false);
-			m_pTerrain->FindFrame("tile map - 19")->Set_Active(false);
-		}		break;
-
-		case '8':
-		{
-			m_pTerrain->FindFrame("tile map - 9")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 14")->Set_Active(true);
-			m_pTerrain->FindFrame("tile map - 19")->Set_Active(true);
-		}		break;
-
-		case VK_SPACE:
-		{
 			test_button = true;
 		}	break;
 
@@ -738,13 +701,14 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 }
 
-void CScene::AnimateObjects(float fTimeElapsed)
+void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	for (int i = 0; i < m_nShaders; i++) 
-		if (m_ppShaders[i]) 
-			m_ppShaders[i]->AnimateObjects(fTimeElapsed);
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr->AnimateObjects(fTimeElapsed);
+
 
 	if (m_pLights)
 	{
@@ -752,56 +716,77 @@ void CScene::AnimateObjects(float fTimeElapsed)
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
 }
-
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_OBB
-	// 테스트용 - 터레인 객체 컨테이너와, 스킨 메시 객체 컨테이너에 OBB_Drawer 동시 적용
-	// 테스트를 위해 터레인 객체를 임시 shared_ptr로 해서, 
-	// 함수가 끝나면 터레인 객체가 제거되고 있음 -> 오류 발생 
-//		static std::shared_ptr<CHeightMapTerrain> test_ptr(m_pTerrain);
-//		static vector<shared_ptr<CGameObject>> temp_list{ test_ptr }; 
-		//vector<shared_ptr<CGameObject>>* temp_list_2 = obj_manager->Get_Object_List(Object_Type::skinned);
-		//if (test_button)
-		//{
-		//	temp_list.insert(temp_list.end(), temp_list_2->begin(), temp_list_2->end());
-		//	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, temp_list);
-		//}
-		//else
-		//	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_2);
+
+	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
+	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+
+	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
+
+#endif
+	obj_manager->Update(pd3dDevice, pd3dCommandList);
+}
+
+void CScene::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+		particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
+
 #endif
 }
 
-void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Pre_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-
-	if (m_pd3dGraphicsRootSignature) 
+	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
-	if (m_pd3dCbvSrvDescriptorHeap) 
+	if (m_pd3dCbvSrvDescriptorHeap)
 		pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvDescriptorHeap);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
+	//씬의 객체들 프러스텀 컬링
+	obj_manager->Check_Culling_All(pCamera);
+
+	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress); //Lights
-
-//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-	if (m_pTerrain) m_pTerrain->Render(pd3dCommandList, pCamera);
-
 	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+
+
+
+}
+
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+{
+//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+
+
+	obj_manager->Render_Terrain(pd3dCommandList, pCamera);
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
-	for (int i = 0; i < m_nShaders; i++) 
-		if (m_ppShaders[i]) 
-			m_ppShaders[i]->Render_Objects(pd3dCommandList, pCamera);
+	if (Shader_list.size())
+		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+			shader_ptr->Render_Objects(pd3dCommandList, pCamera);
+
+
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+	{
+		particle_manager->Render_All(pd3dCommandList, pCamera, 0);
+		particle_manager->Render_All(pd3dCommandList, pCamera, 1);
+	}
+
+#endif
+
 
 #ifdef RENDER_OBB
 	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
@@ -811,3 +796,121 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 }
 
+void CScene::Post_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+		particle_manager->OnPostRender_All();
+
+#endif
+}
+
+
+void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
+
+//	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 76); //SuperCobra(17), Gunship(2), Player:Mi24(1), Angrybot()
+
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+
+	BuildDefaultLightsAndMaterials();
+
+	obj_manager = new Object_Manager();
+
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+#endif
+
+	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+
+
+	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
+
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
+//	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, -100.0f * xmf3Scale.y, 0.0f));
+
+
+	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
+
+	string obj_name_1 = "test_obj_name_1";
+	string obj_name_2 = "test_obj_name_2";
+	string obj_name_3 = "test_obj_name_3";
+
+
+	std::string_view name_view = obj_name_1;
+	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 2);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
+	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
+	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_1->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
+
+	//====================================================
+	// 테스트용 코드	
+//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
+	CGameObject* test_obj = humanObject_1->FindFrame("MiddleFinger3_R");
+	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
+
+	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
+	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
+
+	test_obj->Add_Collider(0.0f);
+	test_obj2->Add_Collider(10.0f);
+
+	//====================================================
+
+	name_view = obj_name_2;
+	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
+	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_2->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
+
+
+	name_view = obj_name_3;
+	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
+	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
+	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_3->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
+
+	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Havana.bin", NULL);
+
+	testModel->m_pModelRootObject->Add_Collider(10.0f);
+
+	//=====================================================
+	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
+	test_OBJ->Set_Child(testModel->m_pModelRootObject);
+
+	float scale_value = 10.0f;
+	XMFLOAT3 scale_vector = { scale_value ,scale_value ,scale_value };
+	float pos_x = 200.0f;
+	float pos_z = 100.0f;
+	float pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
+
+	test_OBJ->SetScale(scale_vector, true);
+	test_OBJ->SetPosition(pos_x, pos_y+ 500.0f, pos_z);
+
+	test_OBJ->UpdateTransform(NULL);
+
+	//=====================================================
+	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
+
+
+	Object_Manager::Reserve_Update();
+
+
+
+	if (pHumanModel)
+		delete pHumanModel;
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}

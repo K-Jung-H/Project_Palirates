@@ -3,7 +3,7 @@
 // stdafx.obj에는 미리 컴파일된 형식 정보가 포함됩니다.
 
 #include "stdafx.h"
-
+#include <sstream>
 #include "DDSTextureLoader12.h"
 #include "WICTextureLoader12.h"
 
@@ -42,6 +42,13 @@ void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, I
 	d3dResourceBarrier.Transition.StateAfter = d3dStateAfter;
 	d3dResourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	pd3dCommandList->ResourceBarrier(1, &d3dResourceBarrier);
+}
+
+void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB)
+{
+	ID3D12Resource* pd3dTempResource = *ppd3dResourceA;
+	*ppd3dResourceA = *ppd3dResourceB;
+	*ppd3dResourceB = pd3dTempResource;
 }
 
 ID3D12Resource* CreateTextureResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_RESOURCE_DIMENSION d3dResourceDimension, UINT nWidth, UINT nHeight, UINT nDepthOrArraySize, UINT nMipLevels, D3D12_RESOURCE_FLAGS d3dResourceFlags, DXGI_FORMAT dxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
@@ -131,6 +138,15 @@ ID3D12Resource* CreateTextureResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 			pd3dBuffer->Map(0, &d3dReadRange, (void**)&pBufferDataBegin);
 			memcpy(pBufferDataBegin, pData, nBytes);
 			pd3dBuffer->Unmap(0, NULL);
+		}
+
+		if (FAILED(hResult))
+		{
+			HRESULT removeReason = pd3dDevice->GetDeviceRemovedReason();
+			std::stringstream ss;
+			ss << "CreateCommittedResource failed with HRESULT: 0x" << std::hex << hResult;
+			ss << ", Device Removed Reason: 0x" << std::hex << removeReason;
+			DebugOutput(ss.str());
 		}
 		break;
 	}

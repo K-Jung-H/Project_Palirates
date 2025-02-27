@@ -44,6 +44,9 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
+	BoundingFrustum m_xmFrustum;
+
+
 public:
 	CCamera();
 	CCamera(CCamera *pCamera);
@@ -85,7 +88,6 @@ public:
 	float& GetYaw() { return(m_fYaw); }
 
 	void SetOffset(XMFLOAT3 xmf3Offset) { m_xmf3Offset = xmf3Offset; }
-//	void SetOffset(XMFLOAT3 xmf3Offset) { m_xmf3Offset = xmf3Offset; m_xmf3Position.x += xmf3Offset.x; m_xmf3Position.y += xmf3Offset.y; m_xmf3Position.z += xmf3Offset.z; }
 	XMFLOAT3& GetOffset() { return(m_xmf3Offset); }
 
 	void SetTimeLag(float fTimeLag) { m_fTimeLag = fTimeLag; }
@@ -100,6 +102,11 @@ public:
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { }
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 	virtual void SetLookAt(XMFLOAT3& xmf3LookAt) { }
+
+	void GenerateFrustum();
+	bool IsInFrustum(BoundingOrientedBox& xmBoundingBox);
+	bool IsInFrustum(const XMFLOAT3& position);
+
 };
 
 class CSpaceShipCamera : public CCamera

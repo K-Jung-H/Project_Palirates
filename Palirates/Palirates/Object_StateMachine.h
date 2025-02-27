@@ -113,6 +113,7 @@ private:
 	// 이걸로 애니메이션 처리
 	virtual void doAction(State state, float Elapsed_time) {};
 
+
 	CPlayer* m_pOwner;
 
 };
