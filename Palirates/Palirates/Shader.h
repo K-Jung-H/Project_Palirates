@@ -3,9 +3,9 @@
 //-----------------------------------------------------------------------------
 
 #pragma once
-
 #include "Object.h"
 #include "Camera.h"
+
 
 class CShader
 {
@@ -52,7 +52,7 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState=0);
 
-	virtual void Setting_Render(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState);
+	virtual void Setting_Render(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState = 0);
 	virtual void Render_Objects(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {};
 
 	virtual void ReleaseUploadBuffers() { }
@@ -146,6 +146,61 @@ public:
 
 };
 
+class CPostProcessingShader : public CStandardShader
+{
+protected:
+	ID3D12RootSignature* m_pd3dGraphicsRootSignature = NULL;
+	D3D12_CPU_DESCRIPTOR_HANDLE* m_pd3dRtvCPUDescriptorHandles = NULL;
+	CTexture* m_pTexture = NULL;
+
+public:
+	CPostProcessingShader();
+	virtual ~CPostProcessingShader();
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int n);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int n);
+	virtual D3D12_BLEND_DESC CreateBlendState(int n);
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice);
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
+	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState);
+
+	virtual void CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle);
+
+	virtual void OnPrepareRenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle);
+	virtual void OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+public:
+	CTexture* GetTexture() { return(m_pTexture); }
+	ID3D12Resource* GetTextureResource(UINT nIndex) { return(m_pTexture->GetResource(nIndex)); }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE GetRtvCPUDescriptorHandle(UINT nIndex) { return(m_pd3dRtvCPUDescriptorHandles[nIndex]); }
+};
+
+class CTextureToFullScreenShader : public CPostProcessingShader
+{
+public:
+	CTextureToFullScreenShader();
+	virtual ~CTextureToFullScreenShader();
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+		virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
+	virtual void ReleaseShaderVariables();
+
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CStandardObjectsShader : public CStandardShader
@@ -214,3 +269,5 @@ public:
 
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, void *pContext = NULL);
 };
+
+

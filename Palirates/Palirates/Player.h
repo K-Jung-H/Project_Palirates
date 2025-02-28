@@ -7,8 +7,25 @@
 #define DIR_UP					0x10
 #define DIR_DOWN				0x20
 
+#include "Object_StateMachine.h"
 #include "Object.h"
 #include "Camera.h"
+
+enum AnimationTrack
+{
+	TRACK_IDLE = 0,
+	TRACK_RUN_FORWARD_LEFT = 1,
+	TRACK_RUN_FORWARD = 2,
+	TRACK_RUN_FORWARD_RIGHT = 3,
+	TRACK_RUN_BACKWARD_LEFT = 4,
+	TRACK_RUN_BACKWARD = 5,
+	TRACK_RUN_BACKWARD_RIGHT = 6,
+	TRACK_RUN_LEFT = 7, 
+	TRACK_RUN_RIGHT = 8, 
+	TRACK_DIVEROLL_FORWARD = 9,
+	TRACK_KNOCK_DOWN = 10,
+	TRACK_GET_UP = 11
+};
 
 class CPlayer : public CGameObject
 {
@@ -36,10 +53,16 @@ protected:
 	CCamera						*m_pCamera = NULL;
 	CHeightMapTerrain* last_tile_ptr = NULL;
 
+	float stateElapsedTime{ 0.0f };
+
 
 	bool Anime_test_FallingLoop = false;
 	float m_fFallingTimer = 0.0f;
 
+	float moveX{ 0.0f };
+	float moveZ{ 0.0f };
+private:
+	std::unique_ptr<StateMachine> m_StateMachine;
 
 public:
 	CPlayer();
@@ -99,6 +122,17 @@ public:
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
+	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
+
+	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
+
+	void SetMoveX(float x) { moveX = x; }
+	void SetMoveZ(float x) { moveZ = x; }
+	float GetMoveX() { return moveX; }
+	float GetMoveZ() { return moveZ; }
+
+	std::vector<float> prevWeights;
+	std::vector<float> targetWeights;
 };
 
 
@@ -118,7 +152,7 @@ private:
 	bool On_Ground = false;
 
 public:
-	CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext=NULL);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
 	virtual ~CTerrainPlayer();
 
 public:

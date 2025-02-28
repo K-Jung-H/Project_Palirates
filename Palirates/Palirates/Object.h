@@ -79,7 +79,9 @@ public:
 
 	int GetRootParameters() { return(m_nRootParameters); }
 	int GetTextures() { return(m_nTextures); }
+
 	ID3D12Resource* GetResource(int nIndex) { return(m_ppd3dTextures[nIndex]); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int nIndex) { return(m_pd3dSrvGpuDescriptorHandles[nIndex]); }
 
 	UINT GetTextureType() { return(m_nTextureType); }
 	UINT GetTextureType(int nIndex) { return(m_pnResourceTypes[nIndex]); }
@@ -110,7 +112,7 @@ public:
 	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
 public:
-	// static ÀÚ·áÇüÀÌ ¿¬°áµÇ¾î¾ß ÇÏ¹Ç·Î, shared_ptr »ç¿ë ºÒ°¡
+	// static ìë£Œí˜•ì´ ì—°ê²°ë˜ì–´ì•¼ í•˜ë¯€ë¡œ, shared_ptr ì‚¬ìš© ë¶ˆê°€
 	CShader* m_pShader = NULL;
 
 	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -235,12 +237,13 @@ public:
 	int								m_nAnimationSets = 0;
 	CAnimationSet					**m_pAnimationSet_list = NULL;
 
-	std::vector<int> m_vecUpperBodyBoneIndices;  // »óÃ¼
-	std::vector<int> m_vecLowerBodyBoneIndices;  // ÇÏÃ¼
+	std::vector<int> m_vecUpperBodyBoneIndices;  // ìƒì²´
+	std::vector<int> m_vecLowerBodyBoneIndices;  // í•˜ì²´
 
 	int								m_nBoneFrames = 0; 
 	std::vector< CGameObject*>	m_ppBoneFrameCaches;
 	void Bone_Info();
+	std::string CAnimationSets::GetBoneName(int index);
 	void ClassifyBones();
 };
 
@@ -255,6 +258,7 @@ public:
     float 							m_fSpeed = 1.0f;
     float 							m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 	float 							m_fWeight = 1.0f;
+	bool m_bFinished{ false };
 
 	int 							m_nAnimationSet = 0; //AnimationSet Index
 
@@ -336,6 +340,7 @@ public:
 	void SetAnimationCallbackHandler(int nAnimationTrack, CAnimationCallbackHandler *pCallbackHandler);
 
 	void AdvanceTime(float fElapsedTime, CGameObject *pRootGameObject);
+	void AdvanceTime2(float fElapsedTime, CGameObject *pRootGameObject);
 
 public:
 	bool							m_bRootMotion = false;
@@ -357,13 +362,13 @@ class CHeightMapTerrain;
 class CGameObject
 {
 private:
-	std::shared_ptr<CGameObject> m_pChild = nullptr;     // ÀÚ½Ä ³ëµå
-	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // ÇüÁ¦ ³ëµå
+	std::shared_ptr<CGameObject> m_pChild = nullptr;     // ìì‹ ë…¸ë“œ
+	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // í˜•ì œ ë…¸ë“œ
 
 	bool Active = true;
 
 public:
-	CGameObject* m_pParent = NULL; // ºÎ¸ğ ptrÀº shared_ptr X, ¼øÈ¯ ÂüÁ¶ ¹ß»ı ¹æÁö
+	CGameObject* m_pParent = NULL; // ë¶€ëª¨ ptrì€ shared_ptr X, ìˆœí™˜ ì°¸ì¡° ë°œìƒ ë°©ì§€
 
 	char							m_pstrFrameName[64];
 
@@ -377,6 +382,8 @@ public:
 
 	XMFLOAT3 m_xmf3RotationAxis;
 	float m_fRotationSpeed;
+
+	int n_Animation = 0;
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -493,11 +500,15 @@ public:
 	virtual void Add_Collider(float cube_length);
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
+
+	CAnimationController* GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+
 	public:
 	// Using CHeightMapTerrain
 	virtual int Get_Tile(float x, float z) { return -1; };
 	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
 	virtual void Check_Culling(CCamera* pCamera) {};
+
 };
 
 //==================================================================================
@@ -511,7 +522,7 @@ private:
 	static CTerrainShader* pTerrainShader;
 	static CMaterial* pTerrainMaterial;
 
-	static CHeightMapImage* m_pHeightMapImage;  // °¢ °´Ã¼¸¶´Ù °³º°ÀûÀ¸·Î °®´Â ³ôÀÌ ¸Ê ÀÌ¹ÌÁö
+	static CHeightMapImage* m_pHeightMapImage;  // ê° ê°ì²´ë§ˆë‹¤ ê°œë³„ì ìœ¼ë¡œ ê°–ëŠ” ë†’ì´ ë§µ ì´ë¯¸ì§€
 
 private:
 	int							m_nWidth;

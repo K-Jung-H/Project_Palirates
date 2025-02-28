@@ -337,12 +337,6 @@ void ParticleShader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12
 
 void ParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-
-
-	//=================================================
-
-	//CScene::CreateShaderResourceViews(pd3dDevice, pParticleTexture, 0, PARAMETER_DEFAULT_TEXTURE);
-	//CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, 14);
 }
 
 void ParticleShader::Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList)

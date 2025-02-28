@@ -1,17 +1,11 @@
 #pragma once
+#include "Scene.h"
 #include "Shader.h"
 #include "stdafx.h"
 #include "Mesh.h"
-#include "Scene.h"
 #include "Particle.h"
 
-class CScene;
 
-
-
-//==============================================================================
-
-// CS에 전달할 정보
 struct CB_Particle_Update_Info
 {
 	float ElapsedTime;

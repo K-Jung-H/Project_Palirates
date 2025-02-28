@@ -73,15 +73,21 @@ private:
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
 
-	static const UINT			m_nSwapChainBuffers = 4;
-	UINT						m_nSwapChainBufferIndex;
+	static const UINT			N_SwapChainBuffers = 2;
+	UINT						SwapChainBuffer_Index;
 
-	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
-	ID3D12DescriptorHeap		*m_pd3dRtvDescriptorHeap = NULL;
-
+	//=======================================================
+	//	RTV
+	ID3D12Resource				*ptr_SwapChainBackBuffer_List[N_SwapChainBuffers];
+	ID3D12DescriptorHeap		*ptr_Rtv_DescriptorHeap = NULL;
+	D3D12_CPU_DESCRIPTOR_HANDLE		SwapChainBack_Buffer_RTVCPUHandle_list[N_SwapChainBuffers];
+	//=======================================================
+	// DSV
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
-
+	D3D12_CPU_DESCRIPTOR_HANDLE		DsvDescriptorCPUHandle;
+	//=======================================================
+	// Command
 	ID3D12CommandQueue			*p_CommandQueue = NULL;
 
 	ID3D12CommandAllocator		*Compute_CommandAllocator = NULL;
@@ -93,34 +99,38 @@ private:
 	// 사용할 커멘드 할당자, 큐로 연결하여 사용
 	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
 	ID3D12GraphicsCommandList* Active_CommandList = NULL;
-
+	//=======================================================
 
 	ID3D12Fence					*m_pd3dFence = NULL;
-	UINT64						m_nFenceValues[m_nSwapChainBuffers];
+	UINT64						m_nFenceValues[N_SwapChainBuffers];
 	HANDLE						m_hFenceEvent;
-
+	//=======================================================
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif
-
+protected:
+	ID3D12Resource* FrameworkInfo = NULL;
+	CB_FRAMEWORK_INFO* MappedFrameworkInfo = NULL;
+	
 	CGameTimer					m_GameTimer;
 
+public:
+	CPostProcessingShader* PostProcessing_shader = NULL;
 	Scene_Manager* scene_manager = NULL;
+
 
 
 	CPlayer						*m_pPlayer = NULL;
 	CCamera						*m_pCamera = NULL;
 
-	POINT						m_ptOldCursorPos;
 
+
+
+	POINT						m_ptOldCursorPos;
 	_TCHAR						m_pszFrameRate[70];
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;
 #endif 
-
-protected:
-	ID3D12Resource* FrameworkInfo = NULL;
-	CB_FRAMEWORK_INFO* MappedFrameworkInfo = NULL;
 };
 

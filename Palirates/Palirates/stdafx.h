@@ -24,13 +24,13 @@
 #include <vector>
 
 // 추가한 헤더
-#include <string>
 #include <cwchar>  // wcsrchr 사용을 위한 헤더
 #include <cstring> // wcstombs 함수 사용을 위한 헤더
 #include <cstdio>
 #include <unordered_set>
 
 #include <unordered_map>
+#include <map>
 
 using namespace std;
 

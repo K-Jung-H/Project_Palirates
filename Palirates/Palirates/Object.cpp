@@ -116,7 +116,7 @@ void CTexture::ReleaseUploadBuffers()
 
 void CTexture::LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex)
 {
-	Get_File_Name_From_Address(pszFileName, m_pstrTextureName); // ≈¨∑°Ω∫ø° ¿Ã∏ß ¿˙¿Â«œ¥¬ char[64] √ﬂ∞°«œ∞Ì ¿˙¿Â«œ±‚
+	Get_File_Name_From_Address(pszFileName, m_pstrTextureName);
 	m_pnResourceTypes[nIndex] = nResourceType;
 	m_ppd3dTextures[nIndex] = ::CreateTextureResourceFromDDSFile(pd3dDevice, pd3dCommandList, pszFileName, &m_ppd3dTextureUploadBuffers[nIndex], D3D12_RESOURCE_STATE_GENERIC_READ/*D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/);
 }
@@ -145,6 +145,7 @@ ID3D12Resource* CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12Graphics
 	m_ppd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, pd3dCommandList, nWidth, nHeight, nElements, nMipLevels, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
 	return(m_ppd3dTextures[nIndex]);
 }
+
 
 D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 {
@@ -575,6 +576,18 @@ void CAnimationSets::Bone_Info()
 	}
 }
 
+std::string CAnimationSets::GetBoneName(int index)
+{
+	if (index < 0 || index >= m_nBoneFrames) return "";
+
+	if (m_ppBoneFrameCaches[index] && m_ppBoneFrameCaches[index]->m_pstrFrameName)
+	{
+		return std::string(m_ppBoneFrameCaches[index]->m_pstrFrameName);
+	}
+
+	return "";
+}
+
 void CAnimationSets::ClassifyBones()
 {
 	/*for (int i = 0; i < m_nBoneFrames; i++)
@@ -662,9 +675,17 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 		break;
 	}
 	case ANIMATION_TYPE_ONCE:
-		m_fPosition = fTrackPosition + fTrackElapsedTime;
-		if (m_fPosition > fAnimationLength) 
-			m_fPosition = fAnimationLength;
+		if (m_fPosition < 0.0f)
+			m_fPosition = 0.0f;
+		else {
+			if (m_fPosition > fAnimationLength) {
+				m_fPosition = fAnimationLength;
+				//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+				m_bFinished = true;
+				break;
+			}
+			m_fPosition = fTrackPosition + fTrackElapsedTime;
+		}
 		break;
 	case ANIMATION_TYPE_PINGPONG:
 		break;
@@ -694,7 +715,7 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes];
 	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes];
 
-	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); //256¿« πËºˆ
+	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
 		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
@@ -771,12 +792,11 @@ void CAnimationController::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3d
 {
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i];  // æ÷¥œ∏ﬁ¿Ãº« ƒ¡∆Æ∑—∑Øø° ¿˙¿Âµ» ª¿ ¡§∫∏ ∏Æº“Ω∫ ∆˜¿Œ≈Õ∏¶ Ω∫≈≤ ∏ﬁΩ√ø° ¿¸¥ﬁ
-		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; // æ÷¥œ∏ﬁ¿Ãº« ƒ¡∆Æ∑—∑Øø° ¿˙¿Âµ» ª¿ ∫Ø»Ø «‡∑ƒ¿ª Ω∫≈≤ ∏ﬁΩ√ø° ¿¸¥ﬁ
+		m_ppSkinnedMeshes[i]->m_pd3dcbSkinningBoneTransforms = m_ppd3dcbSkinningBoneTransforms[i]; 
+		m_ppSkinnedMeshes[i]->m_pcbxmf4x4MappedSkinningBoneTransforms = m_ppcbxmf4x4MappedSkinningBoneTransforms[i]; 
 	}
 }
 
-// º±«¸ ∫∏∞£ (¿ßƒ° & ≈©±‚)
 XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
 	return XMFLOAT3(
 		a.x + (b.x - a.x) * t,
@@ -785,7 +805,6 @@ XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
 	);
 }
 
-// ªÁø¯ºˆ ∫∏∞£ (»∏¿¸)
 XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
 	XMVECTOR v1 = XMLoadFloat4(&q1);
 	XMVECTOR v2 = XMLoadFloat4(&q2);
@@ -796,12 +815,10 @@ XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
 	return out;
 }
 
-// «‡∑ƒø°º≠ ¿ßƒ° ¡§∫∏ √ﬂ√‚
 XMFLOAT3 GetTranslation(const XMFLOAT4X4& matrix) {
 	return XMFLOAT3(matrix._41, matrix._42, matrix._43);
 }
 
-// «‡∑ƒø°º≠ »∏¿¸ ¡§∫∏ √ﬂ√‚
 XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
 	XMVECTOR scale, rotation, translation;
 	XMMATRIX mat = XMLoadFloat4x4(&matrix);
@@ -812,7 +829,6 @@ XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
 	return rot;
 }
 
-// «‡∑ƒø°º≠ Ω∫ƒ…¿œ ¡§∫∏ √ﬂ√‚
 XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
 	XMVECTOR scale, rotation, translation;
 	XMMATRIX mat = XMLoadFloat4x4(&matrix);
@@ -823,7 +839,6 @@ XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
 	return scl;
 }
 
-// ¿ßƒ°, »∏¿¸, ≈©±‚∏¶ ¿ÃøÎ«ÿ «‡∑ƒ ¿Á±∏º∫
 XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	XMMATRIX S = XMMatrixScaling(scale.x, scale.y, scale.z);
 	XMMATRIX R = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
@@ -841,14 +856,11 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 	if (m_pAnimationTracks)
 	{
-		// Bone ¡§∫∏ √ ±‚»≠
-		// m_ppBoneFrameCaches∞° ∞¢∞¢ pRootGameObject¿« ¿⁄Ωƒ ∞¥√º(=bone ∞¥√º)
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
-		// »∞º∫»≠µ» ∆Æ∑¢¿« ¿¸√º ∞°¡ﬂƒ° ≈©±‚ -> ∞°¡ﬂƒ° ¡§±‘»≠ø° ªÁøÎ
 		float totalWeight = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
@@ -866,15 +878,22 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
-				// ∞¢ bone ∏∂¥Ÿ ∫Ø»Ø«‡∑ƒ æ˜µ•¿Ã∆Æ
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
 					
-					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // ∆Æ∑¢¿« ∞°¡ﬂƒ° ¡§±‘»≠
-					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // ¡§±‘»≠ ∫Ò¿≤¿ª ¿˚øÎ«— ∆Æ∑¢¿« ∫Ø»Ø«‡∑ƒ ¥ı«œ±‚
+					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; 
+					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); 
+
+					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+					if (boneName == "Hips")
+					{
+						blendedTransform._41 = 0.0f;
+						blendedTransform._42 = 0.8762761f;
+						blendedTransform._43 = 0.0f;
+					}
 
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 				}
@@ -883,14 +902,108 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 			}
 		}
 
-		// 4. Transform æ˜µ•¿Ã∆Æ
-		// m_ppBoneFrameCaches∞° ∞¢∞¢ pRootGameObject¿« ¿⁄Ωƒ ∞¥√º(=bone ∞¥√º)¿Ãπ«∑Œ, 
-		// ¿⁄Ωƒ ∞¥√ºø° ∫Œ∏ ∞¥√º¿« ∫Ø»Ø ¡§∫∏∏¶ ªÛº”«œ∏Èº≠ ª¿ ∞¥√º∏∂¥Ÿ æ˜µ•¿Ã∆Æ µ» m_xmf4x4Parent∞° π›øµµ«æÓ, ∞¢ ª¿¿« ¡§∫∏ π›øµ
-		// == ∞¢ ª¿µÈ¿« ∫Ø»Ø «‡∑ƒ ¡§∫∏ æ˜µ•¿Ã∆Æ
 		pRootGameObject->UpdateTransform(NULL);
 
 
-		// 5. √ﬂ∞° æ÷¥œ∏ﬁ¿Ãº« √≥∏Æ
+		OnRootMotion(pRootGameObject);
+		OnAnimationIK(pRootGameObject);
+	}
+}
+
+bool IsUpperBodyBone(const std::string& boneName)
+{
+    static const std::unordered_set<std::string> upperBodyBones =
+    {
+        "Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows", "Eyebrows", "Clavicle_L", 
+		"Shoulder_L", "Elbow_L", "Hand_L", /* tumb */ "Clavicle_R", "Shoulder_R", "Elbow_R", "Hand_R",  /* tumb */"SM_Wep_Sabre_01",
+
+    };
+    return upperBodyBones.find(boneName) != upperBodyBones.end();
+}
+
+bool IsLowerBodyBone(const std::string& boneName)
+{
+    static const std::unordered_set<std::string> lowerBodyBones =
+    {
+        "UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
+		"UpperLeg_L", "LowerLeg_L", "Ankle_L", "Ball_L", "Toes_L"
+    };
+    return lowerBodyBones.find(boneName) != lowerBodyBones.end();
+}
+
+void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGameObject)
+{
+	m_fTime += fTimeElapsed;
+
+	if (m_pAnimationTracks)
+	{
+		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+		{
+			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
+		}
+
+		float totalWeightUpper = 0.0f;
+		float totalWeightLower = 0.0f;
+		for (int k = 0; k < m_nAnimationTracks; k++)
+		{
+			if (m_pAnimationTracks[k].m_bEnable)
+			{
+				if (m_pAnimationTracks[k].m_nAnimationSet == 2) 
+					totalWeightUpper += m_pAnimationTracks[k].m_fWeight;
+				else if (m_pAnimationTracks[k].m_nAnimationSet == 1) 
+					totalWeightLower += m_pAnimationTracks[k].m_fWeight;
+			}
+		}
+
+		for (int k = 0; k < m_nAnimationTracks; k++)
+		{
+			if (m_pAnimationTracks[k].m_bEnable)
+			{
+				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
+
+				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+				{
+					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+
+					bool isLowerBody = IsLowerBodyBone(boneName);
+
+					float totalWeight = 0.0f;
+					
+					if (isLowerBody)
+					{
+						totalWeight = totalWeightLower;  
+					}
+					else {
+						totalWeight = totalWeightUpper;  
+					}
+
+					if ((!isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 2) ||
+						(isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 1))
+					{
+						XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
+						XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+
+						float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+						XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
+
+						if (boneName == "Hips")
+						{
+							blendedTransform._41 = 0.0f; 
+							blendedTransform._42 = 0.8762761f;
+							blendedTransform._43 = 0.0f; 
+						}
+
+						m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
+					}
+				}
+
+				m_pAnimationTracks[k].HandleCallback();
+			}
+		}
+
+		pRootGameObject->UpdateTransform(NULL);
+
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
@@ -901,7 +1014,6 @@ void CAnimationController::Bone_Info()
 	m_pAnimationSets->Bone_Info();
 	
 }
-
 
 //*/
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1079,7 +1191,7 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 			if (material) 
 				Material_list.push_back(std::make_shared<CMaterial>(*material));	
 			else 
-				Material_list.push_back(nullptr);  // nullptr¿ª ¿Ø¡ˆ		
+				Material_list.push_back(nullptr);  // nullptrÏùÑ Ïú†ÏßÄ		
 		}
 	}
 
@@ -1129,28 +1241,23 @@ void CGameObject::Obj_Info(int depth)
 	for (int i = 0; i < depth; ++i)
 		_tcscat_s(indent, _T("  "));
 
-	// char πËø≠¿ª TCHAR*∑Œ ¡˜¡¢ ªÁøÎ
 	TCHAR tFrameName[64];
 	MultiByteToWideChar(CP_ACP, 0, m_pstrFrameName, -1, tFrameName, 64);
 
-	// √‚∑¬«“ πÆ¿⁄ø≠
 	TCHAR pstrDebug[256] = { 0 };
 	_stprintf_s(pstrDebug, 256, _T("%s%s\n"), indent, tFrameName);
 
-	// µπˆ±◊ √‚∑¬
 	OutputDebugString(pstrDebug);
 
 
-	// ¿⁄Ωƒ ∞¥√º √‚∑¬
 	if (m_pChild)
 	{
-		m_pChild->Obj_Info(depth + 1); // ¿⁄Ωƒ¿∫ ±Ì¿Ã∏¶ «œ≥™ ¥√∑¡ »£√‚
+		m_pChild->Obj_Info(depth + 1); 
 	}
 
-	// «¸¡¶ ∞¥√º √‚∑¬
 	if (m_pSibling)
 	{
-		m_pSibling->Obj_Info(depth); // «¸¡¶¥¬ ∞∞¿∫ ±Ì¿Ãø°º≠ »£√‚
+		m_pSibling->Obj_Info(depth); 
 	}
 }
 
@@ -1163,13 +1270,13 @@ void CGameObject::Set_Name(std::string_view name)
 void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild) 
 {
 	if (pChild) 
-		pChild->m_pParent = this; // ∫Œ∏ º≥¡§
+		pChild->m_pParent = this;
 	
 
 	if (m_pChild) 
 	{
 		if (pChild) 
-			pChild->m_pSibling = m_pChild->m_pSibling; // ±‚¡∏ «¸¡¶ ø¨∞·
+			pChild->m_pSibling = m_pChild->m_pSibling; 
 		
 		m_pChild->m_pSibling = pChild;
 	}
@@ -1265,7 +1372,6 @@ CGameObject* CGameObject::FindFrame(char* pstrFrameName)
 			return pFrameObject;
 	}
 
-	// √£¡ˆ ∏¯«— ∞ÊøÏ nullptr π›»Ø
 	return nullptr;
 }
 
@@ -1319,10 +1425,8 @@ bool CGameObject::IsVisible(CCamera* pCamera)
 }
 
 
-// ºŒ¿Ã¥ı∞° PSO∏¶ ø©∑Ø ∞≥ ∞Æ¥¬ ∞ÊøÏ
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// æ÷¥œ∏ﬁ¿Ãº« ƒ¡∆Æ∑—∑Ø ºŒ¿Ã¥ı ∫Øºˆ æ˜µ•¿Ã∆Æ
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
@@ -1331,7 +1435,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		if (!IsVisible(pCamera))
 			return;
 
-		// ∞¥√º¿« ºŒ¿Ã¥ı ∫Øºˆ æ˜µ•¿Ã∆Æ
+		// Í∞ùÏ≤¥Ïùò ÏÖ∞Ïù¥Îçî Î≥ÄÏàò ÏóÖÎç∞Ïù¥Ìä∏
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
 		if (Material_list.size())
@@ -1344,23 +1448,23 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 					{
-						// PSO º¯»∏ π◊ ∑ª¥ı∏µ
 						int pipelineStateNum = pShader->Get_Num_PipelineState();
 						for (int j = 0; j < pipelineStateNum; ++j)
 						{
-							// PSO º≥¡§
 							pShader->Setting_Render(pd3dCommandList, j);
 
-							// ¿Á∑·(Material) ºŒ¿Ã¥ı ∫Øºˆ æ˜µ•¿Ã∆Æ
+
+							// Ïû¨Î£å(Material) ÏÖ∞Ïù¥Îçî Î≥ÄÏàò ÏóÖÎç∞Ïù¥Ìä∏
 							material_ptr->UpdateShaderVariable(pd3dCommandList);
 
-							// ∏ﬁΩ¨ ∑ª¥ı∏µ
+
 							m_pMesh->Render(pd3dCommandList, i);
 						}
 					}
 					else
 					{
-						// ºŒ¿Ã¥ı∞° æ¯¥¬ ∞ÊøÏø°µµ ¿Á∑· æ˜µ•¿Ã∆Æ »ƒ ∏ﬁΩ¨ ∑ª¥ı∏µ
+
+						// ÏÖ∞Ïù¥ÎçîÍ∞Ä ÏóÜÎäî Í≤ΩÏö∞ÏóêÎèÑ Ïû¨Î£å ÏóÖÎç∞Ïù¥Ìä∏ ÌõÑ Î©îÏâ¨ Î†åÎçîÎßÅ
 						material_ptr->UpdateShaderVariable(pd3dCommandList);
 						m_pMesh->Render(pd3dCommandList, i);
 					}
@@ -1435,40 +1539,40 @@ void CGameObject::Modify_World_Up_Vector(XMFLOAT3 newUpVector)
 	XMVECTOR scale, rotation, translation;
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
 
-	// ±‚¡∏ «‡∑ƒ¿ª Scale, Rotation, Translation¿∏∑Œ ∫–«ÿ
+	// Í∏∞Ï°¥ ÌñâÎ†¨ÏùÑ Scale, Rotation, TranslationÏúºÎ°ú Î∂ÑÌï¥
 	XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix);
 
-	// ±‚¡∏ Forward π◊ Right ∫§≈Õ √ﬂ√‚
-	XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]); // ±‚¡∏ Z√‡ (Forward)
-	XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);   // ±‚¡∏ X√‡ (Right)
+	// Í∏∞Ï°¥ Forward Î∞è Right Î≤°ÌÑ∞ Ï∂îÏ∂ú
+	XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]); // Í∏∞Ï°¥ ZÏ∂ï (Forward)
+	XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);   // Í∏∞Ï°¥ XÏ∂ï (Right)
 
-	// ¿‘∑¬πﬁ¿∫ Up ∫§≈Õ∏¶ ¡§±‘»≠
+	// ÏûÖÎ†•Î∞õÏùÄ Up Î≤°ÌÑ∞Î•º Ï†ïÍ∑úÌôî
 	XMVECTOR newUp = XMVector3Normalize(XMLoadFloat3(&newUpVector));
 
-	// ±‚¡∏ Forward ∫§≈ÕøÕ ªı Up ∫§≈Õ∞° ∞∞¿∫ πÊ«‚¿Ã∏È √≥∏Æ (±‚∫ª¿˚¿∏∑Œ Right ∫§≈Õ ¿Ø¡ˆ)
+	// Í∏∞Ï°¥ Forward Î≤°ÌÑ∞ÏôÄ ÏÉà Up Î≤°ÌÑ∞Í∞Ä Í∞ôÏùÄ Î∞©Ìñ•Ïù¥Î©¥ Ï≤òÎ¶¨ (Í∏∞Î≥∏Ï†ÅÏúºÎ°ú Right Î≤°ÌÑ∞ Ïú†ÏßÄ)
 	if (XMVector3Equal(forward, newUp) || XMVector3Equal(XMVectorNegate(forward), newUp))
 	{
-		forward = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); // øπø‹ √≥∏Æ: ±‚∫ª Forward ∫§≈Õ º≥¡§
+		forward = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); // ÏòàÏô∏ Ï≤òÎ¶¨: Í∏∞Î≥∏ Forward Î≤°ÌÑ∞ ÏÑ§Ï†ï
 	}
 
-	// ªı∑ŒøÓ Right ∫§≈Õ ∞ËªÍ (newUp∞˙ Forward¿« ø‹¿˚)
+	// ÏÉàÎ°úÏö¥ Right Î≤°ÌÑ∞ Í≥ÑÏÇ∞ (newUpÍ≥º ForwardÏùò Ïô∏Ï†Å)
 	XMVECTOR newRight = XMVector3Normalize(XMVector3Cross(newUp, forward));
 
-	// ªı∑ŒøÓ Forward ∫§≈Õ ∞ËªÍ (RightøÕ Up¿« ø‹¿˚)
+	// ÏÉàÎ°úÏö¥ Forward Î≤°ÌÑ∞ Í≥ÑÏÇ∞ (RightÏôÄ UpÏùò Ïô∏Ï†Å)
 	XMVECTOR newForward = XMVector3Normalize(XMVector3Cross(newRight, newUp));
 
-	// ªı∑ŒøÓ »∏¿¸ «‡∑ƒ ±∏º∫
+	// ÏÉàÎ°úÏö¥ ÌöåÏ†Ñ ÌñâÎ†¨ Íµ¨ÏÑ±
 	XMMATRIX newRotationMatrix = XMMATRIX(
-		newRight,   // X√‡ (Right)
-		newUp,      // Y√‡ (Up)
-		newForward, // Z√‡ (Forward)
+		newRight,   // XÏ∂ï (Right)
+		newUp,      // YÏ∂ï (Up)
+		newForward, // ZÏ∂ï (Forward)
 		XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f)
 	);
 
-	// √÷¡æ ø˘µÂ «‡∑ƒ ∞ËªÍ (Scale * Rotation * Translation)
+	// ÏµúÏ¢Ö ÏõîÎìú ÌñâÎ†¨ Í≥ÑÏÇ∞ (Scale * Rotation * Translation)
 	XMMATRIX newWorldMatrix = XMMatrixScalingFromVector(scale) * newRotationMatrix * XMMatrixTranslationFromVector(translation);
 
-	// ∫Ø»Øµ» ø˘µÂ «‡∑ƒ ¿˙¿Â
+	// Î≥ÄÌôòÎêú ÏõîÎìú ÌñâÎ†¨ Ï†ÄÏû•
 	XMStoreFloat4x4(&m_xmf4x4World, newWorldMatrix);
 }
 
@@ -1552,19 +1656,19 @@ XMFLOAT3 CGameObject::Get_World_Position()
 
 XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
 {
-	XMFLOAT3 worldPosition = GetPosition(); // «ˆ¿Á ø¿∫Í¡ß∆Æ¿« ø˘µÂ ¿ßƒ°
+	XMFLOAT3 worldPosition = GetPosition(); // ÌòÑÏû¨ Ïò§Î∏åÏ†ùÌä∏Ïùò ÏõîÎìú ÏúÑÏπò
 	XMFLOAT3 rootPosition = { 0.0f, 0.0f, 0.0f };
 
-	// ∑Á∆Æ ø¿∫Í¡ß∆Æ±Ó¡ˆ ≈Ωªˆ
+	// Î£®Ìä∏ Ïò§Î∏åÏ†ùÌä∏ÍπåÏßÄ ÌÉêÏÉâ
 	CGameObject* root = this;
 	while (root->m_pParent != NULL)
 	{
 		root = root->m_pParent;
 	}
 
-	rootPosition = root->GetPosition(); // ∑Á∆Æ¿« ∑Œƒ√ ¿ßƒ°(√ ±‚ ¿ßƒ°)
+	rootPosition = root->GetPosition(); // Î£®Ìä∏Ïùò Î°úÏª¨ ÏúÑÏπò(Ï¥àÍ∏∞ ÏúÑÏπò)
 
-	// «ˆ¿Á ¿ßƒ°ø°º≠ ∑Á∆Æ ¿ßƒ°∏¶ ª´ ∞™¿Ã "∑Á∆Æ «¡∑π¿” ±‚¡ÿ ¿Ãµø∑Æ"
+	// ÌòÑÏû¨ ÏúÑÏπòÏóêÏÑú Î£®Ìä∏ ÏúÑÏπòÎ•º Î∫Ä Í∞íÏù¥ "Î£®Ìä∏ ÌîÑÎ†àÏûÑ Í∏∞Ï§Ä Ïù¥ÎèôÎüâ"
 	return XMFLOAT3(
 		worldPosition.x - rootPosition.x,
 		worldPosition.y - rootPosition.y,
@@ -1815,10 +1919,10 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	// ±‚¡∏ Material ¡¶∞≈ »ƒ ªı∑ŒøÓ ≈©±‚ º≥¡§
+	// Í∏∞Ï°¥ Material Ï†úÍ±∞ ÌõÑ ÏÉàÎ°úÏö¥ ÌÅ¨Í∏∞ ÏÑ§Ï†ï
 	Material_list.clear();
 	int materialCount = ReadIntegerFromFile(pInFile);
-	Material_list.reserve(materialCount);  // ∏ﬁ∏∏Æ øπæ‡
+	Material_list.reserve(materialCount);  // Î©îÎ™®Î¶¨ ÏòàÏïΩ
 
 	std::shared_ptr<CMaterial> pMaterial = nullptr;
 
@@ -1830,7 +1934,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
 
-			// ªı∑ŒøÓ Material ª˝º∫ π◊ √ﬂ∞°
+			// ÏÉàÎ°úÏö¥ Material ÏÉùÏÑ± Î∞è Ï∂îÍ∞Ä
 			pMaterial = std::make_shared<CMaterial>(7);
 			if (!pShader)
 			{
@@ -1844,7 +1948,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 
-			// ∫§≈Õ ≈©±‚∏¶ nMaterial ¿Œµ¶Ω∫±Ó¡ˆ »Æ¿Â
+			// Î≤°ÌÑ∞ ÌÅ¨Í∏∞Î•º nMaterial Ïù∏Îç±Ïä§ÍπåÏßÄ ÌôïÏû•
 			if (nMaterial >= Material_list.size())
 				Material_list.resize(nMaterial + 1);
 
@@ -1999,7 +2103,7 @@ CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, I
 				{
 					CGameObject *pChild_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
 					
-					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // º“¿Ø±« ¿Ã¿¸
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); 
 					if (pChild) 
 						pGameObject->Set_Child(pChild);
 				}
@@ -2077,7 +2181,7 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 				{
 					CGameObject* pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader);
 
-					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // º“¿Ø±« ¿Ã¿¸
+					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // ÏÜåÏú†Í∂å Ïù¥Ï†Ñ
 					if (pChild)
 						pGameObject->Set_Child(pChild);
 				}
@@ -2335,12 +2439,10 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
 	if (m_pMesh == NULL)
 		m_pMesh = new OBBContainer();
-	m_pMesh->Set_BoundingBox(ptr); // ptr¿Ã NULL ¿Œ ∞ÊøÏ, ±‚∫ª∞™ OBB∑Œ ª˝º∫
+	m_pMesh->Set_BoundingBox(ptr); 
 }
 
 
-
-// static ∫Øºˆ √ ±‚»≠
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
@@ -2352,10 +2454,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 {
 	static int tile_map_number = 0;
 
-	// ºŒ¿Ã¥ı π◊ ≈ÿΩ∫√≥ º≥¡§ (√π »£√‚ Ω√ø°∏∏ Ω««‡µ )
+
 	if (pTerrainBaseTexture == nullptr)
 	{
-		// ºŒ¿Ã¥ı π◊ ≈ÿΩ∫√≥ ∑Œµ˘
+
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
@@ -2364,22 +2466,20 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
-		// ºŒ¿Ã¥ı ª˝º∫
 		pTerrainShader = new CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		// ºŒ¿Ã¥ı ∏Æº“Ω∫ ∫‰ ª˝º∫
+
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
-		// ¿ÁªÁøÎ ∞°¥…«— Material ∞¥√º ª˝º∫
+
 		pTerrainMaterial = new CMaterial(2);
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 		pTerrainMaterial->SetShader(pTerrainShader);
 
-		// ≥Ù¿Ã ∏  ¿ÃπÃ¡ˆ ∑ŒµÂ
 		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
 
@@ -2408,10 +2508,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
-	// ±Ì¿Ã∞° 0¿Ã∏È 1∞≥¿« ∏ﬁΩ¨∑Œ √≥∏Æ«œ∞Ì, 1 ¿ÃªÛ¿Ã∏È 4µÓ∫–«œø© ∞Ë√˛ ±∏¡∂∑Œ √≥∏Æ
 	if (nMaxDepth == 0)
 	{
-		// ±Ì¿Ã∞° 0¿Ã∏È 1∞≥¿« ∏ﬁΩ¨∑Œ √≥∏Æ
 		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth +1, nLength +1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);
 	}
@@ -2569,8 +2667,6 @@ XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z, CHeightMapTerrain*
 			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Normal(x, z);
 		else
 		{
-			// π¸¿ß π€¿Ã æ∆¥œ∂Û∏È
-			// ø©±‚º≠ ≈∏¿œ ¿˙¿Â«ÿæﬂ «‘
 			return m_pMesh->Get_Normal(x, z);
 		}
 	}
@@ -2620,7 +2716,7 @@ int CHeightMapTerrain::Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_
 			return sibling_ptr->Get_Tile(x, z);
 	}
 
-	// πÆ¡¶ πﬂª˝ Ω√ -1 π›»Ø
+
 	return -1; 
 }
 
@@ -2629,12 +2725,10 @@ void CHeightMapTerrain::Get_Active_TileNum_List(std::vector<int>& tile_list)
 	if (Get_Active())
 		tile_list.push_back(tile_number);
 
-	// ¿⁄Ωƒ ≥ÎµÂ ≈Ωªˆ
 	CGameObject* child_ptr = Get_Child().get();
 	if (child_ptr)
 		child_ptr->Get_Active_TileNum_List(tile_list);
 
-	// «¸¡¶ ≥ÎµÂ ≈Ωªˆ
 	CGameObject* sibling_ptr = Get_Sibling().get();
 	if (sibling_ptr)
 		sibling_ptr->Get_Active_TileNum_List(tile_list);
@@ -2720,10 +2814,10 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 		{
 			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // √π π¯¬∞ PSO
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // Ï≤´ Î≤àÏß∏ PSO
 			m_pMesh->Render(pd3dCommandList, 0);
 
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // µŒ π¯¬∞ PSO
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // Îëê Î≤àÏß∏ PSO
 			m_pMesh->Render(pd3dCommandList, 0);
 
 			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
@@ -2796,7 +2890,7 @@ void CAngrybotAnimationController::OnRootMotion(CGameObject* pRootGameObject)
 CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks)
 {
 	CLoadedModelInfo *pAngrybotModel = pModel;
-	if (!pAngrybotModel) // ø¿∑˘ πÊ¡ˆ
+	if (!pAngrybotModel) 
 		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
 
 	Set_Child(pAngrybotModel->m_pModelRootObject);
