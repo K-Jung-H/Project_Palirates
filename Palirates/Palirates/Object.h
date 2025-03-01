@@ -18,6 +18,8 @@ class CShader;
 class CTerrainShader;
 class CStandardShader;
 
+class Deferred_CTerrainShader;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 #define RESOURCE_TEXTURE1D			0x01
@@ -519,7 +521,7 @@ class CHeightMapTerrain : public CGameObject
 private:
 	static CTexture* pTerrainBaseTexture;
 	static CTexture* pTerrainDetailTexture;
-	static CTerrainShader* pTerrainShader;
+	static Deferred_CTerrainShader* pTerrainShader;
 	static CMaterial* pTerrainMaterial;
 
 	static CHeightMapImage* m_pHeightMapImage;  // 각 객체마다 개별적으로 갖는 높이 맵 이미지

@@ -35,7 +35,11 @@ PostProcessing Render 기능 추가하는 중
 
 렌더 타겟 및 DSV를 힙으로 관리까지 완료,
 
-힙 연결해서 리소스로 연결하는 과정에서 오류 발생 중
+힙 연결 오류 해결
 
+사용하던 모든 셰이더를 전부 RTV 여러개 연결하도록 바꿔야 함
+== CreateShader() 함수 구조와 CreateGraphicsPipeline 함수 구조 변경하기
+
+현재 일부 셰이더와 PSO의 RTV 개수 설정이 일치 하지 않아서 오류 발생 중
 
 

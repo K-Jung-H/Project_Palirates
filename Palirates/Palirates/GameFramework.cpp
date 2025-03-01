@@ -65,16 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
-	PostProcessing_shader = new CTextureToFullScreenShader();
-	PostProcessing_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
-
-	DXGI_FORMAT pdxgiResourceFormats[4] = { DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT };
-	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 4, pdxgiResourceFormats, d3dRtvCPUDescriptorHandle); //SRV to (Render Targets) + (Depth Buffer)
-
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+	
 
 
 	Build_Scenes();
@@ -509,6 +500,22 @@ void CGameFramework::Build_Scenes()
 	Active_CommandList->Reset(Active_CommandAllocator, NULL);
 
 	CreateShaderVariables();
+
+
+	PostProcessing_shader = new CTextureToFullScreenShader();
+	PostProcessing_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvCPUDescriptorHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
+
+	DXGI_FORMAT pdxgiResourceFormats[4] = { DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT };
+	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 4, pdxgiResourceFormats, d3dRtvCPUDescriptorHandle); //SRV to (Render Targets) + (Depth Buffer)
+
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+
+
+
+
 	//========================================================
 	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
 	scene_manager->Register_Scene("Scene_1", Scene_1);
@@ -699,7 +706,7 @@ void CGameFramework::FrameAdvance()
 
 	Active_CommandAllocator = Render_CommandAllocator;
 	Active_CommandList = Render_CommandList;
-
+	WaitForGpuComplete();
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
 
@@ -744,8 +751,8 @@ void CGameFramework::FrameAdvance()
 
 	scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-	//if (m_pPlayer) 
-	//	m_pPlayer->Render(Active_CommandList, m_pCamera);
+	if (m_pPlayer) 
+		m_pPlayer->Render(Active_CommandList, m_pCamera);
 
 	//	Change Used RenderTarget Resource State
 	PostProcessing_shader->OnPostRenderTarget(Active_CommandList);
@@ -785,6 +792,7 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandList->Close();
 	ID3D12CommandList* Post_Render_CommandLists[] = { Active_CommandList };
 	p_CommandQueue->ExecuteCommandLists(1, Post_Render_CommandLists);
+	WaitForGpuComplete();
 
 
 #ifdef WRITE_TEXT_UI
