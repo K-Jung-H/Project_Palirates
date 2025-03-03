@@ -127,9 +127,6 @@ OBB_Drawer::OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 		obb_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		obb_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		//obb_shader = new BoundingBox_Shader();
-		//obb_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-		//obb_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }
 

@@ -238,7 +238,7 @@ void CGameFramework::CreateRenderTargetViews()
 	{
 		m_pdxgiSwapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void **)&ptr_SwapChainBackBuffer_List[i]);
 		m_pd3dDevice->CreateRenderTargetView(ptr_SwapChainBackBuffer_List[i], &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle);
-		SwapChainBack_Buffer_RTVCPUHandle_list[i] = d3dRtvCPUDescriptorHandle;
+		SwapChainBack_Buffer_RTV_CPUHandle_list[i] = d3dRtvCPUDescriptorHandle;
 		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
 	}
 }
@@ -526,8 +526,6 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
 
 
-	
-
 	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
 	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
 
@@ -665,7 +663,6 @@ void CGameFramework::MoveToNextFrame()
 
 void CGameFramework::Clear_RenderTarget(XMFLOAT3 background_color)
 {
-
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += (SwapChainBuffer_Index * ::gnRtvDescriptorIncrementSize);
 
@@ -739,9 +736,7 @@ void CGameFramework::FrameAdvance()
 	);
 
 	// Connect Multi_RenderTarget
-	PostProcessing_shader->OnPrepareRenderTarget(Active_CommandList, 1, &SwapChainBack_Buffer_RTVCPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
-
-
+	PostProcessing_shader->OnPrepareRenderTarget(Active_CommandList, 1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 
 
 	scene_manager->Pre_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
@@ -758,7 +753,7 @@ void CGameFramework::FrameAdvance()
 	PostProcessing_shader->OnPostRenderTarget(Active_CommandList);
 
 	// Connect One RenderTarget
-	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTVCPUHandle_list[SwapChainBuffer_Index], TRUE, &d3dDsvCPUDescriptorHandle);
+	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &d3dDsvCPUDescriptorHandle);
 
 
 	// Draw Scene by Mixing resource

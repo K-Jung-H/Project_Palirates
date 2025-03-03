@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -324,28 +324,29 @@ void CMaterial::ReleaseUploadBuffers()
 CShader *CMaterial::m_pSkinnedAnimationShader = NULL;
 CShader *CMaterial::m_pStandardShader = NULL;
 
-void CMaterial::PrepareShaders(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
+void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_pStandardShader = new CStandardShader();
-	m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	m_pStandardShader = new Deferred_CStandard_Shader();
+	m_pStandardShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	DXGI_FORMAT pdxgiRtvFormats[5] = { DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT };
-	DXGI_FORMAT Dsv_Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
-
-	//m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
-	//m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	//m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
 	m_pSkinnedAnimationShader = new Deferred_CSkinnedAnimationStandardShader();
-	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 5, pdxgiRtvFormats, Dsv_Format);
+	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 	m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 	Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
-	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 5, pdxgiRtvFormats, Dsv_Format);
+	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+
+	//m_pStandardShader = new CStandardShader();
+	//m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	//m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
+	//m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	//m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	//Object_Manager::instance_shader = std::make_shared<CStandard_Instance_Shader>();
 	//Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
@@ -2147,7 +2148,7 @@ void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
 	if (pParent != NULL)
 	{
 		char pstrDebug[256] = { 0 };
-		sprintf_s(pstrDebug, sizeof(pstrDebug), "(Frame: %s) <- (Parent: %s)\n", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
+		sprintf_s(pstrDebug, sizeof(pstrDebug), "\n(Frame: %s) <- (Parent: %s)", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
 		OutputDebugStringA(pstrDebug);
 	}
 
@@ -2371,11 +2372,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
-		DXGI_FORMAT pdxgiRtvFormats[5] = { DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT };
-		DXGI_FORMAT Dsv_Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-
 		pTerrainShader = new Deferred_CTerrainShader();
-		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, 5, pdxgiRtvFormats, Dsv_Format);
+		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		//pTerrainShader = new CTerrainShader();

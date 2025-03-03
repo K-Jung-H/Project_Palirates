@@ -203,8 +203,15 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
 }
 
 // Pixel Shader
-float4 PSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input)
 {
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
+    
     // 초기 색상
     float4 cColor = input.color;
     
@@ -229,8 +236,43 @@ float4 PSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
     {
         cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
     }
-    
-//    cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
-    // 색상 반환
-    return cColor;
+
+    output.cTexture = cColor;
+    return output;
 }
+
+
+
+
+
+//float4 PSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
+//{
+//    // 초기 색상
+//    float4 cColor = input.color;
+    
+//    // 파티클 타입에 따라 색상 변경
+//    if (input.type == PARTICLE_TYPE_EMITTER)
+//    {
+//        cColor = float4(1.0f, 0.1f, 0.1f, 1.0f); // 붉은색
+//    }
+//    else if (input.type == PARTICLE_TYPE_SHELL)
+//    {
+//        cColor = float4(0.1f, 0.0f, 1.0f, 1.0f); // 파란색
+//    }
+//    else if (input.type == PARTICLE_TYPE_FLARE01)
+//    {
+//        cColor = float4(1.0f, 1.0f, 0.1f, 1.0f); // 노란색
+//    }
+//    else if (input.type == PARTICLE_TYPE_FLARE02)
+//    {
+//        cColor = float4(0.0f, 1.0f, 0.1f, 1.0f); // 초록색
+//    }
+//    else if (input.type == PARTICLE_TYPE_FLARE03)
+//    {
+//        cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
+//    }
+    
+////    cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
+//    // 색상 반환
+//    return cColor;
+//}

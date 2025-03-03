@@ -115,6 +115,11 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -150,7 +155,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.cTexture = cColor;
     output.normal = float4(normalW,1.0f);
     output.cIllumination = cIllumination;
-    output.zDepth = input.positionW.z;
+
     
     return (output);
 
@@ -230,108 +235,7 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 
 //==================================================================
 
-float4 VSPostProcessing(uint nVertexID : SV_VertexID) : SV_POSITION
-{
-    if (nVertexID == 0)
-        return (float4(-1.0f, +1.0f, 0.0f, 1.0f));
-    if (nVertexID == 1)
-        return (float4(+1.0f, +1.0f, 0.0f, 1.0f));
-    if (nVertexID == 2)
-        return (float4(+1.0f, -1.0f, 0.0f, 1.0f));
 
-    if (nVertexID == 3)
-        return (float4(-1.0f, +1.0f, 0.0f, 1.0f));
-    if (nVertexID == 4)
-        return (float4(+1.0f, -1.0f, 0.0f, 1.0f));
-    if (nVertexID == 5)
-        return (float4(-1.0f, -1.0f, 0.0f, 1.0f));
-
-    return (float4(0, 0, 0, 0));
-}
-
-float4 PSPostProcessing(float4 position : SV_POSITION) : SV_Target
-{
-    return (float4(0.0f, 0.0f, 0.0f, 1.0f));
-}
-
-//==================================================================
-
-struct VS_TEXTURED_SCREEN_RECT_OUTPUT
-{
-    float4 position : SV_POSITION;
-    float2 uv : TEXCOORD;
-};
-
-Texture2D<float4> Post_TextureTexture : register(t0);
-Texture2D<float4> Post_IlluminationTexture : register(t1);
-Texture2D<float4> Post_NormalTexture : register(t2);
-
-Texture2D<float> Post_Z_DepthTexture : register(t3);
-Texture2D<float> Post_DepthTexture : register(t4);
-
-VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_VertexID)
-{
-    VS_TEXTURED_SCREEN_RECT_OUTPUT output = (VS_TEXTURED_SCREEN_RECT_OUTPUT) 0;
-
-    if (nVertexID == 0)
-    {
-        output.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
-        output.uv = float2(0.0f, 0.0f);
-    }
-    else if (nVertexID == 1)
-    {
-        output.position = float4(+1.0f, +1.0f, 0.0f, 1.0f);
-        output.uv = float2(1.0f, 0.0f);
-    }
-    else if (nVertexID == 2)
-    {
-        output.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
-        output.uv = float2(1.0f, 1.0f);
-    }
-    else if (nVertexID == 3)
-    {
-        output.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
-        output.uv = float2(0.0f, 0.0f);
-    }
-    else if (nVertexID == 4)
-    {
-        output.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
-        output.uv = float2(1.0f, 1.0f);
-    }
-    else if (nVertexID == 5)
-    {
-        output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
-        output.uv = float2(0.0f, 1.0f);
-    }
-
-    return (output);
-}
-
-float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
-{
-    // 기본 텍스처 샘플링
-    float4 colorTexture = Post_TextureTexture.Sample(gssWrap, input.uv);
-    float4 colorIllumination = Post_IlluminationTexture.Sample(gssWrap, input.uv);
-    float4 colorNormal = Post_NormalTexture.Sample(gssWrap, input.uv);
-    
-    float4 Depth = Post_Z_DepthTexture.Load(uint3((uint) input.position.x, (uint) input.position.y, 0));
-
-    // 뷰 공간 깊이 샘플링
-    float zDepth = Post_Z_DepthTexture.Load(uint3((uint) input.position.x, (uint) input.position.y, 0)).r;
-
-    // 안개 강도 계산 (뷰 공간 깊이를 사용)
-    float fogStart = 10.0f; // 안개 시작 거리
-    float fogEnd = 200.0f; // 안개 끝 거리
-    float fogFactor = saturate((zDepth - fogStart) / (fogEnd - fogStart)); // 선형 안개
-
-    // 안개 색상 혼합
-    float3 fogColor = float3(0.5f, 0.5f, 0.5f); // 안개 색상 (회색)
-    float4 cColor = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
-    cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
-    
-    return cColor;
-}
-//==================================================================
 
 #define MAX_VERTEX_INFLUENCES			4
 #define SKINNED_ANIMATION_BONES			256
@@ -382,11 +286,11 @@ VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_SkinnedAnimationStandard(VS_STANDARD_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cIllumination = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cTexture = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.zDepth = float(1.0f);
+    output.zDepth = float(0.0f);
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -422,7 +326,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_SkinnedAnimationStandard(VS_STANDARD_OUTPUT
     output.cTexture = cColor;
     output.normal = float4(normalW, 1.0f);
     output.cIllumination = cIllumination;
-    output.zDepth = input.positionW.z;
     return output;
 
 }
@@ -463,17 +366,16 @@ VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cIllumination = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cTexture = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.zDepth = float(1.0f);
+    output.zDepth = float(0.0f);
     
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
-    output.cTexture = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-    output.color = input.color;
-    output.zDepth = input.position.z;
+    output.cTexture = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    
     return (output);
 }
 
@@ -503,13 +405,13 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cIllumination = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cTexture = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.zDepth = float(1.0f);
+    output.zDepth = float(0.0f);
 
-    output.color = input.color;
+    output.cTexture = input.color;
     return (output);
 }
 
@@ -519,8 +421,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
 //    return (cColor);
 //}
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+//=============================================================
+
 struct VS_SKYBOX_CUBEMAP_INPUT
 {
 	float3 position : POSITION;
@@ -542,30 +444,14 @@ VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 	return(output);
 }
 
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input)
+
+// SkyBox don't need DefferedRendering
+float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 {
-    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cIllumination = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cTexture = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.zDepth = float(1.0f);
-    
-    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cTexture = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
-    output.zDepth = input.position.z;
-    
+    float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
 
-
-    return (output);
+    return (cColor);
 }
-
-//float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
-//{
-//	float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
-
-//	return(cColor);
-//}
 
 
 
@@ -596,15 +482,15 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 }
 
 
-
+// OBB don't need DefferedRendering
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cIllumination = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.cTexture = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.zDepth = float(1.0f);
+    output.zDepth = float(0.0f);
 
     output.color = input.color;
         

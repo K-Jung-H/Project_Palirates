@@ -80,7 +80,7 @@ private:
 	//	RTV
 	ID3D12Resource				*ptr_SwapChainBackBuffer_List[N_SwapChainBuffers];
 	ID3D12DescriptorHeap		*ptr_Rtv_DescriptorHeap = NULL;
-	D3D12_CPU_DESCRIPTOR_HANDLE		SwapChainBack_Buffer_RTVCPUHandle_list[N_SwapChainBuffers];
+	D3D12_CPU_DESCRIPTOR_HANDLE		SwapChainBack_Buffer_RTV_CPUHandle_list[N_SwapChainBuffers];
 	//=======================================================
 	// DSV
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;

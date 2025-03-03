@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CScene.cpp
 //-----------------------------------------------------------------------------
 
@@ -346,7 +346,7 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 
 	if (text_ui_manager)
 	{
-		std::shared_ptr<TextDesign> design_ptr = text_ui_manager->Create_Text_Design("White_Text", D2D1::ColorF(D2D1::ColorF::White, 1.0f), L"Gothic", 20.0f);
+		std::shared_ptr<TextDesign> design_ptr = text_ui_manager->Create_Text_Design("White_Text", D2D1::ColorF(D2D1::ColorF::Black, 1.0f), L"Gothic", 20.0f);
 		text_ui_manager->Add_Text_Design(design_ptr);
 
 		D2D1_RECT_F player_pos_text_area = D2D1::RectF(0.0f, 0.0f, 400.0f, 30.0f);
@@ -902,7 +902,7 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 #endif
 
-	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
 	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
@@ -962,28 +962,19 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	humanObject_3->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
-	CLoadedModelInfo* testModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Havana.bin", NULL);
-
-	testModel->m_pModelRootObject->Add_Collider(10.0f);
-
 	//=====================================================
-	std::shared_ptr<CGameObject> test_OBJ = std::make_shared<CGameObject>();
-	test_OBJ->Set_Child(testModel->m_pModelRootObject);
+#ifdef LOAD_SCENE
+	// Load Scene
 
-	float scale_value = 10.0f;
-	XMFLOAT3 scale_vector = { scale_value ,scale_value ,scale_value };
-	float pos_x = 200.0f;
-	float pos_z = 100.0f;
-	float pos_y = m_pTerrain->Get_Height(pos_x, pos_z);
-
-	test_OBJ->SetScale(scale_vector, true);
-	test_OBJ->SetPosition(pos_x, pos_y+ 500.0f, pos_z);
-
-	test_OBJ->UpdateTransform(NULL);
-
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("test_scene");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+#endif
 	//=====================================================
-	obj_manager->Add_Object(test_OBJ, Object_Type::fixed);
-
 
 	Object_Manager::Reserve_Update();
 

@@ -33,13 +33,12 @@
 
 PostProcessing Render 기능 추가하는 중
 
-렌더 타겟 및 DSV를 힙으로 관리까지 완료,
+RenderTarget을 4개 연결하여 정보를 저장하고
+각 저장된 정보를 하나로 합쳐 한번에 렌더링 함
 
-힙 연결 오류 해결
 
-사용하던 모든 셰이더를 전부 RTV 여러개 연결하도록 바꿔야 함
-== CreateShader() 함수 구조와 CreateGraphicsPipeline 함수 구조 변경하기
+Deffered_ParticleShader 작성하는 중, 
+작성 완료 시, main에 커밋 예정
 
-현재 일부 셰이더와 PSO의 RTV 개수 설정이 일치 하지 않아서 오류 발생 중
 
 

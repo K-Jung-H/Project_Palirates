@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+Ôªø//-----------------------------------------------------------------------------
 // File: Shader.cpp
 //-----------------------------------------------------------------------------
 
@@ -68,11 +68,20 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR *pszFileName, LPCSTR 
 
 	ID3DBlob *pd3dErrorBlob = NULL;
 	HRESULT hResult = ::D3DCompileFromFile(pszFileName, NULL, D3D_COMPILE_STANDARD_FILE_INCLUDE, pszShaderName, pszShaderProfile, nCompileFlags, 0, ppd3dShaderBlob, &pd3dErrorBlob);
-	char* pErrorString = NULL;
+
+
+	DebugOutput("\n[Shader Compilation] File: ", pszFileName);
+	DebugOutput("\n[Shader Compilation] Function: ", pszShaderName);
+	DebugOutput("\n[Shader Compilation] Profile: ", pszShaderProfile);
+
+	// üìå Ïò§Î•ò Î∞úÏÉù Ïãú ÎîîÎ≤ÑÍ∑∏ Ï∞ΩÏóê Ï∂úÎ†•
 	if (pd3dErrorBlob)
 	{
-		pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
+		DebugOutput("\n[Shader Compilation Error]\n");
+		DebugOutput("----------------------------------------\n");
+		char* pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
 		DebugOutput(pErrorString);
+		DebugOutput("----------------------------------------\n");
 	}
 
 	D3D12_SHADER_BYTECODE d3dShaderByteCode;
@@ -452,7 +461,7 @@ void CStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	m_nPipelineStates = 1;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // ±‚∫ª ±◊∏Æ±‚
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // Í∏∞Î≥∏ Í∑∏Î¶¨Í∏∞
 }
 
 D3D12_INPUT_LAYOUT_DESC CStandardShader::CreateInputLayout(int nPipelineState)
@@ -530,14 +539,14 @@ D3D12_INPUT_LAYOUT_DESC CStandard_Instance_Shader::CreateInputLayout(int nPipeli
 		UINT nInputElementDescs = 9;
 		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 		
-		// ¡§¡° ¡§∫∏∏¶ ¿ß«— ¿‘∑¬ ø¯º“µÈ
+		// Ï†ïÏ†ê Ï†ïÎ≥¥Î•º ÏúÑÌïú ÏûÖÎ†• ÏõêÏÜåÎì§
 		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[2] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-		// ¿ŒΩ∫≈œΩÃ ¡§∫∏∏¶ ¿ß«— ¿‘∑¬ ø¯º“µÈ
+		// Ïù∏Ïä§ÌÑ¥Ïã± Ï†ïÎ≥¥Î•º ÏúÑÌïú ÏûÖÎ†• ÏõêÏÜåÎì§
 		pd3dInputElementDescs[5] = { "WORLDMATRIX", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 		pd3dInputElementDescs[6] = { "WORLDMATRIX", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 		pd3dInputElementDescs[7] = { "WORLDMATRIX", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
@@ -701,12 +710,12 @@ ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12De
 
 D3D12_SHADER_BYTECODE CPostProcessingShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSPostProcessing", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VSPostProcessing", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE CPostProcessingShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSPostProcessing", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PSPostProcessing", "ps_5_1", ppd3dShaderBlob));
 }
 
 void CPostProcessingShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
@@ -715,7 +724,7 @@ void CPostProcessingShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSig
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 	
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-	CreateGraphicsPipelineState(pd3dDevice, m_pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // ±‚∫ª ±◊∏Æ±‚
+	CreateGraphicsPipelineState(pd3dDevice, m_pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // Í∏∞Î≥∏ Í∑∏Î¶¨Í∏∞
 }
 
 
@@ -768,7 +777,7 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, 0); // 0π¯ ¿Œµ¶Ω∫∫Œ≈Õ ∏Æº“Ω∫ ø¨∞·«“≤®¿”
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, 0); // 0Î≤à Ïù∏Îç±Ïä§Î∂ÄÌÑ∞ Î¶¨ÏÜåÏä§ Ïó∞Í≤∞Ìï†Í∫ºÏûÑ
 
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
 	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -849,12 +858,12 @@ CTextureToFullScreenShader::~CTextureToFullScreenShader()
 
 D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
 }
 
 void CTextureToFullScreenShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -890,7 +899,7 @@ void CSkinnedAnimationStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3
 	m_nPipelineStates = 1;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // ±‚∫ª ±◊∏Æ±‚
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // Í∏∞Î≥∏ Í∑∏Î¶¨Í∏∞
 }
 
 D3D12_INPUT_LAYOUT_DESC CSkinnedAnimationStandardShader::CreateInputLayout(int nPipelineState)
@@ -958,29 +967,43 @@ Deferred_CStandard_Shader::~Deferred_CStandard_Shader()
 
 D3D12_INPUT_LAYOUT_DESC Deferred_CStandard_Shader::CreateInputLayout(int nPipelineState)
 {
-	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-	d3dInputLayoutDesc.pInputElementDescs = NULL;
-	d3dInputLayoutDesc.NumElements = 0;
+	if (nPipelineState == 0)
+	{
+		UINT nInputElementDescs = 5;
+		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	return(d3dInputLayoutDesc);
+		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		pd3dInputElementDescs[2] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+		D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+		d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+		d3dInputLayoutDesc.NumElements = nInputElementDescs;
+		return(d3dInputLayoutDesc);
+	}
 }
-D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
-	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	d3dShaderByteCode.BytecodeLength = 0;
-	d3dShaderByteCode.pShaderBytecode = NULL;
-
-	return(d3dShaderByteCode);
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", VertexShaderBlob));
+	else
+	{
+		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
+		return 		d3dShaderByteCode;
+	}
 }
-D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
 {
-	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	d3dShaderByteCode.BytecodeLength = 0;
-	d3dShaderByteCode.pShaderBytecode = NULL;
-
-	return(d3dShaderByteCode);
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", PixelShaderBlob));
+	else
+	{
+		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
+		return 		d3dShaderByteCode;
+	}
 }
-
 
 void Deferred_CStandard_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
@@ -1053,14 +1076,14 @@ D3D12_INPUT_LAYOUT_DESC Deferred_CStandard_Instance_Shader::CreateInputLayout(in
 		UINT nInputElementDescs = 9;
 		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-		// ¡§¡° ¡§∫∏∏¶ ¿ß«— ¿‘∑¬ ø¯º“µÈ
+		// Ï†ïÏ†ê Ï†ïÎ≥¥Î•º ÏúÑÌïú ÏûÖÎ†• ÏõêÏÜåÎì§
 		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[2] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 		pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-		// ¿ŒΩ∫≈œΩÃ ¡§∫∏∏¶ ¿ß«— ¿‘∑¬ ø¯º“µÈ
+		// Ïù∏Ïä§ÌÑ¥Ïã± Ï†ïÎ≥¥Î•º ÏúÑÌïú ÏûÖÎ†• ÏõêÏÜåÎì§
 		pd3dInputElementDescs[5] = { "WORLDMATRIX", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 		pd3dInputElementDescs[6] = { "WORLDMATRIX", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 		pd3dInputElementDescs[7] = { "WORLDMATRIX", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 5, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
@@ -1276,7 +1299,7 @@ void Deferred_CSkinnedAnimationStandardShader::CreateShader(ID3D12Device* pd3dDe
 	m_nPipelineStates = 1;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0);  // ±‚∫ª ±◊∏Æ±‚
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0);  // Í∏∞Î≥∏ Í∑∏Î¶¨Í∏∞
 }
 
 D3D12_INPUT_LAYOUT_DESC Deferred_CSkinnedAnimationStandardShader::CreateInputLayout(int nPipelineState)
