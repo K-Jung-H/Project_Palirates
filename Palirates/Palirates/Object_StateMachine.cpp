@@ -389,49 +389,7 @@ void StateMachine::enterState(State state, Key_Value key_event)
         }*/
         
         break;
-    case State::Run_Forawrd:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-        for (int i = 2; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-
-        ///*for (int i = 0; i < n_Ani; ++i) {
-        //    animController->SetTrackEnable(i, false);
-        //}
-        //animController->SetTrackEnable(GetStateKey(Get_State()), true);
-        //animController->SetTrackEnable(GetStateKey(Get_LastState()), true);*/
-        break;
-    case State::Run_Backawrd:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-        for (int i = 3; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-        break;
-    case State::Run_Left:
-        /*animController->SetTrackEnable(TRACK_IDLE, true);
-        animController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_BACKWARD, false);
-        animController->SetTrackEnable(TRACK_RUN_LEFT, true);
-        for (int i = 4; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }*/
-        break;
-    case State::Run_Right:
-       /* animController->SetTrackEnable(TRACK_IDLE, true);
-        for (int i = 1; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }
-        animController->SetTrackEnable(TRACK_RUN_RIGHT, true);*/
-        break;
-    case State::Dive:
-        /*animController->SetTrackEnable(TRACK_IDLE, true);
-        for (int i = 1; i < n_Ani; ++i) {
-            animController->SetTrackEnable(i, false);
-        }
-        animController->SetTrackEnable(TRACK_DIVEROLL_FORWARD, true);*/
+    case State::Run:
         break;
     case State::Dive:
         /*animController->SetTrackEnable(TRACK_IDLE, true);
@@ -462,24 +420,12 @@ void StateMachine::exitState(State state, Key_Value key_event)
     {
     case State::Idle:
         break;
-    case State::Run_Forawrd:
-       // animController->SetTrackWeight(1, 0.0f);
-        break;
-    case State::Run_Backawrd:
-       // animController->SetTrackWeight(2, 0.0f);
-        break;
-    case State::Run_Left:
-        break;
-    case State::Run_Right:
+    case State::Run:
         break;
     case State::Dive:
         key_state.dive = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
-        DebugOutput("Dive->Idle\n");
-        break;
-    case State::Dive:
-       
         DebugOutput("Dive->Idle\n");
         break;
     case State::Jump:
