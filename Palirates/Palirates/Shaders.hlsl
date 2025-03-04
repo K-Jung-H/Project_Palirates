@@ -84,6 +84,16 @@ struct VS_STANDARD_OUTPUT
 	float2 uv : TEXCOORD;
 };
 
+struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
+{
+    float4 color : SV_TARGET0;
+
+    float4 cTexture : SV_TARGET1;
+    float4 cIllumination : SV_TARGET2;
+    float4 normal : SV_TARGET3;
+    float zDepth : SV_TARGET4;
+};
+
 //===========================================================
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
@@ -102,35 +112,86 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 
 //===========================================================
 
-float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 {
-	float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	if (gnTexturesMask & MATERIAL_ALBEDO_MAP) cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
-	float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	if (gnTexturesMask & MATERIAL_SPECULAR_MAP) cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
-	float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	if (gnTexturesMask & MATERIAL_NORMAL_MAP) cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
-	float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	if (gnTexturesMask & MATERIAL_METALLIC_MAP) cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
-	float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-	if (gnTexturesMask & MATERIAL_EMISSION_MAP) cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
+    
+    float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
+        cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_SPECULAR_MAP)
+        cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+    float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+        cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_METALLIC_MAP)
+        cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP)
+        cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
 
-	float3 normalW;
-	float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
-	if (gnTexturesMask & MATERIAL_NORMAL_MAP)
-	{
-		float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
-		float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] ¡æ [-1, 1]
-		normalW = normalize(mul(vNormal, TBN));
-	}
-	else
-	{
-		normalW = normalize(input.normalW);
-	}
-	float4 cIllumination = Lighting(input.positionW, normalW);
-	return(lerp(cColor, cIllumination, 0.5f));
+    float3 normalW;
+    float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+    {
+        float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
+        float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] ¡æ [-1, 1]
+        normalW = normalize(mul(vNormal, TBN));
+    }
+    else
+    {
+        normalW = normalize(input.normalW);
+    }
+    
+    float4 cIllumination = Lighting(input.positionW, normalW);
+    
+    output.cTexture = cColor;
+    output.normal = float4(normalW,1.0f);
+    output.cIllumination = cIllumination;
+
+    
+    return (output);
 
 }
+
+
+//float4 PSStandard(VS_STANDARD_OUTPUT input) : SV_TARGET
+//{
+//	float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+//	if (gnTexturesMask & MATERIAL_ALBEDO_MAP) cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+//	float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+//	if (gnTexturesMask & MATERIAL_SPECULAR_MAP) cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+//	float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+//	if (gnTexturesMask & MATERIAL_NORMAL_MAP) cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+//	float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+//	if (gnTexturesMask & MATERIAL_METALLIC_MAP) cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+//	float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+//	if (gnTexturesMask & MATERIAL_EMISSION_MAP) cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
+
+//	float3 normalW;
+//	float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
+//	if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+//	{
+//		float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
+//		float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); //[0, 1] ¡æ [-1, 1]
+//		normalW = normalize(mul(vNormal, TBN));
+//	}
+//	else
+//	{
+//		normalW = normalize(input.normalW);
+//	}
+//	float4 cIllumination = Lighting(input.positionW, normalW);
+//	return(lerp(cColor, cIllumination, 0.5f));
+
+//}
+
 
 //===========================================================
 
@@ -156,9 +217,9 @@ struct VS_STANDARD_OUTPUT_INSTANCE
 
 };
 
-VS_STANDARD_OUTPUT_INSTANCE VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
+VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 {
-    VS_STANDARD_OUTPUT_INSTANCE output;
+    VS_STANDARD_OUTPUT output;
 
 
     output.position = mul(mul(mul(float4(input.position, 1.0f), input.instance_worldMatrix), gmtxView), gmtxProjection);
@@ -172,10 +233,65 @@ VS_STANDARD_OUTPUT_INSTANCE VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input
     return (output);
 }
 
-float4 PSStandard_INSTANCE(VS_STANDARD_OUTPUT_INSTANCE input) : SV_TARGET
-{
+//==================================================================
 
-	
+
+
+#define MAX_VERTEX_INFLUENCES			4
+#define SKINNED_ANIMATION_BONES			256
+
+cbuffer cbBoneOffsets : register(b4)
+{
+	float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
+};
+
+cbuffer cbBoneTransforms : register(b5)
+{
+	float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
+};
+
+struct VS_SKINNED_STANDARD_INPUT
+{
+	float3 position : POSITION;
+	float2 uv : TEXCOORD;
+	float3 normal : NORMAL;
+	float3 tangent : TANGENT;
+	float3 bitangent : BITANGENT;
+	int4 indices : BONEINDEX;
+	float4 weights : BONEWEIGHT;
+};
+
+
+
+VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
+{
+    VS_STANDARD_OUTPUT output;
+
+    float4x4 mtxVertexToBoneWorld = (float4x4) 0.0f;
+    for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
+    {
+        mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+    }
+    output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
+    output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
+    output.tangentW = mul(input.tangent, (float3x3) mtxVertexToBoneWorld).xyz;
+    output.bitangentW = mul(input.bitangent, (float3x3) mtxVertexToBoneWorld).xyz;
+
+    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    output.uv = input.uv;
+
+    return (output);
+}
+
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_SkinnedAnimationStandard(VS_STANDARD_OUTPUT input)
+{
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
+    
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
         cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
@@ -205,61 +321,18 @@ float4 PSStandard_INSTANCE(VS_STANDARD_OUTPUT_INSTANCE input) : SV_TARGET
         normalW = normalize(input.normalW);
     }
     float4 cIllumination = Lighting(input.positionW, normalW);
-    return (lerp(cColor, cIllumination, 0.5f));
+ //   return (lerp(cColor, cIllumination, 0.5f));
+    
+    output.cTexture = cColor;
+    output.normal = float4(normalW, 1.0f);
+    output.cIllumination = cIllumination;
+    return output;
 
 }
 
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-#define MAX_VERTEX_INFLUENCES			4
-#define SKINNED_ANIMATION_BONES			256
-
-cbuffer cbBoneOffsets : register(b4)
-{
-	float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
-};
-
-cbuffer cbBoneTransforms : register(b5)
-{
-	float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
-};
-
-struct VS_SKINNED_STANDARD_INPUT
-{
-	float3 position : POSITION;
-	float2 uv : TEXCOORD;
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-	float3 bitangent : BITANGENT;
-	int4 indices : BONEINDEX;
-	float4 weights : BONEWEIGHT;
-};
-
-VS_STANDARD_OUTPUT VSSkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
-{
-	VS_STANDARD_OUTPUT output;
-
-	float4x4 mtxVertexToBoneWorld = (float4x4)0.0f;
-	for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
-	{
-		mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
-	}
-	output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
-	output.normalW = mul(input.normal, (float3x3)mtxVertexToBoneWorld).xyz;
-	output.tangentW = mul(input.tangent, (float3x3)mtxVertexToBoneWorld).xyz;
-	output.bitangentW = mul(input.bitangent, (float3x3)mtxVertexToBoneWorld).xyz;
-
-	output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
-	output.uv = input.uv;
-
-	return(output);
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-
 
 struct VS_TERRAIN_INPUT
 {
@@ -289,13 +362,32 @@ VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 	return(output);
 }
 
-float4 PSTerrain_Solid(VS_TERRAIN_OUTPUT input) : SV_TARGET
+
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
 {
-	float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
-	float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
-	float4 cColor = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-	return(cColor);
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
+    
+    float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
+    float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
+    output.cTexture = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    
+    return (output);
 }
+
+
+
+//float4 PSTerrain_Solid(VS_TERRAIN_OUTPUT input) : SV_TARGET
+//{
+//	float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
+//	float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
+//	float4 cColor = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+//	return(cColor);
+//}
 
 VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 {
@@ -309,14 +401,28 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
     return (output);
 }
 
-float4 PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input) : SV_TARGET
+
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
 {
-    float4 cColor = input.color; // float4(0.0f, 1.0f, 0.0f, 1.0f);
-    return (cColor);
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
+
+    output.cTexture = input.color;
+    return (output);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+//float4 PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input) : SV_TARGET
+//{
+//    float4 cColor = input.color; // float4(0.0f, 1.0f, 0.0f, 1.0f);
+//    return (cColor);
+//}
+
+//=============================================================
+
 struct VS_SKYBOX_CUBEMAP_INPUT
 {
 	float3 position : POSITION;
@@ -339,13 +445,15 @@ VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 }
 
 
-
+// SkyBox don't need DefferedRendering
 float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 {
-	float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
+    float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
 
-	return(cColor);
+    return (cColor);
 }
+
+
 
 
 
@@ -374,10 +482,25 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 }
 
 
-
-float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
+// OBB don't need DefferedRendering
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
 {
-    float4 cColor = input.color;
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    output.zDepth = float(0.0f);
+
+    output.color = input.color;
         
-    return (cColor);
+    return (output);
 }
+
+
+//float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
+//{
+//    float4 cColor = input.color;
+        
+//    return (cColor);
+//}

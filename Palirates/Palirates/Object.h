@@ -18,6 +18,8 @@ class CShader;
 class CTerrainShader;
 class CStandardShader;
 
+class Deferred_CTerrainShader;
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 #define RESOURCE_TEXTURE1D			0x01
@@ -79,7 +81,9 @@ public:
 
 	int GetRootParameters() { return(m_nRootParameters); }
 	int GetTextures() { return(m_nTextures); }
+
 	ID3D12Resource* GetResource(int nIndex) { return(m_ppd3dTextures[nIndex]); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int nIndex) { return(m_pd3dSrvGpuDescriptorHandles[nIndex]); }
 
 	UINT GetTextureType() { return(m_nTextureType); }
 	UINT GetTextureType(int nIndex) { return(m_pnResourceTypes[nIndex]); }
@@ -517,7 +521,7 @@ class CHeightMapTerrain : public CGameObject
 private:
 	static CTexture* pTerrainBaseTexture;
 	static CTexture* pTerrainDetailTexture;
-	static CTerrainShader* pTerrainShader;
+	static Deferred_CTerrainShader* pTerrainShader;
 	static CMaterial* pTerrainMaterial;
 
 	static CHeightMapImage* m_pHeightMapImage;  // 각 객체마다 개별적으로 갖는 높이 맵 이미지

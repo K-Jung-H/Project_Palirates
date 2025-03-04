@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -145,6 +145,7 @@ ID3D12Resource* CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12Graphics
 	m_ppd3dTextures[nIndex] = ::CreateTexture2DResource(pd3dDevice, pd3dCommandList, nWidth, nHeight, nElements, nMipLevels, dxgiFormat, d3dResourceFlags, d3dResourceStates, pd3dClearValue);
 	return(m_ppd3dTextures[nIndex]);
 }
+
 
 D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 {
@@ -323,19 +324,36 @@ void CMaterial::ReleaseUploadBuffers()
 CShader *CMaterial::m_pSkinnedAnimationShader = NULL;
 CShader *CMaterial::m_pStandardShader = NULL;
 
-void CMaterial::PrepareShaders(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature)
+void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_pStandardShader = new CStandardShader();
-	m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	m_pStandardShader = new Deferred_CStandard_Shader();
+	m_pStandardShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	Object_Manager::instance_shader = std::make_shared<CStandard_Instance_Shader>();
-	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	m_pSkinnedAnimationShader = new Deferred_CSkinnedAnimationStandardShader();
+	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+	m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+
+	Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
+	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
-	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//m_pStandardShader = new CStandardShader();
+	//m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	//m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
+	//m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	//m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//Object_Manager::instance_shader = std::make_shared<CStandard_Instance_Shader>();
+	//Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	//Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+
+
 }
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -1801,117 +1819,6 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 	return(nStrLength);
 }
 
-//void CGameObject::LoadMaterialsFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CGameObject *pParent, FILE *pInFile, CShader *pShader)
-//{
-//	char pstrToken[64] = { '\0' };
-//	int nMaterial = 0;
-//	UINT nReads = 0;
-//
-//	m_nMaterials = ReadIntegerFromFile(pInFile);
-//
-//	m_ppMaterials = new CMaterial*[m_nMaterials];
-//
-//	for (int i = 0; i < m_nMaterials; i++) 
-//		m_ppMaterials[i] = NULL;
-//
-//	CMaterial *pMaterial = NULL;
-//
-//
-//
-//	for ( ; ; )
-//	{
-//		::ReadStringFromFile(pInFile, pstrToken);
-//
-//		if (!strcmp(pstrToken, "<Material>:"))
-//		{
-//			nMaterial = ReadIntegerFromFile(pInFile);
-//
-//			pMaterial = new CMaterial(7); //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
-//
-//			if (!pShader)
-//			{
-//				UINT nMeshType = GetMeshType();
-//				if (nMeshType & VERTEXT_NORMAL_TANGENT_TEXTURE)
-//				{
-//					if (nMeshType & VERTEXT_BONE_INDEX_WEIGHT)
-//					{
-//						pMaterial->SetSkinnedAnimationShader();
-//					}
-//					else
-//					{
-//						pMaterial->SetStandardShader();
-//					}
-//				}
-//			}
-//			SetMaterial(nMaterial, pMaterial);
-//		}
-//		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_xmf4AlbedoColor), sizeof(float), 4, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_xmf4EmissiveColor), sizeof(float), 4, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<SpecularColor>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<Glossiness>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<Smoothness>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_fSmoothness), sizeof(float), 1, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<Metallic>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_fSpecularHighlight), sizeof(float), 1, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
-//		{
-//			nReads = (UINT)::fread(&(pMaterial->m_fGlossyReflection), sizeof(float), 1, pInFile);
-//		}
-//		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
-//		{
-//			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, 3, pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "<SpecularMap>:"))
-//		{
-//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, 4, pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "<NormalMap>:"))
-//		{
-//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, 5, pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "<MetallicMap>:"))
-//		{
-//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, 6, pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "<EmissionMap>:"))
-//		{
-//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, 7, pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
-//		{
-//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, 8, pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
-//		{
-//			m_ppMaterials[nMaterial]->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, 9, pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]), pParent, pInFile, pShader);
-//		}
-//		else if (!strcmp(pstrToken, "</Materials>"))
-//		{
-//			break;
-//		}
-//	}
-//}
-
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
@@ -2241,7 +2148,7 @@ void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject *pParent)
 	if (pParent != NULL)
 	{
 		char pstrDebug[256] = { 0 };
-		sprintf_s(pstrDebug, sizeof(pstrDebug), "(Frame: %s) <- (Parent: %s)\n", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
+		sprintf_s(pstrDebug, sizeof(pstrDebug), "\n(Frame: %s) <- (Parent: %s)", pGameObject->m_pstrFrameName, pParent->m_pstrFrameName);
 		OutputDebugStringA(pstrDebug);
 	}
 
@@ -2444,7 +2351,7 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
-CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
+Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
 CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
 CHeightMapImage* CHeightMapTerrain::m_pHeightMapImage = nullptr;
 
@@ -2465,9 +2372,14 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
-		pTerrainShader = new CTerrainShader();
-		pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+		pTerrainShader = new Deferred_CTerrainShader();
+		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		//pTerrainShader = new CTerrainShader();
+		//pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		//pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
@@ -2732,9 +2644,6 @@ void CHeightMapTerrain::Get_Active_TileNum_List(std::vector<int>& tile_list)
 	if (sibling_ptr)
 		sibling_ptr->Get_Active_TileNum_List(tile_list);
 }
-
-
-
 
 BoundingOrientedBox* CHeightMapTerrain::Get_Collider()
 {

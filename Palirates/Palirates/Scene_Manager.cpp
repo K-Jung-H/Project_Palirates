@@ -8,6 +8,7 @@ Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12Comma
 #ifdef WRITE_TEXT_UI
     text_ui_renderer = make_shared<Text_UI_Renderer>(nFrames, pd3dDevice, pd3dCommandQueue, ppd3dRenderTargets, nWidth, nHeight);
 #endif
+
 }
 
 Scene_Manager::~Scene_Manager()
@@ -18,6 +19,7 @@ Scene_Manager::~Scene_Manager()
     }
     sceneCache.clear();
 
+    if (CScene::m_pDescriptorHeap) delete CScene::m_pDescriptorHeap;
 }
 
 bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene)

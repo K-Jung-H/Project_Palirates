@@ -31,6 +31,8 @@
 
 #include <unordered_map>
 #include <map>
+#include <array>
+
 
 using namespace std;
 
@@ -79,7 +81,7 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
-#define FRAME_BUFFER_WIDTH				1640
+#define FRAME_BUFFER_WIDTH				840
 #define FRAME_BUFFER_HEIGHT				480
 
 #define ANIMATION_TYPE_ONCE				0
@@ -113,6 +115,7 @@ extern HINSTANCE						ghAppInstance;
 #define PARAMETER_TEST 3
 
 
+
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
 
@@ -122,8 +125,8 @@ extern HINSTANCE						ghAppInstance;
 
 
 #define WRITE_TEXT_UI
-#define RENDER_OBB
-#define LOAD_SCENE
+//#define RENDER_OBB
+// #define LOAD_SCENE
 #define RENDER_PARTICLE
 
 
@@ -137,6 +140,14 @@ extern HINSTANCE						ghAppInstance;
 extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
+
+#define RTV_Format_Num 5
+struct RenderTarget_Config
+{
+	static  const int RTV_FORMAT_num = RTV_Format_Num;
+	static  DXGI_FORMAT RTV_FORMATS[RTV_Format_Num];
+	static  DXGI_FORMAT DSV_FORMAT;
+};
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);
