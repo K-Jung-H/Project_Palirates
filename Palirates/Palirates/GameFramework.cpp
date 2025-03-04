@@ -715,10 +715,6 @@ void CGameFramework::FrameAdvance()
 	//	D3D12_RESOURCE_STATE_RENDER_TARGET
 	//);
 
-	//Clear_RenderTarget(XMFLOAT3{ 0.0f, 0.125f, 0.3f });
-	//XMFLOAT3 background_color = { 0.0f, 0.125f, 0.3f };
-	//float pfClearColor[4] = { background_color.x, background_color.y, background_color.z, 1.0f };
-	//Active_CommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, pfClearColor, 0, NULL);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += (SwapChainBuffer_Index * ::gnRtvDescriptorIncrementSize);

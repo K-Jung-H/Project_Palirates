@@ -80,7 +80,7 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
-#define FRAME_BUFFER_WIDTH				1640
+#define FRAME_BUFFER_WIDTH				840
 #define FRAME_BUFFER_HEIGHT				480
 
 #define ANIMATION_TYPE_ONCE				0
