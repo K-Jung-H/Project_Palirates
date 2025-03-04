@@ -33,12 +33,10 @@
 - 렌더링 파이프라인 분리
 	-Pre_Render
 	-Render
-	-Post_Render
 
-PostProcessing Render 기능 추가하는 중
+ 	-Post_Render == Deffered_Render
 
-RenderTarget을 4개 연결하여 정보를 저장하고
-각 저장된 정보를 하나로 합쳐 한번에 렌더링 함
+PostProcessing Render 기능 추가 완료
 
 
 - 파티클 처리 방식:
