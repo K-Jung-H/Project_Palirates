@@ -169,6 +169,7 @@ struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
 {
     float4 position : SV_POSITION;
+    float3 positionW : POSITION;
     float4 color : COLOR;
     
     float lifetime : LIFETIME;
@@ -191,8 +192,9 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
     
     // 파티클 위치 계산 (월드 좌표 적용)
     float4 particleWorldPosition = float4(input.position + input.world_position, 1.0f);
-    float4 worldPos = mul(particleWorldPosition, gmtxGameObject);
-    output.position = mul(mul(worldPos, gmtxView), gmtxProjection);
+    
+    output.positionW = mul(particleWorldPosition, gmtxGameObject).xyz;
+    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
     
     // 색상과 기타 속성 설정
     output.color = input.color;
@@ -238,6 +240,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
     }
 
     output.cTexture = cColor;
+    output.zDepth = distance(input.positionW, gvCameraPosition);
+
     return output;
 }
 
