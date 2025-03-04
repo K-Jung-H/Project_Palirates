@@ -154,5 +154,6 @@
     <FxCompile Include="Particle_CS.hlsl" />
     <FxCompile Include="Particle.hlsl" />
     <FxCompile Include="Post_Shaders.hlsl" />
+
   </ItemGroup>
 </Project>
