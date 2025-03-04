@@ -155,6 +155,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.cTexture = cColor;
     output.normal = float4(normalW,1.0f);
     output.cIllumination = cIllumination;
+    output.zDepth = distance(input.positionW, gvCameraPosition);
 
     
     return (output);
@@ -222,8 +223,8 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
     VS_STANDARD_OUTPUT output;
 
 
-    output.position = mul(mul(mul(float4(input.position, 1.0f), input.instance_worldMatrix), gmtxView), gmtxProjection);
     output.positionW = mul(float4(input.position, 1.0f), input.instance_worldMatrix).xyz;
+    output.position = mul(mul(mul(float4(input.position, 1.0f), input.instance_worldMatrix), gmtxView), gmtxProjection);
     output.normalW = mul(input.normal, (float3x3) input.instance_worldMatrix);
     output.tangentW = mul(input.tangent, (float3x3) input.instance_worldMatrix);
     output.bitangentW = mul(input.bitangent, (float3x3) input.instance_worldMatrix);
@@ -345,6 +346,8 @@ struct VS_TERRAIN_INPUT
 struct VS_TERRAIN_OUTPUT
 {
 	float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+
 	float4 color : COLOR;
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
@@ -353,7 +356,7 @@ struct VS_TERRAIN_OUTPUT
 VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 {
 	VS_TERRAIN_OUTPUT output;
-
+    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
 	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
 	output.color = input.color;
 	output.uv0 = input.uv0;
@@ -376,6 +379,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
     output.cTexture = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     
+    output.zDepth = distance(input.positionW, gvCameraPosition);
+
     return (output);
 }
 
@@ -393,6 +398,7 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
     input.position.y -= 1.0f;
+    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
     output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
     output.color = input.color;
     output.uv0 = input.uv0;
@@ -412,6 +418,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
     output.zDepth = float(0.0f);
 
     output.cTexture = input.color;
+    output.zDepth = distance(input.positionW, gvCameraPosition);
+
     return (output);
 }
 
