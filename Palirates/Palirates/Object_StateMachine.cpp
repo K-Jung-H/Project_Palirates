@@ -180,20 +180,20 @@ void StateMachine::update(float Elapsed_time)
         }
         break;
     case State::Dive:
-        m_pOwner->targetWeights[TRACK_DIVEROLL_FORWARD] = 1.0f;
-        
-    	float fFixedSpeed = 300.0f; 
-
-    	// Dive 상태일 때 무조건 전방 이동
-        m_pOwner->Move(DIR_FORWARD, fFixedSpeed * Elapsed_time, false);
 
         if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
             key_state.dive = false;
             animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
-            animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
             changeState(State::Idle, Key_Value::None);
         }
-       
+        else {
+            m_pOwner->targetWeights[TRACK_DIVEROLL_FORWARD] = 1.0f;
+
+            float fFixedSpeed = 300.0f;
+
+            // Dive 상태일 때 무조건 전방 이동
+           // m_pOwner->Move(DIR_FORWARD, fFixedSpeed * Elapsed_time, false);
+        }
         break;
     }
     
@@ -425,7 +425,7 @@ void StateMachine::exitState(State state, Key_Value key_event)
     case State::Dive:
         key_state.dive = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
+        //animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
         DebugOutput("Dive->Idle\n");
         break;
     case State::Jump:
