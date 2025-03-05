@@ -353,6 +353,9 @@ public:
 
 	virtual void OnRootMotion(CGameObject* pRootGameObject) { }
 	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
+
+	XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 m_xmf3PrevHipsPosition{ 0.0f, 0.0f, 0.0f };
 };
 
 //==================================================================================
@@ -486,6 +489,8 @@ public:
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
 	CAnimationController* GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+
+	XMFLOAT3 RootPosition{ 0.0f, 0.0f, 0.0f };
 };
 
 //==================================================================================

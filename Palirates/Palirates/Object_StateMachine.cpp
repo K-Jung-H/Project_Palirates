@@ -182,8 +182,6 @@ void StateMachine::update(float Elapsed_time)
     case State::Dive:
 
         if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
-           // key_state.dive = false;
-           // animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
             changeState(State::Idle, Key_Value::None);
         }
         else {
@@ -191,8 +189,33 @@ void StateMachine::update(float Elapsed_time)
 
             float fFixedSpeed = 300.0f;
 
+
+            std::wostringstream oss;
+            XMFLOAT3 vec = animController->HipsPosition;
+            XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
+
+            XMFLOAT3 shift;
+            shift.x = vec.x - vec2.x;
+            shift.y = vec.y - vec2.y;
+            shift.z = vec.z - vec2.z;
+
+            animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
+
+            float scaleFactor = 30.0f;
+            XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
+
+            oss << L"XMFLOAT3: ("
+                << scaleShift.x << L", "
+                << scaleShift.y << L", "
+                << scaleShift.z << L")\n";
+            OutputDebugStringW(oss.str().c_str());
+
+            if (scaleShift.z > 0.001f) {
+                //m_pOwner->m_xmf3Velocity;
+                m_pOwner->Move(scaleShift, false);
+            }
             // Dive 상태일 때 무조건 전방 이동
-            m_pOwner->Move(DIR_FORWARD, fFixedSpeed * Elapsed_time, false);
+           // m_pOwner->Move(DIR_FORWARD, fFixedSpeed * Elapsed_time, false);
         }
         break;
     }

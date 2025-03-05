@@ -798,6 +798,18 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (boneName == "Hips")
 					{
+					/*	XMFLOAT3 tempHipsPosition = { blendedTransform._41, blendedTransform._42, blendedTransform._43 };
+						HipsPosition = tempHipsPosition;*/
+
+						
+
+						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+							/*std::wostringstream oss;
+							oss << L"XMFLOAT3: (" << HipsPosition.x << L", " << HipsPosition.y << L", " << HipsPosition.z << L")\n";
+							OutputDebugStringW(oss.str().c_str());*/
+						}
+
 						blendedTransform._41 = 0.0f;
 						blendedTransform._42 = 0.8762761f;
 						blendedTransform._43 = 0.0f;
