@@ -521,9 +521,9 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Register_Scene("Scene_1", Scene_1);
 	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
 
-	std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
-	scene_manager->Register_Scene("Scene_2", Scene_2);
-	scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
+	//std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
+	//scene_manager->Register_Scene("Scene_2", Scene_2);
+	//scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
 
 
 	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();

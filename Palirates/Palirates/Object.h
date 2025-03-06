@@ -29,6 +29,7 @@ class Deferred_CTerrainShader;
 #define RESOURCE_TEXTURE_CUBE		0x05
 #define RESOURCE_BUFFER				0x06
 #define RESOURCE_STRUCTURED_BUFFER 0x07
+
 class CTexture
 {
 public:
@@ -72,7 +73,9 @@ public:
 
 	void LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex);
 	void LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, UINT nIndex);
+
 	void CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
+	void CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
 
 	ID3D12Resource* CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
 
@@ -107,44 +110,93 @@ public:
 
 class CGameObject;
 
+class Reflectance_Data
+{
+private:
+	UINT ID;
+
+public:
+	XMFLOAT4 m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	XMFLOAT4 m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	XMFLOAT4 m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	XMFLOAT4 m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	float m_fGlossiness = 0.0f;
+	float m_fSmoothness = 0.0f;
+	float m_fSpecularHighlight = 0.0f;
+	float m_fMetallic = 0.0f;
+	float m_fGlossyReflection = 0.0f;
+
+	Reflectance_Data() : ID(0) {}
+
+	UINT Get_ID() const { return ID; }
+
+	friend bool operator==(const Reflectance_Data& other1, const Reflectance_Data& other2);
+
+	friend class Reflectance_Data_Manager;
+};
+
+
+class Reflectance_Data_Manager
+{
+private:
+	static std::vector<std::shared_ptr<Reflectance_Data>> reflectance_data_list;
+
+	CTexture* Reflectance_Data_Texture = NULL;
+
+
+public:
+	Reflectance_Data_Manager();
+	~Reflectance_Data_Manager();
+	
+	static void Add_Reflectance_Data(const std::shared_ptr<Reflectance_Data>& new_data);
+
+	void Create_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Release_ShaderVariables();
+
+	static void Print_Info();
+};
 class CMaterial
 {
 public:
 	CMaterial(int nTextures);
 	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
+
 public:
-	// static 자료형이 연결되어야 하므로, shared_ptr 사용 불가
+	std::shared_ptr<Reflectance_Data> reflectance_data;
+	//XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	//XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	//XMFLOAT4						m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	//XMFLOAT4						m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	
+	//float							m_fGlossiness = 0.0f;
+	//float							m_fSmoothness = 0.0f;
+	//float							m_fSpecularHighlight = 0.0f;
+	//float							m_fMetallic = 0.0f;
+	//float							m_fGlossyReflection = 0.0f;
+
+public:
+	// Don't apply Shared_ptr
 	CShader* m_pShader = NULL;
 
-	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	void SetShader(CShader *pShader);
-	void SetMaterialType(UINT nType) { m_nType |= nType; }
-	void SetTexture(CTexture *pTexture, UINT nTexture = 0);
+	UINT							m_nType = 0x00; // Texture Map Type
 
-	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList);
-
-	virtual void ReleaseUploadBuffers();
-
-public:
-	UINT							m_nType = 0x00;
-
-	float							m_fGlossiness = 0.0f;
-	float							m_fSmoothness = 0.0f;
-	float							m_fSpecularHighlight = 0.0f;
-	float							m_fMetallic = 0.0f;
-	float							m_fGlossyReflection = 0.0f;
-
-public:
 	int 							m_nTextures = 0;
 	_TCHAR							(*m_ppstrTextureNames)[64] = NULL;
 	CTexture						**m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
 
 	void LoadTextureFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR *pwstrTextureName, CTexture **ppTexture, CGameObject *pParent, FILE *pInFile, CShader *pShader);
+
+	void SetShader(CShader* pShader);
+	void SetMaterialType(UINT nType) { m_nType |= nType; }
+	void SetTexture(CTexture* pTexture, UINT nTexture = 0);
+
+	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseUploadBuffers();
+
 
 public:
 	static CShader					*m_pStandardShader;
@@ -155,6 +207,7 @@ public:
 	void SetStandardShader() { CMaterial::SetShader(m_pStandardShader); }
 	void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); }
 };
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -524,7 +577,7 @@ private:
 	static Deferred_CTerrainShader* pTerrainShader;
 	static CMaterial* pTerrainMaterial;
 
-	static CHeightMapImage* m_pHeightMapImage;  // 각 객체마다 개별적으로 갖는 높이 맵 이미지
+	static CHeightMapImage* m_pHeightMapImage;  // link height map image for each terrain tile object
 
 private:
 	int							m_nWidth;

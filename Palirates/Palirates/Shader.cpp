@@ -657,20 +657,31 @@ D3D12_BLEND_DESC CPostProcessingShader::CreateBlendState(int n)
 
 ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
 {
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[1];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
 
 	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 	pd3dDescriptorRanges[0].NumDescriptors = 5;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 0; //Texture
+	pd3dDescriptorRanges[0].BaseShaderRegister = 0; // G-buffer Texture
 	pd3dDescriptorRanges[0].RegisterSpace = 0;
 	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = 0;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[1];
+	pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	pd3dDescriptorRanges[1].NumDescriptors = 1;  // Structured Buffer  == Material_Info
+	pd3dDescriptorRanges[1].BaseShaderRegister = 5; 
+	pd3dDescriptorRanges[1].RegisterSpace = 0;
+	pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = 0;
 
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[0].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; //Texture
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	D3D12_ROOT_PARAMETER pd3dRootParameters[2];
+
+	pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; // G-buffer Texture
+	pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; // Material_Info
+	pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	D3D12_STATIC_SAMPLER_DESC d3dSamplerDesc;
 	::ZeroMemory(&d3dSamplerDesc, sizeof(D3D12_STATIC_SAMPLER_DESC));
@@ -1336,7 +1347,7 @@ D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreateVertexShad
 D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreatePixelShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_SkinnedAnimationStandard", "ps_5_1", VertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", VertexShaderBlob));
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };

@@ -330,7 +330,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Classify_Objects_By_Tile();
 
 	Object_Manager::Reserve_Update();
-
+	Reflectance_Data_Manager::Print_Info();
 
 
 	if (pHumanModel)

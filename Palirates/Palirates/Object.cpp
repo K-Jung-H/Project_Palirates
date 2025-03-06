@@ -138,6 +138,16 @@ void CTexture::CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	m_ppd3dTextures[nIndex] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pData, nElements * nStride, d3dHeapType, d3dResourceStates, &m_ppd3dTextureUploadBuffers[nIndex]);
 }
 
+void CTexture::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex)
+{
+	m_pnResourceTypes[nIndex] = RESOURCE_STRUCTURED_BUFFER;
+	m_pdxgiBufferFormats[nIndex] = DXGI_FORMAT_UNKNOWN; // Structured Buffer is not use DXGI 
+	m_pnBufferElements[nIndex] = nElements;
+	m_pnBufferStrides[nIndex] = nStride;
+
+	m_ppd3dTextures[nIndex] = ::CreateStructuredBufferResource(pd3dDevice, pd3dCommandList, pData, nStride, nElements, d3dHeapType, d3dResourceStates, &m_ppd3dTextureUploadBuffers[nIndex]);
+}
+
 
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue)
 {
@@ -205,8 +215,81 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 	return(d3dShaderResourceViewDesc);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+//==================================================================================
+
+bool operator==(const Reflectance_Data& lhs, const Reflectance_Data& rhs)
+{
+	return
+		Compare_XMFLOAT4(lhs.m_xmf4AlbedoColor, rhs.m_xmf4AlbedoColor) &&
+		Compare_XMFLOAT4(lhs.m_xmf4EmissiveColor, rhs.m_xmf4EmissiveColor) &&
+		Compare_XMFLOAT4(lhs.m_xmf4SpecularColor, rhs.m_xmf4SpecularColor) &&
+		Compare_XMFLOAT4(lhs.m_xmf4AmbientColor, rhs.m_xmf4AmbientColor) &&
+		lhs.m_fGlossiness == rhs.m_fGlossiness &&
+		lhs.m_fSmoothness == rhs.m_fSmoothness &&
+		lhs.m_fSpecularHighlight == rhs.m_fSpecularHighlight &&
+		lhs.m_fMetallic == rhs.m_fMetallic &&
+		lhs.m_fGlossyReflection == rhs.m_fGlossyReflection;
+}
+
+Reflectance_Data_Manager::Reflectance_Data_Manager()
+{
+}
+
+Reflectance_Data_Manager::~Reflectance_Data_Manager()
+{
+	reflectance_data_list.clear();
+	reflectance_data_list.resize(0);
+}
+
+std::vector<std::shared_ptr<Reflectance_Data>> Reflectance_Data_Manager::reflectance_data_list;
+
+void Reflectance_Data_Manager::Add_Reflectance_Data(const std::shared_ptr<Reflectance_Data>& new_data)
+{
+	auto it = std::find_if(reflectance_data_list.begin(), reflectance_data_list.end(),
+		[&](const std::shared_ptr<Reflectance_Data>& existing_data) {
+			return *existing_data == *new_data;  // 값 비교
+		});
+
+	if (it != reflectance_data_list.end()) {
+		// 중복된 값이 있다면, 기존 ID를 재사용
+		new_data->ID = (*it)->Get_ID();
+	}
+	else {
+		// 중복되지 않으면, 새로운 ID를 할당하고 추가
+		new_data->ID = reflectance_data_list.size();  // 여기서 size()를 사용
+		reflectance_data_list.push_back(new_data);
+	}
+}
+
+void Reflectance_Data_Manager::Create_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Reflectance_Data_Texture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 1);
+	Reflectance_Data_Texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, reflectance_data_list.data(), sizeof(Reflectance_Data), reflectance_data_list.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
+
+	CScene::CreateShaderResourceViews(pd3dDevice, Reflectance_Data_Texture, 0, ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX); 
+
+}
+
+void Reflectance_Data_Manager::Update_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Reflectance_Data_Texture->UpdateShaderVariables(pd3dCommandList);
+}
+
+void Reflectance_Data_Manager::Release_ShaderVariables()
+{
+	delete Reflectance_Data_Texture;
+}
+
+void Reflectance_Data_Manager::Print_Info()
+{
+	for (std::shared_ptr<Reflectance_Data> data : reflectance_data_list)
+	{
+		DebugOutput("\nReflectance_Data:", to_string(data->ID));
+	}
+}
+
+//==================================================================================
+
 CMaterial::CMaterial(int nTextures)
 {
 	m_nTextures = nTextures;
@@ -242,18 +325,14 @@ CMaterial::~CMaterial()
 
 CMaterial::CMaterial(const CMaterial& other)
 {
-	m_pShader = other.m_pShader;
+	if (other.reflectance_data)
+		reflectance_data = std::make_shared<Reflectance_Data>(*other.reflectance_data);
+	else
+		reflectance_data = nullptr;
 
-	m_xmf4AlbedoColor = other.m_xmf4AlbedoColor;
-	m_xmf4EmissiveColor = other.m_xmf4EmissiveColor;
-	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
-	m_xmf4AmbientColor = other.m_xmf4AmbientColor;
+
+	m_pShader = other.m_pShader;
 	m_nType = other.m_nType;
-	m_fGlossiness = other.m_fGlossiness;
-	m_fSmoothness = other.m_fSmoothness;
-	m_fSpecularHighlight = other.m_fSpecularHighlight;
-	m_fMetallic = other.m_fMetallic;
-	m_fGlossyReflection = other.m_fGlossyReflection;
 	m_nTextures = other.m_nTextures;
 
 	if (other.m_ppstrTextureNames != nullptr) 
@@ -358,12 +437,17 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 32);
+	UINT id = -1;
+	if (reflectance_data)
+		reflectance_data->Get_ID();
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &id, 16);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 20);
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
@@ -1760,21 +1844,6 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
-	//for (int i = 0; i < m_nMaterials; i++)
-	//{
-	//	if (m_ppMaterials[i])
-	//	{
-	//		for (int j = 0; j < m_ppMaterials[i]->m_nTextures; j++)
-	//		{
-	//			if (m_ppMaterials[i]->m_ppTextures[j])
-	//			{
-	//				if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) 
-	//					return(m_ppMaterials[i]->m_ppTextures[j]);
-	//			}
-	//		}
-	//	}
-	//}
-
 	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
 		for (int j = 0; j < material_ptr->m_nTextures; j++)
@@ -1825,10 +1894,11 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	// 기존 Material 제거 후 새로운 크기 설정
+	// delete old Material & Resize material
 	Material_list.clear();
+
 	int materialCount = ReadIntegerFromFile(pInFile);
-	Material_list.reserve(materialCount);  // 메모리 예약
+	Material_list.reserve(materialCount);  // Reserve memory
 
 	std::shared_ptr<CMaterial> pMaterial = nullptr;
 
@@ -1840,8 +1910,10 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
 
-			// 새로운 Material 생성 및 추가
+			// add & define new Material 
 			pMaterial = std::make_shared<CMaterial>(7);
+			pMaterial->reflectance_data = std::make_shared<Reflectance_Data>(); // reset Reflectance_Data
+						
 			if (!pShader)
 			{
 				UINT nMeshType = GetMeshType();
@@ -1854,7 +1926,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 
-			// 벡터 크기를 nMaterial 인덱스까지 확장
+			// Resize to nMaterial
 			if (nMaterial >= Material_list.size())
 				Material_list.resize(nMaterial + 1);
 
@@ -1862,35 +1934,35 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4AlbedoColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_xmf4AlbedoColor), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4EmissiveColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_xmf4EmissiveColor), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Glossiness>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_fGlossiness), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Smoothness>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fSmoothness), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_fSmoothness), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Metallic>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fSpecularHighlight), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_fSpecularHighlight), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_fMetallic), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossyReflection), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->reflectance_data->m_fGlossyReflection), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
@@ -1901,25 +1973,29 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
 				pParent, pInFile, pShader);
 		}
@@ -1940,6 +2016,9 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			break;
 		}
 	}
+
+	Reflectance_Data_Manager::Add_Reflectance_Data(pMaterial->reflectance_data);
+
 }
 
 
@@ -2459,10 +2538,9 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		}
 	}
 
-	if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
-	{
-		PrintFrameInfo(this, NULL);
-	}
+	//if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
+	//	PrintFrameInfo(this, NULL);
+	
 }
 
 

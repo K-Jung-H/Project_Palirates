@@ -1,6 +1,7 @@
 #pragma once
-#pragma once
 #include "Scene.h"
+#include "Object.h"
+
 
 class Scene_Manager
 {
@@ -9,6 +10,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<CScene>> sceneCache;
     
     std::shared_ptr<Text_UI_Renderer> text_ui_renderer;
+    std::shared_ptr<Reflectance_Data_Manager> material_reflectance_data_manager;
 
 public:
     Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
