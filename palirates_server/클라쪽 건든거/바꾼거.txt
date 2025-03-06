@@ -1,0 +1,6 @@
+GameFramework.h ->  ClientNetwork 객체 추가 (서버 연결, 데이터 수신)
+		   Object_Manager 객체 추가 (플레이어상태 관리)
+GameFramework.cpp -> 서버연결, 데이터 적용
+Player.h -> 패킷 변환
+Object_Manager.h -> 위치 업데이트
+Object_Manager.cpp -> 위치 업데이트

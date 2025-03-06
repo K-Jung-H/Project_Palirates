@@ -20,6 +20,7 @@ LobbyManager lobbyManager;
 std::unordered_map<int, Player> players;
 std::unordered_map<int, Monster> monsters;
 
+// 패킷 수신 확인
 void HandleClient(SOCKET clientSocket, int clientId)
 {
     char buffer[BUFFER_SIZE];
@@ -31,13 +32,13 @@ void HandleClient(SOCKET clientSocket, int clientId)
         {
             buffer[bytesReceived] = '\0';
             std::string packet(buffer);
-            std::cout << "[서버] 수신 패킷: " << packet << std::endl;
+            std::cout << "[서버] 클라이언트 " << clientId << " 패킷 수신: " << packet << std::endl;
 
             HandleGamePacket(clientSocket, packet, clientId);
         }
         else if (bytesReceived == 0)
         {
-            std::cout << "[서버] 클라이언트 연결 종료 (ID: " << clientId << ")" << std::endl;
+            std::cout << "[서버] 클라이언트 " << clientId << " 연결 종료" << std::endl;
             closesocket(clientSocket);
             clients.erase(clientId);
             break;
@@ -45,49 +46,47 @@ void HandleClient(SOCKET clientSocket, int clientId)
     }
 }
 
+// 클라이언트 패킷 처리
 void HandleGamePacket(SOCKET clientSocket, const std::string& packet, int clientId)
 {
+    char command[50];
+    float x, y, z;
+    int monsterId, damage;
+    char response[BUFFER_SIZE];
+
+    // JOIN_LOBBY 처리
     if (packet == "JOIN_LOBBY")
     {
         std::cout << "[서버] 클라이언트 " << clientId << " 로비 입장" << std::endl;
         lobbyManager.JoinRoom(clientId, 1);
+        sprintf_s(response, "JOIN_SUCCESS,%d", 1);
     }
+    // READY 처리
     else if (packet == "READY")
     {
         std::cout << "[서버] 클라이언트 " << clientId << " 준비 완료" << std::endl;
         lobbyManager.StartGame(1);
     }
-    else if (packet.find("MOVE") != std::string::npos)
-    {
-        float x, y, z;
-        sscanf_s(packet.c_str(), "MOVE,%f,%f,%f", &x, &y, &z);
 
+    // MOVE 처리
+    else if (sscanf_s(packet.c_str(), "MOVE,%f,%f,%f", &x, &y, &z) == 3)
+    {
         players[clientId].update(x, y, z, 1);
-        std::string updatePacket = players[clientId].Serialize();
-
-        for (const auto& [id, socket] : clients)
-        {
-            if (id != clientId)
-            {
-                send(socket, updatePacket.c_str(), updatePacket.size(), 0);
-            }
-        }
+        sprintf_s(response, "PLAYER_UPDATE,%d,%.2f,%.2f,%.2f,1", clientId, x, y, z);
     }
-    else if (packet.find("ATTACK_MONSTER") != std::string::npos)
+    // ATTACK_MONSTER 처리
+    else if (sscanf_s(packet.c_str(), "ATTACK_MONSTER,%d,%d", &monsterId, &damage) == 2)
     {
-        int monsterId, damage;
-        sscanf_s(packet.c_str(), "ATTACK_MONSTER,%d,%d", &monsterId, &damage);
-
         if (monsters.find(monsterId) != monsters.end())
         {
             monsters[monsterId].hp -= damage;
-            std::string updatePacket = monsters[monsterId].Serialize();
-
-            for (const auto& [id, socket] : clients)
-            {
-                send(socket, updatePacket.c_str(), updatePacket.size(), 0);
-            }
+            sprintf_s(response, "MONSTER_UPDATE,%d,%d", monsterId, monsters[monsterId].hp);
         }
+    }
+    // 모든 클라이언트에게 패킷 전송
+    for (const auto& [id, socket] : clients)
+    {
+        send(socket, response, strlen(response), 0);
     }
 }
 
