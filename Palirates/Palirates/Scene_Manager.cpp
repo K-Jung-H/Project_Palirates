@@ -69,9 +69,13 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
     if (it != sceneCache.end())
     {
         it->second->BuildObjects(pd3dDevice, pd3dCommandList);
+
+        material_reflectance_data_manager->Create_ShaderVariables(pd3dDevice, pd3dCommandList);
+
 #ifdef WRITE_TEXT_UI
         it->second->Build_Text_UI(text_ui_renderer.get());
 #endif
+
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Can't find " + std::string(sceneName));
@@ -146,6 +150,22 @@ void Scene_Manager::Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
+void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)
+        activeScene->UpdateShaderVariables_POST(pd3dCommandList);
+
+    if (material_reflectance_data_manager)
+        material_reflectance_data_manager->Update_ShaderVariables(pd3dDevice, pd3dCommandList);
+
+    if (pCamera)
+    {
+        pCamera->UpdateShaderVariables_POST(pd3dCommandList);
+    }
+
 
 }
 

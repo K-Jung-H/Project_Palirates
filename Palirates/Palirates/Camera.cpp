@@ -115,6 +115,15 @@ void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComm
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbCamera->Map(0, NULL, (void **)&m_pcbMappedCamera);
+
+	//==========================================================================
+
+	UINT ncbElementBytes_2 = ((sizeof(VS_CB_POST_CAMERA_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
+	post_Camera_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes_2, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	post_Camera_Info->Map(0, NULL, (void**)&Mapped_post_Camera_Info);
+
+
 }
 
 void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -133,9 +142,29 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress);
 }
 
+void CCamera::UpdateShaderVariables_POST(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	XMFLOAT4X4 xmf4x4InvProjection;
+	XMStoreFloat4x4(&xmf4x4InvProjection, XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_xmf4x4Projection)));
+
+	::memcpy(&Mapped_post_Camera_Info->m_InvProjection, &xmf4x4InvProjection, sizeof(XMFLOAT4X4));
+
+	::memcpy(&Mapped_post_Camera_Info->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = post_Camera_Info->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_CAMERA_CBV_INDEX, d3dGpuVirtualAddress);
+}
+
+
 void CCamera::ReleaseShaderVariables()
 {
 	if (m_pd3dcbCamera)
+	{
+		m_pd3dcbCamera->Unmap(0, NULL);
+		m_pd3dcbCamera->Release();
+	}
+
+	if (post_Camera_Info)
 	{
 		m_pd3dcbCamera->Unmap(0, NULL);
 		m_pd3dcbCamera->Release();

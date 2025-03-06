@@ -13,6 +13,12 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT3						m_xmf3Position;
 };
 
+struct VS_CB_POST_CAMERA_INFO
+{
+	XMFLOAT4X4						m_InvProjection;
+	XMFLOAT3						m_xmf3Position;
+};
+
 class CPlayer;
 
 class CCamera
@@ -46,6 +52,10 @@ protected:
 
 	BoundingFrustum m_xmFrustum;
 
+	//==============================================
+
+	ID3D12Resource* post_Camera_Info = NULL;
+	VS_CB_POST_CAMERA_INFO* Mapped_post_Camera_Info = NULL;
 
 public:
 	CCamera();
@@ -55,7 +65,9 @@ public:
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void UpdateShaderVariables_POST(ID3D12GraphicsCommandList* pd3dCommandList);
 
+	
 	void GenerateViewMatrix();
 	void GenerateViewMatrix(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3LookAt, XMFLOAT3 xmf3Up);
 	void RegenerateViewMatrix();

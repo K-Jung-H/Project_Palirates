@@ -69,13 +69,18 @@ CMaterial에서는 ID를 통해 매니저에서 읽어올 것.
 
 진행 상황
 ------------------------------------------------------------------------------------------------
-메니저 구현 완료, 중복 재질 방지되는 것 확인, Material 정보 저장한 Structured_Buffer 생성
+PSO에서 설정한 렌더 타겟 DXGI 포맷과 실제로 동작하는 DXGI 구조가 일치하지 않는 문제 발생
 
-To do:
--> 셰이더에서 렌더 타겟에 Material ID 저장하게 하기
--> RTV에 사용할 GXDI 포맷 변경하게 하기
--> 프레임워크에 메니저에서 Structured_Buffer 를 셰이더 변수에 연결하는 동작 추가하기
--> Light 함수 Post에서 호출하여, Deffered_Render 테스트하기
+필요한 RTV 구조:
+- Material_ID -> int 값으로 저장 및 structured_buffer의 인덱스로 활용
+- depth -> float 깊이 값으로 활용하여, 조명 연산에 활용
+- camera_distance -> float 안개 효과에 활용 
+
+-> RTV FORMAT = { float4, int, float4, float, float} 로 설정하였으나, 실제로 연결되는 값은 다른 상태임. 문제 해결 필요
+
+차선책: Material_ID 의 저장 방식을 int 값을 float 값으로 변환하여 저장할 시 생길 수 있는  정밀도 손실 문제만 해결하면, float4의 원소에 저장하면 해결 가능
+-> 그 전에 최대한 해결해 볼 것
+
 
 
 

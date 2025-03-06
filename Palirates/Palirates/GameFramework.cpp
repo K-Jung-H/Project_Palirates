@@ -237,10 +237,19 @@ void CGameFramework::CreateRenderTargetViews()
 	for (UINT i = 0; i < N_SwapChainBuffers; i++)
 	{
 		m_pdxgiSwapChain->GetBuffer(i, __uuidof(ID3D12Resource), (void **)&ptr_SwapChainBackBuffer_List[i]);
-		m_pd3dDevice->CreateRenderTargetView(ptr_SwapChainBackBuffer_List[i], &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle);
+		m_pd3dDevice->CreateRenderTargetView(ptr_SwapChainBackBuffer_List[i], &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle); 
 		SwapChainBack_Buffer_RTV_CPUHandle_list[i] = d3dRtvCPUDescriptorHandle;
 		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
 	}
+	
+
+	//for (UINT i = 0; i < RTV_Format_Num; i++)
+	//{
+	//	d3dRenderTargetViewDesc.Format = RenderTarget_Config::RTV_FORMATS[i];
+	//	m_pd3dDevice->CreateRenderTargetView(ptr_RTV_Buffer_List[i], &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle);
+	//	RTV_Buffer_CPUHandle_list[i] = d3dRtvCPUDescriptorHandle;
+	//	d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
+	//}
 }
 
 void CGameFramework::CreateDepthStencilView()
@@ -508,8 +517,12 @@ void CGameFramework::Build_Scenes()
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
 
-	DXGI_FORMAT pdxgiResourceFormats[4] = { DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT };
-	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 4, pdxgiResourceFormats, d3dRtvCPUDescriptorHandle); //SRV to (Render Targets) + (Depth Buffer)
+	//DXGI_FORMAT pdxgiResourceFormats[4] = { DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R32_FLOAT };
+	//PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 4, pdxgiResourceFormats, d3dRtvCPUDescriptorHandle); //SRV to (Render Targets) + (Depth Buffer)
+
+	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); //SRV to (Render Targets) + (Depth Buffer)
+
+
 
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 
@@ -708,14 +721,6 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
 
 
-	//::SynchronizeResourceTransition(
-	//	Active_CommandList,
-	//	ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
-	//	D3D12_RESOURCE_STATE_PRESENT, 
-	//	D3D12_RESOURCE_STATE_RENDER_TARGET
-	//);
-
-
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += (SwapChainBuffer_Index * ::gnRtvDescriptorIncrementSize);
 
@@ -750,6 +755,12 @@ void CGameFramework::FrameAdvance()
 
 	// Connect One RenderTarget
 	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &d3dDsvCPUDescriptorHandle);
+
+
+
+	// Testing Code
+	PostProcessing_shader->Setting_Render(Active_CommandList, 0);
+	scene_manager->Prepare_Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 
 	// Draw Scene by Mixing resource
