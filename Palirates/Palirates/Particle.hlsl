@@ -242,6 +242,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
 
     output.Albedo_Texture = cColor;
     output.Depth = input.position.z;
+    output.Material_ID = (-1);
     output.Camera_Distance = distance(input.positionW, gvCameraPosition);
 
     return output;

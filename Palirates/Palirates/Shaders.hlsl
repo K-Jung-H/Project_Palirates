@@ -14,8 +14,7 @@ cbuffer Frame_Info : register(b0)
 cbuffer cbGameObjectInfo : register(b1)
 {
 	matrix					gmtxGameObject : packoffset(c0);
-	//MATERIAL				gMaterial : packoffset(c4);
-    uint                   gMaterialID : packoffset(c4);
+    int                     gMaterialID : packoffset(c4);
 	uint					gnTexturesMask : packoffset(c8);
 };
 
@@ -70,16 +69,6 @@ struct VS_STANDARD_OUTPUT
 	float3 bitangentW : BITANGENT;
 	float2 uv : TEXCOORD;
 };
-
-//struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
-//{
-//    float4 color : SV_TARGET0;
-
-//    float4 cTexture : SV_TARGET1;
-//    float4 cIllumination : SV_TARGET2;
-//    float4 normal : SV_TARGET3;
-//    float zDepth : SV_TARGET4;
-//};
 
 struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 {

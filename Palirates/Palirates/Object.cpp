@@ -437,14 +437,9 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
-
-	UINT id = -1;
+	int id = -1;
 	if (reflectance_data)
-		reflectance_data->Get_ID();
+		id = reflectance_data->Get_ID();
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &id, 16);
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 20);

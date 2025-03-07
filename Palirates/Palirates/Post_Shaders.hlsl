@@ -53,6 +53,51 @@ float4 PSPostProcessing(float4 position : SV_POSITION) : SV_Target
     return (float4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
+// HSV → RGB 변환 함수
+float3 HSVtoRGB(float h, float s, float v)
+{
+    float3 rgb;
+    
+    float i = floor(h * 6);
+    float f = h * 6 - i;
+    float p = v * (1 - s);
+    float q = v * (1 - f * s);
+    float t = v * (1 - (1 - f) * s);
+
+    if (i == 0)
+        rgb = float3(v, t, p);
+    else if (i == 1)
+        rgb = float3(q, v, p);
+    else if (i == 2)
+        rgb = float3(p, v, t);
+    else if (i == 3)
+        rgb = float3(p, q, v);
+    else if (i == 4)
+        rgb = float3(t, p, v);
+    else
+        rgb = float3(v, p, q);
+
+    return rgb;
+}
+
+// Material ID를 색상으로 변환하는 함수
+float4 GetMaterialColor(int materialID)
+{
+    if (materialID == -1)
+    {
+        return float4(1, 0, 0, 1); 
+    }
+
+    // ID 범위 제한 (0 ~ 20)
+    materialID = clamp(materialID, 0, 20);
+
+    // ID를 0 ~ 1 사이의 Hue 값으로 변환
+    float hue = (float) materialID / 20.0f; // 0 ~ 1 사이의 값
+    float3 color = HSVtoRGB(hue, 1.0f, 1.0f); // 채도, 명도는 최대
+
+    return float4(color, 1.0f);
+}
+
 //==================================================================
 
 
@@ -108,7 +153,9 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     uint width, height;
     Post_Material_ID.GetDimensions(width, height);
     int pixel_Material_ID = Post_Material_ID.Load(int3(input.uv * float2(width, height), 0));
-    
+
+    if (pixel_Material_ID == -1)
+        return colorTexture;
     
     
     float3 vNormal = Post_View_Normal.Sample(gssWrap, input.uv).xyz;
@@ -122,7 +169,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float pixelDistance = Post_Camera_Distance.Load(uint3((uint) input.position.x, (uint) input.position.y, 0)).r;
     
 
-    float4 colorIllumination = Lighting(vPosition, vNormal, post_camera_pos.xyz, pixel_Material_ID);
+    float4 colorIllumination = Lighting(vPosition.xyz, vNormal, post_camera_pos.xyz, pixel_Material_ID);
 
     //================================================================    
     
@@ -138,10 +185,12 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     //float fogDensity = 0.02f;
     //float fogFactor = 1.0 - exp(-pixelDistance * fogDensity);
     
-    //================================================================
     
     float4 cColor = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
-    cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
-   
-    return cColor;
+    //cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
+    //================================================================
+    
+
+    
+    return colorIllumination;
 }

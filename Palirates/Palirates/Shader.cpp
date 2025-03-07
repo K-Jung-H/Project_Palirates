@@ -859,6 +859,9 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 	//if (CScene::m_pDescriptorHeap)
 	//	pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
 
+	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+
 }
 
 void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

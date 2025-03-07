@@ -242,14 +242,6 @@ void CGameFramework::CreateRenderTargetViews()
 		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
 	}
 	
-
-	//for (UINT i = 0; i < RTV_Format_Num; i++)
-	//{
-	//	d3dRenderTargetViewDesc.Format = RenderTarget_Config::RTV_FORMATS[i];
-	//	m_pd3dDevice->CreateRenderTargetView(ptr_RTV_Buffer_List[i], &d3dRenderTargetViewDesc, d3dRtvCPUDescriptorHandle);
-	//	RTV_Buffer_CPUHandle_list[i] = d3dRtvCPUDescriptorHandle;
-	//	d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
-	//}
 }
 
 void CGameFramework::CreateDepthStencilView()
@@ -281,15 +273,6 @@ void CGameFramework::CreateDepthStencilView()
 	d3dClearValue.DepthStencil.Stencil = 0;
 
 	m_pd3dDevice->CreateCommittedResource(&d3dHeapProperties, D3D12_HEAP_FLAG_NONE, &d3dResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &d3dClearValue, __uuidof(ID3D12Resource), (void **)&m_pd3dDepthStencilBuffer);
-
-	//D3D12_DEPTH_STENCIL_VIEW_DESC d3dDepthStencilViewDesc;
-	//::ZeroMemory(&d3dDepthStencilViewDesc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
-	//d3dDepthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	//d3dDepthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-	//d3dDepthStencilViewDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-	//D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, &d3dDepthStencilViewDesc, d3dDsvCPUDescriptorHandle);
 
 	DsvDescriptorCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	m_pd3dDevice->CreateDepthStencilView(m_pd3dDepthStencilBuffer, NULL, DsvDescriptorCPUHandle);
@@ -737,7 +720,8 @@ void CGameFramework::FrameAdvance()
 	);
 
 	// Connect Multi_RenderTarget
-	PostProcessing_shader->OnPrepareRenderTarget(Active_CommandList, 1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
+	// nRenderTarget = 0 -> Not use BackBuffer in this time, 
+	PostProcessing_shader->OnPrepareRenderTarget(Active_CommandList, 0, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 
 
 	scene_manager->Pre_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
