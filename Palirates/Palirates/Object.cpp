@@ -441,8 +441,8 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	if (reflectance_data)
 		id = reflectance_data->Get_ID();
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &id, 16);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 20);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &id, 16);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 20);
 
 	for (int i = 0; i < m_nTextures; i++)
 	{

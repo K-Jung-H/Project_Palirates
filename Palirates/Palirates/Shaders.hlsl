@@ -102,7 +102,7 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Texture = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Albedo_Texture = float4(1.0f, 0.0f, 0.0f, 1.0f);
     output.Material_ID = int(-1);
     output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Depth = float(0.0f);

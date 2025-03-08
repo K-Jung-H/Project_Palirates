@@ -1,23 +1,11 @@
 #include "Shaders.hlsl"
 #include "Light.hlsl"
 
-
-
-//Texture2D<float4> Post_Texture : register(t0);
-//Texture2D<float4> Post_Illumination : register(t1);
-//Texture2D<float4> Post_Normal : register(t2);
-
-//Texture2D<float> Post_Depth : register(t3);
-//Texture2D<float> Post_Z_Depth : register(t4);
-
-
-
 Texture2D<float4> Post_Albedo_Texture : register(t0);
 Texture2D<int> Post_Material_ID : register(t1);
 Texture2D<float4> Post_View_Normal : register(t2);
 Texture2D<float> Post_Depth : register(t3);
 Texture2D<float> Post_Camera_Distance : register(t4);
-//Texture2D<float> Post_Screen_Depth : register(t5);
 
 cbuffer cb_Post_Camera : register(b0)
 {
@@ -149,26 +137,23 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
     // 기본 텍스처 샘플링
     float4 colorTexture = Post_Albedo_Texture.Sample(gssWrap, input.uv);
-
+    float3 vNormal = Post_View_Normal.Sample(gssWrap, input.uv).xyz;
+    float cDepth = Post_Depth.Load(uint3((uint) input.position.x, (uint) input.position.y, 0));
+    float pixelDistance = Post_Camera_Distance.Load(uint3((uint) input.position.x, (uint) input.position.y, 0)).r;
+    
     uint width, height;
     Post_Material_ID.GetDimensions(width, height);
     int pixel_Material_ID = Post_Material_ID.Load(int3(input.uv * float2(width, height), 0));
 
     if (pixel_Material_ID == -1)
         return colorTexture;
-    
-    
-    float3 vNormal = Post_View_Normal.Sample(gssWrap, input.uv).xyz;
-    float cDepth = Post_Depth.Load(uint3((uint) input.position.x, (uint) input.position.y, 0));
-    
+
+       
     float4 screenSpacePosition = float4(input.position.xy * 0.5f + 0.5f, input.position.z, 1.0f); 
     float4 vPosition = mul(screenSpacePosition, gmtxInvProjection); 
 
     
-    // 플레이어와 거리
-    float pixelDistance = Post_Camera_Distance.Load(uint3((uint) input.position.x, (uint) input.position.y, 0)).r;
-    
-
+ 
     float4 colorIllumination = Lighting(vPosition.xyz, vNormal, post_camera_pos.xyz, pixel_Material_ID);
 
     //================================================================    
@@ -189,8 +174,8 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float4 cColor = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
     //cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
     //================================================================
-    
+    return colorTexture;
+//    return colorIllumination;
 
-    
-    return colorIllumination;
+
 }
