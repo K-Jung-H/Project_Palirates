@@ -145,11 +145,10 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     Post_Material_ID.GetDimensions(width, height);
     int pixel_Material_ID = Post_Material_ID.Load(int3(input.uv * float2(width, height), 0));
 
-    if (pixel_Material_ID == -1)
+//    if (pixel_Material_ID == -1)
         return colorTexture;
-
        
-    float4 screenSpacePosition = float4(input.position.xy * 0.5f + 0.5f, input.position.z, 1.0f); 
+        float4 screenSpacePosition = float4(input.position.xy * 0.5f + 0.5f, input.position.z, 1.0f);
     float4 vPosition = mul(screenSpacePosition, gmtxInvProjection); 
 
     
@@ -174,6 +173,12 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float4 cColor = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
     //cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
     //================================================================
+    
+    if (colorTexture.x == 0.0f && 
+        colorTexture.y == 0.0f &&
+        colorTexture.z == 0.0f)
+        return float4(1.0f, 0.0f, 0.0f, 1.0f);
+    
     return colorTexture;
 //    return colorIllumination;
 

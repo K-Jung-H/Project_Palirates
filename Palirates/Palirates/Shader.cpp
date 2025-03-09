@@ -856,8 +856,8 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
-	//if (CScene::m_pDescriptorHeap)
-	//	pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
+	if (CScene::m_pDescriptorHeap)
+		pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
 
 	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);

@@ -145,7 +145,7 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 void CCamera::UpdateShaderVariables_POST(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	XMFLOAT4X4 xmf4x4InvProjection;
-	XMStoreFloat4x4(&xmf4x4InvProjection, XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_xmf4x4Projection)));
+	XMStoreFloat4x4(&xmf4x4InvProjection, XMMatrixTranspose(XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_xmf4x4Projection))));
 
 	::memcpy(&Mapped_post_Camera_Info->m_InvProjection, &xmf4x4InvProjection, sizeof(XMFLOAT4X4));
 
