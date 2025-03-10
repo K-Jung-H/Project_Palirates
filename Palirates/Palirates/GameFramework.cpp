@@ -752,7 +752,7 @@ void CGameFramework::FrameAdvance()
 #ifndef WRITE_TEXT_UI
 	::SynchronizeResourceTransition(
 		Active_CommandList,
-		m_ppd3dSwapChainBackBuffers[m_nSwapChainBufferIndex], 
+		ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
 		D3D12_RESOURCE_STATE_RENDER_TARGET, 
 		D3D12_RESOURCE_STATE_PRESENT);
 

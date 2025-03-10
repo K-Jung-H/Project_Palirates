@@ -860,7 +860,7 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 //	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 
 
-	obj_manager->Render_Terrain(pd3dCommandList, pCamera);
+//	obj_manager->Render_Terrain(pd3dCommandList, pCamera); // fixed에서 처리중
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 

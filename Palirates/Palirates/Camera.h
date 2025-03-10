@@ -15,7 +15,8 @@ struct VS_CB_CAMERA_INFO
 
 struct VS_CB_POST_CAMERA_INFO
 {
-	XMFLOAT4X4						m_InvProjection;
+	XMFLOAT4X4					m_xm_Inv_View;
+	XMFLOAT4X4					m_xm_Inv_View_Proj_Matrix;
 	XMFLOAT3						m_xmf3Position;
 };
 

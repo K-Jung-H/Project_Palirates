@@ -14,8 +14,8 @@ cbuffer Frame_Info : register(b0)
 cbuffer cbGameObjectInfo : register(b1)
 {
 	matrix					gmtxGameObject : packoffset(c0);
-    int                     gMaterialID : packoffset(c4);
-	uint					gnTexturesMask : packoffset(c8);
+    int                     gMaterialID : packoffset(c4.x);
+	uint					gnTexturesMask : packoffset(c4.y);
 };
 
 cbuffer cbCameraInfo : register(b2)
@@ -107,6 +107,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Depth = float(0.0f);
     output.Camera_Distance = float(1.0f);
+
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -257,7 +258,7 @@ struct VS_TERRAIN_OUTPUT
 VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 {
 	VS_TERRAIN_OUTPUT output;
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
 	output.color = input.color;
 	output.uv0 = input.uv0;
@@ -291,7 +292,7 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
     input.position.y -= 1.0f;
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
     output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
     output.color = input.color;
     output.uv0 = input.uv0;

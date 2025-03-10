@@ -122,9 +122,9 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
 }
 
 
-float4 Lighting(float3 vPosition, float3 vNormal, float3 camera_pos, int Material_ID)
+float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, int Material_ID)
 {
-    float3 vToCamera = normalize(camera_pos.xyz - vPosition);
+    float3 vToCamera = normalize(camera_pos.xyz - wPosition);
     float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
 
@@ -134,15 +134,15 @@ float4 Lighting(float3 vPosition, float3 vNormal, float3 camera_pos, int Materia
         {
             if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
             {
-                cColor += DirectionalLight(i, vNormal, vToCamera, Material_ID);
+                cColor += DirectionalLight(i, wNormal, vToCamera, Material_ID);
             }
             else if (gLights[i].m_nType == POINT_LIGHT)
             {
-                cColor += PointLight(i, vPosition, vNormal, vToCamera, Material_ID);
+                cColor += PointLight(i, wPosition, wNormal, vToCamera, Material_ID);
             }
             else if (gLights[i].m_nType == SPOT_LIGHT)
             {
-                cColor += SpotLight(i, vPosition, vNormal, vToCamera, Material_ID);
+                cColor += SpotLight(i, wPosition, wNormal, vToCamera, Material_ID);
             }
         }
     }
