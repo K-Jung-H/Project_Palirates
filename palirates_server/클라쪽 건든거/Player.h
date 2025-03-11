@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+#include <iostream>
 
 #define DIR_FORWARD				0x01
 #define DIR_BACKWARD			0x02
@@ -10,7 +12,6 @@
 #include "Object_StateMachine.h"
 #include "Object.h"
 #include "Camera.h"
-#include <string>
 
 enum AnimationTrack
 {
@@ -171,15 +172,37 @@ public:
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 };
 
+//서버 추가
 class Player
 {
-public:
-	int id;
+private:
+	int id;  
 	float x, y, z;
-	int state;
+	int state;  
 
-	Player(int playerId, float startX, float startY, float startZ, int startState = 0)
-		: id(playerId), x(startX), y(startY), z(startZ), state(startState) {}
+public:
+	Player(int playerId) : id(playerId), x(0), y(0), z(0), state(0) {}
 
-	std::string Serialize();
+	void UpdatePosition(float newX, float newY, float newZ, int newState)
+	{
+		x = newX;
+		y = newY;
+		z = newZ;
+		state = newState;
+	}
+
+	std::string Serialize()
+	{
+		return "PLAYER_DATA," + std::to_string(id) + "," +
+			std::to_string(x) + "," + std::to_string(y) + "," +
+			std::to_string(z) + "," + std::to_string(state);
+	}
+
+	void PrintPosition()
+	{
+		std::cout << "[플레이어 " << id << "] 위치: (" << x << ", " << y << ", " << z << "), 상태: " << state << std::endl;
+	}
+
+	int GetID() { return id; }
 };
+//서버 추가

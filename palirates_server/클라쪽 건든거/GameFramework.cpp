@@ -3,8 +3,9 @@
 //-----------------------------------------------------------------------------
 
 #include "stdafx.h"
+//서버 추가
 #include "GameFramework.h"
-
+//서버 추가
 
 CGameFramework::CGameFramework()
 {
@@ -814,22 +815,19 @@ void CGameFramework::FrameAdvance()
 
 }
 
-void GameFramework::Run()
+//서버 추가
+void GameFramework::Init()
 {
-	while (true)
-	{
-		std::string serverResponse = network.ReceiveData();
-		if (!serverResponse.empty())
-		{
-			int playerId;
-			float x, y, z;
-			int state;
-
-			if (sscanf_s(serverResponse.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-				&playerId, &x, &y, &z, &state) == 5)
-			{
-				sceneManager.updatePlayerPosition(playerId, x, y, z, state);
-			}
-		}
-	}
+	network.ConnectToServer();
 }
+
+void GameFramework::Update()
+{
+	network.ProcessIncomingPackets(object_manager);
+}
+
+void GameFramework::Render()
+{
+	object_manager.Render();
+}
+//서버 추가
