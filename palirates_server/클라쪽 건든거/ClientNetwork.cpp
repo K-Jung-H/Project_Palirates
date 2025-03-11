@@ -1,66 +1,63 @@
+#include "stdafx.h"
 #include "ClientNetwork.h"
+#include <iostream>
 
 ClientNetwork::ClientNetwork()
 {
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-
-	clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == INVALID_SOCKET)
-    {
-		std::cerr << "소켓 생성 실패!" << std::endl;
-		WSACleanup();
-		return;
-	}
+    WSAStartup(MAKEWORD(2, 2), NULL);
+    serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 }
 
 ClientNetwork::~ClientNetwork()
 {
-	closesocket(clientSocket);
-	WSACleanup();
+    Disconnect();
+    WSACleanup();
 }
 
-bool ClientNetwork::ConnectToServer()
+bool ClientNetwork::Connect(const std::string& ip, int port)
 {
-	sockaddr_in serverAddr;
-	serverAddr.sin_family = AF_INET;
-	serverAddr.sin_port = htons(SERVER_PORT);
-	inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(port);
+    inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr);
 
-    if (connect(clientSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+    if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == 0)
     {
-		std::cerr << "서버 연결 실패!" << std::endl;
-		closesocket(clientSocket);
-		WSACleanup();
-		return false;
-	}
-
-	std::cout << "[클라이언트] 서버 연결 성공!" << std::endl;
-	return true;
+        std::cout << "서버 연결 성공\n";
+        return true;
+    }
+    std::cerr << "서버 연결 실패\n";
+    return false;
 }
 
-void ClientNetwork::ProcessIncomingPackets(Object_Manager& objectManager)
+void ClientNetwork::SendPlayerMove(int id, float x, float y, float z, int state)
 {
-	char buffer[1024];
+    static float lastX = -9999, lastY = -9999, lastZ = -9999;
+    static int lastState = -1;
 
-	while (true)
-	{
-		int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
-		if (bytesReceived > 0)
-		{
-			buffer[bytesReceived] = '\0';
-			int playerId, state;
-			float x, y, z;
+    if (x != lastX || y != lastY || z != lastZ || state != lastState)  // 위치 변경 시에만 전송
+    {
+        std::string packet = "MOVE," + std::to_string(id) + "," +
+            std::to_string(x) + "," + std::to_string(y) + "," +
+            std::to_string(z) + "," + std::to_string(state);
 
-			if (sscanf_s(buffer, "PLAYER_UPDATE,%d,%f,%f,%f,%d", &playerId, &x, &y, &z, &state) == 5)
-			{
-				objectManager.UpdatePlayerPosition(playerId, x, y, z, state);
-			}
-		}
-	}
+        send(serverSocket, packet.c_str(), packet.size(), 0);
+
+        lastX = x;
+        lastY = y;
+        lastZ = z;
+        lastState = state;
+    }
 }
 
-void ClientNetwork::SendPacket(const std::string& packet)
+std::string ClientNetwork::ReceiveData()
 {
-	send(clientSocket, packet.c_str(), packet.length(), 0);
+    char buffer[1024];
+    int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+    return (bytesReceived > 0) ? std::string(buffer, bytesReceived) : "";
+}
+
+void ClientNetwork::Disconnect()
+{
+    closesocket(serverSocket);
+    std::cout << "서버 연결 종료\n";
 }
