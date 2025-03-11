@@ -1,7 +1,31 @@
 #pragma once
-#pragma once
-#include <string>
+#include <unordered_map>
 #include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include "SceneManager.h"
+#include "DatabaseManager.h"
+#include "Logger.h"
+#include "Player.h"
 
-void HandleGamePacket(SOCKET clientSocket, const std::string& packet, int clientId);
-void HandleClient(SOCKET clientSocket, int clientId);
+#pragma comment(lib, "ws2_32.lib")
+
+class Server
+{
+private:
+    SOCKET listenSocket;
+    std::unordered_map<int, SOCKET> clients;
+    Scene_Manager sceneManager;
+    //DatabaseManager dbManager;
+    Logger logger;
+
+public:
+    Server(int port);
+    ~Server();
+
+    void Start();
+    void AcceptClients();
+    void ProcessClientPackets(SOCKET clientSocket, int clientId);
+    void BroadcastPacket(const std::string& packet, int senderId);
+    bool ValidatePosition(float x, float y, float z);
+};
