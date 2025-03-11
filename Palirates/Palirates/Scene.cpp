@@ -113,8 +113,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 //	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
 
 
-	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	CLoadedModelInfo* pHumanModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+	CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
 	//CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 
 	string obj_name_1 = "test_obj_name_1";
@@ -123,7 +123,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 5);
+	std::shared_ptr<CGargoyleObject> humanObject_1 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
 	for (int i = 0; i < 5; ++i) {
 		humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 	}
@@ -136,7 +136,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 	//humanObject_1->m_pSkinnedAnimationController->SetTrackWeight(3, 1.0f);
 	humanObject_1->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(NULL, 20.0f, 735.0f), 20.0f);
-	humanObject_1->SetScale(5.0f, 5.0f, 5.0f);
+	humanObject_1->SetScale(30.0f, 30.0f, 30.0f);
 	humanObject_1->Set_Name(obj_name_1);
 	obj_manager->Add_Object(humanObject_1);
 	
@@ -152,7 +152,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//====================================================
 
 	name_view = obj_name_2;
-	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel2, 5);
+	std::shared_ptr<CGargoyleObject> humanObject_2 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
 	for (int i = 0; i < 5; ++i) {
 		humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 	}
@@ -166,7 +166,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(humanObject_2);
 
 	name_view = obj_name_3;
-	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 5);
+	std::shared_ptr<CGargoyleObject> humanObject_3 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
 	for (int i = 0; i < 5; ++i) {
 		humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 	}
@@ -198,8 +198,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_nShaders = 0;
 	m_ppShaders = new CShader*[m_nShaders];
 
-	if (pHumanModel)
-		delete pHumanModel;
+	if (pGargoyleModel)
+		delete pGargoyleModel;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }

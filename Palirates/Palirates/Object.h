@@ -491,6 +491,10 @@ public:
 	CAnimationController* GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
 
 	XMFLOAT3 RootPosition{ 0.0f, 0.0f, 0.0f };
+
+
+	std::vector<float> prevWeights;
+	std::vector<float> targetWeights;
 };
 
 //==================================================================================
@@ -585,3 +589,9 @@ public:
 	virtual ~CHumanObject();
 };
 
+class CGargoyleObject : public CGameObject
+{
+public:
+	CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	virtual ~CGargoyleObject();
+};
