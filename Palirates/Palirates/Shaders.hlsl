@@ -140,6 +140,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     
     
     output.Albedo_Texture = cColor;
+    output.Albedo_Texture.a = float(gMaterialID + 1) / 255.0f;
     output.Material_ID = gMaterialID;
     output.view_Normal = float4(normalW, 1.0f);
     output.Depth = input.position.z;
@@ -281,6 +282,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
     
     output.Albedo_Texture = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    output.Albedo_Texture.a = float(gMaterialID + 1) / 101.0f;
+    
     output.Material_ID = gMaterialID;
     output.Depth = input.position.z;
     output.Camera_Distance = distance(input.positionW, gvCameraPosition);
@@ -311,6 +314,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
     output.Camera_Distance = float(1.0f);
 
     output.Albedo_Texture = input.color;
+    output.Albedo_Texture.a = float(gMaterialID + 1) / 101.0f;
+    
     output.Material_ID = gMaterialID;
     output.Depth = input.position.z;
     output.Camera_Distance = distance(input.positionW, gvCameraPosition);

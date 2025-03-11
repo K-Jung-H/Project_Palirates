@@ -29,17 +29,37 @@ struct LIGHT
 
 struct MATERIAL
 {
-    float4 m_cAmbient;
-    float4 m_cDiffuse;
-    float4 m_cSpecular;
-    float4 m_cEmissive;
+    uint id; // 4 bytes
+    float3 padding; // 12 bytes
     
-    float m_fGlossiness;
-    float m_fSmoothness;
-    float m_fSpecularHighlight;
-    float m_fMetallic;
-    float m_fGlossyReflection;
+    float4 m_cAmbient; // 16 bytes
+    float4 m_cDiffuse; // 16 bytes
+    float4 m_cSpecular; // 16 bytes
+    float4 m_cEmissive; // 16 bytes
+
+    float m_fGlossiness; // 4 bytes
+    float m_fSmoothness; // 4 bytes
+    float m_fSpecularHighlight; // 4 bytes
+    float m_fMetallic; // 4 bytes
+    float m_fGlossyReflection; // 4 bytes
+
+    float3 padding2; // 12 bytes
 };
+
+//struct MATERIAL
+//{
+//    uint id;
+//    float4 m_cAmbient;
+//    float4 m_cDiffuse;
+//    float4 m_cSpecular;
+//    float4 m_cEmissive;
+    
+//    float m_fGlossiness;
+//    float m_fSmoothness;
+//    float m_fSpecularHighlight;
+//    float m_fMetallic;
+//    float m_fGlossyReflection;
+//};
 
 
 
@@ -152,4 +172,67 @@ float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, int Materia
     cColor.a = material.m_cDiffuse.a;
 
     return cColor;
+}
+
+float4 Get_Diffuse(int ID)
+{
+    return float4(Material_Info[ID].m_cAmbient.a, Material_Info[ID].m_cDiffuse.r, Material_Info[ID].m_cDiffuse.a, 1.0f);
+}
+
+
+
+bool IsMaterialZero(int materialIndex)
+{
+    MATERIAL mat = Material_Info[materialIndex];
+    
+    // 모든 멤버가 0인지 확인
+    if (mat.m_cAmbient.x == 0.0f && mat.m_cAmbient.y == 0.0f && mat.m_cAmbient.z == 0.0f && mat.m_cAmbient.w == 0.0f &&
+    mat.m_cDiffuse.x == 0.0f && mat.m_cDiffuse.y == 0.0f && mat.m_cDiffuse.z == 0.0f && mat.m_cDiffuse.w == 0.0f &&
+    mat.m_cSpecular.x == 0.0f && mat.m_cSpecular.y == 0.0f && mat.m_cSpecular.z == 0.0f && mat.m_cSpecular.w == 0.0f &&
+    mat.m_cEmissive.x == 0.0f && mat.m_cEmissive.y == 0.0f && mat.m_cEmissive.z == 0.0f && mat.m_cEmissive.w == 0.0f)
+    {
+        return true; // 모든 값이 0이면 true 반환
+    }
+    
+    return false; // 하나라도 0이 아니면 false 반환
+}
+
+float4 Get_Result(int ID)
+{
+    if (IsMaterialZero(ID))
+    {
+        return float4(1.0f, 0.0f, 0.0f, 1.0f); // red color for zero material
+    }
+    else
+    {
+        // Color change based on ID
+        if (ID == 1)
+        {
+            return float4(0.0f, 1.0f, 0.0f, 1.0f); // green color for ID == 1
+        }
+        else if (ID == 2)
+        {
+            return float4(0.0f, 0.0f, 1.0f, 1.0f); // blue color for ID == 2
+        }
+        else if (ID == 3)
+        {
+            return float4(1.0f, 1.0f, 0.0f, 1.0f); // yellow color for ID == 3
+        }
+        else if (ID == 4)
+        {
+            return float4(0.0f, 1.0f, 1.0f, 1.0f); // yellow color for ID == 3
+        }
+        else if (ID == 5)
+        {
+            return float4(1.0f, 1.0f, 1.0f, 1.0f); // yellow color for ID == 3
+        }
+        else if (ID == 6)
+        {
+            return float4(0.5f, 0.5f, 0.5f, 1.0f); // yellow color for ID == 3
+        }
+        else
+        {
+            return float4(0.5f, 1.0f, 0.0f, 1.0f); // white color for all other IDs
+        }
+    }
 }

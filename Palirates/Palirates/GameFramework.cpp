@@ -526,6 +526,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
 
 	m_pCamera = m_pPlayer->GetCamera();
+
 	//========================================================
 
 	Active_CommandList->Close();
@@ -539,6 +540,8 @@ void CGameFramework::Build_Scenes()
 		m_pPlayer->ReleaseUploadBuffers();
 
 	m_GameTimer.Reset();
+
+	Reflectance_Data_Manager::Print_Info();
 }
 
 void CGameFramework::Release_Scenes()
@@ -619,6 +622,7 @@ void CGameFramework::Update_Scene()
 
 	scene_manager->Update_Active_Particles(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
+	scene_manager->material_reflectance_data_manager->Update(m_pd3dDevice, Active_CommandList);
 	//===============================================================
 
 	m_pPlayer->Animate(fTimeElapsed);

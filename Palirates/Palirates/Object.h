@@ -110,22 +110,26 @@ public:
 
 class CGameObject;
 
-class Reflectance_Data
+
+class alignas(16) Reflectance_Data
 {
 private:
-	UINT ID;
+	UINT ID;                    
+	XMFLOAT3 padding = {0.0f,0.0f,0.0f}; 
 
 public:
-	XMFLOAT4 m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	XMFLOAT4 m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4 m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4 m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	XMFLOAT4 m_xmf4AmbientColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes
+	XMFLOAT4 m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);  // 16 bytes
+	XMFLOAT4 m_xmf4SpecularColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes
+	XMFLOAT4 m_xmf4EmissiveColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes
 
-	float m_fGlossiness = 0.0f;
-	float m_fSmoothness = 0.0f;
-	float m_fSpecularHighlight = 0.0f;
-	float m_fMetallic = 0.0f;
-	float m_fGlossyReflection = 0.0f;
+	float m_fGlossiness = 1.0f;           // 4 bytes
+	float m_fSmoothness = 1.0f;           // 4 bytes
+	float m_fSpecularHighlight = 1.0f;    // 4 bytes
+	float m_fMetallic = 1.0f;             // 4 bytes
+	float m_fGlossyReflection = 1.0f;     // 4 bytes
+
+	XMFLOAT3 padding2 = { 0.0f,0.0f,0.0f};                    
 
 	Reflectance_Data() : ID(0) {}
 
@@ -136,10 +140,10 @@ public:
 	friend class Reflectance_Data_Manager;
 };
 
-
 class Reflectance_Data_Manager
 {
 private:
+	static bool update_sign;
 	static std::vector<std::shared_ptr<Reflectance_Data>> reflectance_data_list;
 
 	CTexture* Reflectance_Data_Texture = NULL;
@@ -151,12 +155,16 @@ public:
 	
 	static void Add_Reflectance_Data(const std::shared_ptr<Reflectance_Data>& new_data);
 
+	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 	void Create_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Release_ShaderVariables();
 
 	static void Print_Info();
 };
+
+
 class CMaterial
 {
 public:
@@ -166,16 +174,6 @@ public:
 
 public:
 	std::shared_ptr<Reflectance_Data> reflectance_data;
-	//XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	//XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	//XMFLOAT4						m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	//XMFLOAT4						m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	
-	//float							m_fGlossiness = 0.0f;
-	//float							m_fSmoothness = 0.0f;
-	//float							m_fSpecularHighlight = 0.0f;
-	//float							m_fMetallic = 0.0f;
-	//float							m_fGlossyReflection = 0.0f;
 
 public:
 	// Don't apply Shared_ptr

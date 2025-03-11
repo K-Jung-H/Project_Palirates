@@ -371,7 +371,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 
 	if (instance_obj_num > instance_buffer_max_num)
 	{
-		DebugOutput("\n\nResizing buffer to fit more" + obj_mesh->Get_Name() + "instances\n\n\n");
+//		DebugOutput("\n\nResizing buffer to fit more" + obj_mesh->Get_Name() + "instances\n\n\n");
 
 		Release_Instance_Data_ShaderVariables();
 

@@ -691,7 +691,7 @@ ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12De
 		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; // Material_Info
-		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC d3dSamplerDesc;
@@ -856,8 +856,8 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
-	//if (CScene::m_pDescriptorHeap)
-	//	pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
+	if (CScene::m_pDescriptorHeap)
+		pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
 
 	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);

@@ -148,7 +148,6 @@ void CTexture::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_ppd3dTextures[nIndex] = ::CreateStructuredBufferResource(pd3dDevice, pd3dCommandList, pData, nStride, nElements, d3dHeapType, d3dResourceStates, &m_ppd3dTextureUploadBuffers[nIndex]);
 }
 
-
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue)
 {
 	m_pnResourceTypes[nIndex] = nResourceType;
@@ -237,10 +236,14 @@ Reflectance_Data_Manager::Reflectance_Data_Manager()
 
 Reflectance_Data_Manager::~Reflectance_Data_Manager()
 {
+	if(Reflectance_Data_Texture != NULL)
+		Reflectance_Data_Texture->Release();
+
 	reflectance_data_list.clear();
 	reflectance_data_list.resize(0);
 }
 
+bool Reflectance_Data_Manager::update_sign = false;
 std::vector<std::shared_ptr<Reflectance_Data>> Reflectance_Data_Manager::reflectance_data_list;
 
 void Reflectance_Data_Manager::Add_Reflectance_Data(const std::shared_ptr<Reflectance_Data>& new_data)
@@ -258,13 +261,25 @@ void Reflectance_Data_Manager::Add_Reflectance_Data(const std::shared_ptr<Reflec
 		// 중복되지 않으면, 새로운 ID를 할당하고 추가
 		new_data->ID = reflectance_data_list.size();  // 여기서 size()를 사용
 		reflectance_data_list.push_back(new_data);
+		update_sign = true;
 	}
+}
+
+void Reflectance_Data_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!update_sign)
+		return;
+	else
+		update_sign = false;
+
+	Release_ShaderVariables();
+	Create_ShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
 void Reflectance_Data_Manager::Create_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Reflectance_Data_Texture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 1);
-	Reflectance_Data_Texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, reflectance_data_list.data(), sizeof(Reflectance_Data), reflectance_data_list.size(), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
+	Reflectance_Data_Texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, reflectance_data_list.data(), reflectance_data_list.size(), sizeof(Reflectance_Data), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
 
 	CScene::CreateShaderResourceViews(pd3dDevice, Reflectance_Data_Texture, 0, ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX); 
 
@@ -277,15 +292,29 @@ void Reflectance_Data_Manager::Update_ShaderVariables(ID3D12Device* pd3dDevice, 
 
 void Reflectance_Data_Manager::Release_ShaderVariables()
 {
-	delete Reflectance_Data_Texture;
+	if(Reflectance_Data_Texture)
+		Reflectance_Data_Texture->Release();
 }
 
 void Reflectance_Data_Manager::Print_Info()
 {
+	DebugOutput("\nSize of Reflectance_Data: " + to_string(sizeof(Reflectance_Data)));
+	DebugOutput("\nSize of Reflectance_Data: " + to_string(alignof(Reflectance_Data)));
+
+
+
 	for (std::shared_ptr<Reflectance_Data> data : reflectance_data_list)
 	{
-		DebugOutput("\nReflectance_Data:", to_string(data->ID));
+		std::string output = "\nReflectance_Data: ID = " + to_string(data->ID) +
+			" Diffuse Color = (" +
+			to_string(data->m_xmf4AlbedoColor.x) + ", " +
+			to_string(data->m_xmf4AlbedoColor.y) + ", " +
+			to_string(data->m_xmf4AlbedoColor.z) + ", " +
+			to_string(data->m_xmf4AlbedoColor.w) + ")";
+
+		DebugOutput(output);
 	}
+	DebugOutput("\n");
 }
 
 //==================================================================================
