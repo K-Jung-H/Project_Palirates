@@ -165,7 +165,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_2->Set_Name(obj_name_2);
 	obj_manager->Add_Object(humanObject_2);
 
-
 	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 5);
 	for (int i = 0; i < 5; ++i) {

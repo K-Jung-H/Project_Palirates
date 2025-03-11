@@ -62,7 +62,7 @@ protected:
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
 private:
-	std::unique_ptr<StateMachine> m_StateMachine;
+	std::unique_ptr<PlayerStateMachine> m_StateMachine;
 
 public:
 	CPlayer();
@@ -122,7 +122,7 @@ public:
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
-	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
+	std::unique_ptr<PlayerStateMachine>& GetStateMachine() { return m_StateMachine; }
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 

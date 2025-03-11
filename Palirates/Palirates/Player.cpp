@@ -10,7 +10,7 @@
 // CPlayer
 
 CPlayer::CPlayer() 
-	: m_StateMachine(std::make_unique<StateMachine>(this))
+	: m_StateMachine(std::make_unique<PlayerStateMachine>(this))
 {
 	m_pCamera = NULL;
 
