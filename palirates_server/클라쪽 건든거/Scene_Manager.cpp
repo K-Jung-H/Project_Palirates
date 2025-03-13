@@ -176,3 +176,16 @@ void Scene_Manager::ReleaseUploadBuffers()
     }
 }
 
+void Scene_Manager::updatePlayerPosition(int playerId, float x, float y, float z, int state)
+{
+    if (players.find(playerId) != players.end())
+    {
+        players[playerId].x = x;
+        players[playerId].y = y;
+        players[playerId].z = z;
+        players[playerId].state = state;
+
+        std::cout << "[CLIENT] 다른 클라이언트 (" << playerId << ") 위치 업데이트: ("
+                  << x << ", " << y << ", " << z << ") 상태: " << state << std::endl;
+    }
+}
