@@ -29,59 +29,20 @@
 
 작업 목표:
 ------------------------------------------------------------------------------------------------
-G 버퍼 타입 변경하기
-{
-	float4 Albedo_Texture : SV_TARGET0;
-	float4 view_Normal : SV_TARGET1;
-	float view_Depth : SV_TARGET2;
-	float Camera_Distance : SV_TARGET3;
-	float Material_ID : SV_TARGET4;
-}
-
-사용하는 재질 ID를 렌더 타겟에 저장하고, PostRender 과정에서 ID 기반으로 재질을 찾아 적용할 것
-
-즉, 재질을 객체의 자식 변수가 아니라, 전부 컨테이너에 담아서 관리하고 PostRender에서 배열로 연결하여, ID로 사용할 재질을 찾아 적용해야 함
-
-재질을 관리하는 컨테이너부터 만들기 -> Material_Manager 만들기
-
-GameObject에 저장되는 Material 구조체는 유지
-
-기존 속성은 유지하되, 
-- shader
-- texture 
-
-빛을 반사하는 속성
-	UINT							m_nType = 0x00;
-	float							m_fGlossiness = 0.0f;
-	float							m_fSmoothness = 0.0f;
-	float							m_fSpecularHighlight = 0.0f;
-	float							m_fMetallic = 0.0f;
-	float							m_fGlossyReflection = 0.0f;
-	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-속성들을 별도의 구조체로 저장하고, 메니저를 통해 관리하도록 설정하기
-
-CMaterial에서는 ID를 통해 매니저에서 읽어올 것.
-매니저는 씬 메니저의 자식 객체로 설정하고, 씬에서는 포인터를 통해 연결되도록 하여, 씬마다 중복되는 재질을 방지하기
+Deffered Lighting 구현하기
 
 
-진행 상황
+진행 상황:
 ------------------------------------------------------------------------------------------------
-PSO에서 설정한 렌더 타겟 DXGI 포맷과 실제로 동작하는 DXGI 구조가 일치하지 않는 문제 발생
--> 원인 발견 및 해결 완료
-	- 원인: Pre Rendering 과정에서는 G 버퍼만 연결해야 하지만, 셰이더의 OMRenderTargetSet 함수에서 인자를 nRenderTarget = 1 로  설정하여, 
-			0번 렌더 타겟에 스왑체인 백 버퍼가 연결되고, 1 ~ 5번에 G버퍼가 연결되어 의도한 것과 잘못 진행되고 있었음
-	
-	- nRenderTarget = 0 으로  설정하여 문제 해결 완료
+G 버퍼 설정 완료 및 각 버퍼의 값 테스트 완료
 
+문제점:
+------------------------------------------------------------------------------------------------
+- Directional Light 는 제대로 조명 연산에 반영이 되고 있지만, 나머지 객체들이 반영이 되고 있지 않음 
+- 지형맵에 normal 값을 강제로 지정하여, 전달하였는데, 지형맵은 조명 연산 안되는 중
+- 재질 값을 다시 CMaterial의 원소로 저장하고 있지만, 포인터로 관리하고, 중복 제거 할 것
 
-각 픽셀의 Material_ID를 int 값으로 저장하고, structured_buffer로 재질 정보를 불러와, Post_Rendering 과정에서 ID를 통해 픽셀에 해당하는 재질과 조명 연산 처리 중
++
 
-픽셀별 Material_ID 확인 완료, 이상 없음 // 초기에 int 값으로 저장해야 하는데, unsignedint로 저장하고 있어서 문제가 있었으나 발견 및 해결 완료
-
-
-G버퍼의 원소 방식 변경하기, Pixel 별 Material ID 가 아니라, Material 의 성분 값을 저장하도록 변경하기
-
+Rootsignature 정리할 것 // Pre render 단계에서는 조명 필요 없음 
 

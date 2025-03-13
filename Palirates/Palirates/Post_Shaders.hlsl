@@ -1,18 +1,18 @@
 #include "Shaders.hlsl"
 #include "Light.hlsl"
 
-Texture2D<float4> Post_Albedo_Texture : register(t0);
-Texture2D<int> Post_Material_ID : register(t1);
-Texture2D<float4> Post_View_Normal : register(t2);
-Texture2D<float> Post_Depth : register(t3);
-Texture2D<float> Post_Camera_Distance : register(t4);
+Texture2D<float4> T_Albedo_Color : register(t0);
+Texture2D<float4> T_View_Normal : register(t1);
+Texture2D<float2> T_Depth_and_CameraDistance : register(t2);
+Texture2D<float4> T_Material_Light_Info : register(t3);
+Texture2D<float4> T_Emissive_Color: register(t4);
 
 
 cbuffer cb_Post_Camera : register(b0)
 {
     matrix gmtx_Inv_View;
-    matrix gmtx_Inv_View_Projection;
-    float4 post_camera_pos;
+    matrix gmtx_Inv_View_Projection; 
+    float4 camera_pos;
 };
 
 
@@ -94,71 +94,59 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_Vertex
 float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
     // 기본 텍스처 샘플링
-    float4 colorTexture = Post_Albedo_Texture.Sample(gssWrap, input.uv);
-    float4 vNormal = (Post_View_Normal.Sample(gssWrap, input.uv).xyz, 1.0f);
-    float depthValue = Post_Depth.Load(uint3((uint) input.position.x, (uint) input.position.y, 0)).r;
-    float pixelDistance = Post_Camera_Distance.Load(uint3((uint) input.position.x, (uint) input.position.y, 0)).r;
+    float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
+    float4 vNormal = T_View_Normal.Sample(gssWrap, input.uv);
+    float2 Depth_and_Distance = T_Depth_and_CameraDistance.Sample(gssWrap, input.uv);
+    float vDepth = Depth_and_Distance.r;
+    float Camera_Distance = Depth_and_Distance.g;
+    float4 material_light_info = T_Material_Light_Info.Sample(gssWrap, input.uv);
+    float4 colorEmissive = T_Emissive_Color.Sample(gssWrap, input.uv);
     
+    Material material;
+    material.gAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    material.gEmissiveColor = colorEmissive;
+    material.gRoughness = material_light_info.r;
+    material.gMetallic = material_light_info.g;
+    material.gSpecular = material_light_info.b;
 
+    //================================================================
     
-// alpha 값이 0일 경우에는 -1로 처리하고, 그 외의 경우에는 정규화된 ID 값으로 읽기
-    int pixel_Material_ID = int(floor(colorTexture.a * 255.0f)) - 1;
-
-//// 잘못된 ID 값 처리
-//    if (pixel_Material_ID < -1 || pixel_Material_ID > 6)
-//        return float4(0.0f, 0.0f, 0.0f, 1.0f); // 잘못된 값은 검은색으로 출력
-
-//// ID가 -1일 때 (ID 없음)
-//    else if (pixel_Material_ID == -1)
-//        return float4(1.0f, 1.0f, 1.0f, 1.0f); // 하얀색 (ID 없음)
-
-//// 정상적인 ID 값 처리 (0 ~ 5)
-//    else if (pixel_Material_ID >= 0 && pixel_Material_ID <= 6)
-//    {
-//    // ID 값을 색상으로 변환 (예시: 각 ID를 고유 색상으로 변환)
-//        float r = float(pixel_Material_ID % 2); // 짝수면 0, 홀수면 1
-//        float g = float((pixel_Material_ID / 2) % 2); // 2의 배수이면 0, 아니면 1
-//        float b = float((pixel_Material_ID / 4) % 2); // 4의 배수이면 0, 아니면 1
-//        return float4(r, g, b, 1.0f); // 변환된 색상 반환
-//    }
-
-    if (pixel_Material_ID >= 0)
-    {
-        return Get_Diffuse(pixel_Material_ID);
-        return Get_Result(pixel_Material_ID);
-        float4 temp = Get_Diffuse(0) + Get_Diffuse(1) + Get_Diffuse(2) + Get_Diffuse(3) + Get_Diffuse(4) + Get_Diffuse(5) + Get_Diffuse(6);
-        return temp;
-    }
-    else
-        return float4(0.0f, 0.0f, 1.0f, 1.0f);
+    float2 screenPos = input.uv * 2.0f - 1.0f;
+    float4 clipSpacePos = float4(screenPos.x, screenPos.y, vDepth, 1.0f);
+    float4 viewSpacePos = mul(clipSpacePos, gmtx_Inv_View_Projection);
+    viewSpacePos /= viewSpacePos.w;
     
-        float4 screenSpacePosition = float4(input.position.xy * 0.5f + 0.5f, input.position.z, 1.0f);
-        float4 wPosition = mul(screenSpacePosition, gmtx_Inv_View_Projection);
-
-        wPosition.xyz /= wPosition.w;
-        wPosition.xyz *= depthValue;
-        float3 wNormal = normalize(mul(vNormal.xyz, (float3x3) gmtx_Inv_View));
-        float4 colorIllumination = Lighting(wPosition.xyz, wNormal, post_camera_pos.xyz, pixel_Material_ID);
+    float4 worldPos = mul(viewSpacePos, gmtx_Inv_View);
+    float3 worldNormal = normalize(mul(vNormal.xyz, (float3x3) gmtx_Inv_View));
     
+    
+    float4 finalColor = Lighting(worldPos.xyz, worldNormal, camera_pos.xyz, material);
+
+    finalColor += material.gEmissiveColor;
+    return finalColor;
     //================================================================    
     
     // 안개 강도 계산 (카메라와의 거리를 기반)
-        float3 fogColor = float3(0.5f, 0.5f, 0.5f); // 안개 색상 (회색)
-        float fogStart = 10.0f; // 안개 시작 거리
-        float fogEnd = 200.0f; // 안개 끝 거리
+    float3 fogColor = float3(0.5f, 0.5f, 0.5f); // 안개 색상 (회색)
+    float fogStart = 10.0f; // 안개 시작 거리
+    float fogEnd = 200.0f; // 안개 끝 거리
     
     // 선형 안개
-        float fogFactor = saturate((pixelDistance - fogStart) / (fogEnd - fogStart)); // 선형 안개
+    float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart)); // 선형 안개
 
     // Density 가 작으면, 은은하게, 크면, 급격한 안개 형성
     //float fogDensity = 0.02f;
-    //float fogFactor = 1.0 - exp(-pixelDistance * fogDensity);
+    //float fogFactor = 1.0 - exp(-Camera_Distance * fogDensity);
     
     
-        float4 cColor = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
+    //float4 cColor  = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
     //cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
+    
     //================================================================
 
-        return cColor;
+    float4 cColor = finalColor;
+    cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
+    return cColor;
 
+    
     }

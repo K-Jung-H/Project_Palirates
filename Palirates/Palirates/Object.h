@@ -110,58 +110,14 @@ public:
 
 class CGameObject;
 
-
-class alignas(16) Reflectance_Data
+struct Material_Info
 {
-private:
-	UINT ID;                    
-	XMFLOAT3 padding = {0.0f,0.0f,0.0f}; 
+	XMFLOAT4 gAlbedoColor;   
+	XMFLOAT4 gEmissiveColor; 
 
-public:
-	XMFLOAT4 m_xmf4AmbientColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes
-	XMFLOAT4 m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);  // 16 bytes
-	XMFLOAT4 m_xmf4SpecularColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes
-	XMFLOAT4 m_xmf4EmissiveColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes
-
-	float m_fGlossiness = 1.0f;           // 4 bytes
-	float m_fSmoothness = 1.0f;           // 4 bytes
-	float m_fSpecularHighlight = 1.0f;    // 4 bytes
-	float m_fMetallic = 1.0f;             // 4 bytes
-	float m_fGlossyReflection = 1.0f;     // 4 bytes
-
-	XMFLOAT3 padding2 = { 0.0f,0.0f,0.0f};                    
-
-	Reflectance_Data() : ID(0) {}
-
-	UINT Get_ID() const { return ID; }
-
-	friend bool operator==(const Reflectance_Data& other1, const Reflectance_Data& other2);
-
-	friend class Reflectance_Data_Manager;
-};
-
-class Reflectance_Data_Manager
-{
-private:
-	static bool update_sign;
-	static std::vector<std::shared_ptr<Reflectance_Data>> reflectance_data_list;
-
-	CTexture* Reflectance_Data_Texture = NULL;
-
-
-public:
-	Reflectance_Data_Manager();
-	~Reflectance_Data_Manager();
-	
-	static void Add_Reflectance_Data(const std::shared_ptr<Reflectance_Data>& new_data);
-
-	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
-	void Create_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Update_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Release_ShaderVariables();
-
-	static void Print_Info();
+	float gRoughness; 
+	float gMetallic;  
+	float gSpecular;  
 };
 
 
@@ -173,7 +129,23 @@ public:
 	virtual ~CMaterial();
 
 public:
-	std::shared_ptr<Reflectance_Data> reflectance_data;
+	// 거칠기 (0 = 매끄러움, 1 = 거침)
+	// 금속성 (0 = 비금속, 1 = 금속)
+	// 반사 계수 (Specular Intensity)
+
+	XMFLOAT4 m_cAlbedo = { 0.0f, 0.0f, 0.0f, 1.0f };
+	XMFLOAT4 m_cEmissive = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	float m_fRoughness = 0.0f;
+	float m_fMetallic = 0.0f; 
+	float m_fSpecular = 1.0f; 
+
+
+public:
+	// not use
+	XMFLOAT4 m_xmf4SpecularColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float m_fGlossiness = 0.0f;
+	float m_fGlossyReflection = 0.0f;
 
 public:
 	// Don't apply Shared_ptr

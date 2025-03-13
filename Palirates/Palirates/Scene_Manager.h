@@ -12,7 +12,6 @@ private:
     std::shared_ptr<Text_UI_Renderer> text_ui_renderer;
 
 public:
-    std::shared_ptr<Reflectance_Data_Manager> material_reflectance_data_manager;
     Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
     ~Scene_Manager();
 

@@ -6,7 +6,6 @@
 
 Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
 {
-    material_reflectance_data_manager = make_shared <Reflectance_Data_Manager>();
 
 #ifdef WRITE_TEXT_UI
     text_ui_renderer = make_shared<Text_UI_Renderer>(nFrames, pd3dDevice, pd3dCommandQueue, ppd3dRenderTargets, nWidth, nHeight);
@@ -159,10 +158,7 @@ void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D
     if (activeScene)
         activeScene->UpdateShaderVariables_POST(pd3dCommandList);
 
-    if (material_reflectance_data_manager)
-    {
-        material_reflectance_data_manager->Update_ShaderVariables(pd3dDevice, pd3dCommandList);
-    }
+
     if (pCamera)
     {
         pCamera->UpdateShaderVariables_POST(pd3dCommandList);
