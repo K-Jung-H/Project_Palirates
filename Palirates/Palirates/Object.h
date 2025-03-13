@@ -6,6 +6,7 @@
 
 #include "Mesh.h"
 #include "Camera.h"
+#include "Object_StateMachine.h"
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -594,4 +595,8 @@ class CGargoyleObject : public CGameObject
 public:
 	CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
 	virtual ~CGargoyleObject();
+	virtual void Animate(float fTimeElapsed);
+	std::unique_ptr<GargoyleStateMachine>& GetStateMachine() { return m_StateMachine; }
+private:
+	std::unique_ptr<GargoyleStateMachine> m_StateMachine;
 };
