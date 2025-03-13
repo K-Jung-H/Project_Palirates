@@ -221,6 +221,7 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		D2D1_RECT_F player_xz = D2D1::RectF(0.0f, 90.0f, 400.0f, 120.0f);
 		D2D1_RECT_F player_state = D2D1::RectF(0.0f, 120.0f, 200.0f, 150.0f);
 		D2D1_RECT_F player_Laststate = D2D1::RectF(0.0f, 150.0f, 400.0f, 180.0f);
+		D2D1_RECT_F mon_debug = D2D1::RectF(0.0f, 180.0f, 400.0f, 210.0f);
 
 		TextBlock* player_pos_text_block_ptr = new TextBlock(design_ptr, L"Player_pos: ", player_pos_text_area);
 		TextBlock* player_normal_text_block_ptr = new TextBlock(design_ptr, L"Player_normal: ", player_normal_text_area);
@@ -228,6 +229,7 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		TextBlock* player_xz_ptr = new TextBlock(design_ptr, L"Player_XZ: : ", player_xz);
 		TextBlock* player_state_ptr = new TextBlock(design_ptr, L"Player_state: : ", player_state);
 		TextBlock* player_Laststate_ptr = new TextBlock(design_ptr, L"Player_LastState: : ", player_Laststate);
+		TextBlock* mon_debug_ptr = new TextBlock(design_ptr, L"Mon_Debug: : ", mon_debug);
 
 		text_ui_manager->Add_TextBlock(player_pos_text_block_ptr);
 		text_ui_manager->Add_TextBlock(player_normal_text_block_ptr);
@@ -235,6 +237,7 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		text_ui_manager->Add_TextBlock(player_xz_ptr);
 		text_ui_manager->Add_TextBlock(player_state_ptr);
 		text_ui_manager->Add_TextBlock(player_Laststate_ptr);
+		text_ui_manager->Add_TextBlock(mon_debug_ptr);
 
 	}
 }
@@ -255,6 +258,7 @@ void CScene::Update_UI()
 	static wchar_t Player_XZ_Buffer[100];
 	static wchar_t Player_state_Buffer[100];
 	static wchar_t Player_Laststate_Buffer[100];
+	static wchar_t Mon_debug_Buffer[100];
 
 	if (text_ui_manager)
 	{
@@ -267,6 +271,20 @@ void CScene::Update_UI()
 		std::wstring stateStr = stateToStringMap[currentState];  
 		State LastState = m_pPlayer->GetStateMachine()->Get_LastState();
 		std::wstring LastStateStr = stateToStringMap[LastState];
+		std::vector<std::shared_ptr<CGameObject>>* objectList = obj_manager->Get_Object_List(Object_Type::skinned);
+		std::vector<State> stateArray(objectList->size());
+		size_t index = 0;
+		for (auto& obj : *objectList) {  
+			std::shared_ptr<CGargoyleObject> gargoyle = std::dynamic_pointer_cast<CGargoyleObject>(obj);
+			if (gargoyle) {
+				std::unique_ptr<GargoyleStateMachine>& stateMachine = gargoyle->GetStateMachine();
+				stateArray[index] = stateMachine->Get_State();
+			}
+			index++;
+		}
+		std::wstring M1StateStr = stateToStringMap[stateArray[0]];
+		std::wstring M2StateStr = stateToStringMap[stateArray[1]];
+		std::wstring M3StateStr = stateToStringMap[stateArray[2]];
 
 
 		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos >>%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
@@ -275,6 +293,7 @@ void CScene::Update_UI()
 		_stprintf_s(Player_XZ_Buffer, 100, _T("Player_XZ  >> %.2f,%.2f"), player_x, player_z);
 		_stprintf_s(Player_state_Buffer, 100, _T("Player_state  >> %s"), stateStr.c_str());
 		_stprintf_s(Player_Laststate_Buffer, 100, _T("Player_LastState  >> %s"), LastStateStr.c_str());
+		_stprintf_s(Mon_debug_Buffer, 100, _T("Mon_State  >> %s %s %s"), M1StateStr.c_str(), M2StateStr.c_str(), M3StateStr.c_str());
 
 		text_ui_manager->UpdateTextBlock(0, Player_pos_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(1, Player_normal_Buffer, NULL, NULL);
@@ -282,6 +301,7 @@ void CScene::Update_UI()
 		text_ui_manager->UpdateTextBlock(3, Player_XZ_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(4, Player_state_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(5, Player_Laststate_Buffer, NULL, NULL);
+		text_ui_manager->UpdateTextBlock(6, Mon_debug_Buffer, NULL, NULL);
 	}
 }
 
