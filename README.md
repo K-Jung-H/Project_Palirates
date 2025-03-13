@@ -38,12 +38,10 @@ Deffered Lighting 구현하기
 진행 상황:
 ------------------------------------------------------------------------------------------------
 G 버퍼 설정 완료 및 각 버퍼의 값 테스트 완료
-=======
 - 렌더링 파이프라인 분리
-	-Pre_Render
-	-Render
-
- 	-Post_Render == Deffered_Render
+	- Pre_Render
+	- Render
+ 	- Post_Render == Deffered_Render
 
 PostProcessing Render 기능 추가 완료
 
