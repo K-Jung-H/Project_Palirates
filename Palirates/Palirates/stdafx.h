@@ -108,9 +108,15 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
 #define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 14
 //=====================================
+#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 14
+
+#define ROOT_PARAMETER_POST_CAMERA_CBV_INDEX 0
+#define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 1
+#define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 2
+#define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 3
+
 //#define ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX 11
 //#define ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX 12
-#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 14
 #define PARAMETER_TEST 3
 
 
@@ -123,10 +129,10 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-#define WRITE_TEXT_UI
+// #define WRITE_TEXT_UI
 //#define RENDER_OBB
 #define LOAD_SCENE
-#define RENDER_PARTICLE
+// #define RENDER_PARTICLE
 
 
 #define DEBUG_MESSAGE
@@ -154,6 +160,8 @@ extern void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence
 extern void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 
 extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+extern ID3D12Resource* CreateStructuredBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nStride, UINT nElements, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+
 extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 extern ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
 extern ID3D12Resource* CreateTextureResourceFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -186,6 +194,7 @@ inline bool IsEqual(float fA, float fB, float fEpsilon) { return(::IsZero(fA - f
 inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
 inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
 
+inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
 
 
 namespace Vector3

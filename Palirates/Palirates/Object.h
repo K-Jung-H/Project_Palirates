@@ -29,6 +29,7 @@ class Deferred_CTerrainShader;
 #define RESOURCE_TEXTURE_CUBE		0x05
 #define RESOURCE_BUFFER				0x06
 #define RESOURCE_STRUCTURED_BUFFER 0x07
+
 class CTexture
 {
 public:
@@ -72,7 +73,9 @@ public:
 
 	void LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex);
 	void LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, UINT nIndex);
+
 	void CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
+	void CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
 
 	ID3D12Resource* CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
 
@@ -107,44 +110,63 @@ public:
 
 class CGameObject;
 
+struct Material_Info
+{
+	XMFLOAT4 gAlbedoColor;   
+	XMFLOAT4 gEmissiveColor; 
+
+	float gRoughness; 
+	float gMetallic;  
+	float gSpecular;  
+};
+
+
 class CMaterial
 {
 public:
 	CMaterial(int nTextures);
 	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
+
 public:
-	// static 자료형이 연결되어야 하므로, shared_ptr 사용 불가
+	// 거칠기 (0 = 매끄러움, 1 = 거침)
+	// 금속성 (0 = 비금속, 1 = 금속)
+	// 반사 계수 (Specular Intensity)
+
+	XMFLOAT4 m_cAlbedo = { 0.0f, 0.0f, 0.0f, 1.0f };
+	XMFLOAT4 m_cEmissive = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+	float m_fRoughness = 0.0f;
+	float m_fMetallic = 0.0f; 
+	float m_fSpecular = 1.0f; 
+
+
+public:
+	// not use
+	XMFLOAT4 m_xmf4SpecularColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+	float m_fGlossiness = 0.0f;
+	float m_fGlossyReflection = 0.0f;
+
+public:
+	// Don't apply Shared_ptr
 	CShader* m_pShader = NULL;
 
-	XMFLOAT4						m_xmf4AlbedoColor = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	XMFLOAT4						m_xmf4EmissiveColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4SpecularColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	XMFLOAT4						m_xmf4AmbientColor = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	void SetShader(CShader *pShader);
-	void SetMaterialType(UINT nType) { m_nType |= nType; }
-	void SetTexture(CTexture *pTexture, UINT nTexture = 0);
+	UINT							m_nType = 0x00; // Texture Map Type
 
-	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList);
-
-	virtual void ReleaseUploadBuffers();
-
-public:
-	UINT							m_nType = 0x00;
-
-	float							m_fGlossiness = 0.0f;
-	float							m_fSmoothness = 0.0f;
-	float							m_fSpecularHighlight = 0.0f;
-	float							m_fMetallic = 0.0f;
-	float							m_fGlossyReflection = 0.0f;
-
-public:
 	int 							m_nTextures = 0;
 	_TCHAR							(*m_ppstrTextureNames)[64] = NULL;
 	CTexture						**m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
 
 	void LoadTextureFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR *pwstrTextureName, CTexture **ppTexture, CGameObject *pParent, FILE *pInFile, CShader *pShader);
+
+	void SetShader(CShader* pShader);
+	void SetMaterialType(UINT nType) { m_nType |= nType; }
+	void SetTexture(CTexture* pTexture, UINT nTexture = 0);
+
+	virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseUploadBuffers();
+
 
 public:
 	static CShader					*m_pStandardShader;
@@ -155,6 +177,7 @@ public:
 	void SetStandardShader() { CMaterial::SetShader(m_pStandardShader); }
 	void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); }
 };
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -524,7 +547,7 @@ private:
 	static Deferred_CTerrainShader* pTerrainShader;
 	static CMaterial* pTerrainMaterial;
 
-	static CHeightMapImage* m_pHeightMapImage;  // 각 객체마다 개별적으로 갖는 높이 맵 이미지
+	static CHeightMapImage* m_pHeightMapImage;  // link height map image for each terrain tile object
 
 private:
 	int							m_nWidth;

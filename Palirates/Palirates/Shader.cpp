@@ -657,20 +657,42 @@ D3D12_BLEND_DESC CPostProcessingShader::CreateBlendState(int n)
 
 ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
 {
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[1];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
+	{
+		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[0].NumDescriptors = 5;
+		pd3dDescriptorRanges[0].BaseShaderRegister = 0; // G-buffer Texture
+		pd3dDescriptorRanges[0].RegisterSpace = 0;
+		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = 0;
 
-	pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[0].NumDescriptors = 5;
-	pd3dDescriptorRanges[0].BaseShaderRegister = 0; //Texture
-	pd3dDescriptorRanges[0].RegisterSpace = 0;
-	pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = 0;
+		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[1].NumDescriptors = 1;  // Structured Buffer  == Material_Info
+		pd3dDescriptorRanges[1].BaseShaderRegister = 5;
+		pd3dDescriptorRanges[1].RegisterSpace = 0;
+		pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = 0;
+	}
+	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	{
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 0; // Post_Camera_Info
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[1];
+		pd3dRootParameters[ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX].Descriptor.ShaderRegister = 1; // Light_Info
+		pd3dRootParameters[ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[0].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; //Texture
-	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; // G-buffer Texture
+		pd3dRootParameters[ROOT_PARAMETER_G_BUFFER_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; // Material_Info
+		pd3dRootParameters[ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	}
 
 	D3D12_STATIC_SAMPLER_DESC d3dSamplerDesc;
 	::ZeroMemory(&d3dSamplerDesc, sizeof(D3D12_STATIC_SAMPLER_DESC));
@@ -777,7 +799,7 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, 0); // 0번 인덱스부터 리소스 연결할꺼임
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX); 
 
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
 	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
@@ -829,7 +851,7 @@ void CPostProcessingShader::OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCo
 	}
 }
 
-void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
@@ -837,8 +859,13 @@ void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, C
 	if (CScene::m_pDescriptorHeap)
 		pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
 
-	CShader::Setting_Render(pd3dCommandList, 0);
+	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
 
+}
+
+void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
 	if (m_pTexture) m_pTexture->UpdateShaderVariables(pd3dCommandList);
 
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -1336,7 +1363,7 @@ D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreateVertexShad
 D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreatePixelShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_SkinnedAnimationStandard", "ps_5_1", VertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", VertexShaderBlob));
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };

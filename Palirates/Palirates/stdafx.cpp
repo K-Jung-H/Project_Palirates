@@ -14,11 +14,11 @@ UINT gnDsvDescriptorIncrementSize = 0;
 
  DXGI_FORMAT RenderTarget_Config::RTV_FORMATS[RTV_Format_Num] =
 {
-	DXGI_FORMAT_R8G8B8A8_UNORM,
-	DXGI_FORMAT_R8G8B8A8_UNORM,
-	DXGI_FORMAT_R8G8B8A8_UNORM,
-	DXGI_FORMAT_R8G8B8A8_UNORM,
-	DXGI_FORMAT_R32_FLOAT
+	DXGI_FORMAT_R8G8B8A8_UNORM, // AlbedoColor
+	DXGI_FORMAT_R16G16B16A16_FLOAT, // view_normal
+	DXGI_FORMAT_R16G16_FLOAT, // depth & camera_distance
+	DXGI_FORMAT_R8G8B8A8_UNORM, // Material_Light_Info
+	DXGI_FORMAT_R8G8B8A8_UNORM // EmissiveColor
 };
 
  DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -185,6 +185,12 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 {
 	return(CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nBytes, D3D12_RESOURCE_DIMENSION_BUFFER, nBytes, 1, 1, 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer));
 }
+
+ID3D12Resource* CreateStructuredBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nStride, UINT nElements, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
+{
+	return CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nStride * nElements, D3D12_RESOURCE_DIMENSION_BUFFER, nStride * nElements, 1, 1, 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer);
+}
+
 
 ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates)
 {

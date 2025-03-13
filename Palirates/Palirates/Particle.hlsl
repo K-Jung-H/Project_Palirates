@@ -193,8 +193,9 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
     // 파티클 위치 계산 (월드 좌표 적용)
     float4 particleWorldPosition = float4(input.position + input.world_position, 1.0f);
     
-    output.positionW = mul(particleWorldPosition, gmtxGameObject).xyz;
-    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+    float4 positionW = mul(particleWorldPosition, gmtxGameObject);
+    output.position = mul(mul(positionW, gmtxView), gmtxProjection);    
+    output.positionW = positionW.xyz;
     
     // 색상과 기타 속성 설정
     output.color = input.color;
@@ -208,11 +209,11 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.cIllumination = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.cTexture = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.normal = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    output.zDepth = float(1.0f);
+    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.view_Depth_and_Camera_Distance = float2(0.0f, 0.0f);
+    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Emissive_Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
     
     // 초기 색상
     float4 cColor = input.color;
@@ -239,8 +240,10 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
         cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
     }
 
-    output.cTexture = cColor;
-    output.zDepth = distance(input.positionW, gvCameraPosition);
+
+    output.Albedo_Color = input.color;
+    output.view_Depth_and_Camera_Distance.r = input.position.z;
+    output.view_Depth_and_Camera_Distance.g = distance(input.positionW, gvCameraPosition);
 
     return output;
 }

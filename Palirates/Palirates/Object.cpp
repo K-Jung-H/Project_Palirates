@@ -138,6 +138,15 @@ void CTexture::CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	m_ppd3dTextures[nIndex] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pData, nElements * nStride, d3dHeapType, d3dResourceStates, &m_ppd3dTextureUploadBuffers[nIndex]);
 }
 
+void CTexture::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex)
+{
+	m_pnResourceTypes[nIndex] = RESOURCE_STRUCTURED_BUFFER;
+	m_pdxgiBufferFormats[nIndex] = DXGI_FORMAT_UNKNOWN; // Structured Buffer is not use DXGI 
+	m_pnBufferElements[nIndex] = nElements;
+	m_pnBufferStrides[nIndex] = nStride;
+
+	m_ppd3dTextures[nIndex] = ::CreateStructuredBufferResource(pd3dDevice, pd3dCommandList, pData, nStride, nElements, d3dHeapType, d3dResourceStates, &m_ppd3dTextureUploadBuffers[nIndex]);
+}
 
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue)
 {
@@ -205,8 +214,9 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 	return(d3dShaderResourceViewDesc);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+
+//==================================================================================
+
 CMaterial::CMaterial(int nTextures)
 {
 	m_nTextures = nTextures;
@@ -242,18 +252,20 @@ CMaterial::~CMaterial()
 
 CMaterial::CMaterial(const CMaterial& other)
 {
-	m_pShader = other.m_pShader;
+	m_cAlbedo = other.m_cAlbedo;
+	m_cEmissive = other.m_cEmissive;
 
-	m_xmf4AlbedoColor = other.m_xmf4AlbedoColor;
-	m_xmf4EmissiveColor = other.m_xmf4EmissiveColor;
-	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
-	m_xmf4AmbientColor = other.m_xmf4AmbientColor;
-	m_nType = other.m_nType;
-	m_fGlossiness = other.m_fGlossiness;
-	m_fSmoothness = other.m_fSmoothness;
-	m_fSpecularHighlight = other.m_fSpecularHighlight;
+	m_fRoughness = other.m_fRoughness;
 	m_fMetallic = other.m_fMetallic;
+	m_fSpecular = other.m_fSpecular;
+
+	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
+	m_fGlossiness = other.m_fGlossiness;
 	m_fGlossyReflection = other.m_fGlossyReflection;
+
+
+	m_pShader = other.m_pShader;
+	m_nType = other.m_nType;
 	m_nTextures = other.m_nTextures;
 
 	if (other.m_ppstrTextureNames != nullptr) 
@@ -339,31 +351,23 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-
-	//m_pStandardShader = new CStandardShader();
-	//m_pStandardShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	//m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	//m_pSkinnedAnimationShader = new CSkinnedAnimationStandardShader();
-	//m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	//m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	//Object_Manager::instance_shader = std::make_shared<CStandard_Instance_Shader>();
-	//Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	//Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-
-
 }
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AmbientColor, 16);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 32);
+
+	Material_Info material_info;
+	material_info.gAlbedoColor = m_cAlbedo;
+	material_info.gEmissiveColor = m_cEmissive;
+
+	material_info.gRoughness = m_fRoughness;
+	material_info.gMetallic = m_fMetallic;
+	material_info.gSpecular = m_fSpecular;
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
+
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
@@ -1053,12 +1057,7 @@ void CLoadedModelInfo::PrepareSkinning()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-//CGameObject::CGameObject()
-//{
-//	Set_Name("No_name");
-//	m_xmf4x4Parent = Matrix4x4::Identity();
-//	m_xmf4x4World = Matrix4x4::Identity();
-//}
+
 
 CGameObject::CGameObject(const std::string_view& name) 
 {
@@ -1078,13 +1077,6 @@ CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameOb
 		material_ptr.reset();
 	}
 
-	//m_nMaterials = nMaterials;
-	//if (m_nMaterials > 0)
-	//{
-	//	m_ppMaterials = new CMaterial*[m_nMaterials];
-	//	for(int i = 0; i < m_nMaterials; i++) 
-	//		m_ppMaterials[i] = NULL;
-	//}
 }
 
 CGameObject::~CGameObject()
@@ -1092,26 +1084,12 @@ CGameObject::~CGameObject()
 	if (m_pMesh) 
 		m_pMesh->Release();
 
-	//for (std::shared_ptr<CMaterial> material_ptr : Material_list)
-	//{
-	//	material_ptr.reset();
-	//}
-	//Material_list.clear();
-	//Material_list.shrink_to_fit();
-
-	//if (m_nMaterials > 0)
-	//{
-	//	for (int i = 0; i < m_nMaterials; i++)
-	//	{
-	//		if (m_ppMaterials[i]) m_ppMaterials[i]->Release();
-	//	}
-	//}
-
-	//if (m_ppMaterials)
-	//{
-	//	delete[] m_ppMaterials;
-	//	m_ppMaterials = nullptr;  
-	//}
+	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+	{
+		material_ptr.reset();
+	}
+	Material_list.clear();
+	Material_list.shrink_to_fit();
 
 
 	if (m_pSkinnedAnimationController)
@@ -1322,10 +1300,7 @@ void CGameObject::SetMesh(CMesh *pMesh)
 
 void CGameObject::SetShader(CShader *pShader)
 {
-	//m_nMaterials = 1;
-	//m_ppMaterials = new CMaterial*[m_nMaterials];
-	//m_ppMaterials[0] = new CMaterial(0);
-	//m_ppMaterials[0]->SetShader(pShader);
+
 	std::shared_ptr<CMaterial> material_ptr = std::make_shared<CMaterial>(0);
 	material_ptr->SetShader(pShader);
 	Material_list.push_back(material_ptr);
@@ -1334,8 +1309,7 @@ void CGameObject::SetShader(CShader *pShader)
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-	//if (m_ppMaterials[nMaterial]) 
-	//	m_ppMaterials[nMaterial]->SetShader(pShader);
+
 
 	if (Material_list.size() > nMaterial)
 		Material_list[nMaterial]->SetShader(pShader);
@@ -1344,14 +1318,6 @@ void CGameObject::SetShader(int nMaterial, CShader *pShader)
 
 void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
 {
-	/*if (m_ppMaterials[nMaterial]) 
-		m_ppMaterials[nMaterial]->Release();
-
-	m_ppMaterials[nMaterial] = pMaterial;
-
-	if (m_ppMaterials[nMaterial]) 
-		m_ppMaterials[nMaterial]->AddRef();*/
-
 	std::shared_ptr<CMaterial> material_ptr(pMaterial);
 	Material_list[nMaterial] = material_ptr;
 }
@@ -1760,21 +1726,6 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
-	//for (int i = 0; i < m_nMaterials; i++)
-	//{
-	//	if (m_ppMaterials[i])
-	//	{
-	//		for (int j = 0; j < m_ppMaterials[i]->m_nTextures; j++)
-	//		{
-	//			if (m_ppMaterials[i]->m_ppTextures[j])
-	//			{
-	//				if (!_tcsncmp(m_ppMaterials[i]->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName))) 
-	//					return(m_ppMaterials[i]->m_ppTextures[j]);
-	//			}
-	//		}
-	//	}
-	//}
-
 	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
 		for (int j = 0; j < material_ptr->m_nTextures; j++)
@@ -1825,10 +1776,11 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	// 기존 Material 제거 후 새로운 크기 설정
+	// delete old Material & Resize material
 	Material_list.clear();
+
 	int materialCount = ReadIntegerFromFile(pInFile);
-	Material_list.reserve(materialCount);  // 메모리 예약
+	Material_list.reserve(materialCount);  // Reserve memory
 
 	std::shared_ptr<CMaterial> pMaterial = nullptr;
 
@@ -1840,8 +1792,9 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
 
-			// 새로운 Material 생성 및 추가
+			// add & define new Material 
 			pMaterial = std::make_shared<CMaterial>(7);
+						
 			if (!pShader)
 			{
 				UINT nMeshType = GetMeshType();
@@ -1854,7 +1807,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 
-			// 벡터 크기를 nMaterial 인덱스까지 확장
+			// Resize to nMaterial
 			if (nMaterial >= Material_list.size())
 				Material_list.resize(nMaterial + 1);
 
@@ -1862,31 +1815,31 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4AlbedoColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->m_cAlbedo), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4EmissiveColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->m_cEmissive), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularColor>:"))
 		{
 			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
 		}
-		else if (!strcmp(pstrToken, "<Glossiness>:"))
+		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->m_fSpecular), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Smoothness>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fSmoothness), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(pMaterial->m_fRoughness), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Metallic>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fSpecularHighlight), sizeof(float), 1, pInFile);
-		}
-		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
-		{
 			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Glossiness>:"))
+		{
+			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
 		{
@@ -1901,25 +1854,29 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+				MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
 				pParent, pInFile, pShader);
 		}
@@ -1940,6 +1897,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 			break;
 		}
 	}
+
 }
 
 
@@ -2372,13 +2330,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
+
 		pTerrainShader = new Deferred_CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		//pTerrainShader = new CTerrainShader();
-		//pTerrainShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-		//pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
 		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
@@ -2459,10 +2416,9 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		}
 	}
 
-	if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
-	{
-		PrintFrameInfo(this, NULL);
-	}
+	//if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
+	//	PrintFrameInfo(this, NULL);
+	
 }
 
 
@@ -2725,8 +2681,6 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
 			m_pMesh->Render(pd3dCommandList, 0);
-
-			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 		}
 	}
 
