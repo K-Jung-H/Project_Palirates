@@ -597,6 +597,7 @@ public:
 	virtual ~CGargoyleObject();
 	virtual void Animate(float fTimeElapsed);
 	std::unique_ptr<GargoyleStateMachine>& GetStateMachine() { return m_StateMachine; }
+	int test_num{ 0 };
 private:
 	std::unique_ptr<GargoyleStateMachine> m_StateMachine;
 };

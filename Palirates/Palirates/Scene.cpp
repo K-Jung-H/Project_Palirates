@@ -138,6 +138,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 20.0f), 20.0f);
 	humanObject_1->SetScale(30.0f, 30.0f, 30.0f);
 	humanObject_1->Set_Name(obj_name_1);
+	humanObject_1->test_num = 1;
 	obj_manager->Add_Object(humanObject_1);
 	
 	//====================================================
@@ -164,6 +165,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(430.0f, 700.0f), 700.0f);
 	humanObject_2->SetScale(100.0f, 100.0f, 100.0f);
 	humanObject_2->Set_Name(obj_name_2);
+	humanObject_2->test_num = 2;
 	obj_manager->Add_Object(humanObject_2);
 
 	name_view = obj_name_3;
@@ -179,6 +181,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
 	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_3->Set_Name(obj_name_3);
+	humanObject_3->test_num = 3;
 	obj_manager->Add_Object(humanObject_3);
 
 	//float* pfData = new float[2];
@@ -730,8 +733,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			m_pPlayer->Animate_test();
-			m_pPlayer->FallingTimer_Reset();
 		}		break;
 
 		default:

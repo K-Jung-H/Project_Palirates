@@ -143,11 +143,6 @@ void CPlayer::Rotate(float x, float y, float z)
 	m_xmf3Up = Vector3::CrossProduct(m_xmf3Look, m_xmf3Right, true);
 }
 
-void CPlayer::Animate_test()
-{
-	if (Anime_test_FallingLoop) Anime_test_FallingLoop = false;
-	else Anime_test_FallingLoop = true;
-}
 
 void CPlayer::Update(float fTimeElapsed)
 {
@@ -494,10 +489,11 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (Anime_test_FallingLoop)
+		/*if (Anime_test_FallingLoop)
 			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
 		else
-			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
+		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 	}
 
 	if (On_Ground)
@@ -522,110 +518,6 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
-
-
-	if (m_pSkinnedAnimationController)
-	{
-
-		if (Anime_test_FallingLoop) {
-			if (m_fFallingTimer < 0.0f) {
-				// Falling 타이머 갱신
-				m_fFallingTimer += fTimeElapsed;
-
-				// 트랙 0의 가중치를 1.0에서 0.0으로 줄임
-				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); // 0초일 때 1.0, 2초일 때 0.0
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
-
-				// 트랙 2의 가중치를 0.0에서 1.0으로 늘림
-				float weight2 = m_fFallingTimer / 1.0f; // 0초일 때 0.0, 2초일 때 1.0
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight2);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-			}
-			else {
-				/*if (m_pSkinnedAnimationController->m_pAnimationTracks[1].m_fWeight != 1.0f)
-					m_pSkinnedAnimationController->SetTrackWeight(1, 1.0f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[2].m_fWeight != 1.0f)
-					m_pSkinnedAnimationController->SetTrackWeight(2, 1.0f);*/
-
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, 0.5f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_BACKWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, 0.5f);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-
-				//m_pSkinnedAnimationController->Bone_Info();
-			}
-			//m_pSkinnedAnimationController->SetTrackPosition(1, 0.0f);
-		}
-		else {
-			//float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-
-			//const float maxSpeed = 100.0f; // 최대 속도 
-			//const float minSpeed = 0.0f;  // 최소 속도 
-
-			//// 속도 비율을 0과 1 사이로 정규화
-			//float speedRatio = (fLength - minSpeed) / (maxSpeed - minSpeed);
-			//speedRatio = max(0.0f, min(speedRatio, 1.0f));
-
-			//float weight0 = 1.0f - speedRatio; // idle 가중치
-			//float weight1 = speedRatio;        // 달리기 가중치
-
-			// 블렌딩 시간 설정 (초 단위)
-			//const float blendDuration = 0.2f;
-
-			//// 현재 상태 지속 시간 (애니메이션 상태가 바뀌면 0으로 초기화)
-			//stateElapsedTime += fTimeElapsed;
-
-			//// 블렌딩 비율 계산 (0 ~ 1 사이 값)
-			//float blendRatio = min(1.0f, stateElapsedTime / blendDuration);
-
-			//float weight1 = 1.0f - blendRatio; 
-			//float weight0 = blendRatio;        
-
-			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
-			//m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_State()), weight0);
-
-			//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, weight1); 
-			//
-			//if (GetStateMachine()->Get_State() == State::Idle) {
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, weight0);
-			//	if (GetStateMachine()->Get_LastState() != State::Idle)
-			//	m_pSkinnedAnimationController->SetTrackWeight(GetStateMachine()->GetStateKey(GetStateMachine()->Get_LastState()), weight1);
-			//}
-			//else if (GetStateMachine()->Get_State() == State::Run_Forawrd)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Run_Backawrd)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Run_Left)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_LEFT, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Run_Right)
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_RIGHT, weight0);
-			//else if (GetStateMachine()->Get_State() == State::Dive) {
-			//	
-			//	
-			//	float fFixedSpeed = 300.0f; 
-
-			//	// Dive 상태일 때 무조건 전방 이동
-			//	Move(DIR_FORWARD, fFixedSpeed * fTimeElapsed, false);
-
-			//	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 0.0f);
-			//	m_pSkinnedAnimationController->SetTrackWeight(TRACK_DIVEROLL_FORWARD, weight0);
-
-			//	if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
-			//		GetStateMachine()->changeState(State::Idle, Key_Value::None);
-			//	}
-			//	}
-			/*m_pSkinnedAnimationController->SetTrackEnable(0, true);
-			m_pSkinnedAnimationController->SetTrackEnable(1, true);
-			m_pSkinnedAnimationController->SetTrackEnable(2, false);*/
-		}
-	}
 
 }
 

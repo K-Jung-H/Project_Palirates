@@ -55,10 +55,6 @@ protected:
 
 	float stateElapsedTime{ 0.0f };
 
-
-	bool Anime_test_FallingLoop = false;
-	float m_fFallingTimer = 0.0f;
-
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
 private:
@@ -97,7 +93,6 @@ public:
 
 //	virtual void Animate(float fTimeElapsed);
 
-	virtual void Animate_test();
 
 	virtual void Update(float fTimeElapsed);
 
@@ -118,9 +113,6 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
-
-
-	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
 	std::unique_ptr<PlayerStateMachine>& GetStateMachine() { return m_StateMachine; }
 
