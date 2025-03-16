@@ -246,6 +246,37 @@ public:
 	void Bone_Info();
 	std::string CAnimationSets::GetBoneName(int index);
 	void ClassifyBones();
+
+	CAnimationSets* Clone();
+	//virtual CAnimationSets* Clone() {
+	//	CAnimationSets* pNewSet = new CAnimationSets(m_nAnimationSets);
+	//	pNewSet->m_pAnimationSet_list = m_pAnimationSet_list;
+
+	//	for (int i = 0; i < m_nAnimationSets; i++) {
+	//		pNewSet->m_pAnimationSet_list[i] = m_pAnimationSet_list[i]; // 깊은 복사 수행
+	//	}
+
+	//	return pNewSet;
+	//}
+	/*virtual CAnimationSets* Clone() {
+		CAnimationSets* pNewSet = new CAnimationSets(m_nAnimationSets);
+
+		pNewSet->m_pAnimationSet_list = new CAnimationSet * [m_nAnimationSets];
+		for (int i = 0; i < m_nAnimationSets; i++) {
+			pNewSet->m_pAnimationSet_list[i] = new CAnimationSet(*m_pAnimationSet_list[i]); 
+		}
+
+		pNewSet->m_vecUpperBodyBoneIndices = m_vecUpperBodyBoneIndices;
+		pNewSet->m_vecLowerBodyBoneIndices = m_vecLowerBodyBoneIndices;
+		pNewSet->m_nBoneFrames = m_nBoneFrames;
+
+		pNewSet->m_ppBoneFrameCaches.reserve(m_ppBoneFrameCaches.size());
+		for (CGameObject* pBone : m_ppBoneFrameCaches) {
+			pNewSet->m_ppBoneFrameCaches.push_back(new CGameObject(*pBone)); 
+		}
+
+		return pNewSet;
+	}*/
 };
 
 class CAnimationTrack
@@ -302,6 +333,11 @@ public:
 
 public:
 	void PrepareSkinning();
+
+	/*void CopyAnimationSets() const {
+		CAnimationSets* pClone = m_pAnimationSets->Clone();
+		m_pAnimationSets = pClone;
+	}*/
 };
 
 class CAnimationController 
@@ -598,6 +634,7 @@ public:
 	virtual void Animate(float fTimeElapsed);
 	std::unique_ptr<GargoyleStateMachine>& GetStateMachine() { return m_StateMachine; }
 	int test_num{ 0 };
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 private:
 	std::unique_ptr<GargoyleStateMachine> m_StateMachine;
 };
