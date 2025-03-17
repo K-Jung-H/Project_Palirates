@@ -6,7 +6,8 @@ std::mutex networkMutex;
 
 ClientNetwork::ClientNetwork()
 {
-    WSAStartup(MAKEWORD(2, 2), NULL);
+    WSADATA wsaData;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 }
 

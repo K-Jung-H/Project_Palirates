@@ -814,6 +814,42 @@ void CGameFramework::FrameAdvance()
 
 }
 
+class GameFramework
+{
+private:
+	static GameFramework instance;
+	Player* player;
+
+	GameFramework();
+
+public:
+	static GameFramework* GetInstance();
+	Player* GetPlayer();
+	void Initialize();
+	void Run();
+};
+GameFramework GameFramework::instance;
+
+GameFramework* GameFramework::GetInstance()
+{
+	return &instance;
+}
+
+GameFramework::GameFramework()
+{
+	player = nullptr;
+}
+
+void GameFramework::Initialize()
+{
+	player = new Player();
+}
+
+Player* GameFramework::GetPlayer()
+{
+	return player;
+}
+
 void GameFramework::Run()
 {
 	while (true)

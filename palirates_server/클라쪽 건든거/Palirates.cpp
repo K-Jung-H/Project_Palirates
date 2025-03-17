@@ -178,31 +178,28 @@ void NetworkThread()
 		float x = player->GetX();
 		float y = player->GetY();
 		float z = player->GetZ();
-		int state = player->GetState();
+		int id = player->GetID();
 
-		std::string packet = "MOVE," + std::to_string(player->GetID()) + "," +
+		std::string packet = "MOVE," + std::to_string(id) + "," +
 			std::to_string(x) + "," + std::to_string(y) + "," +
-			std::to_string(z) + "," + std::to_string(state);
+			std::to_string(z);
 
-		network.SendPacket(packet);
-		std::cout << "[CLIENT] 서버로 패킷 전송: " << packet << std::endl;
+		ClientNetwork::GetInstance()->SendPacket(packet);
 
-		std::string serverResponse = network.ReceiveData();
+		std::string serverResponse = ClientNetwork::GetInstance()->ReceiveData();
 		if (!serverResponse.empty())
 		{
-			std::cout << "[CLIENT] 서버 응답 수신: " << serverResponse << std::endl;
-
 			int playerId;
-			float x, y, z;
+			float px, py, pz;
 			int state;
 
 			if (sscanf_s(serverResponse.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-				&playerId, &x, &y, &z, &state) == 5)
+				&playerId, &px, &py, &pz, &state) == 5)
 			{
-				game.sceneManager.updatePlayerPosition(playerId, x, y, z, state);
+				GameFramework::GetInstance()->GetSceneManager()->updatePlayerPosition(playerId, px, py, pz, state);
 			}
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(33)); // 33ms (30FPS)
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 	}
 }
 

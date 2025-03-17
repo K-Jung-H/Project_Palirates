@@ -551,6 +551,49 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
 	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
 }
 
+Player::Player()
+{
+	x = 0.0f;
+	y = 0.0f;
+	z = 0.0f;
+}
+
+float Player::GetX()
+{
+	return x;
+}
+
+float Player::GetY()
+{
+	return y;
+}
+
+float Player::GetZ()
+{
+	return z;
+}
+
+int Player::GetState()
+{
+	return state;
+}
+
+Player::Player(int playerId)
+{
+	id = playerId;
+	x = 0.0f;
+	y = 0.0f;
+	z = 0.0f;
+	std::cout << "[INFO] Player °´Ã¼ »ý¼º (ID: " << id << ")" << std::endl;
+}
+
+void Player::Move(float dx, float dy, float dz)
+{
+	x += dx;
+	y += dy;
+	z += dz;
+}
+
 std::string Player::Serialize()
 {
 	return "MOVE," + std::to_string(id) + "," +
