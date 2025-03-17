@@ -53,8 +53,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
             if (sscanf_s(packet.c_str(), "MOVE,%f,%f,%f,%d", &x, &y, &z, &state) == 4)
             {
-                if (ValidatePosition(x, y, z))
-                {
+                //if (//ValidatePosition(x, y, z))
+                //{
                     Scene* scene = sceneManager.getScene(clientId);
                     if (scene)
                     {
@@ -66,11 +66,11 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         std::to_string(z) + "," + std::to_string(state);
 
                     BroadcastPacket(response, clientId);
-                }
-                else
-                {
-                    logger.Log("유효하지 않은 좌표값 수신: " + packet);
-                }
+                //}
+                //else
+                //{
+                //    logger.Log("유효하지 않은 좌표값 수신: " + packet);
+                //}
             }
         }
     }
@@ -116,7 +116,7 @@ int main()
 	return 0;
 }
 
-bool Server::ValidatePosition(float x, float y, float z)
-{
-    return (x >= -1000 && x <= 1000) && (y >= -1000 && y <= 1000) && (z >= -1000 && z <= 1000);
-}
+//bool Server::ValidatePosition(float x, float y, float z)
+//{
+//    return 0;//(x >= -1000 && x <= 1000) && (y >= -1000 && y <= 1000) && (z >= -1000 && z <= 1000);
+//}
