@@ -239,11 +239,14 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
         cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // º¸¶ó»ö
     }
 
-
     output.Albedo_Color = input.color;
-    output.view_Depth_and_Camera_Distance.r = input.position.z;
-    output.view_Depth_and_Camera_Distance.g = distance(input.positionW, gvCameraPosition);
+    
+    output.world_Position = float4(input.positionW, 1.0f);
+    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
+    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+    
     return output;
 }
 

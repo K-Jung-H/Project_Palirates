@@ -130,12 +130,24 @@ void Scene_Manager::Unload_Scene()
 {
     activeScene.reset();
 }
+void Scene_Manager::Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle)
+{
+    if (MRT_shader)
+    {
+        // Connect Multi_RenderTarget
+        // nRenderTarget = 0 -> Not use BackBuffer in this time, 
+        MRT_shader->Prepare_Multi_RenderTarget(pd3dCommandList, 0, pd3dRtvCPUHandles, pd3dDsvCPUHandle);
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  MRT_shader is not exist");
 
-void Scene_Manager::Pre_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+}
+
+void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     if (activeScene)
     {
-        activeScene->Pre_Render(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Prepare_Render(pd3dDevice, pd3dCommandList, pCamera);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -153,18 +165,29 @@ void Scene_Manager::Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 }
 
-void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+    //	Change Used RenderTarget Resource State
+    if (MRT_shader)
+        MRT_shader->OnPostRenderTarget(pd3dCommandList);
+}
+
+void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if(MRT_shader)
+        MRT_shader->Setting_Render(pd3dCommandList, 0);
+
+
     if (activeScene)
-        activeScene->UpdateShaderVariables_POST(pd3dCommandList);
+        activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
 
 
     if (pCamera)
-    {
-        pCamera->UpdateShaderVariables_POST(pd3dCommandList);
-    }
+        pCamera->Update_PostRender_ShaderVariables(pd3dCommandList);
+    
 
-
+    if(MRT_shader)
+        MRT_shader->Render(pd3dCommandList, NULL);
 
 }
 

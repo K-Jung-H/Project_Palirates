@@ -9,9 +9,7 @@ Texture2D<float4> T_Material_Light_Info : register(t3);
 
 cbuffer cb_Post_Camera : register(b0)
 {
-    matrix gmtx_Inv_View;//: packoffset(c0);
-    matrix gmtx_Inv_Projection;//: packoffset(c4);
-    float3 camera_pos;//: packoffset(c8);
+    float3 camera_pos;
 };
 
 //==================================================================
@@ -108,9 +106,8 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     material.gEmissive_intensity = material_light_info.a;
 
     //================================================================
-    //return float4(colorTexture);
-    float4 finalColor = Lighting(world_position.xyz, wNormal, camera_pos, material);
-    return finalColor;
+
+    float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, material);
     
     //================================================================    
     
@@ -127,14 +124,10 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     //float fogFactor = 1.0 - exp(-Camera_Distance * fogDensity);
     
     
-    //float4 cColor  = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
-    //cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
+    float4 cColor = float4(lerp(Light_Color.rgb, fogColor, fogFactor), 1.0f); // 안개 효과 적용
     
     //================================================================
 
-    float4 cColor = finalColor;
-    cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
     return cColor;
-
     
     }

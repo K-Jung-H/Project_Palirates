@@ -673,10 +673,11 @@ ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12De
 	}
 	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
 	{
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 0; // Post_Camera_Info
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Constants.Num32BitValues = 3;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Descriptor.ShaderRegister = 0; // Post_Camera_Position
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		pd3dRootParameters[ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		pd3dRootParameters[ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX].Descriptor.ShaderRegister = 1; // Light_Info
@@ -818,7 +819,7 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 	}
 }
 
-void CPostProcessingShader::OnPrepareRenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle)
+void CPostProcessingShader::Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle)
 {
 	int nResources = m_pTexture->GetTextures();
 	D3D12_CPU_DESCRIPTOR_HANDLE* pd3dAllRtvCPUHandles = new D3D12_CPU_DESCRIPTOR_HANDLE[nRenderTargets + nResources];

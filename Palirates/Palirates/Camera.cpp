@@ -126,7 +126,7 @@ void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComm
 
 }
 
-void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+void CCamera::Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	XMFLOAT4X4 xmf4x4View;
 	XMStoreFloat4x4(&xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4View)));
@@ -142,39 +142,11 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress);
 }
 
-void CCamera::UpdateShaderVariables_POST(ID3D12GraphicsCommandList* pd3dCommandList)
+void CCamera::Update_PostRender_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {	
-	XMMATRIX matView = XMLoadFloat4x4(&m_xmf4x4View);
-	XMMATRIX matProjection = XMLoadFloat4x4(&m_xmf4x4Projection);
 
 
-	XMMATRIX matInvView = XMMatrixInverse(nullptr, matView);
-	XMMATRIX matInvProj = XMMatrixInverse(nullptr, matProjection);
-
-
-
-	XMFLOAT4X4 xmf4x4InvView;
-	XMStoreFloat4x4(&xmf4x4InvView, XMMatrixTranspose(matInvView));
-
-	XMFLOAT4X4 xmf4x4InvProj;
-	XMStoreFloat4x4(&xmf4x4InvProj, XMMatrixTranspose(matInvProj));
-
-
-
-	//================================================
-
-	// 역 뷰 행렬을 셰이더에 전달
-	::memcpy(&Mapped_post_Camera_Info->m_xm_Inv_View, &xmf4x4InvView, sizeof(XMFLOAT4X4));
-
-	// 역 투영 행렬을 셰이더에 전달
-	::memcpy(&Mapped_post_Camera_Info->m_xm_Inv_Proj, &xmf4x4InvProj, sizeof(XMFLOAT4X4));
-
-	// 카메라의 위치를 저장
-	::memcpy(&Mapped_post_Camera_Info->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
-
-	// 셰이더의 상수 버퍼에 해당 정보를 설정
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = post_Camera_Info->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_CAMERA_CBV_INDEX, d3dGpuVirtualAddress);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &m_xmf3Position, 0);
 }
 
 
