@@ -10,6 +10,9 @@ private:
     
     std::shared_ptr<Text_UI_Renderer> text_ui_renderer;
 
+    //===========================================서버, 플레이어 데이터 관리
+    std::unordered_map<int, PlayerData> players;
+
 public:
     Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
     ~Scene_Manager();

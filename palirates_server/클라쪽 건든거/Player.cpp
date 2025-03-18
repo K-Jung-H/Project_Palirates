@@ -32,6 +32,9 @@ CPlayer::CPlayer()
 	m_pPlayerUpdatedContext = NULL;
 	m_pCameraUpdatedContext = NULL;
 
+	position = { 0.0f, 0.0f, 0.0f };
+	state = 0;
+
 }
 
 CPlayer::~CPlayer()
@@ -551,52 +554,13 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
 	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
 }
 
-Player::Player()
+
+void CPlayer::SetPosition(const DirectX::XMFLOAT3& newPos)
 {
-	x = 0.0f;
-	y = 0.0f;
-	z = 0.0f;
+	position = newPos;
 }
 
-float Player::GetX()
+void CPlayer::SetState(int newState)
 {
-	return x;
-}
-
-float Player::GetY()
-{
-	return y;
-}
-
-float Player::GetZ()
-{
-	return z;
-}
-
-int Player::GetState()
-{
-	return state;
-}
-
-Player::Player(int playerId)
-{
-	id = playerId;
-	x = 0.0f;
-	y = 0.0f;
-	z = 0.0f;
-	std::cout << "[INFO] Player °´Ã¼ »ý¼º (ID: " << id << ")" << std::endl;
-}
-
-void Player::Move(float dx, float dy, float dz)
-{
-	x += dx;
-	y += dy;
-	z += dz;
-}
-
-std::string Player::Serialize()
-{
-	return "MOVE," + std::to_string(id) + "," +
-		std::to_string(x) + "," + std::to_string(y) + "," +
-		std::to_string(z) + "," + std::to_string(state);
+	state = newState;
 }

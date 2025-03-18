@@ -4,6 +4,12 @@
 
 #include "stdafx.h"
 #include "GameFramework.h"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
+#define DEFAULT_SERVER_IP "127.0.0.1"  
+#define DEFAULT_SERVER_PORT 9000
 
 
 CGameFramework::CGameFramework()
@@ -814,58 +820,105 @@ void CGameFramework::FrameAdvance()
 
 }
 
-class GameFramework
+//=======================서버================================================
+
+CGameFramework::CGameFramework() : isRunning(false) {}
+
+CGameFramework::~CGameFramework() { Disconnect(); }
+
+void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
-private:
-	static GameFramework instance;
-	Player* player;
-
-	GameFramework();
-
-public:
-	static GameFramework* GetInstance();
-	Player* GetPlayer();
-	void Initialize();
-	void Run();
-};
-GameFramework GameFramework::instance;
-
-GameFramework* GameFramework::GetInstance()
-{
-	return &instance;
-}
-
-GameFramework::GameFramework()
-{
-	player = nullptr;
-}
-
-void GameFramework::Initialize()
-{
-	player = new Player();
-}
-
-Player* GameFramework::GetPlayer()
-{
-	return player;
-}
-
-void GameFramework::Run()
-{
-	while (true)
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
-		std::string serverResponse = network.ReceiveData();
-		if (!serverResponse.empty())
-		{
-			int playerId;
-			float x, y, z;
-			int state;
+		std::cerr << "[ERROR] Winsock 초기화 실패" << std::endl;
+		return;
+	}
 
-			if (sscanf_s(serverResponse.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-				&playerId, &x, &y, &z, &state) == 5)
+	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (serverSocket == INVALID_SOCKET)
+	{
+		std::cerr << "[ERROR] 소켓 생성 실패: " << WSAGetLastError() << std::endl;
+		WSACleanup();
+		return;
+	}
+
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(port);
+
+	if (InetPton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1) 
+	{
+		std::cerr << "[ERROR] IP 주소 변환 실패: " << ip << std::endl;
+		closesocket(serverSocket);
+		WSACleanup();
+		return;
+	}
+
+	if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR) 
+	{
+		std::cerr << "[ERROR] 서버 연결 실패: " << WSAGetLastError() << std::endl;
+		closesocket(serverSocket);
+		WSACleanup();
+		return;
+	}
+
+	std::cout << "[INFO] 서버 연결 성공 (IP: " << ip << ", 포트: " << port << ")" << std::endl;
+
+	isRunning = true;
+	networkThread = std::thread(&CGameFramework::NetworkLoop, this);
+}
+
+void CGameFramework::SendPacket()
+{
+	std::lock_guard<std::mutex> lock(networkMutex);
+	CPlayer* player = GetPlayer();
+
+	if (!player) return;
+
+	DirectX::XMFLOAT3 pos = player->GetPosition();
+	int state = player->GetState();
+
+	std::ostringstream packetStream;
+	packetStream << "MOVE," << player->GetID() << ","
+		<< std::fixed << std::setprecision(2) << pos.x << ","
+		<< pos.y << "," << pos.z << ","
+		<< state;
+
+	std::string packet = packetStream.str();
+	send(serverSocket, packet.c_str(), packet.size(), 0);
+}
+
+std::string CGameFramework::ReceiveData()
+{
+	char buffer[1024];
+	int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+
+	if (bytesReceived > 0)
+	{
+		std::string receivedData(buffer, bytesReceived);
+
+		int playerId;
+		float px, py, pz;
+		int state;
+
+		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+			&playerId, &px, &py, &pz, &state) == 5)
+		{
+			CPlayer* player = GetSceneManager()->GetPlayerById(playerId);
+			if (player)
 			{
-				sceneManager.updatePlayerPosition(playerId, x, y, z, state);
+				player->SetPosition(DirectX::XMFLOAT3(px, py, pz));
+				player->SetState(state);
 			}
 		}
+		return receivedData;
 	}
+
+void CGameFramework::Disconnect()
+{
+	isRunning = false;
+	if (networkThread.joinable())
+		networkThread.join();
+	closesocket(serverSocket);
+	WSACleanup();
 }

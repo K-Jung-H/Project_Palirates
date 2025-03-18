@@ -65,6 +65,10 @@ protected:
 private:
 	std::unique_ptr<StateMachine> m_StateMachine;
 
+	//==================서버=======================
+	XMFLOAT3 position;
+	int state;
+
 public:
 	CPlayer();
 	virtual ~CPlayer();
@@ -134,6 +138,14 @@ public:
 
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
+
+	//서버
+	XMFLOAT3 GetPosition() const { return position; }
+	void SetPosition(const XMFLOAT3& newPos);
+
+	int GetState() const { return state; }
+	void SetState(int newState) { state = newState; }
+
 };
 
 
@@ -169,23 +181,4 @@ public:
 
 	void AlignWithNormal(XMFLOAT3 normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
-};
-
-class Player
-{
-public:
-	int id;
-	float x, y, z;
-	int state;
-
-	int GetID();
-	float GetX();
-	float GetY();
-	float GetZ();
-	void Move(float dx, float dy, float dz);
-
-	Player(int playerId, float startX, float startY, float startZ, int startState = 0)
-		: id(playerId), x(startX), y(startY), z(startZ), state(startState) {}
-
-	std::string Serialize();
 };

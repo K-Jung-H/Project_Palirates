@@ -5,12 +5,7 @@
 #include "Palirates.h"
 #include "GameFramework.h"
 #include <thread>
-#include "ClientNetwork.h"
 #include <iostream>
-
-ClientNetwork network;
-GameFramework game;
-bool isRunning = true;
 
 #define MAX_LOADSTRING 100
 
@@ -20,6 +15,15 @@ TCHAR							szWindowClass[MAX_LOADSTRING];
 
 CGameFramework					gGameFramework;
 
+void CreateConsole()
+{
+	AllocConsole();
+	FILE* fp;
+	freopen_s(&fp, "CONOUT$", "w", stdout);
+	freopen_s(&fp, "CONIN$", "r", stdin);
+	freopen_s(&fp, "CONERR$", "w", stderr);
+}
+
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -27,6 +31,9 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
+
+	CreateConsole();
+
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -54,11 +61,12 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 		}
 		else
 		{
+			gGameFramework.ConnectToServer(ip, port);
 			gGameFramework.FrameAdvance();
 		}
 	}
 	gGameFramework.OnDestroy();
-
+	FreeConsole();
 	return((int)msg.wParam);
 }
 
@@ -168,60 +176,3 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	return((INT_PTR)FALSE);
 }
 
-void NetworkThread()
-{
-	while (isRunning)
-	{
-		Player* player = GameFramework::GetInstance()->GetPlayer();
-		if (!player) continue;
-
-		float x = player->GetX();
-		float y = player->GetY();
-		float z = player->GetZ();
-		int id = player->GetID();
-
-		std::string packet = "MOVE," + std::to_string(id) + "," +
-			std::to_string(x) + "," + std::to_string(y) + "," +
-			std::to_string(z);
-
-		ClientNetwork::GetInstance()->SendPacket(packet);
-
-		std::string serverResponse = ClientNetwork::GetInstance()->ReceiveData();
-		if (!serverResponse.empty())
-		{
-			int playerId;
-			float px, py, pz;
-			int state;
-
-			if (sscanf_s(serverResponse.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-				&playerId, &px, &py, &pz, &state) == 5)
-			{
-				GameFramework::GetInstance()->GetSceneManager()->updatePlayerPosition(playerId, px, py, pz, state);
-			}
-		}
-		std::this_thread::sleep_for(std::chrono::milliseconds(33));
-	}
-}
-
-int main()
-{
-	std::string serverIP = "127.0.0.1";
-	int serverPort = 9000;
-
-	if (!network.Connect(serverIP, serverPort))
-	{
-		std::cerr << "서버 연결 실패" << std::endl;
-		return -1;
-	}
-
-	std::thread networkThread(NetworkThread); // 네트워크 송수신 스레드 시작
-
-	game.Initialize();
-	game.Run(); // 게임 실행 (메인 루프)
-
-	isRunning = false;
-	networkThread.join(); // 네트워크 스레드 종료 대기
-	network.Disconnect();
-
-	return 0;
-}
