@@ -152,8 +152,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	name_view = obj_name_3;
 	std::shared_ptr<CGargoyleObject> humanObject_3 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
-	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
-	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_3->SetPosition(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f);
+	humanObject_3->SetScale(15.0f, 15.0f, 15.0f);
 	humanObject_3->Set_Name(obj_name_3);
 	humanObject_3->test_num = 3;
 	obj_manager->Add_Object(humanObject_3);
