@@ -14,7 +14,11 @@ private:
 
     CPostProcessingShader* MRT_shader = NULL;
 
+    //===============서버===============
+    std::map<int, CPlayer*> players;
+
 public:
+    Scene_Manager();
     Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
     ~Scene_Manager();
 
@@ -48,4 +52,8 @@ public:
     void Render_Scene_UI(UINT nFrame);
 
     void ReleaseUploadBuffers();
+
+    //===============서버===============
+    //void AddPlayer(int playerId, CPlayer* player);
+    CPlayer* GetPlayerById(int playerId);
 };

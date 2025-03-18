@@ -6,6 +6,13 @@
 #include "Scene.h"
 #include "UI_Manager.h"
 #include "Scene_Manager.h"
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <string>
+#include <thread>
+#include <mutex>
+
+#pragma comment(lib, "ws2_32.lib")
 
 struct CB_FRAMEWORK_INFO
 {
@@ -59,6 +66,16 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
+	//=================서버=================
+	void ConnectToServer(const std::string& ip, int port);
+	void SendPacket();
+	std::string ReceiveData();
+	void NetworkLoop();
+	void Disconnect();
+
+	Scene_Manager sceneManager;
+	//=================서버=================
+
 private:
 	HINSTANCE					m_hInstance;
 	HWND						m_hWnd; 
@@ -109,6 +126,15 @@ private:
 	UINT64						m_nFenceValues[N_SwapChainBuffers];
 	HANDLE						m_hFenceEvent;
 	//=======================================================
+
+	//=================서버=================
+	SOCKET serverSocket;
+	sockaddr_in serverAddr;
+	std::thread networkThread;
+	std::mutex networkMutex;
+	bool isRunning;
+	//=================서버=================
+
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif
@@ -132,6 +158,11 @@ public:
 
 	POINT						m_ptOldCursorPos;
 	_TCHAR						m_pszFrameRate[70];
+
+	//=================서버=================
+	Scene_Manager& GetSceneManager() { return *scene_manager; } 
+	CPlayer* GetPlayer() { return m_pPlayer; } 
+	//=================서버=================
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;

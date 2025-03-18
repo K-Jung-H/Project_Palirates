@@ -61,6 +61,11 @@ protected:
 
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
+
+	//=================서버=================
+	int id;  
+	int state;
+
 private:
 	std::unique_ptr<StateMachine> m_StateMachine;
 
@@ -133,6 +138,22 @@ public:
 
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
+
+
+	//=================서버=================
+	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
+		: id(playerId), state(startState)
+	{
+		m_xmf3Position = XMFLOAT3(startX, startY, startZ);
+	}
+
+	int GetID() const { return id; }
+	void SetID(int playerId) { id = playerId; }
+
+	int GetState() const { return state; }
+	void SetState(int newState) { state = newState; }
+
+	std::string Serialize();
 };
 
 

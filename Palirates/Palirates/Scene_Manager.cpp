@@ -3,6 +3,10 @@
 #include "Scene.h"
 
 
+Scene_Manager::Scene_Manager()
+{
+    activeScene = nullptr;
+}
 
 Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
 {
@@ -218,4 +222,15 @@ void Scene_Manager::ReleaseUploadBuffers()
     {
         pair.second->ReleaseUploadBuffers();
     }
+}
+
+//===============¼­¹ö===============
+CPlayer* Scene_Manager::GetPlayerById(int playerId)
+{
+    auto it = players.find(playerId);
+    if (it != players.end())
+    {
+        return it->second;
+    }
+    return nullptr;
 }

@@ -4,6 +4,10 @@
 
 #include "stdafx.h"
 #include "GameFramework.h"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 
 CGameFramework::CGameFramework()
 {
@@ -38,10 +42,13 @@ CGameFramework::CGameFramework()
 	m_pPlayer = NULL;
 
 	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
+
+	isRunning = false;
 }
 
 CGameFramework::~CGameFramework()
 {
+	Disconnect();
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
@@ -793,3 +800,145 @@ void CGameFramework::FrameAdvance()
 
 }
 
+
+//==============서버================
+void CGameFramework::ConnectToServer(const std::string& ip, int port)
+{
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
+		std::cerr << "[ERROR] Winsock 초기화 실패" << std::endl;
+		return;
+	}
+
+	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (serverSocket == INVALID_SOCKET)
+	{
+		std::cerr << "[ERROR] 소켓 생성 실패: " << WSAGetLastError() << std::endl;
+		WSACleanup();
+		return;
+	}
+
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(port);
+
+	if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1)
+	{
+		std::cerr << "[ERROR] IP 주소 변환 실패: " << ip << std::endl;
+		closesocket(serverSocket);
+		WSACleanup();
+		return;
+	}
+	if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] 서버 연결 실패: " << WSAGetLastError() << std::endl;
+		closesocket(serverSocket);
+		WSACleanup();
+		return;
+	}
+
+	std::cout << "[INFO] 서버 연결 성공 (IP: " << ip << ", 포트: " << port << ")" << std::endl;
+
+	isRunning = true;
+	networkThread = std::thread(&CGameFramework::NetworkLoop, this);
+}
+
+void CGameFramework::SendPacket()
+{
+	std::lock_guard<std::mutex> lock(networkMutex);
+
+	if (!serverSocket) return;
+
+	CPlayer* player = GetPlayer();
+	if (!player) return;
+
+	DirectX::XMFLOAT3 pos = player->GetPosition();
+	int state = player->GetState();
+
+	std::ostringstream packetStream;
+	packetStream << "MOVE," << player->GetID() << ","
+		<< std::fixed << std::setprecision(2) << pos.x << ","
+		<< pos.y << "," << pos.z << ","
+		<< state;
+
+	std::string packet = packetStream.str();
+
+	int bytesSent = send(serverSocket, packet.c_str(), packet.size(), 0);
+	if (bytesSent == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] send() 실패: " << WSAGetLastError() << std::endl;
+	}
+	else
+	{
+		std::cout << "[INFO] 서버로 패킷 전송 완료: " << packet << std::endl;
+	}
+}
+
+std::string CGameFramework::ReceiveData()
+{
+	char buffer[1024];
+	int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+
+	if (bytesReceived > 0)
+	{
+		std::string receivedData(buffer, bytesReceived);
+
+		int playerId;
+		float px, py, pz;
+		int state;
+
+		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+			&playerId, &px, &py, &pz, &state) == 5)
+		{
+			Scene_Manager& sceneManager = GetSceneManager();
+			CPlayer* player = sceneManager.GetPlayerById(playerId);
+			if (player)
+			{
+				player->SetPosition(DirectX::XMFLOAT3(px, py, pz));
+				player->SetState(state);
+			}
+		}
+		return receivedData;
+	}
+
+	return "";
+}
+
+void CGameFramework::Disconnect()
+{
+	isRunning = false;
+	if (networkThread.joinable())
+		networkThread.join();
+	closesocket(serverSocket);
+	WSACleanup();
+
+}
+
+void CGameFramework::NetworkLoop()
+{
+	while (isRunning)
+	{
+		SendPacket();
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
+
+		char buffer[1024];
+		int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+
+		if (bytesReceived > 0)
+		{
+			buffer[bytesReceived] = '\0'; 
+			std::string receivedData(buffer);
+			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
+		}
+		else if (bytesReceived == 0)
+		{
+			std::cerr << "[INFO] 서버와의 연결 종료" << std::endl;
+			isRunning = false;
+			break;
+		}
+		else
+		{
+			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
+		}
+	}
+}
