@@ -34,18 +34,21 @@ void Server::AcceptClients()
     }
 }
 
+
+
 void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 {
     char buffer[1024];
 
     while (true)
     {
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        memset(buffer, 0, sizeof(buffer));
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+
         if (bytesReceived > 0)
         {
             buffer[bytesReceived] = '\0';
             std::string packet(buffer);
-
             logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
 
             float x, y, z;
@@ -53,36 +56,53 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
             if (sscanf_s(packet.c_str(), "MOVE,%f,%f,%f,%d", &x, &y, &z, &state) == 4)
             {
-                //if (//ValidatePosition(x, y, z))
-                //{
-                    Scene* scene = sceneManager.getScene(clientId);
-                    if (scene)
-                    {
-                        scene->updatePlayerPosition(clientId, x, y, z, state);
-                    }
+                Scene* scene = sceneManager.getScene(clientId);
+                if (scene)
+                {
+                    scene->updatePlayerPosition(clientId, x, y, z, state);
+                }
 
-                    std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
-                        std::to_string(x) + "," + std::to_string(y) + "," +
-                        std::to_string(z) + "," + std::to_string(state);
+                std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
+                    std::to_string(x) + "," + std::to_string(y) + "," +
+                    std::to_string(z) + "," + std::to_string(state);
 
-                    BroadcastPacket(response, clientId);
-                //}
-                //else
-                //{
-                //    logger.Log("유효하지 않은 좌표값 수신: " + packet);
-                //}
+                logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
+                BroadcastPacket(response, clientId);
             }
+            else
+            {
+                logger.Log("잘못된 패킷 형식 수신: " + packet);
+            }
+        }
+        else if (bytesReceived == 0)
+        {
+            logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료");
+            closesocket(clientSocket);
+            clients.erase(clientId);
+            break;
+        }
+        else
+        {
+            logger.Log("recv() 오류 발생: " + std::to_string(WSAGetLastError()));
+            break;
         }
     }
 }
-
 void Server::BroadcastPacket(const std::string& packet, int senderId)
 {
     for (const auto& [id, socket] : clients)
     {
         if (id != senderId)
         {
-            send(socket, packet.c_str(), packet.length(), 0);
+            int bytesSent = send(socket, packet.c_str(), packet.length(), 0);
+            if (bytesSent == SOCKET_ERROR)
+            {
+                logger.Log("[ERROR] 클라이언트 " + std::to_string(id) + "에게 send() 실패: " + std::to_string(WSAGetLastError()));
+            }
+            else
+            {
+                logger.Log("클라이언트 " + std::to_string(id) + "에게 패킷 전송 완료: " + packet);
+            }
         }
     }
 }
