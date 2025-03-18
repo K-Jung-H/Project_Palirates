@@ -210,10 +210,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Depth_and_Camera_Distance = float2(0.0f, 0.0f);
+    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Emissive_Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
     
     // 초기 색상
     float4 cColor = input.color;
@@ -240,11 +239,14 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
         cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
     }
 
-
     output.Albedo_Color = input.color;
-    output.view_Depth_and_Camera_Distance.r = input.position.z;
-    output.view_Depth_and_Camera_Distance.g = distance(input.positionW, gvCameraPosition);
+    
+    output.world_Position = float4(input.positionW, 1.0f);
+    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
+    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+    
     return output;
 }
 

@@ -359,11 +359,11 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 
 	Material_Info material_info;
 	material_info.gAlbedoColor = m_cAlbedo;
-	material_info.gEmissiveColor = m_cEmissive;
 
 	material_info.gRoughness = m_fRoughness;
 	material_info.gMetallic = m_fMetallic;
-	material_info.gSpecular = m_fSpecular;
+	material_info.gEmissive_intensity = m_cEmissive.w;
+	material_info.gSpecular_intensity = m_fSpecular;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
@@ -1722,7 +1722,6 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 	UpdateTransform(NULL);
 }
 
-// #define _WITH_DEBUG_FRAME_HIERARCHY
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {

@@ -493,7 +493,8 @@ void CGameFramework::Build_Scenes()
 
 	CreateShaderVariables();
 
-
+	//==========================================
+	// Multi - Render Target Shader
 	PostProcessing_shader = new CTextureToFullScreenShader();
 	PostProcessing_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
@@ -504,7 +505,9 @@ void CGameFramework::Build_Scenes()
 
 
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
-
+	
+	scene_manager->Set_Shader(PostProcessing_shader);
+	//==========================================
 
 
 
@@ -702,13 +705,9 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
 
 
-	//D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//d3dRtvCPUDescriptorHandle.ptr += (SwapChainBuffer_Index * ::gnRtvDescriptorIncrementSize);
-
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
 
-	//Active_CommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
 
 	::SynchronizeResourceTransition(
 		Active_CommandList,
@@ -717,12 +716,9 @@ void CGameFramework::FrameAdvance()
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 
-	// Connect Multi_RenderTarget
-	// nRenderTarget = 0 -> Not use BackBuffer in this time, 
-	PostProcessing_shader->OnPrepareRenderTarget(Active_CommandList, 0, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
+	scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
+	scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-
-	scene_manager->Pre_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 	//	Frame_Info_Buffer Update
 	UpdateShaderVariables();
@@ -732,21 +728,12 @@ void CGameFramework::FrameAdvance()
 	if (m_pPlayer) 
 		m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-	//	Change Used RenderTarget Resource State
-	PostProcessing_shader->OnPostRenderTarget(Active_CommandList);
-
 	// Connect One RenderTarget
 	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, NULL);
 
 
-
-	// Testing Code
-	PostProcessing_shader->Setting_Render(Active_CommandList, 0);
-	scene_manager->Prepare_Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
-
-	// Draw Scene by Mixing resource
-	PostProcessing_shader->Render(Active_CommandList, NULL);
+	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
+	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 
 

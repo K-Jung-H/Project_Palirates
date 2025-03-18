@@ -2,19 +2,15 @@
 #include "Light.hlsl"
 
 Texture2D<float4> T_Albedo_Color : register(t0);
-Texture2D<float4> T_View_Normal : register(t1);
-Texture2D<float2> T_Depth_and_CameraDistance : register(t2);
+Texture2D<float4> T_World_Position: register(t1);
+Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Material_Light_Info : register(t3);
-Texture2D<float4> T_Emissive_Color: register(t4);
 
 
 cbuffer cb_Post_Camera : register(b0)
 {
-    matrix gmtx_Inv_View;
-    matrix gmtx_Inv_View_Projection; 
-    float4 camera_pos;
+    float3 camera_pos;
 };
-
 
 //==================================================================
 
@@ -95,35 +91,24 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
     // 기본 텍스처 샘플링
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
-    float4 vNormal = T_View_Normal.Sample(gssWrap, input.uv);
-    float2 Depth_and_Distance = T_Depth_and_CameraDistance.Sample(gssWrap, input.uv);
-    float vDepth = Depth_and_Distance.r;
-    float Camera_Distance = Depth_and_Distance.g;
+    float4 world_position = T_World_Position.Sample(gssWrap, input.uv);
+    float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
     float4 material_light_info = T_Material_Light_Info.Sample(gssWrap, input.uv);
-    float4 colorEmissive = T_Emissive_Color.Sample(gssWrap, input.uv);
     
+    float3 wNormal = wNormal_CD.xyz;
+    float Camera_Distance = wNormal_CD.w;    
+
     Material material;
-    material.gAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    material.gEmissiveColor = colorEmissive;
+    material.gAlbedoColor = colorTexture;
     material.gRoughness = material_light_info.r;
     material.gMetallic = material_light_info.g;
-    material.gSpecular = material_light_info.b;
+    material.gSpecular_intensity = material_light_info.b;
+    material.gEmissive_intensity = material_light_info.a;
 
     //================================================================
-    
-    float2 screenPos = input.uv * 2.0f - 1.0f;
-    float4 clipSpacePos = float4(screenPos.x, screenPos.y, vDepth, 1.0f);
-    float4 viewSpacePos = mul(clipSpacePos, gmtx_Inv_View_Projection);
-    viewSpacePos /= viewSpacePos.w;
-    
-    float4 worldPos = mul(viewSpacePos, gmtx_Inv_View);
-    float3 worldNormal = normalize(mul(vNormal.xyz, (float3x3) gmtx_Inv_View));
-    
-    
-    float4 finalColor = Lighting(worldPos.xyz, worldNormal, camera_pos.xyz, material);
 
-    finalColor += material.gEmissiveColor;
-    return finalColor;
+    float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, material);
+    
     //================================================================    
     
     // 안개 강도 계산 (카메라와의 거리를 기반)
@@ -139,14 +124,10 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     //float fogFactor = 1.0 - exp(-Camera_Distance * fogDensity);
     
     
-    //float4 cColor  = lerp(colorTexture, colorIllumination, 0.5f); // 기본 색상 혼합
-    //cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
+    float4 cColor = float4(lerp(Light_Color.rgb, fogColor, fogFactor), 1.0f); // 안개 효과 적용
     
     //================================================================
 
-    float4 cColor = finalColor;
-    cColor.rgb = lerp(cColor.rgb, fogColor, fogFactor); // 안개 효과 적용
     return cColor;
-
     
     }

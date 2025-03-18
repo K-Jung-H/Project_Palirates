@@ -16,7 +16,7 @@ struct VS_CB_CAMERA_INFO
 struct VS_CB_POST_CAMERA_INFO
 {
 	XMFLOAT4X4					m_xm_Inv_View;
-	XMFLOAT4X4					m_xm_Inv_View_Proj_Matrix;
+	XMFLOAT4X4					m_xm_Inv_Proj;
 	XMFLOAT3						m_xmf3Position;
 };
 
@@ -65,8 +65,8 @@ public:
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void UpdateShaderVariables_POST(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void Update_PostRender_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	
 	void GenerateViewMatrix();
