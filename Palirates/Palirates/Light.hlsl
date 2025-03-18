@@ -30,10 +30,10 @@ struct LIGHT
 struct Material
 {
     float4 gAlbedoColor;
-    float4 gEmissiveColor;
     float gRoughness;
     float gMetallic;
-    float gSpecular;
+    float gSpecular_intensity;
+    float gEmissive_intensity;
 };
 
 
@@ -52,14 +52,14 @@ float4 ComputeDiffuseSpecular(float3 vToLight, float3 vNormal, float3 vToCamera,
     float fDiffuseFactor = max(dot(vToLight, vNormal), 0.0f);
     float fSpecularFactor = 0.0f;
 
-    if (fDiffuseFactor > 0.0f && material.gSpecular > 0.0f)
+    if (fDiffuseFactor > 0.0f && material.gSpecular_intensity > 0.0f)
     {
 #ifdef _WITH_REFLECT
         float3 vReflect = reflect(-vToLight, vNormal);
-        fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), material.gSpecular);
+        fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), material.gSpecular_intensity);
 #else
         float3 vHalf = normalize(vToCamera + vToLight);
-        fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), material.gSpecular);
+        fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), material.gSpecular_intensity);
 #endif
     }
 
@@ -78,7 +78,6 @@ float4 PointLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCame
 {
     float3 vToLight = gLights[Light_ID].m_vPosition - vPosition;
     float fDistance = length(vToLight);
-    
     if (fDistance <= gLights[Light_ID].m_fRange)
     {
         vToLight /= fDistance;
@@ -107,6 +106,7 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
 float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, Material material)
 {
     float3 vToCamera = normalize(camera_pos.xyz - wPosition);
+
     float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < gnLights; i++)
@@ -127,9 +127,9 @@ float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, Material ma
             }
         }
     }
-
+    
     cColor += (gcGlobalAmbientLight * material.gAlbedoColor);
-    cColor += material.gEmissiveColor;
+    cColor += (material.gAlbedoColor * material.gEmissive_intensity);
     cColor.a = material.gAlbedoColor.a;
 
     return cColor;

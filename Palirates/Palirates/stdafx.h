@@ -129,7 +129,7 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-// #define WRITE_TEXT_UI
+#define WRITE_TEXT_UI
 //#define RENDER_OBB
 #define LOAD_SCENE
 // #define RENDER_PARTICLE
@@ -146,7 +146,7 @@ extern UINT	gnCbvSrvDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 5
+#define RTV_Format_Num 4
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;

@@ -660,14 +660,14 @@ ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12De
 	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-		pd3dDescriptorRanges[0].NumDescriptors = 5;
+		pd3dDescriptorRanges[0].NumDescriptors = RenderTarget_Config::RTV_FORMAT_num;
 		pd3dDescriptorRanges[0].BaseShaderRegister = 0; // G-buffer Texture
 		pd3dDescriptorRanges[0].RegisterSpace = 0;
 		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = 0;
 
 		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[1].NumDescriptors = 1;  // Structured Buffer  == Material_Info
-		pd3dDescriptorRanges[1].BaseShaderRegister = 5;
+		pd3dDescriptorRanges[1].BaseShaderRegister = RenderTarget_Config::RTV_FORMAT_num;
 		pd3dDescriptorRanges[1].RegisterSpace = 0;
 		pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = 0;
 	}

@@ -113,13 +113,12 @@ class CGameObject;
 struct Material_Info
 {
 	XMFLOAT4 gAlbedoColor;   
-	XMFLOAT4 gEmissiveColor; 
 
 	float gRoughness; 
 	float gMetallic;  
-	float gSpecular;  
+	float gSpecular_intensity;  
+	float gEmissive_intensity;
 };
-
 
 class CMaterial
 {
@@ -134,7 +133,7 @@ public:
 	// 반사 계수 (Specular Intensity)
 
 	XMFLOAT4 m_cAlbedo = { 0.0f, 0.0f, 0.0f, 1.0f };
-	XMFLOAT4 m_cEmissive = { 0.0f, 0.0f, 0.0f, 1.0f };
+	XMFLOAT4 m_cEmissive = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	float m_fRoughness = 0.0f;
 	float m_fMetallic = 0.0f; 

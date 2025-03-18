@@ -14,11 +14,11 @@ cbuffer Frame_Info : register(b0)
 struct Material_Info
 {
     float4 gAlbedoColor;
-    float4 gEmissiveColor;
 
     float gRoughness;
     float gMetallic;
-    float gSpecular;
+    float gSpecular_intensity;
+    float gEmissive_intensity;
 };
 
 cbuffer cbGameObjectInfo : register(b1)
@@ -66,10 +66,10 @@ SamplerState gssClamp : register(s1);
 struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 {
     float4 Albedo_Color : SV_TARGET0;
-    float4 view_Normal : SV_TARGET1;
-    float2 view_Depth_and_Camera_Distance : SV_TARGET2;
+    float4 world_Position : SV_TARGET1;
+    float4 world_Normal_and_Camera_Distance : SV_TARGET2;
     float4 Material_Light_Info : SV_TARGET3;
-    float4 Emissive_Color : SV_TARGET4;
+
 };
 
 
@@ -117,10 +117,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Depth_and_Camera_Distance = float2(0.0f, 0.0f);
+    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Emissive_Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -154,11 +153,13 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     
     
     output.Albedo_Color = cColor;
-    output.view_Normal = float4(normalW, 1.0f);
-    output.view_Depth_and_Camera_Distance.r = input.vDepth;
-    output.view_Depth_and_Camera_Distance.g = distance(input.positionW, gvCameraPosition);
-    output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular, 1.0f);
-    output.Emissive_Color = material_info.gEmissiveColor;
+    
+    output.world_Position = float4(input.positionW, 1.0f);
+    output.world_Normal_and_Camera_Distance.xyz = normalW;
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
+
+    output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+
     return (output);
 
 }
@@ -271,17 +272,21 @@ struct VS_TERRAIN_OUTPUT
 	float4 color : COLOR;
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
+    
+    float vDepth : vDEPTH;
 };
 
 VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 {
 	VS_TERRAIN_OUTPUT output;
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
-	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
+    output.position = mul(positionV, gmtxProjection);
 	output.color = input.color;
 	output.uv0 = input.uv0;
 	output.uv1 = input.uv1;
-
+    
+    output.vDepth = positionV.z;
 	return(output);
 }
 
@@ -290,21 +295,21 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Normal = float4(0.0f, 1.0f, 0.0f, 1.0f);
-    output.view_Depth_and_Camera_Distance = float2(0.0f, 0.0f);
+    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Emissive_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
     
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
     
     output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    
+    output.world_Position = float4(input.positionW, 1.0f);
+    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
-    output.view_Depth_and_Camera_Distance.r = input.position.z;
-    output.view_Depth_and_Camera_Distance.g = distance(input.positionW, gvCameraPosition);
-    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, 0.0f, 1.0f);
-    output.Emissive_Color = material_info.gEmissiveColor;
-
+    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+    
     return (output);
 }
 
@@ -312,11 +317,16 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
     input.position.y -= 1.0f;
+    
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
-    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
+    output.position = mul(positionV, gmtxProjection);
+    
     output.color = input.color;
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
+
+    output.vDepth = positionV.z;
 
     return (output);
 }
@@ -325,18 +335,18 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Depth_and_Camera_Distance = float2(0.0f, 0.0f);
+    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Emissive_Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
     output.Albedo_Color = input.color;
-
-    output.view_Depth_and_Camera_Distance.r = input.position.z;
-    output.view_Depth_and_Camera_Distance.g = distance(input.positionW, gvCameraPosition);
-    output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular, 1.0f);
-    output.Emissive_Color = material_info.gEmissiveColor;
     
+    output.world_Position = float4(input.positionW, 1.0f);
+    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
+
+    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+
     return (output);
 }
 
@@ -403,11 +413,10 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Normal = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.view_Depth_and_Camera_Distance = float2(0.0f, 0.0f);
+    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Emissive_Color = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    
+
     return (output);
 }
 
