@@ -258,6 +258,9 @@ void CScene::Update_UI()
 				stateArray[index] = stateMachine->Get_State();
 			}
 			index++;
+			if (index == 1) {
+				//xmf3Position = gargoyle->GetPosition();
+			}
 		}
 		std::wstring M1StateStr = stateToStringMap[stateArray[0]];
 		std::wstring M2StateStr = stateToStringMap[stateArray[1]];
