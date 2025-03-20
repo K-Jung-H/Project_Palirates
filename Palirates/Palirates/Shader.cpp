@@ -800,8 +800,11 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX); 
+	//CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX); 
+	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX);
 
+
+	
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
 	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
@@ -857,8 +860,11 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
-	if (CScene::m_pDescriptorHeap)
-		pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
+
+	CDescriptor_Heap::SetDescriptorHeaps(pd3dCommandList, 1);
+
+
+
 
 	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);

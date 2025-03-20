@@ -21,7 +21,6 @@ Scene_Manager::~Scene_Manager()
     }
     sceneCache.clear();
 
-    if (CScene::m_pDescriptorHeap) delete CScene::m_pDescriptorHeap;
 }
 
 bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene)
@@ -193,8 +192,30 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+    if (MRT_shader)
+        MRT_shader->Setting_Render(pd3dCommandList, 0);
+
+
+    if (activeScene)
+        activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
+
+
+    if (pCamera)
+        pCamera->Update_PostRender_ShaderVariables(pd3dCommandList);
+
+
+    if (MRT_shader)
+        MRT_shader->Render(pd3dCommandList, NULL);
+
+}
+
+
+
+// 렌더링이 모두 끝나면, 데이터  처리 작업
+void Scene_Manager::Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
     if (activeScene)  
-        activeScene->Post_Render(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Finalize_Frame(pd3dDevice, pd3dCommandList, pCamera);
     
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");

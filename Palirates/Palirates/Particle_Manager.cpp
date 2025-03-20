@@ -461,7 +461,9 @@ Particle_Manager::Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	m_pRandowmValueTexture = new CTexture(1, RESOURCE_BUFFER, 0, 1);
 	m_pRandowmValueTexture->CreateBuffer(pd3dDevice, pd3dCommandList, pxmf4RandomValues, 1024, sizeof(XMFLOAT4), DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, 0);
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX);
+	//CScene::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX);
+		
+	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, m_pRandowmValueTexture, 0, ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX);
 	
 }
 

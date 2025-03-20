@@ -57,11 +57,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	if (CScene::m_pDescriptorHeap == NULL)
-	{
-		CScene::m_pDescriptorHeap = new CDescriptorHeap();
-		CScene::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
-	}
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 70);
+	//CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
+	
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
@@ -504,7 +502,9 @@ void CGameFramework::Build_Scenes()
 	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
 
 
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+//	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+
 	
 	scene_manager->Set_Shader(PostProcessing_shader);
 	//==========================================
@@ -735,7 +735,8 @@ void CGameFramework::FrameAdvance()
 	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
 	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-
+	// Post Rendering
+	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList);
 
 
 #ifndef WRITE_TEXT_UI
@@ -757,7 +758,7 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
 
-	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 
 	hResult = Active_CommandList->Close();

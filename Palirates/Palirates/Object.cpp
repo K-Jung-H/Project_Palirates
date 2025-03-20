@@ -85,6 +85,7 @@ void CTexture::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 	{
 		for (int i = 0; i < m_nRootParameters; i++)
 		{
+			int a = m_pnRootParameterIndices[i];
 			pd3dCommandList->SetGraphicsRootDescriptorTable(m_pnRootParameterIndices[i], m_pd3dSrvGpuDescriptorHandles[i]);
 		}
 	}
@@ -421,7 +422,9 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 			(*ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
 			if (*ppTexture) (*ppTexture)->AddRef();
 
-			CScene::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
+//			CScene::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
+			CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
+
 		}
 		else
 		{
@@ -2342,9 +2345,13 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
+		
+		//CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		//CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
-		CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
+
+		CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 
 		pTerrainMaterial = new CMaterial(2);
@@ -2717,8 +2724,9 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
-
+	//CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+	
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
 	pSkyBoxMaterial->SetShader(pSkyBoxShader);
