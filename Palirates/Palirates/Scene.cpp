@@ -113,9 +113,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 //	m_pTerrain->SetPosition(XMFLOAT3(1000.0f, 0.0f, 1000.0f));
 
 
-	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	//CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-//	CLoadedModelInfo* pGargoyleModel3 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+	CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
+	CLoadedModelInfo* pGargoyleModel3 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
 	//CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 
 	string obj_name_1 = "test_obj_name_1";
@@ -143,17 +143,20 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//====================================================
 
 	name_view = obj_name_2;
-	std::shared_ptr<CGargoyleObject> humanObject_2 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
-	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(430.0f, 700.0f), 700.0f);
-	humanObject_2->SetScale(100.0f, 100.0f, 100.0f);
+	std::shared_ptr<CGargoyleObject> humanObject_2 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
+	humanObject_2->SetPosition(50.0f, m_pTerrain->Get_Mesh_Height(50.0f, 50.0f), 50.0f);
+	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_2->Set_Name(obj_name_2);
 	humanObject_2->test_num = 2;
 	obj_manager->Add_Object(humanObject_2);
 
 	name_view = obj_name_3;
-	std::shared_ptr<CGargoyleObject> humanObject_3 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
+	std::shared_ptr<CGargoyleObject> humanObject_3 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel3, 5);
 	humanObject_3->SetPosition(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f);
 	humanObject_3->SetScale(15.0f, 15.0f, 15.0f);
+	humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	XMFLOAT3 tt = { 0.0f, 1.0f, 0.0f };
+	humanObject_3->Rotate(&tt,90.0f);
 	humanObject_3->Set_Name(obj_name_3);
 	humanObject_3->test_num = 3;
 	obj_manager->Add_Object(humanObject_3);
