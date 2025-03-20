@@ -626,15 +626,15 @@ public:
 	virtual ~CHumanObject();
 };
 
-class CGargoyleObject : public CGameObject
+class CMonsterObject : public CGameObject
 {
 public:
-	CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
-	virtual ~CGargoyleObject();
+	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	virtual ~CMonsterObject();
 	virtual void Animate(float fTimeElapsed);
-	std::unique_ptr<GargoyleStateMachine>& GetStateMachine() { return m_StateMachine; }
+	std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
 	int test_num{ 0 };
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 private:
-	std::unique_ptr<GargoyleStateMachine> m_StateMachine;
+	std::unique_ptr<MonsterStateMachine> m_StateMachine;
 };

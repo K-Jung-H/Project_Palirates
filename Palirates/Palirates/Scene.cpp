@@ -124,7 +124,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CGargoyleObject> humanObject_1 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
+	std::shared_ptr<CMonsterObject> humanObject_1 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
 	humanObject_1->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 20.0f), 20.0f);
 	humanObject_1->SetScale(30.0f, 30.0f, 30.0f);
 	humanObject_1->Set_Name(obj_name_1);
@@ -143,7 +143,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//====================================================
 
 	name_view = obj_name_2;
-	std::shared_ptr<CGargoyleObject> humanObject_2 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
+	std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
 	humanObject_2->SetPosition(50.0f, m_pTerrain->Get_Mesh_Height(50.0f, 50.0f), 50.0f);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_2->Set_Name(obj_name_2);
@@ -151,7 +151,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(humanObject_2);
 
 	name_view = obj_name_3;
-	std::shared_ptr<CGargoyleObject> humanObject_3 = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel3, 5);
+	std::shared_ptr<CMonsterObject> humanObject_3 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel3, 5);
 	humanObject_3->SetPosition(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f);
 	humanObject_3->SetScale(15.0f, 15.0f, 15.0f);
 	humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -255,9 +255,9 @@ void CScene::Update_UI()
 		std::vector<State> stateArray(objectList->size());
 		size_t index = 0;
 		for (auto& obj : *objectList) {  
-			std::shared_ptr<CGargoyleObject> gargoyle = std::dynamic_pointer_cast<CGargoyleObject>(obj);
+			std::shared_ptr<CMonsterObject> gargoyle = std::dynamic_pointer_cast<CMonsterObject>(obj);
 			if (gargoyle) {
-				std::unique_ptr<GargoyleStateMachine>& stateMachine = gargoyle->GetStateMachine();
+				std::unique_ptr<MonsterStateMachine>& stateMachine = gargoyle->GetStateMachine();
 				stateArray[index] = stateMachine->Get_State();
 			}
 			index++;
