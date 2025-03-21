@@ -396,6 +396,13 @@ public:
 };
 
 //==================================================================================
+#define OBJECT_TPYE_MAIN_PLAYER		0x01
+#define OBJECT_TPYE_PLAYER		0x02
+#define OBJECT_TPYE_MONSTER		0x04
+//#define OBJECT_TPYE_PLAYER		0x08
+//#define OBJECT_TPYE_PLAYER		0x10
+//#define OBJECT_TPYE_PLAYER		0x20
+//#define OBJECT_TPYE_PLAYER		0x40
 
 
 class CGameObject
@@ -424,6 +431,9 @@ public:
 	float m_fRotationSpeed;
 
 	int n_Animation = 0;
+
+	int Object_type = 0;
+
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
