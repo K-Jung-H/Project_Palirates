@@ -4,6 +4,10 @@
 
 #include "stdafx.h"
 #include "GameFramework.h"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
 
 CGameFramework::CGameFramework()
 {
@@ -38,10 +42,13 @@ CGameFramework::CGameFramework()
 	m_pPlayer = NULL;
 
 	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
+
+	isRunning = false;
 }
 
 CGameFramework::~CGameFramework()
 {
+	Disconnect();
 }
 
 bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
@@ -857,128 +864,147 @@ void CGameFramework::FrameAdvance()
 	SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
-//void CGameFramework::FrameAdvance()
-//{    
-//	HRESULT hResult;
-//
-//	m_GameTimer.Tick(100.0f);
-//	
-//	ProcessInput();
-//
-//	//==================================================
-//	Active_CommandAllocator = Compute_CommandAllocator;
-//	Active_CommandList = Compute_CommandList;
-//
-//	hResult = Active_CommandAllocator->Reset();
-//	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
-//
-//	Update_Scene();
-//
-//	hResult = Active_CommandList->Close();
-//	ID3D12CommandList* ppd3dCommandLists[] = { Active_CommandList };
-//	p_CommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-//
-//	WaitForGpuComplete();
-//
-//	//==================================================
-//
-//#ifdef WRITE_TEXT_UI
-//	scene_manager->Update_UI();
-//#endif
-//
-//	Active_CommandAllocator = Render_CommandAllocator;
-//	Active_CommandList = Render_CommandList;
-//
-//	hResult = Active_CommandAllocator->Reset();
-//	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
-//
-//
-//	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-//	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-//
-//
-//	::SynchronizeResourceTransition(
-//		Active_CommandList,
-//		ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-//		D3D12_RESOURCE_STATE_PRESENT,
-//		D3D12_RESOURCE_STATE_RENDER_TARGET
-//	);
-//
-//	scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
-//	scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//
-//
-//	//	Frame_Info_Buffer Update
-//	UpdateShaderVariables();
-//
-//	scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//
-//	if (m_pPlayer) 
-//		m_pPlayer->Render(Active_CommandList, m_pCamera);
-//
-//	// Connect One RenderTarget
-//	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, NULL);
-//
-//
-//	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
-//	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//
-//	// Post Rendering
-//	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList);
-//
-//
-//#ifndef WRITE_TEXT_UI
-//	::SynchronizeResourceTransition(
-//		Active_CommandList,
-//		ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-//		D3D12_RESOURCE_STATE_RENDER_TARGET, 
-//		D3D12_RESOURCE_STATE_PRESENT);
-//
-//#endif
-//
-//	hResult = Active_CommandList->Close();
-//	ID3D12CommandList *Render_CommandLists[] = { Active_CommandList };
-//	p_CommandQueue->ExecuteCommandLists(1, Render_CommandLists);
-//	WaitForGpuComplete();
-//
-//
-//
-//	hResult = Active_CommandAllocator->Reset();
-//	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
-//
-//	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//
-//
-//	hResult = Active_CommandList->Close();
-//	ID3D12CommandList* Post_Render_CommandLists[] = { Active_CommandList };
-//	p_CommandQueue->ExecuteCommandLists(1, Post_Render_CommandLists);
-//	WaitForGpuComplete();
-//
-//
-//#ifdef WRITE_TEXT_UI
-//	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
-//
-//#endif
-//
-//#ifdef _WITH_PRESENT_PARAMETERS
-//	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
-//	dxgiPresentParameters.DirtyRectsCount = 0;
-//	dxgiPresentParameters.pDirtyRects = NULL;
-//	dxgiPresentParameters.pScrollRect = NULL;
-//	dxgiPresentParameters.pScrollOffset = NULL;
-//	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
-//#else
-//#ifdef _WITH_SYNCH_SWAPCHAIN
-//	m_pdxgiSwapChain->Present(1, 0);
-//#else
-//	m_pdxgiSwapChain->Present(0, 0);
-//#endif
-//#endif
-//
-//	MoveToNextFrame();
-//
-//	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
-//	::SetWindowText(m_hWnd, m_pszFrameRate);
-//
-//}
-//
+
+
+//==============서버================
+void CGameFramework::ConnectToServer(const std::string& ip, int port)
+{
+	WSADATA wsaData;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
+		std::cerr << "[ERROR] Winsock 초기화 실패" << std::endl;
+		return;
+	}
+
+	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if (serverSocket == INVALID_SOCKET)
+	{
+		std::cerr << "[ERROR] 소켓 생성 실패: " << WSAGetLastError() << std::endl;
+		WSACleanup();
+		return;
+	}
+
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(port);
+
+	if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1)
+	{
+		std::cerr << "[ERROR] IP 주소 변환 실패: " << ip << std::endl;
+		closesocket(serverSocket);
+		WSACleanup();
+		return;
+	}
+	if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] 서버 연결 실패: " << WSAGetLastError() << std::endl;
+		closesocket(serverSocket);
+		WSACleanup();
+		return;
+	}
+
+	std::cout << "[INFO] 서버 연결 성공 (IP: " << ip << ", 포트: " << port << ")" << std::endl;
+
+	isRunning = true;
+	networkThread = std::thread(&CGameFramework::NetworkLoop, this);
+}
+
+void CGameFramework::SendPacket()
+{
+	std::lock_guard<std::mutex> lock(networkMutex);
+
+	if (!serverSocket) return;
+
+	CPlayer* player = GetPlayer();
+	if (!player) return;
+
+	DirectX::XMFLOAT3 pos = player->GetPosition();
+	int state = player->GetState();
+
+	std::ostringstream packetStream;
+	packetStream << "MOVE," << player->GetID() << ","
+		<< std::fixed << std::setprecision(2) << pos.x << ","
+		<< pos.y << "," << pos.z << ","
+		<< state;
+
+	std::string packet = packetStream.str();
+
+	int bytesSent = send(serverSocket, packet.c_str(), packet.size(), 0);
+	if (bytesSent == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] send() 실패: " << WSAGetLastError() << std::endl;
+	}
+	else
+	{
+		std::cout << "[INFO] 서버로 패킷 전송 완료: " << packet << std::endl;
+	}
+}
+
+std::string CGameFramework::ReceiveData()
+{
+	char buffer[1024];
+	int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+
+	if (bytesReceived > 0)
+	{
+		std::string receivedData(buffer, bytesReceived);
+
+		int playerId;
+		float px, py, pz;
+		int state;
+
+		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+			&playerId, &px, &py, &pz, &state) == 5)
+		{
+			Scene_Manager& sceneManager = GetSceneManager();
+			CPlayer* player = sceneManager.GetPlayerById(playerId);
+			if (player)
+			{
+				player->SetPosition(DirectX::XMFLOAT3(px, py, pz));
+				player->SetState(state);
+			}
+		}
+		return receivedData;
+	}
+
+	return "";
+}
+
+void CGameFramework::Disconnect()
+{
+	isRunning = false;
+	if (networkThread.joinable())
+		networkThread.join();
+	closesocket(serverSocket);
+	WSACleanup();
+
+}
+
+void CGameFramework::NetworkLoop()
+{
+	while (isRunning)
+	{
+		SendPacket();
+		std::this_thread::sleep_for(std::chrono::milliseconds(33));
+
+		char buffer[1024];
+		int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+
+		if (bytesReceived > 0)
+		{
+			buffer[bytesReceived] = '\0'; 
+			std::string receivedData(buffer);
+			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
+		}
+		else if (bytesReceived == 0)
+		{
+			std::cerr << "[INFO] 서버와의 연결 종료" << std::endl;
+			isRunning = false;
+			break;
+		}
+		else
+		{
+			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
+		}
+	}
+}
+
