@@ -1,6 +1,7 @@
 ﻿// Palirates.cpp : 애플리케이션에 대한 진입점을 정의합니다.
 //
-
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
 #include "stdafx.h"
 #include "Palirates.h"
 #include "GameFramework.h"
@@ -18,10 +19,12 @@ BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
+
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	MSG msg;
 	HACCEL hAccelTable;
