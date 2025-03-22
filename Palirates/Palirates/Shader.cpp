@@ -788,7 +788,8 @@ void CPostProcessingShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice
 
 void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle)
 {
-	m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1);
+	// m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1);
+	m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1, 0, 0, nRenderTargets, 0, 0);
 
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < nRenderTargets; i++)
@@ -800,8 +801,15 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX); 
+	//CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX); 
+	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX);
 
+//	m_pTexture->SetGraphicsSrvRootParameter(0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX, 0, nRenderTargets);
+
+
+
+
+	
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
 	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
@@ -857,8 +865,11 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
-	if (CScene::m_pDescriptorHeap)
-		pd3dCommandList->SetDescriptorHeaps(1, &CScene::m_pDescriptorHeap->m_pd3dCbvSrvDescriptorHeap);
+
+	CDescriptor_Heap::SetDescriptorHeaps(pd3dCommandList, 1);
+
+
+
 
 	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
@@ -867,7 +878,7 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 
 void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_pTexture) m_pTexture->UpdateShaderVariables(pd3dCommandList);
+	if (m_pTexture) m_pTexture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	pd3dCommandList->DrawInstanced(6, 1, 0, 0);

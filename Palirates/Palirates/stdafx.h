@@ -142,7 +142,7 @@ extern HINSTANCE						ghAppInstance;
 
 //=====================================
 
-extern UINT	gnCbvSrvDescriptorIncrementSize;
+extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 

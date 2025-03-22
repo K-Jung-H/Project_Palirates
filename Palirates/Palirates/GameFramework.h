@@ -14,6 +14,15 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+enum class GPU_Stage
+{
+	Compute,
+	Render,
+	Post
+};
+
+
+
 struct CB_FRAMEWORK_INFO
 {
 	float m_fCurrentTime;      
@@ -57,7 +66,11 @@ public:
 	void Update_Scene();
     void FrameAdvance();
 
-	void WaitForGpuComplete();
+//	void WaitForGpuComplete();
+	void SafeSyncStage(GPU_Stage stage);
+	void WaitForGpuComplete(GPU_Stage stage);
+	HRESULT SignalFence(GPU_Stage stage);
+
 	void MoveToNextFrame();
 	void Clear_RenderTarget(XMFLOAT3 background_color);
 
@@ -117,6 +130,9 @@ private:
 	ID3D12GraphicsCommandList	*Compute_CommandList = NULL;
 	ID3D12GraphicsCommandList* Render_CommandList = NULL;
 
+	ID3D12CommandAllocator* Post_CommandAllocator = nullptr;
+	ID3D12GraphicsCommandList* Post_CommandList = nullptr;
+
 	// 사용할 커멘드 할당자, 큐로 연결하여 사용
 	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
 	ID3D12GraphicsCommandList* Active_CommandList = NULL;
@@ -125,6 +141,12 @@ private:
 	ID3D12Fence					*m_pd3dFence = NULL;
 	UINT64						m_nFenceValues[N_SwapChainBuffers];
 	HANDLE						m_hFenceEvent;
+
+	UINT64						m_ComputeFenceValues[N_SwapChainBuffers];
+	UINT64						m_RenderFenceValues[N_SwapChainBuffers];
+	UINT64						m_PostFenceValues[N_SwapChainBuffers];
+
+
 	//=======================================================
 
 	//=================서버=================

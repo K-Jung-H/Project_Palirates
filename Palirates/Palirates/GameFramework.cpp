@@ -64,11 +64,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	if (CScene::m_pDescriptorHeap == NULL)
-	{
-		CScene::m_pDescriptorHeap = new CDescriptorHeap();
-		CScene::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
-	}
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 70, 0);
+	//CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
+	
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
@@ -183,15 +181,17 @@ void CGameFramework::CreateDirect3DDevice()
 	m_bMsaa4xEnable = (m_nMsaa4xQualityLevels > 1) ? true : false;
 
 	hResult = m_pd3dDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(ID3D12Fence), (void **)&m_pd3dFence);
-	for (UINT i = 0; i < N_SwapChainBuffers; i++) m_nFenceValues[i] = 0;
+	for (UINT i = 0; i < N_SwapChainBuffers; i++) 
+		m_nFenceValues[i] = 0;
 
 	m_hFenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
 
-	::gnCbvSrvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	::gnCbvSrvUavDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	::gnRtvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
-	if (pd3dAdapter) pd3dAdapter->Release();
+	if (pd3dAdapter) 
+		pd3dAdapter->Release();
 }
 
 void CGameFramework::CreateCommandQueueAndList()
@@ -213,6 +213,10 @@ void CGameFramework::CreateCommandQueueAndList()
 	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void **)&Render_CommandAllocator);
 	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, Render_CommandAllocator, NULL, __uuidof(ID3D12GraphicsCommandList), (void **)&Render_CommandList);
 	hResult = Render_CommandList->Close();
+
+	hResult = m_pd3dDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(ID3D12CommandAllocator), (void**)&Post_CommandAllocator);
+	hResult = m_pd3dDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, Post_CommandAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList), (void**)&Post_CommandList);
+	hResult = Post_CommandList->Close();
 }
 
 void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
@@ -287,7 +291,8 @@ void CGameFramework::CreateDepthStencilView()
 
 void CGameFramework::ChangeSwapChainState()
 {
-	WaitForGpuComplete();
+//	WaitForGpuComplete();
+	WaitForGpuComplete(GPU_Stage::Render);
 
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
@@ -511,7 +516,10 @@ void CGameFramework::Build_Scenes()
 	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
 
 
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+//	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
+
+
 	
 	scene_manager->Set_Shader(PostProcessing_shader);
 	//==========================================
@@ -542,7 +550,10 @@ void CGameFramework::Build_Scenes()
 	Active_CommandList->Close();
 	ID3D12CommandList *ppd3dCommandLists[] = { Active_CommandList };
 	p_CommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-	WaitForGpuComplete();
+
+//	WaitForGpuComplete();
+	SignalFence(GPU_Stage::Render);
+	WaitForGpuComplete(GPU_Stage::Render);
 
 	scene_manager->ReleaseUploadBuffers();
 
@@ -637,29 +648,99 @@ void CGameFramework::Update_Scene()
 
 }
 
-void CGameFramework::WaitForGpuComplete()
-{
-	const UINT64 nFenceValue = ++m_nFenceValues[SwapChainBuffer_Index];
-	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, nFenceValue);
+//void CGameFramework::WaitForGpuComplete()
+//{
+//	const UINT64 nFenceValue = ++m_nFenceValues[SwapChainBuffer_Index];
+//	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, nFenceValue);
+//
+//	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+//	{
+//		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+//		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+//	}
+//}
 
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+
+//
+//void CGameFramework::MoveToNextFrame()
+//{
+//	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
+//
+//	UINT64 nFenceValue = ++m_nFenceValues[SwapChainBuffer_Index];
+//	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, nFenceValue);
+//
+//	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+//	{
+//		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+//		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+//	}
+//}
+
+void CGameFramework::SafeSyncStage(GPU_Stage stage)
+{
+	SignalFence(stage);
+	WaitForGpuComplete(stage);
+}
+
+void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
+{
+	UINT bufferIndex = SwapChainBuffer_Index;
+	UINT64 fenceValue = 0;
+
+	switch (stage)
 	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+	case GPU_Stage::Compute:
+		fenceValue = m_ComputeFenceValues[bufferIndex];
+		break;
+	case GPU_Stage::Render:
+		fenceValue = m_RenderFenceValues[bufferIndex];
+		break;
+	case GPU_Stage::Post:
+		fenceValue = m_PostFenceValues[bufferIndex];
+		break;
 	}
+
+	if (fenceValue == 0) 
+		return;
+
+	if (m_pd3dFence->GetCompletedValue() < fenceValue)
+	{
+		m_pd3dFence->SetEventOnCompletion(fenceValue, m_hFenceEvent);
+		WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+}
+
+HRESULT CGameFramework::SignalFence(GPU_Stage stage)
+{
+	UINT bufferIndex = SwapChainBuffer_Index;
+	HRESULT hResult = 0;
+	switch (stage)
+	{
+	case GPU_Stage::Compute:
+		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_ComputeFenceValues[bufferIndex]);
+		break;
+	case GPU_Stage::Render:
+		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_RenderFenceValues[bufferIndex]);
+		break;
+	case GPU_Stage::Post:
+		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_PostFenceValues[bufferIndex]);
+		break;
+	}
+	return hResult;
 }
 
 void CGameFramework::MoveToNextFrame()
 {
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	UINT64 nFenceValue = ++m_nFenceValues[SwapChainBuffer_Index];
-	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, nFenceValue);
+	// Present 이후, 보통 Render 스테이지의 마지막 Fence로 처리
+	UINT64 nFenceValue = ++m_RenderFenceValues[SwapChainBuffer_Index];
+	HRESULT hResult = SignalFence(GPU_Stage::Render);
 
 	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
 	{
 		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-		::WaitForSingleObject(m_hFenceEvent, INFINITE);
+		WaitForSingleObject(m_hFenceEvent, INFINITE);
 	}
 }
 
@@ -680,110 +761,93 @@ void CGameFramework::Clear_RenderTarget(XMFLOAT3 background_color)
 }
 
 void CGameFramework::FrameAdvance()
-{    
+{
 	HRESULT hResult;
 
 	m_GameTimer.Tick(100.0f);
-	
 	ProcessInput();
 
-	//==================================================
+	// ====================== [1] Compute Phase ======================
 	Active_CommandAllocator = Compute_CommandAllocator;
 	Active_CommandList = Compute_CommandList;
 
+	SafeSyncStage(GPU_Stage::Compute);
 	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
+	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 
 	Update_Scene();
 
 	hResult = Active_CommandList->Close();
-	ID3D12CommandList* ppd3dCommandLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-	//==================================================
+	ID3D12CommandList* computeCmdLists[] = { Active_CommandList };
+	p_CommandQueue->ExecuteCommandLists(1, computeCmdLists);
+	SignalFence(GPU_Stage::Compute); // 개별 호출도 가능, 반복 sync 시 유용
 
+	// ====================== [2] UI (CPU-only) ======================
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
 
+	// ====================== [3] Render Phase ======================
 	Active_CommandAllocator = Render_CommandAllocator;
 	Active_CommandList = Render_CommandList;
-	WaitForGpuComplete();
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
 
+	SafeSyncStage(GPU_Stage::Render);
+	hResult = Active_CommandAllocator->Reset();
+	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
+	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-
-	::SynchronizeResourceTransition(
-		Active_CommandList,
-		ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
+	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 	scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-
-	//	Frame_Info_Buffer Update
 	UpdateShaderVariables();
 
 	scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-	if (m_pPlayer) 
+	if (m_pPlayer)
 		m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-	// Connect One RenderTarget
-	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, NULL);
-
+	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
 	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
 	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
-
-
+	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList);
 
 #ifndef WRITE_TEXT_UI
-	::SynchronizeResourceTransition(
-		Active_CommandList,
-		ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-		D3D12_RESOURCE_STATE_RENDER_TARGET, 
-		D3D12_RESOURCE_STATE_PRESENT);
-
+	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 #endif
 
 	hResult = Active_CommandList->Close();
-	ID3D12CommandList *Render_CommandLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, Render_CommandLists);
-	WaitForGpuComplete();
+	ID3D12CommandList* renderCmdLists[] = { Active_CommandList };
+	p_CommandQueue->ExecuteCommandLists(1, renderCmdLists);
+	SignalFence(GPU_Stage::Render);
 
+	// ====================== [4] Post Phase ======================
+	Active_CommandAllocator = Post_CommandAllocator;
+	Active_CommandList = Post_CommandList;
 
-
+	SafeSyncStage(GPU_Stage::Post);
 	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, NULL);
+	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 
-	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
+	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 	hResult = Active_CommandList->Close();
-	ID3D12CommandList* Post_Render_CommandLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, Post_Render_CommandLists);
-	WaitForGpuComplete();
-
+	ID3D12CommandList* postCmdLists[] = { Active_CommandList };
+	p_CommandQueue->ExecuteCommandLists(1, postCmdLists);
+	SignalFence(GPU_Stage::Post);
 
 #ifdef WRITE_TEXT_UI
 	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
-
 #endif
 
+	// ====================== [5] Present ======================
 #ifdef _WITH_PRESENT_PARAMETERS
-	DXGI_PRESENT_PARAMETERS dxgiPresentParameters;
-	dxgiPresentParameters.DirtyRectsCount = 0;
-	dxgiPresentParameters.pDirtyRects = NULL;
-	dxgiPresentParameters.pScrollRect = NULL;
-	dxgiPresentParameters.pScrollOffset = NULL;
+	DXGI_PRESENT_PARAMETERS dxgiPresentParameters = {};
 	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
 #else
 #ifdef _WITH_SYNCH_SWAPCHAIN
@@ -793,12 +857,13 @@ void CGameFramework::FrameAdvance()
 #endif
 #endif
 
+	// ====================== [6] Swap & FPS ======================
 	MoveToNextFrame();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
-	::SetWindowText(m_hWnd, m_pszFrameRate);
-
+	SetWindowText(m_hWnd, m_pszFrameRate);
 }
+
 
 
 //==============서버================
@@ -942,3 +1007,4 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 }
+
