@@ -44,6 +44,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
     {
         memset(buffer, 0, sizeof(buffer));
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+        std::cout << "[DEBUG] recv() 호출됨, 받은 바이트 수: " << bytesReceived << std::endl;
 
         if (bytesReceived > 0)
         {
