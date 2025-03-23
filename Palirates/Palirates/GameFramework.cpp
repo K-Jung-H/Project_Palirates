@@ -359,8 +359,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 
 				case VK_SPACE:
-					scene_manager->Load_Scene("Scene_2");
-					Object_Manager::Reserve_Update();
+					//scene_manager->Load_Scene("Scene_2");
+					//Object_Manager::Reserve_Update();
 					break;
 
 				case VK_RETURN:
@@ -516,7 +516,6 @@ void CGameFramework::Build_Scenes()
 	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
 
 
-//	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 
 
@@ -773,6 +772,7 @@ void CGameFramework::FrameAdvance()
 
 	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
+
 	scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 	scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
@@ -787,12 +787,7 @@ void CGameFramework::FrameAdvance()
 
 	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
 	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList);
 
-#ifndef WRITE_TEXT_UI
-	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-#endif
 
 	hResult = Active_CommandList->Close();
 	ID3D12CommandList* renderCmdLists[] = { Active_CommandList };
@@ -807,12 +802,25 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 
+
+	scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
+	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+
 	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+#ifndef WRITE_TEXT_UI
+	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
+		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+#endif
+
 
 	hResult = Active_CommandList->Close();
 	ID3D12CommandList* postCmdLists[] = { Active_CommandList };
 	p_CommandQueue->ExecuteCommandLists(1, postCmdLists);
 	SignalFence(GPU_Stage::Post);
+
+
 
 #ifdef WRITE_TEXT_UI
 	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
@@ -837,8 +845,7 @@ void CGameFramework::FrameAdvance()
 	SetWindowText(m_hWnd, m_pszFrameRate);
 }
 
-<<<<<<< HEAD
-=======
+
 
 
 //==============서버================
@@ -982,5 +989,3 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 }
-
->>>>>>> bd6770fb395319c1fbcd3c62612af56a743dde4f

@@ -194,26 +194,15 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 }
 
-void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Prepare_Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-    if (MRT_shader)
-        MRT_shader->Setting_Render(pd3dCommandList, 0);
-
-
-    if (activeScene)
-        activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
-
-
-    if (pCamera)
-        pCamera->Update_PostRender_ShaderVariables(pd3dCommandList);
-
-
-    if (MRT_shader)
-        MRT_shader->Render(pd3dCommandList, NULL);
-
+    
 }
 
+void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
 
+}
 
 // 렌더링이 모두 끝나면, 데이터  처리 작업
 void Scene_Manager::Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

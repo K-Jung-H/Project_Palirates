@@ -143,7 +143,7 @@ public:
 
 //===========================================================================================================
 
-class CPostProcessingShader : public CStandardShader
+class PostProcessBaseShader : public CStandardShader
 {
 protected:
 	ID3D12RootSignature* m_pd3dGraphicsRootSignature = NULL;
@@ -151,8 +151,8 @@ protected:
 	CTexture* m_pTexture = NULL;
 
 public:
-	CPostProcessingShader();
-	virtual ~CPostProcessingShader();
+	PostProcessBaseShader();
+	virtual ~PostProcessBaseShader();
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int n);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int n);
@@ -181,7 +181,7 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRtvCPUDescriptorHandle(UINT nIndex) { return(m_pd3dRtvCPUDescriptorHandles[nIndex]); }
 };
 
-class CTextureToFullScreenShader : public CPostProcessingShader
+class CTextureToFullScreenShader : public PostProcessBaseShader
 {
 public:
 	CTextureToFullScreenShader();
@@ -196,6 +196,22 @@ public:
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
+};
+
+class CEdgeDetectCSShader : public PostProcessBaseShader
+{
+public:
+	CEdgeDetectCSShader();
+	virtual ~CEdgeDetectCSShader();
+
+	// UAV 출력용 리소스 생성
+	void CreateResourcesAndUavs(ID3D12Device* pd3dDevice, UINT index, DXGI_FORMAT format);
+
+	// 추가: Compute Dispatch 실행
+	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	// 결과 렌더링용 Fullscreen Quad
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
 };
 
 //===========================================================================================================

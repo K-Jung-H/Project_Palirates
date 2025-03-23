@@ -12,7 +12,7 @@ private:
     
     std::shared_ptr<Text_UI_Renderer> text_ui_renderer;
 
-    CPostProcessingShader* MRT_shader = NULL;
+    PostProcessBaseShader* MRT_shader = NULL;
 
     //===============¼­¹ö===============
     std::map<int, CPlayer*> players;
@@ -33,7 +33,7 @@ public:
 
     bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player_ptr);
 
-    void Set_Shader(CPostProcessingShader* shader_ptr) { MRT_shader = shader_ptr; }
+    void Set_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
 
     void Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     void Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
@@ -42,11 +42,14 @@ public:
     void Update_UI();
 
     void Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle);
+
     void Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
     void Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3dCommandList);
-    void Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    void Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+    void Prepare_Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     void Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     void Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);

@@ -560,7 +560,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 			if (*ppTexture) (*ppTexture)->AddRef();
 
 //			CScene::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
-			CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
+			CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
 
 		}
 		else
@@ -2490,8 +2490,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		//CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 
-		CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
-		CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 		//pTerrainBaseTexture->SetGraphicsSrvRootParameter(0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX, 0, 1);
 		//pTerrainDetailTexture->SetGraphicsSrvRootParameter(0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX, 0, 1);
@@ -2869,7 +2869,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	//CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
-	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
 	
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);

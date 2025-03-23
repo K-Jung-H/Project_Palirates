@@ -167,7 +167,7 @@ protected:
 	CGameTimer					m_GameTimer;
 
 public:
-	CPostProcessingShader* PostProcessing_shader = NULL;
+	PostProcessBaseShader* PostProcessing_shader = NULL;
 	Scene_Manager* scene_manager = NULL;
 
 

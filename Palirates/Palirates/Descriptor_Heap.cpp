@@ -105,7 +105,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE CDescriptor_Heap::CreateConstantBufferView(ID3D12Dev
 // Creates shader resource views for a texture
 // Creates a more than one shader resource view
 // Creates SRVs and binds to the root signature. [Root Signature Binding: O]
-void CDescriptor_Heap::CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
+void CDescriptor_Heap::CreateGraphicsShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
 {
     CDescriptor_Heap* instance = Get_Instance();
 

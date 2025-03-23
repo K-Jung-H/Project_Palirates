@@ -31,7 +31,8 @@ class Deferred_CTerrainShader;
 #define RESOURCE_STRUCTURED_BUFFER 0x07
 
 
-class CTexture {
+class CTexture 
+{
 public:
 	CTexture(int nTextures, UINT nTextureType,
 		int nSamplers,
