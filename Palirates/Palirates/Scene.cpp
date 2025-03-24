@@ -116,7 +116,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 	CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
 	CLoadedModelInfo* pGargoyleModel3 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	//CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 
 	string obj_name_1 = "test_obj_name_1";
 	string obj_name_2 = "test_obj_name_2";
@@ -713,6 +712,15 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
+			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			m_pPlayer->SetStateElapsedTime(0.0f);
+			m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+		}		break;
+		case 'X':
+		{
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+			m_pPlayer->SetStateElapsedTime(0.0f);
+			m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 		}		break;
 
 		default:
