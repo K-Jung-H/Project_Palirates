@@ -13,13 +13,6 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT3						m_xmf3Position;
 };
 
-struct VS_CB_POST_CAMERA_INFO
-{
-	XMFLOAT4X4					m_xm_Inv_View;
-	XMFLOAT4X4					m_xm_Inv_Proj;
-	XMFLOAT3						m_xmf3Position;
-};
-
 class CPlayer;
 
 class CCamera
@@ -51,13 +44,6 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
-	BoundingFrustum m_xmFrustum;
-
-	//==============================================
-
-	ID3D12Resource* post_Camera_Info = NULL;
-	VS_CB_POST_CAMERA_INFO* Mapped_post_Camera_Info = NULL;
-
 public:
 	CCamera();
 	CCamera(CCamera *pCamera);
@@ -65,10 +51,8 @@ public:
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	virtual void Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void Update_PostRender_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 
-	
 	void GenerateViewMatrix();
 	void GenerateViewMatrix(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3LookAt, XMFLOAT3 xmf3Up);
 	void RegenerateViewMatrix();
@@ -101,6 +85,7 @@ public:
 	float& GetYaw() { return(m_fYaw); }
 
 	void SetOffset(XMFLOAT3 xmf3Offset) { m_xmf3Offset = xmf3Offset; }
+//	void SetOffset(XMFLOAT3 xmf3Offset) { m_xmf3Offset = xmf3Offset; m_xmf3Position.x += xmf3Offset.x; m_xmf3Position.y += xmf3Offset.y; m_xmf3Position.z += xmf3Offset.z; }
 	XMFLOAT3& GetOffset() { return(m_xmf3Offset); }
 
 	void SetTimeLag(float fTimeLag) { m_fTimeLag = fTimeLag; }
@@ -115,11 +100,6 @@ public:
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f) { }
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed) { }
 	virtual void SetLookAt(XMFLOAT3& xmf3LookAt) { }
-
-	void GenerateFrustum();
-	bool IsInFrustum(BoundingOrientedBox& xmBoundingBox);
-	bool IsInFrustum(const XMFLOAT3& position);
-
 };
 
 class CSpaceShipCamera : public CCamera

@@ -1,12 +1,9 @@
 ﻿// Palirates.cpp : 애플리케이션에 대한 진입점을 정의합니다.
 //
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
+
 #include "stdafx.h"
 #include "Palirates.h"
 #include "GameFramework.h"
-#include <iostream>
-#include <sstream>
 
 #define MAX_LOADSTRING 100
 
@@ -21,33 +18,13 @@ BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 
-
-void CreateConsole()
-{
-	AllocConsole();
-	FILE* fp;
-	freopen_s(&fp, "CONOUT$", "w", stdout);
-	freopen_s(&fp, "CONIN$", "r", stdin);
-	freopen_s(&fp, "CONERR$", "w", stderr);
-	std::cout << "[INFO] 콘솔 창 활성화 - 네트워크 상태 확인 가능" << std::endl;
-}
-
-#define SERVER_IP "127.0.0.1"
-#define SERVER_PORT 9000
-
-
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
 	MSG msg;
 	HACCEL hAccelTable;
-
-	CreateConsole();
-
-	gGameFramework.ConnectToServer(SERVER_IP, SERVER_PORT);
 
 	::LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	::LoadString(hInstance, IDC_PALIRATES, szWindowClass, MAX_LOADSTRING);
@@ -74,7 +51,6 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 		}
 	}
 	gGameFramework.OnDestroy();
-	FreeConsole();
 
 	return((int)msg.wParam);
 }
@@ -183,14 +159,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	}
 	return((INT_PTR)FALSE);
-}
-
-//=================서버=================
-std::string CPlayer::Serialize()
-{
-	std::ostringstream packetStream;
-	packetStream << "PLAYER_DATA," << id << ","
-		<< m_xmf3Position.x << "," << m_xmf3Position.y << "," << m_xmf3Position.z << ","
-		<< state;
-	return packetStream.str();
 }
