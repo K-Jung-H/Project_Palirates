@@ -916,31 +916,7 @@ void CTextureToFullScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandLi
 	PostProcessBaseShader::Render(pd3dCommandList, pCamera);
 }
 
-CEdgeDetectCSShader::CEdgeDetectCSShader()
-{
 
-}
-
-CEdgeDetectCSShader::~CEdgeDetectCSShader()
-{
-
-}
-
-void CEdgeDetectCSShader::CreateResourcesAndUavs(ID3D12Device* pd3dDevice, UINT index, DXGI_FORMAT format)
-{
-	// 결과물 저장을 위한 1개의 텍스처만 관리한다고 가정
-	m_pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 0, 1, 0, 0, 1, 0);
-
-	D3D12_CLEAR_VALUE clearValue = {};
-	clearValue.Format = format;
-
-	m_pTexture->CreateTexture( pd3dDevice, nullptr, 0,RESOURCE_TEXTURE2D, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 
-		1, 1, format, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, &clearValue );
-
-	// UAV 뷰 생성 - 결과물 저장용
-	CDescriptor_Heap::CreateComputeUnorderedAccessViews(pd3dDevice, m_pTexture, 1);
-
-}
 //===============================================================================
 
 CSkinnedAnimationStandardShader::CSkinnedAnimationStandardShader()

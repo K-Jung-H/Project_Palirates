@@ -198,22 +198,6 @@ public:
 
 };
 
-class CEdgeDetectCSShader : public PostProcessBaseShader
-{
-public:
-	CEdgeDetectCSShader();
-	virtual ~CEdgeDetectCSShader();
-
-	// UAV 출력용 리소스 생성
-	void CreateResourcesAndUavs(ID3D12Device* pd3dDevice, UINT index, DXGI_FORMAT format);
-
-	// 추가: Compute Dispatch 실행
-	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList);
-
-	// 결과 렌더링용 Fullscreen Quad
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) override;
-};
-
 //===========================================================================================================
 
 class CSkinnedAnimationStandardShader : public CStandardShader

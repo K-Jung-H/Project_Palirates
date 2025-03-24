@@ -78,11 +78,15 @@ public:
 	int GetComputeSrvRootParameterIndex(int index) const;
 	int GetComputeUavRootParameterIndex(int index) const;
 
-	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
 	void UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* commandList);
-	void UpdateComputeShaderVariables(ID3D12GraphicsCommandList* commandList);
-	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int index);
-	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* commandList, int index);
+	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+
+	void UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+
+	void UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex);
+	
 
 	void ReleaseShaderVariables();
 	void ReleaseUploadBuffers();
