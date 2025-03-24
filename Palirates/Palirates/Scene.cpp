@@ -114,10 +114,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 
-	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel3 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	//CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
 
 	string obj_name_1 = "test_obj_name_1";
 	string obj_name_2 = "test_obj_name_2";
@@ -125,61 +122,47 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CMonsterObject> humanObject_1 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
-	humanObject_1->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 20.0f), 20.0f);
-	humanObject_1->SetScale(30.0f, 30.0f, 30.0f);
-	humanObject_1->Set_Name(obj_name_1);
-	humanObject_1->test_num = 1;
-	obj_manager->Add_Object(humanObject_1);
+	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 2);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
+	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
+	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_1->SetPosition(100.0f, m_pTerrain->Get_Mesh_Height(100.0f, 100.0f), 100.0f);
+	humanObject_1->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
 	
 	//====================================================
 	// 테스트용 코드	
 //	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
-	/*CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
+	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
 	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
 
 	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
 	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
 
 	test_obj->Add_Collider(0.0f);
-	test_obj2->Add_Collider(10.0f);*/
+	test_obj2->Add_Collider(10.0f);
 
 	//====================================================
 
 	name_view = obj_name_2;
-	std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
-	humanObject_2->SetPosition(50.0f, m_pTerrain->Get_Mesh_Height(50.0f, 50.0f), 50.0f);
+	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_2->Set_Name(obj_name_2);
-	humanObject_2->test_num = 2;
-	obj_manager->Add_Object(humanObject_2);
+	humanObject_2->SetPosition(150.0f, m_pTerrain->Get_Mesh_Height(150.0f, 150.0f), 150.0f);
+	humanObject_2->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
+
 
 	name_view = obj_name_3;
-	std::shared_ptr<CMonsterObject> humanObject_3 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel3, 5);
-	humanObject_3->SetPosition(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f);
-	humanObject_3->SetScale(15.0f, 15.0f, 15.0f);
-	humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	XMFLOAT3 tt = { 0.0f, 1.0f, 0.0f };
-	humanObject_3->Rotate(&tt,90.0f);
-	humanObject_3->Set_Name(obj_name_3);
-	humanObject_3->test_num = 3;
-	obj_manager->Add_Object(humanObject_3);
+	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
+	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
+	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
+	humanObject_3->SetPosition(200.0f, m_pTerrain->Get_Mesh_Height(200.0f, 200.0f), 200.0f);
 
-	//float* pfData = new float[2];
-	//pfData[0] = 0.0f;
-	//pfData[1] = 1.0f;
-	//m_ppHierarchicalGameObjects[6] = new CEthanObject(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, 1);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKeys(0, 2);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 0, 0.0f, &pfData[0]);
-	//CAnimationSet* pAnimationSet = m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->m_pAnimationSets->m_pAnimationSets[1];
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetCallbackKey(0, 1, pAnimationSet->m_fLength, &pfData[1]);
-	//CRootMotionCallbackHandler* pRootMotionCallbackHandler = new CRootMotionCallbackHandler();
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetAnimationCallbackHandler(1, pRootMotionCallbackHandler);
-	//m_ppHierarchicalGameObjects[6]->SetRootMotion(true);
-	//m_ppHierarchicalGameObjects[6]->SetPosition(350.0f, m_pTerrain->GetHeight(350.0f, 670.0f), 670.0f);
-	//m_ppHierarchicalGameObjects[6]->Rotate(0.0f, -90.0f, 0.0f);
-	//m_ppHierarchicalGameObjects[6]->m_pSkinnedAnimationController->SetTrackSpeed(0, 0.75f);
+	humanObject_3->Set_Name(name_view);
+	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
 
 	//=====================================================
@@ -211,8 +194,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	Object_Manager::Reserve_Update();
 
-	if (pGargoyleModel)
-		delete pGargoyleModel;
+	if (pHumanModel)
+		delete pHumanModel;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -233,7 +216,6 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		D2D1_RECT_F player_xz = D2D1::RectF(0.0f, 90.0f, 400.0f, 120.0f);
 		D2D1_RECT_F player_state = D2D1::RectF(0.0f, 120.0f, 200.0f, 150.0f);
 		D2D1_RECT_F player_Laststate = D2D1::RectF(0.0f, 150.0f, 400.0f, 180.0f);
-		D2D1_RECT_F mon_debug = D2D1::RectF(0.0f, 180.0f, 400.0f, 210.0f);
 
 		TextBlock* player_pos_text_block_ptr = new TextBlock(design_ptr, L"Player_pos: ", player_pos_text_area);
 		TextBlock* player_normal_text_block_ptr = new TextBlock(design_ptr, L"Player_normal: ", player_normal_text_area);
@@ -241,7 +223,6 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		TextBlock* player_xz_ptr = new TextBlock(design_ptr, L"Player_XZ: : ", player_xz);
 		TextBlock* player_state_ptr = new TextBlock(design_ptr, L"Player_state: : ", player_state);
 		TextBlock* player_Laststate_ptr = new TextBlock(design_ptr, L"Player_LastState: : ", player_Laststate);
-		TextBlock* mon_debug_ptr = new TextBlock(design_ptr, L"Mon_Debug: : ", mon_debug);
 
 		text_ui_manager->Add_TextBlock(player_pos_text_block_ptr);
 		text_ui_manager->Add_TextBlock(player_normal_text_block_ptr);
@@ -249,7 +230,6 @@ void CScene::Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr)
 		text_ui_manager->Add_TextBlock(player_xz_ptr);
 		text_ui_manager->Add_TextBlock(player_state_ptr);
 		text_ui_manager->Add_TextBlock(player_Laststate_ptr);
-		text_ui_manager->Add_TextBlock(mon_debug_ptr);
 
 	}
 }
@@ -270,7 +250,6 @@ void CScene::Update_UI()
 	static wchar_t Player_XZ_Buffer[100];
 	static wchar_t Player_state_Buffer[100];
 	static wchar_t Player_Laststate_Buffer[100];
-	static wchar_t Mon_debug_Buffer[100];
 
 	if (text_ui_manager)
 	{
@@ -283,23 +262,6 @@ void CScene::Update_UI()
 		std::wstring stateStr = stateToStringMap[currentState];  
 		State LastState = m_pPlayer->GetStateMachine()->Get_LastState();
 		std::wstring LastStateStr = stateToStringMap[LastState];
-		std::vector<std::shared_ptr<CGameObject>>* objectList = obj_manager->Get_Object_List(Object_Type::skinned);
-		std::vector<State> stateArray(objectList->size());
-		size_t index = 0;
-		for (auto& obj : *objectList) {  
-			std::shared_ptr<CMonsterObject> gargoyle = std::dynamic_pointer_cast<CMonsterObject>(obj);
-			if (gargoyle) {
-				std::unique_ptr<MonsterStateMachine>& stateMachine = gargoyle->GetStateMachine();
-				stateArray[index] = stateMachine->Get_State();
-			}
-			index++;
-			if (index == 1) {
-				//xmf3Position = gargoyle->GetPosition();
-			}
-		}
-		std::wstring M1StateStr = stateToStringMap[stateArray[0]];
-		std::wstring M2StateStr = stateToStringMap[stateArray[1]];
-		std::wstring M3StateStr = stateToStringMap[stateArray[2]];
 
 
 		_stprintf_s(Player_pos_Buffer, 100, _T("Player_pos >>%.2f,%.2f,%.2f"), xmf3Position.x, xmf3Position.y, xmf3Position.z);
@@ -308,7 +270,6 @@ void CScene::Update_UI()
 		_stprintf_s(Player_XZ_Buffer, 100, _T("Player_XZ  >> %.2f,%.2f"), player_x, player_z);
 		_stprintf_s(Player_state_Buffer, 100, _T("Player_state  >> %s"), stateStr.c_str());
 		_stprintf_s(Player_Laststate_Buffer, 100, _T("Player_LastState  >> %s"), LastStateStr.c_str());
-		_stprintf_s(Mon_debug_Buffer, 100, _T("Mon_State  >> %s %s %s"), M1StateStr.c_str(), M2StateStr.c_str(), M3StateStr.c_str());
 
 		text_ui_manager->UpdateTextBlock(0, Player_pos_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(1, Player_normal_Buffer, NULL, NULL);
@@ -316,7 +277,6 @@ void CScene::Update_UI()
 		text_ui_manager->UpdateTextBlock(3, Player_XZ_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(4, Player_state_Buffer, NULL, NULL);
 		text_ui_manager->UpdateTextBlock(5, Player_Laststate_Buffer, NULL, NULL);
-		text_ui_manager->UpdateTextBlock(6, Mon_debug_Buffer, NULL, NULL);
 	}
 }
 
@@ -633,6 +593,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
+			m_pPlayer->Animate_test();
+			m_pPlayer->FallingTimer_Reset();
 		}		break;
 
 		default:

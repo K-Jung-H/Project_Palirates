@@ -24,8 +24,6 @@
 #include <vector>
 
 // 추가한 헤더
-#include <iostream>
-#include <sstream>
 #include <cwchar>  // wcsrchr 사용을 위한 헤더
 #include <cstring> // wcstombs 함수 사용을 위한 헤더
 #include <cstdio>

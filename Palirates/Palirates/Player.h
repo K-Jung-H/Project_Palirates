@@ -55,15 +55,19 @@ protected:
 
 	float stateElapsedTime{ 0.0f };
 
+
+	bool Anime_test_FallingLoop = false;
+	float m_fFallingTimer = 0.0f;
+
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
 
-	//=================Â¼Â­Â¹Ã¶=================
+	//=================¼­¹ö=================
 	int id;  
 	int state;
 
 private:
-	std::unique_ptr<PlayerStateMachine> m_StateMachine;
+	std::unique_ptr<StateMachine> m_StateMachine;
 
 public:
 	CPlayer();
@@ -98,6 +102,7 @@ public:
 
 //	virtual void Animate(float fTimeElapsed);
 
+	virtual void Animate_test();
 
 	virtual void Update(float fTimeElapsed);
 
@@ -119,7 +124,10 @@ public:
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
-	std::unique_ptr<PlayerStateMachine>& GetStateMachine() { return m_StateMachine; }
+
+	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
+
+	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 
@@ -132,6 +140,7 @@ public:
 	std::vector<float> targetWeights;
 
 
+	//=================¼­¹ö=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
 		: id(playerId), state(startState)
 	{

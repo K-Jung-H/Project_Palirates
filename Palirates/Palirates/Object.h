@@ -6,7 +6,6 @@
 
 #include "Mesh.h"
 #include "Camera.h"
-#include "Object_StateMachine.h"
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -431,37 +430,6 @@ public:
 	void Bone_Info();
 	std::string CAnimationSets::GetBoneName(int index);
 	void ClassifyBones();
-
-	CAnimationSets* Clone();
-	//virtual CAnimationSets* Clone() {
-	//	CAnimationSets* pNewSet = new CAnimationSets(m_nAnimationSets);
-	//	pNewSet->m_pAnimationSet_list = m_pAnimationSet_list;
-
-	//	for (int i = 0; i < m_nAnimationSets; i++) {
-	//		pNewSet->m_pAnimationSet_list[i] = m_pAnimationSet_list[i]; // ���� ���� ����
-	//	}
-
-	//	return pNewSet;
-	//}
-	/*virtual CAnimationSets* Clone() {
-		CAnimationSets* pNewSet = new CAnimationSets(m_nAnimationSets);
-
-		pNewSet->m_pAnimationSet_list = new CAnimationSet * [m_nAnimationSets];
-		for (int i = 0; i < m_nAnimationSets; i++) {
-			pNewSet->m_pAnimationSet_list[i] = new CAnimationSet(*m_pAnimationSet_list[i]); 
-		}
-
-		pNewSet->m_vecUpperBodyBoneIndices = m_vecUpperBodyBoneIndices;
-		pNewSet->m_vecLowerBodyBoneIndices = m_vecLowerBodyBoneIndices;
-		pNewSet->m_nBoneFrames = m_nBoneFrames;
-
-		pNewSet->m_ppBoneFrameCaches.reserve(m_ppBoneFrameCaches.size());
-		for (CGameObject* pBone : m_ppBoneFrameCaches) {
-			pNewSet->m_ppBoneFrameCaches.push_back(new CGameObject(*pBone)); 
-		}
-
-		return pNewSet;
-	}*/
 };
 
 class CAnimationTrack
@@ -518,11 +486,6 @@ public:
 
 public:
 	void PrepareSkinning();
-
-	/*void CopyAnimationSets() const {
-		CAnimationSets* pClone = m_pAnimationSets->Clone();
-		m_pAnimationSets = pClone;
-	}*/
 };
 
 class CAnimationController 
@@ -575,19 +538,9 @@ public:
 
 	virtual void OnRootMotion(CGameObject* pRootGameObject) { }
 	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
-
-	XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };
-	XMFLOAT3 m_xmf3PrevHipsPosition{ 0.0f, 0.0f, 0.0f };
 };
 
 //==================================================================================
-#define OBJECT_TPYE_MAIN_PLAYER		0x01
-#define OBJECT_TPYE_PLAYER		0x02
-#define OBJECT_TPYE_MONSTER		0x04
-//#define OBJECT_TPYE_PLAYER		0x08
-//#define OBJECT_TPYE_PLAYER		0x10
-//#define OBJECT_TPYE_PLAYER		0x20
-//#define OBJECT_TPYE_PLAYER		0x40
 
 class CHeightMapTerrain;
 
@@ -616,9 +569,6 @@ public:
 	float m_fRotationSpeed;
 
 	int n_Animation = 0;
-
-	int Object_type = 0;
-
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -738,15 +688,12 @@ public:
 
 	CAnimationController* GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
 
-	XMFLOAT3 RootPosition{ 0.0f, 0.0f, 0.0f };
-
-	std::vector<float> prevWeights;
-	std::vector<float> targetWeights;
 	public:
 	// Using CHeightMapTerrain
 	virtual int Get_Tile(float x, float z) { return -1; };
 	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
 	virtual void Check_Culling(CCamera* pCamera) {};
+
 };
 
 //==================================================================================
@@ -848,15 +795,3 @@ public:
 	virtual ~CHumanObject();
 };
 
-class CMonsterObject : public CGameObject
-{
-public:
-	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
-	virtual ~CMonsterObject();
-	virtual void Animate(float fTimeElapsed);
-	std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
-	int test_num{ 0 };
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-private:
-	std::unique_ptr<MonsterStateMachine> m_StateMachine;
-};
