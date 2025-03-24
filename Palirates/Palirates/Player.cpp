@@ -162,14 +162,12 @@ void CPlayer::Update(float fTimeElapsed)
 	XMFLOAT3 look = GetLook();   
 	XMFLOAT3 right = GetRight();
 
-	// 5. XZ 속도를 정규화 (크기를 1로)
 	XMFLOAT3 velocityXZ = XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z);
 	float velocityLength = Vector3::Length(velocityXZ);
 	XMFLOAT3 normalizedVelocity = velocityLength > 0.0f ? Vector3::Normalize(velocityXZ) : XMFLOAT3(0, 0, 0);
 
-	// 6. Look 및 Right 벡터를 기준으로 moveZ, moveX 값 계산 (-1 ~ 1 범위)
-	moveZ = Vector3::DotProduct(normalizedVelocity, look);  // 전후 움직임
-	moveX = Vector3::DotProduct(normalizedVelocity, right); // 좌우 움직임
+	moveZ = Vector3::DotProduct(normalizedVelocity, look);  
+	moveX = Vector3::DotProduct(normalizedVelocity, right); 
 
 	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
 
@@ -324,8 +322,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSkinnedAnimationController->SetCallbackKey(1, 0.5f, _T("Footstep02"));
 	m_pSkinnedAnimationController->SetCallbackKey(2, 0.9f, _T("Footstep03"));
 #else
-	m_pSkinnedAnimationController->SetCallbackKey(1, 0, 0.2f, _T("Sound/Footstep01.wav"));
-	m_pSkinnedAnimationController->SetCallbackKey(1, 1, 0.5f, _T("Sound/Footstep02.wav"));
+//	m_pSkinnedAnimationController->SetCallbackKey(1, 0, 0.2f, _T("Sound/Footstep01.wav"));
+//	m_pSkinnedAnimationController->SetCallbackKey(1, 1, 0.5f, _T("Sound/Footstep02.wav"));
 //	m_pSkinnedAnimationController->SetCallbackKey(1, 2, 0.39f, _T("Sound/Footstep03.wav"));
 #endif
 	CAnimationCallbackHandler *pAnimationCallbackHandler = new CSoundCallbackHandler();
@@ -337,7 +335,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetCameraUpdatedContext(pContext);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Mesh_Height(25.0f, 25.0f, last_tile_ptr), 25.0f));
+	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
 	if (pAngrybotModel) delete pAngrybotModel;
@@ -406,7 +404,7 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Mesh_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr) + 0.0f;
+	float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
 
 	if (xmf3PlayerPosition.y < fHeight)
 	{
@@ -439,7 +437,7 @@ void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)
 	int z = (int)(xmf3CameraPosition.z / xmf3Scale.z);
 	bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Mesh_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad, last_tile_ptr) + 5.0f;
+	float fHeight = pTerrain->Get_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad, last_tile_ptr) + 5.0f;
 
 
 	if (xmf3CameraPosition.y <= fHeight)
@@ -458,28 +456,6 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 {
 	if (dwDirection)
 	{
-		//float fSpeed = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-
-		//char debugMsg[256];
-		//sprintf_s(debugMsg, "Current Speed: %.2f\n", fSpeed);  
-		//OutputDebugStringA(debugMsg);  
-
-		//const float maxSpeed = 100.0f; // 최대 속도 
-		//const float minSpeed = 0.0f;  // 최소 속도 
-
-		//// 속도 비율을 0과 1 사이로 정규화
-		//float speedRatio = (fSpeed - minSpeed) / (maxSpeed - minSpeed);
-		//speedRatio = max(0.0f, min(speedRatio, 1.0f)); 
-
-		//float weight0 = 1.0f - speedRatio; // idle 가중치
-		//float weight1 = speedRatio;        // 달리기 가중치
-
-		//m_pSkinnedAnimationController->SetTrackWeight(0, weight0); // idle
-		//m_pSkinnedAnimationController->SetTrackWeight(1, weight1); // 달리기
-
-		//m_pSkinnedAnimationController->SetTrackEnable(0, true);
-		//m_pSkinnedAnimationController->SetTrackEnable(1, true);
-		//m_pSkinnedAnimationController->SetTrackEnable(2, false);
 	}
 
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
