@@ -10,7 +10,7 @@
 // CPlayer
 
 CPlayer::CPlayer() 
-	: m_StateMachine(std::make_unique<StateMachine>(this))
+	: m_StateMachine(std::make_unique<PlayerStateMachine>(this))
 {
 	m_pCamera = NULL;
 
@@ -143,11 +143,6 @@ void CPlayer::Rotate(float x, float y, float z)
 	m_xmf3Up = Vector3::CrossProduct(m_xmf3Look, m_xmf3Right, true);
 }
 
-void CPlayer::Animate_test()
-{
-	if (Anime_test_FallingLoop) Anime_test_FallingLoop = false;
-	else Anime_test_FallingLoop = true;
-}
 
 void CPlayer::Update(float fTimeElapsed)
 {
@@ -287,10 +282,11 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext) : CPlayer()
 {
+	Object_type = OBJECT_TPYE_MAIN_PLAYER;
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	  
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test.bin", NULL);
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test_ani8.bin", NULL);
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
@@ -317,6 +313,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	// Once type Setting
 	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = 0;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = 0;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = 0;
 
 	m_pSkinnedAnimationController->SetCallbackKeys(1, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -470,10 +468,11 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (Anime_test_FallingLoop)
+		/*if (Anime_test_FallingLoop)
 			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
 		else
-			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
+		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 	}
 
 	if (On_Ground)
@@ -498,45 +497,6 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
-
-
-	if (m_pSkinnedAnimationController)
-	{
-
-		if (Anime_test_FallingLoop) {
-			if (m_fFallingTimer < 0.0f) {
-
-				m_fFallingTimer += fTimeElapsed;
-
-				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); 
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
-
-	
-				float weight2 = m_fFallingTimer / 1.0f; 
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight2);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-			}
-			else {
-
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, 0.5f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_BACKWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, 0.5f);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-
-				
-			}
-		}
-		else {
-		
-		}
-	}
 
 }
 
