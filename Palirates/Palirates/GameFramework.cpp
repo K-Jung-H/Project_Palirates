@@ -64,7 +64,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 70, 0);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 70, 10);
 	//CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
 	
 
@@ -417,7 +417,7 @@ void CGameFramework::OnDestroy()
 {
 	Release_Scenes();
 
-	delete PostProcessing_shader;
+	delete MRT_shader;
 
 	::CloseHandle(m_hFenceEvent);
 
@@ -507,20 +507,34 @@ void CGameFramework::Build_Scenes()
 
 	//==========================================
 	// Multi - Render Target Shader
-	PostProcessing_shader = new CTextureToFullScreenShader();
-	PostProcessing_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
+	MRT_shader = new G_BufferMerger_Shader();
+	MRT_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
 
-	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
+	MRT_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
 
 
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 
 
 	
-	scene_manager->Set_Shader(PostProcessing_shader);
+	scene_manager->Set_Shader(MRT_shader);
+
+	// 후처리 담당 전용 루트 시그니처 만들기 static으로 선언해서 부모객체에 박아놓기.
+	Post_ComputeShader::CreateComputeRootSignature(m_pd3dDevice);
+	
+	for (UINT i = 0; i < N_SwapChainBuffers; ++i)
+	{
+		Post_ComputeShader::CreateBackBufferSRV(m_pd3dDevice, ptr_SwapChainBackBuffer_List[i], i, DXGI_FORMAT_R8G8B8A8_UNORM);
+	}
+
+	post_shader = new CEdgeDetectCSShader();
+	post_shader->CreateShader(m_pd3dDevice);
+	
+	fullscreen_shader = new CTextureToFullScreenShader();
+	fullscreen_shader->CreateShader(m_pd3dDevice);
 	//==========================================
 
 
@@ -802,9 +816,29 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 
+	// 커멘트 리스트 초기화할 떄마다 필수 단계 - 함수화 할 것
+	{
+		m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
+	}
 
-	scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
-	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+	CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
+
+	post_shader->OnPrepareRender(Active_CommandList);
+	post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
+	post_shader->Dispatch(Active_CommandList);
+
+	SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+	fullscreen_shader->OnPrepareRender(Active_CommandList);
+	fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
+	fullscreen_shader->Render(Active_CommandList);
+
+	SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+
+	//scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
+	//scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 
 	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);

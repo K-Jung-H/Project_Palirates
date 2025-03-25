@@ -161,20 +161,15 @@ void CTexture::UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCo
 	}
 	else if (!m_pnComputeUavRootParameterIndices.empty())
 	{
-		pd3dCommandList->SetComputeRootDescriptorTable(
-			m_pnComputeUavRootParameterIndices[0],
-			m_pd3dComputeUavRootParameterGpuDescriptorHandles[0]);
+		pd3dCommandList->SetComputeRootDescriptorTable(m_pnComputeUavRootParameterIndices[0], m_pd3dComputeUavRootParameterGpuDescriptorHandles[0]);
 	}
 }
 
 void CTexture::UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex)
 {
-	if (m_pnComputeUavRootParameterIndices[paramIndex] != -1 &&
-		m_pd3dComputeUavRootParameterGpuDescriptorHandles[textureIndex].ptr != 0)
+	if (m_pnComputeUavRootParameterIndices[paramIndex] != -1 && m_pd3dComputeUavRootParameterGpuDescriptorHandles[textureIndex].ptr != 0)
 	{
-		pd3dCommandList->SetComputeRootDescriptorTable(
-			m_pnComputeUavRootParameterIndices[paramIndex],
-			m_pd3dComputeUavRootParameterGpuDescriptorHandles[textureIndex]);
+		pd3dCommandList->SetComputeRootDescriptorTable( m_pnComputeUavRootParameterIndices[paramIndex], m_pd3dComputeUavRootParameterGpuDescriptorHandles[textureIndex]);
 	}
 }
 

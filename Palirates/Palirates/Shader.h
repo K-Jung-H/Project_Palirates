@@ -181,11 +181,11 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRtvCPUDescriptorHandle(UINT nIndex) { return(m_pd3dRtvCPUDescriptorHandles[nIndex]); }
 };
 
-class CTextureToFullScreenShader : public PostProcessBaseShader
+class G_BufferMerger_Shader : public PostProcessBaseShader
 {
 public:
-	CTextureToFullScreenShader();
-	virtual ~CTextureToFullScreenShader();
+	G_BufferMerger_Shader();
+	virtual ~G_BufferMerger_Shader();
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);

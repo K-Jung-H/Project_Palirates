@@ -78,10 +78,10 @@
     <ClInclude Include="Particle.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Shader_Compute.h">
+    <ClInclude Include="Descriptor_Heap.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Descriptor_Heap.h">
+    <ClInclude Include="Shader_Compute.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -140,10 +140,10 @@
     <ClCompile Include="Particle.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Shader_Compute.cpp">
+    <ClCompile Include="Descriptor_Heap.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Descriptor_Heap.cpp">
+    <ClCompile Include="Shader_Compute.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -166,5 +166,6 @@
     <FxCompile Include="Particle_CS.hlsl" />
     <FxCompile Include="Particle.hlsl" />
     <FxCompile Include="Post_Shaders.hlsl" />
+    <FxCompile Include="Post_Compute_Shaders.hlsl" />
   </ItemGroup>
 </Project>

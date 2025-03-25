@@ -11,7 +11,6 @@ void CDescriptor_Heap::SetDescriptorHeaps(ID3D12GraphicsCommandList* pd3dCommand
 }
 
 // Creates the descriptor heap for CBV, SRV, and UAV
-// void CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews)
 void CDescriptor_Heap::CreateCbvSrvUavDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews, int nUnorderedAccessViews)
 {
     CDescriptor_Heap* instance = Get_Instance();

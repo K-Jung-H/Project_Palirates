@@ -9,6 +9,7 @@
 #include "Descriptor_Heap.h"
 
 #include "Shader.h"
+#include "Shader_Compute.h"
 #include "Player.h"
 
 #define MAX_LIGHTS						16 
