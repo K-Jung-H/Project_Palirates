@@ -29,7 +29,12 @@ void Server::AcceptClients()
         clients[clientId] = clientSocket;
         sceneManager.addScene(clientId);
 
+        std::cout << "[DEBUG] 클라이언트 " << clientId << " 소켓 수락됨" << std::endl;
+        std::cout << "[INFO] 클라이언트 " << clientId << " 현재 접속 수: " << clients.size() << std::endl;
+
         logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
+
+        std::cout << "[DEBUG] 클라이언트 " << clientId << " 스레드 시작" << std::endl;
         std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
     }
 }
@@ -44,20 +49,27 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
     {
         memset(buffer, 0, sizeof(buffer));
         int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+
         std::cout << "[DEBUG] recv() 호출됨, 받은 바이트 수: " << bytesReceived << std::endl;
+
+        if (bytesReceived <= 0)
+        {
+            std::cout << "[DEBUG] 수신 실패 또는 연결 종료, 에러 코드: " << WSAGetLastError() << std::endl;
+        }
 
         if (bytesReceived > 0)
         {
             buffer[bytesReceived] = '\0';
             std::string packet(buffer);
-            logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
+            logger.Log("[DEBUG] 수신된 데이터: " + packet);
 
             float x, y, z;
-            int state;
+            int id, state;
 
-            if (sscanf_s(packet.c_str(), "MOVE,%f,%f,%f,%d", &x, &y, &z, &state) == 4)
+            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &id, &x, &y, &z, &state) == 5)
             {
                 Scene* scene = sceneManager.getScene(clientId);
+                scene->updatePlayerPosition(id, x, y, z, state);
                 if (scene)
                 {
                     scene->updatePlayerPosition(clientId, x, y, z, state);
@@ -80,15 +92,20 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료");
             closesocket(clientSocket);
             clients.erase(clientId);
+            std::cout << "[INFO] 클라이언트 " << clientId << " 연결 종료. 현재 접속 수: " << clients.size() << std::endl;
             break;
         }
         else
         {
+            std::cout << "[DEBUG] 수신 실패 또는 연결 종료, 에러 코드: " << WSAGetLastError() << std::endl;
+
             logger.Log("recv() 오류 발생: " + std::to_string(WSAGetLastError()));
             break;
         }
     }
 }
+
+
 void Server::BroadcastPacket(const std::string& packet, int senderId)
 {
     for (const auto& [id, socket] : clients)
@@ -106,6 +123,7 @@ void Server::BroadcastPacket(const std::string& packet, int senderId)
             }
         }
     }
+    std::cout << "[INFO] 현재 접속 중인 클라이언트 수: " << clients.size() << std::endl;
 }
 
 Server::~Server()
@@ -136,6 +154,7 @@ int main()
 
 	return 0;
 }
+
 
 //bool Server::ValidatePosition(float x, float y, float z)
 //{
