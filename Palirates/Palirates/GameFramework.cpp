@@ -858,6 +858,9 @@ void CGameFramework::FrameAdvance()
 #endif
 
 	// ====================== [6] Swap & FPS ======================
+
+	SendPacket();
+
 	MoveToNextFrame();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
@@ -910,12 +913,24 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 void CGameFramework::SendPacket()
 {
+	std::cout << "[DEBUG] SendPacket() 실행" << std::endl;
+
 	std::lock_guard<std::mutex> lock(networkMutex);
 
-	if (!serverSocket) return;
+	if (!serverSocket)
+	{
+		std::cout << "[DEBUG] serverSocket이 유효하지 않음" << std::endl;
+		return;
+	}
 
 	CPlayer* player = GetPlayer();
-	if (!player) return;
+	std::cout << "[DEBUG] GetPlayer() 반환 주소: " << player << std::endl;
+
+	if (!player)
+	{
+		std::cout << "[DEBUG] player 객체가 null입니다!" << std::endl;
+		return;
+	}
 
 	DirectX::XMFLOAT3 pos = player->GetPosition();
 	int state = player->GetState();
@@ -928,14 +943,16 @@ void CGameFramework::SendPacket()
 
 	std::string packet = packetStream.str();
 
+	std::cout << "[DEBUG] 전송할 패킷 내용: " << packet << std::endl;
+
 	int bytesSent = send(serverSocket, packet.c_str(), packet.size(), 0);
 	if (bytesSent == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] send() 실패: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] send 실패: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
-		std::cout << "[INFO] 서버로 패킷 전송 완료: " << packet << std::endl;
+		std::cout << "[INFO] " << bytesSent << "바이트 전송 완료 (" << packet << ")" << std::endl;
 	}
 }
 
@@ -981,8 +998,12 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
+	std::cout << "[INFO] 네트워크 스레드 시작" << std::endl;
+
 	while (isRunning)
 	{
+		std::cout << "[DEBUG] 네트워크 루프 반복 중..." << std::endl;
+
 		SendPacket();
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 
@@ -991,7 +1012,7 @@ void CGameFramework::NetworkLoop()
 
 		if (bytesReceived > 0)
 		{
-			buffer[bytesReceived] = '\0'; 
+			buffer[bytesReceived] = '\0';
 			std::string receivedData(buffer);
 			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
 		}
