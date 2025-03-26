@@ -143,7 +143,7 @@ public:
 
 //===========================================================================================================
 
-class CPostProcessingShader : public CStandardShader
+class PostProcessBaseShader : public CStandardShader
 {
 protected:
 	ID3D12RootSignature* m_pd3dGraphicsRootSignature = NULL;
@@ -151,8 +151,8 @@ protected:
 	CTexture* m_pTexture = NULL;
 
 public:
-	CPostProcessingShader();
-	virtual ~CPostProcessingShader();
+	PostProcessBaseShader();
+	virtual ~PostProcessBaseShader();
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int n);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int n);
@@ -181,11 +181,11 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRtvCPUDescriptorHandle(UINT nIndex) { return(m_pd3dRtvCPUDescriptorHandles[nIndex]); }
 };
 
-class CTextureToFullScreenShader : public CPostProcessingShader
+class G_BufferMerger_Shader : public PostProcessBaseShader
 {
 public:
-	CTextureToFullScreenShader();
-	virtual ~CTextureToFullScreenShader();
+	G_BufferMerger_Shader();
+	virtual ~G_BufferMerger_Shader();
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);

@@ -74,7 +74,7 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR *pszFileName, LPCSTR 
 	DebugOutput("\n[Shader Compilation] Function: ", pszShaderName);
 	DebugOutput("\n[Shader Compilation] Profile: ", pszShaderProfile);
 
-	// 📌 오류 발생 시 디버그 창에 출력
+	//  오류 발생 시 디버그 창에 출력
 	if (pd3dErrorBlob)
 	{
 		DebugOutput("\n[Shader Compilation Error]\n");
@@ -591,18 +591,18 @@ void CStandard_Instance_Shader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dC
 
 //===============================================================================
 
-CPostProcessingShader::CPostProcessingShader()
+PostProcessBaseShader::PostProcessBaseShader()
 {
 }
 
-CPostProcessingShader::~CPostProcessingShader()
+PostProcessBaseShader::~PostProcessBaseShader()
 {
 	if (m_pTexture) delete m_pTexture;
 
 	if (m_pd3dRtvCPUDescriptorHandles) delete[] m_pd3dRtvCPUDescriptorHandles;
 }
 
-D3D12_INPUT_LAYOUT_DESC CPostProcessingShader::CreateInputLayout(int n)
+D3D12_INPUT_LAYOUT_DESC PostProcessBaseShader::CreateInputLayout(int n)
 {
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	d3dInputLayoutDesc.pInputElementDescs = NULL;
@@ -611,7 +611,7 @@ D3D12_INPUT_LAYOUT_DESC CPostProcessingShader::CreateInputLayout(int n)
 	return(d3dInputLayoutDesc);
 }
 
-D3D12_DEPTH_STENCIL_DESC CPostProcessingShader::CreateDepthStencilState(int n)
+D3D12_DEPTH_STENCIL_DESC PostProcessBaseShader::CreateDepthStencilState(int n)
 {
 	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
 	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
@@ -634,7 +634,7 @@ D3D12_DEPTH_STENCIL_DESC CPostProcessingShader::CreateDepthStencilState(int n)
 }
 
 
-D3D12_BLEND_DESC CPostProcessingShader::CreateBlendState(int n)
+D3D12_BLEND_DESC PostProcessBaseShader::CreateBlendState(int n)
 {
 	D3D12_BLEND_DESC d3dBlendDesc;
 	::ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
@@ -655,7 +655,7 @@ D3D12_BLEND_DESC CPostProcessingShader::CreateBlendState(int n)
 	return(d3dBlendDesc);
 }
 
-ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
+ID3D12RootSignature* PostProcessBaseShader::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
 {
 	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
 	{
@@ -731,17 +731,25 @@ ID3D12RootSignature* CPostProcessingShader::CreateGraphicsRootSignature(ID3D12De
 	return(pd3dGraphicsRootSignature);
 }
 
-D3D12_SHADER_BYTECODE CPostProcessingShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE PostProcessBaseShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VSPostProcessing", "vs_5_1", ppd3dShaderBlob));
+	D3D12_SHADER_BYTECODE d3dShaderByteCode;
+	d3dShaderByteCode.BytecodeLength = 0;
+	d3dShaderByteCode.pShaderBytecode = NULL;
+
+	return(d3dShaderByteCode);
 }
 
-D3D12_SHADER_BYTECODE CPostProcessingShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE PostProcessBaseShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PSPostProcessing", "ps_5_1", ppd3dShaderBlob));
+	D3D12_SHADER_BYTECODE d3dShaderByteCode;
+	d3dShaderByteCode.BytecodeLength = 0;
+	d3dShaderByteCode.pShaderBytecode = NULL;
+
+	return(d3dShaderByteCode);
 }
 
-void CPostProcessingShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
+void PostProcessBaseShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
 	m_nPipelineStates = 1;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
@@ -751,7 +759,7 @@ void CPostProcessingShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSig
 }
 
 
-void CPostProcessingShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState)
+void PostProcessBaseShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState)
 {
 	ID3DBlob* pd3dVertexShaderBlob = NULL, * pd3dPixelShaderBlob = NULL, * pd3dGeometryShaderBlob = NULL;
 
@@ -786,9 +794,8 @@ void CPostProcessingShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice
 	if (d3dPipelineStateDesc.InputLayout.pInputElementDescs) delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
-void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle)
+void PostProcessBaseShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle)
 {
-	// m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1);
 	m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1, 0, 0, nRenderTargets, 0, 0);
 
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM, { 1.0f, 1.0f, 1.0f, 1.0f } };
@@ -801,13 +808,7 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	//CScene::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX); 
-	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX);
-
-//	m_pTexture->SetGraphicsSrvRootParameter(0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX, 0, nRenderTargets);
-
-
-
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX);
 
 	
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
@@ -827,7 +828,7 @@ void CPostProcessingShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 	}
 }
 
-void CPostProcessingShader::Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle)
+void PostProcessBaseShader::Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle)
 {
 	int nResources = m_pTexture->GetTextures();
 	D3D12_CPU_DESCRIPTOR_HANDLE* pd3dAllRtvCPUHandles = new D3D12_CPU_DESCRIPTOR_HANDLE[nRenderTargets + nResources];
@@ -851,7 +852,7 @@ void CPostProcessingShader::Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList
 	if (pd3dAllRtvCPUHandles) delete[] pd3dAllRtvCPUHandles;
 }
 
-void CPostProcessingShader::OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCommandList)
+void PostProcessBaseShader::OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	int nResources = m_pTexture->GetTextures();
 	for (int i = 0; i < nResources; i++)
@@ -860,7 +861,7 @@ void CPostProcessingShader::OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCo
 	}
 }
 
-void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+void PostProcessBaseShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
 	if (m_pd3dGraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
@@ -876,7 +877,7 @@ void CPostProcessingShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 
 }
 
-void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void PostProcessBaseShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_pTexture) m_pTexture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 
@@ -886,42 +887,43 @@ void CPostProcessingShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, C
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CTextureToFullScreenShader::CTextureToFullScreenShader()
+G_BufferMerger_Shader::G_BufferMerger_Shader()
 {
 }
 
-CTextureToFullScreenShader::~CTextureToFullScreenShader()
+G_BufferMerger_Shader::~G_BufferMerger_Shader()
 {
 	ReleaseShaderVariables();
 }
 
-D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE G_BufferMerger_Shader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
 }
 
-D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE G_BufferMerger_Shader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
 }
 
-void CTextureToFullScreenShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void G_BufferMerger_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	CPostProcessingShader::CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	PostProcessBaseShader::CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 
-void CTextureToFullScreenShader::ReleaseShaderVariables()
-{
-}
-
-void CTextureToFullScreenShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+void G_BufferMerger_Shader::ReleaseShaderVariables()
 {
 }
 
-void CTextureToFullScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void G_BufferMerger_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
 {
-	CPostProcessingShader::Render(pd3dCommandList, pCamera);
 }
+
+void G_BufferMerger_Shader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	PostProcessBaseShader::Render(pd3dCommandList, pCamera);
+}
+
 
 //===============================================================================
 

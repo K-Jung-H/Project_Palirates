@@ -11,7 +11,6 @@ void CDescriptor_Heap::SetDescriptorHeaps(ID3D12GraphicsCommandList* pd3dCommand
 }
 
 // Creates the descriptor heap for CBV, SRV, and UAV
-// void CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews)
 void CDescriptor_Heap::CreateCbvSrvUavDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews, int nUnorderedAccessViews)
 {
     CDescriptor_Heap* instance = Get_Instance();
@@ -105,7 +104,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE CDescriptor_Heap::CreateConstantBufferView(ID3D12Dev
 // Creates shader resource views for a texture
 // Creates a more than one shader resource view
 // Creates SRVs and binds to the root signature. [Root Signature Binding: O]
-void CDescriptor_Heap::CreateShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
+void CDescriptor_Heap::CreateGraphicsShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex)
 {
     CDescriptor_Heap* instance = Get_Instance();
 
@@ -214,7 +213,8 @@ void CDescriptor_Heap::CreateComputeShaderResourceViews(ID3D12Device* pd3dDevice
     }
 }
 
-void CDescriptor_Heap::CreateComputeUnorderedAccessViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex)
+
+void CDescriptor_Heap::CreateComputeUnorderedAccessViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterIndex, UINT nHandleStartIndex)
 {
     CDescriptor_Heap* instance = Get_Instance();
 
@@ -222,6 +222,7 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessViews(ID3D12Device* pd3dDevic
     instance->UavGPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * nDescriptorHeapIndex);
 
     int nTextures = pTexture->GetTextures();
+
     for (int i = 0; i < nTextures; ++i)
     {
         ID3D12Resource* pResource = pTexture->GetResource(i);
@@ -236,7 +237,11 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessViews(ID3D12Device* pd3dDevic
             instance->UavGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
         }
     }
+
+    // ✔️ 루트 파라미터 인덱스 저장 (핸들 인덱스도 같이 전달)
+    pTexture->SetComputeUavRootParameter(0, nRootParameterIndex, nHandleStartIndex, nTextures);
 }
+
 
 void CDescriptor_Heap::CreateComputeShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nTextureIndex, UINT nHandleIndex, UINT nDescriptorHeapIndex, UINT nDescriptors)
 {

@@ -687,10 +687,10 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
 
-	CDescriptor_Heap::SetDescriptorHeaps(pd3dCommandList, 1);
+//	CDescriptor_Heap::SetDescriptorHeaps(pd3dCommandList, 1);
+//	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 
 
-	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->Update_PreRender_ShaderVariables(pd3dCommandList);
 
 	//씬의 객체들 프러스텀 컬링

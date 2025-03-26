@@ -15,34 +15,6 @@ cbuffer cb_Post_Camera : register(b0)
 //==================================================================
 
 
-float4 VSPostProcessing(uint nVertexID : SV_VertexID) : SV_POSITION
-{
-    if (nVertexID == 0)
-        return (float4(-1.0f, +1.0f, 0.0f, 1.0f));
-    if (nVertexID == 1)
-        return (float4(+1.0f, +1.0f, 0.0f, 1.0f));
-    if (nVertexID == 2)
-        return (float4(+1.0f, -1.0f, 0.0f, 1.0f));
-
-    if (nVertexID == 3)
-        return (float4(-1.0f, +1.0f, 0.0f, 1.0f));
-    if (nVertexID == 4)
-        return (float4(+1.0f, -1.0f, 0.0f, 1.0f));
-    if (nVertexID == 5)
-        return (float4(-1.0f, -1.0f, 0.0f, 1.0f));
-
-    return (float4(0, 0, 0, 0));
-}
-
-float4 PSPostProcessing(float4 position : SV_POSITION) : SV_Target
-{
-    return (float4(0.0f, 0.0f, 0.0f, 1.0f));
-}
-
-
-//==================================================================
-
-
 struct VS_TEXTURED_SCREEN_RECT_OUTPUT
 {
     float4 position : SV_POSITION;
@@ -131,3 +103,51 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     return cColor;
     
     }
+
+//=====================================================================
+
+Texture2D<float4> Screen_Texture: register(t0);
+
+VS_TEXTURED_SCREEN_RECT_OUTPUT VS_FullScreen(uint nVertexID : SV_VertexID)
+{
+    VS_TEXTURED_SCREEN_RECT_OUTPUT output = (VS_TEXTURED_SCREEN_RECT_OUTPUT) 0;
+
+    if (nVertexID == 0)
+    {
+        output.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+        output.uv = float2(0.0f, 0.0f);
+    }
+    else if (nVertexID == 1)
+    {
+        output.position = float4(+1.0f, +1.0f, 0.0f, 1.0f);
+        output.uv = float2(1.0f, 0.0f);
+    }
+    else if (nVertexID == 2)
+    {
+        output.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+        output.uv = float2(1.0f, 1.0f);
+    }
+    else if (nVertexID == 3)
+    {
+        output.position = float4(-1.0f, +1.0f, 0.0f, 1.0f);
+        output.uv = float2(0.0f, 0.0f);
+    }
+    else if (nVertexID == 4)
+    {
+        output.position = float4(+1.0f, -1.0f, 0.0f, 1.0f);
+        output.uv = float2(1.0f, 1.0f);
+    }
+    else if (nVertexID == 5)
+    {
+        output.position = float4(-1.0f, -1.0f, 0.0f, 1.0f);
+        output.uv = float2(0.0f, 1.0f);
+    }
+
+    return (output);
+}
+
+float4 PS_FullScreen(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
+{
+    float4 colorTexture = Screen_Texture.Sample(gssWrap, input.uv);
+    return colorTexture;
+}

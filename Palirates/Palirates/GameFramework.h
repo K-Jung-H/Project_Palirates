@@ -66,13 +66,13 @@ public:
 	void Update_Scene();
     void FrameAdvance();
 
-//	void WaitForGpuComplete();
+	void Prepare_Render();
+
 	void SafeSyncStage(GPU_Stage stage);
 	void WaitForGpuComplete(GPU_Stage stage);
 	HRESULT SignalFence(GPU_Stage stage);
 
 	void MoveToNextFrame();
-	void Clear_RenderTarget(XMFLOAT3 background_color);
 
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
@@ -167,9 +167,11 @@ protected:
 	CGameTimer					m_GameTimer;
 
 public:
-	CPostProcessingShader* PostProcessing_shader = NULL;
+	PostProcessBaseShader* MRT_shader = NULL;
 	Scene_Manager* scene_manager = NULL;
 
+	Post_ComputeShader* post_shader = NULL;
+	CTextureToFullScreenShader* fullscreen_shader = NULL;
 
 
 	CPlayer						*m_pPlayer = NULL;
