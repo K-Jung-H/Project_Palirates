@@ -875,7 +875,6 @@ void CGameFramework::FrameAdvance()
 
 
 
-
 //==============서버================
 void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
@@ -1017,3 +1016,4 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 }
+
