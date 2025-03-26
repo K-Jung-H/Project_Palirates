@@ -37,6 +37,7 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 	virtual void Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int back_buffer_index);
+	virtual void Set_RootSignature_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int rootsignature_index, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle);
 
 	virtual void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 	virtual void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState = 0);

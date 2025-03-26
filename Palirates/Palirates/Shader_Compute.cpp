@@ -205,6 +205,13 @@ void Post_ComputeShader::Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dComma
 	pd3dCommandList->SetComputeRootDescriptorTable(BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX, g_BackBufferSRVs[back_buffer_index]);
 }
 
+void Post_ComputeShader::Set_RootSignature_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int rootsignature_index, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle)
+{
+	pd3dCommandList->SetComputeRootDescriptorTable(rootsignature_index, srv_handle);
+
+}
+
+
 void Post_ComputeShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
 	UpdateShaderVariables(pd3dCommandList);

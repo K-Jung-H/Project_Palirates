@@ -811,12 +811,13 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 	{
-		Prepare_Render();
+		Prepare_Render(); 
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
 		{
 			post_shader->OnPrepareRender(Active_CommandList);
-			post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
+//			post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
+			post_shader->Set_RootSignature_SRV(Active_CommandList, 0, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2));
 			post_shader->Dispatch(Active_CommandList);
 		}
 
@@ -825,6 +826,12 @@ void CGameFramework::FrameAdvance()
 		{
 			fullscreen_shader->OnPrepareRender(Active_CommandList);
 			fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
+
+			//테스트 용 코드
+			// G 버퍼 텍스처에 접근해서 바로 최종 화면으로 전달
+			// 이걸 그대로 post_shader에 추가해서, G 버퍼의 원소를 다시 CS의 리소스로 활용하기
+			//fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2));
+
 			fullscreen_shader->Render(Active_CommandList);
 		}
 
@@ -872,6 +879,7 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 }
+
 
 
 
@@ -1016,4 +1024,3 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 }
-
