@@ -732,18 +732,10 @@ void CGameFramework::MoveToNextFrame()
 
 //#define _WITH_PLAYER_TOP
 
-void CGameFramework::Clear_RenderTarget(XMFLOAT3 background_color)
+void CGameFramework::Prepare_Render()
 {
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += (SwapChainBuffer_Index * ::gnRtvDescriptorIncrementSize);
-
-	float pfClearColor[4] = { background_color.x, background_color.y, background_color.z, 1.0f };
-	Active_CommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, pfClearColor, 0, NULL);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-
-	Active_CommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
+	m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
+	CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
 }
 
 void CGameFramework::FrameAdvance()
@@ -756,18 +748,17 @@ void CGameFramework::FrameAdvance()
 	// ====================== [1] Compute Phase ======================
 	Active_CommandAllocator = Compute_CommandAllocator;
 	Active_CommandList = Compute_CommandList;
-
+	
 	SafeSyncStage(GPU_Stage::Compute);
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-
-	Update_Scene();
-
+	{
+		Update_Scene();
+	}
 	hResult = Active_CommandList->Close();
 	ID3D12CommandList* computeCmdLists[] = { Active_CommandList };
 	p_CommandQueue->ExecuteCommandLists(1, computeCmdLists);
-	SignalFence(GPU_Stage::Compute); // 개별 호출도 가능, 반복 sync 시 유용
-
+	SignalFence(GPU_Stage::Compute); 
 	// ====================== [2] UI (CPU-only) ======================
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
@@ -780,29 +771,33 @@ void CGameFramework::FrameAdvance()
 	SafeSyncStage(GPU_Stage::Render);
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+	{
+		Prepare_Render();
 
 
-	scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
-	scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	UpdateShaderVariables();
-
-	scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
-	if (m_pPlayer)
-		m_pPlayer->Render(Active_CommandList, m_pCamera);
-
-	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-
-	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
-	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		// OMSetRenderTargets by G_Buffer
+		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 
 
+		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		UpdateShaderVariables();
+		scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+		if (m_pPlayer)
+			m_pPlayer->Render(Active_CommandList, m_pCamera);
+
+		// Set Back_Buffer's Resource State : PRESENT -> RENDER_TARGET
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
+
+		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
+		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+
+	}
 	hResult = Active_CommandList->Close();
 	ID3D12CommandList* renderCmdLists[] = { Active_CommandList };
 	p_CommandQueue->ExecuteCommandLists(1, renderCmdLists);
@@ -815,40 +810,39 @@ void CGameFramework::FrameAdvance()
 	SafeSyncStage(GPU_Stage::Post);
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-
-	// 커멘트 리스트 초기화할 떄마다 필수 단계 - 함수화 할 것
 	{
-		m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
+		Prepare_Render();
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-	}
 
-	CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
+		{
+			post_shader->OnPrepareRender(Active_CommandList);
+			post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
+			post_shader->Dispatch(Active_CommandList);
+		}
 
-	post_shader->OnPrepareRender(Active_CommandList);
-	post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
-	post_shader->Dispatch(Active_CommandList);
+		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-	SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		{
+			fullscreen_shader->OnPrepareRender(Active_CommandList);
+			fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
+			fullscreen_shader->Render(Active_CommandList);
+		}
 
-	fullscreen_shader->OnPrepareRender(Active_CommandList);
-	fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
-	fullscreen_shader->Render(Active_CommandList);
-
-	SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-
-	//scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
-	//scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 
-	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		//scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
+		//scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+		// Particles's SO-Buffer
+		scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 #ifndef WRITE_TEXT_UI
-	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 #endif
 
-
+	}
 	hResult = Active_CommandList->Close();
 	ID3D12CommandList* postCmdLists[] = { Active_CommandList };
 	p_CommandQueue->ExecuteCommandLists(1, postCmdLists);

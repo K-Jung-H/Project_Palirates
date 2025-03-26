@@ -66,13 +66,13 @@ public:
 	void Update_Scene();
     void FrameAdvance();
 
-//	void WaitForGpuComplete();
+	void Prepare_Render();
+
 	void SafeSyncStage(GPU_Stage stage);
 	void WaitForGpuComplete(GPU_Stage stage);
 	HRESULT SignalFence(GPU_Stage stage);
 
 	void MoveToNextFrame();
-	void Clear_RenderTarget(XMFLOAT3 background_color);
 
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
