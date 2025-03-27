@@ -1,4 +1,6 @@
 Texture2D gtxtInput : register(t0);
+
+
 RWTexture2D<float4> gtxtRWOutput : register(u0);
 
 #define _WITH_BY_LUMINANCE
@@ -155,4 +157,61 @@ void CS_EdgeDetection(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThrea
 #endif
     }
 #endif
+}
+
+
+//========================================================================================
+
+
+Texture2D<float2> gtxtVelocity : register(t1);
+
+static const float BlurScale = 1.0f; // 감도 조절
+static const float MaxBlurLength = 0.05f; // 최대 블러 길이 (NDC)
+static const float VelocityThreshold = 1e-4f; // 블러 생략 기준
+
+[numthreads(CX_THREADS, CY_THREADS, 1)]
+void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
+{
+    uint2 texSize;
+    gtxtInput.GetDimensions(texSize.x, texSize.y);
+
+    if (gid.x >= texSize.x || gid.y >= texSize.y)
+        return;
+
+    float4 baseColor = gtxtInput[gid.xy];
+    float2 velocity = gtxtVelocity[gid.xy];
+
+    // 감도 적용
+    velocity *= BlurScale;
+
+    // 길이 제한
+    float len = length(velocity);
+    if (len < VelocityThreshold)
+    {
+        gtxtRWOutput[gid.xy] = baseColor; // 블러 생략
+        return;
+    }
+    if (len > MaxBlurLength)
+    {
+        velocity = normalize(velocity) * MaxBlurLength;
+    }
+
+    // 블러 샘플링
+    const int samples = 5;
+    float3 accum = baseColor.rgb;
+
+    for (int i = 1; i <= samples; ++i)
+    {
+        float2 offset = velocity * (float(i) / samples);
+        float2 sampleUV = (float2) gid.xy + offset * texSize;
+
+        int2 sampleCoord = int2(sampleUV);
+        sampleCoord = clamp(sampleCoord, int2(0, 0), int2(texSize - 1));
+
+        float3 sampleColor = gtxtInput[sampleCoord].rgb;
+        accum += sampleColor;
+    }
+
+    float3 finalColor = accum / (samples + 1);
+    gtxtRWOutput[gid.xy] = float4(finalColor, 1.0f);
 }

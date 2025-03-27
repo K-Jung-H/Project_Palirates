@@ -92,23 +92,23 @@ extern HINSTANCE						ghAppInstance;
 //=====================================
 #define ROOT_PARAMETER_FRAME_CBV_INDEX 0 
 #define ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX 1
-#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 2
-#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 3
-#define ROOT_PARAMETER_CAMERA_CBV_INDEX 4
-
+#define ROOT_PARAMETER_CAMERA_CBV_INDEX 2
+#define ROOT_PARAMETER_PREV_CAMERA_CBV_INDEX 3
+#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 4
+#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 5
 //=====================================
-#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 5
-#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 6
-#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 7
-#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 8
-#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 6
+#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 7
+#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 8
+#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 10
 
-#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 10
-#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 11
-#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 12
-#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 13
+#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 11
+#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 12
+#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
+#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 14
 //=====================================
-#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 14
+#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 15
 
 #define ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX 0
 #define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 1
@@ -146,7 +146,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 4
+#define RTV_Format_Num 5
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;
@@ -176,6 +176,7 @@ extern void DebugOutput(const std::wstring& message);
 extern void DebugOutput(const std::string& message1, const char message2[]);
 extern void DebugOutput(const std::string& message1, const std::string& message2);
 extern void DebugOutput(const std::string& message1, const std::wstring& message2);
+extern void DebugPrintMatrix(const XMMATRIX& m);
 
 extern void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t bufferSize = STR_LENGTH);
 

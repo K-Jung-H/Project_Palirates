@@ -816,8 +816,8 @@ void CGameFramework::FrameAdvance()
 
 		{
 			post_shader->OnPrepareRender(Active_CommandList);
-//			post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
-			post_shader->Set_RootSignature_SRV(Active_CommandList, 0, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2));
+			post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
+			post_shader->Set_RootSignature_SRV(Active_CommandList, 1, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
 			post_shader->Dispatch(Active_CommandList);
 		}
 
@@ -830,7 +830,7 @@ void CGameFramework::FrameAdvance()
 			//테스트 용 코드
 			// G 버퍼 텍스처에 접근해서 바로 최종 화면으로 전달
 			// 이걸 그대로 post_shader에 추가해서, G 버퍼의 원소를 다시 CS의 리소스로 활용하기
-			//fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2));
+			//fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
 
 			fullscreen_shader->Render(Active_CommandList);
 		}

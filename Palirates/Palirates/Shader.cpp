@@ -794,16 +794,47 @@ void PostProcessBaseShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice
 	if (d3dPipelineStateDesc.InputLayout.pInputElementDescs) delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
+D3D12_CLEAR_VALUE PostProcessBaseShader::Get_ClearValue_For_RTVFormat(DXGI_FORMAT format)
+{
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = format;
+
+	if (format == DXGI_FORMAT_R16G16_FLOAT) 
+	{
+		// Velocity
+		clearValue.Color[0] = 0.0f;		clearValue.Color[1] = 0.0f;
+	}
+	else if (format == DXGI_FORMAT_R8G8B8A8_UNORM) 
+	{
+		// Albedo
+		clearValue.Color[0] = 1.0f;		clearValue.Color[1] = 1.0f;
+		clearValue.Color[2] = 1.0f;		clearValue.Color[3] = 1.0f;
+	}
+	else if (format == DXGI_FORMAT_R16G16B16A16_FLOAT) 
+	{
+		// 위치나 노멀
+		clearValue.Color[0] = 0.0f;		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;		clearValue.Color[3] = 0.0f;
+	}
+	else
+	{
+		clearValue.Color[0] = 0.0f;		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;		clearValue.Color[3] = 0.0f;
+	}
+
+	return clearValue;
+}
+
 void PostProcessBaseShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle)
 {
 	m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1, 0, 0, nRenderTargets, 0, 0);
 
-	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < nRenderTargets; i++)
 	{
-		d3dClearValue.Format = pdxgiFormats[i];
-		m_pTexture->CreateTexture(pd3dDevice, NULL, i, RESOURCE_TEXTURE2D, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 1, 0, pdxgiFormats[i], D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &d3dClearValue);
+		D3D12_CLEAR_VALUE clearValue = Get_ClearValue_For_RTVFormat(pdxgiFormats[i]);
 
+		m_pTexture->CreateTexture( pd3dDevice, nullptr, i, RESOURCE_TEXTURE2D, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 1, 0, 
+			pdxgiFormats[i], D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &clearValue);
 	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -841,10 +872,13 @@ void PostProcessBaseShader::Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList
 
 	for (int i = 0; i < nResources; i++)
 	{
+		DXGI_FORMAT format = m_pTexture->GetBufferFormat(i); 
+		D3D12_CLEAR_VALUE clearValue = Get_ClearValue_For_RTVFormat(format);
+
 		::SynchronizeResourceTransition(pd3dCommandList, GetTextureResource(i), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = GetRtvCPUDescriptorHandle(i);
-		pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::White, 0, NULL);
+		pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, clearValue.Color, 0, NULL);
 		pd3dAllRtvCPUHandles[nRenderTargets + i] = d3dRtvCPUDescriptorHandle;
 	}
 	pd3dCommandList->OMSetRenderTargets(nRenderTargets + nResources, pd3dAllRtvCPUHandles, FALSE, pd3dDsvCPUHandle);
@@ -898,12 +932,12 @@ G_BufferMerger_Shader::~G_BufferMerger_Shader()
 
 D3D12_SHADER_BYTECODE G_BufferMerger_Shader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Deffered_Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE G_BufferMerger_Shader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Deffered_Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
 }
 
 void G_BufferMerger_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

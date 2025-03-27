@@ -186,7 +186,7 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 
     if (pCamera)
-        pCamera->Update_PostRender_ShaderVariables(pd3dCommandList);
+        pCamera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
     
 
     if(MRT_shader)
@@ -209,7 +209,6 @@ void Scene_Manager::Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12Graphic
 {
     if (activeScene)  
         activeScene->Finalize_Frame(pd3dDevice, pd3dCommandList, pCamera);
-    
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 

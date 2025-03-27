@@ -248,6 +248,7 @@ void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsComman
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue)
 {
 	m_pnResourceTypes[index] = resourceType;
+	m_pdxgiBufferFormats[index] = format;
 	m_ppd3dTextures[index] = CreateTexture2DResource(device, commandList, width, height, elements, mips, format, flags, state, clearValue);
 	return m_ppd3dTextures[index];
 }

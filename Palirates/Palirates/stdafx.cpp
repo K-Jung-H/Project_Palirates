@@ -18,7 +18,7 @@ UINT gnDsvDescriptorIncrementSize = 0;
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_pos
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_normal & camera_distance
 	DXGI_FORMAT_R8G8B8A8_UNORM, // Material_Light_Info
-
+	DXGI_FORMAT_R16G16_FLOAT,           // Velocity
 
 };
 
@@ -382,7 +382,23 @@ void DebugOutput(const std::string& message1, const std::wstring& message2)
 	OutputDebugString(combinedMessage.c_str());
 }
 
+void DebugPrintMatrix(const XMMATRIX& m)
+{
+	OutputDebugStringA("\n");
+	char buffer[128];
+	for (int i = 0; i < 4; ++i)
+	{
+		sprintf_s(buffer, sizeof(buffer),
+			"| % .4f % .4f % .4f % .4f |\n",
+			m.r[i].m128_f32[0],
+			m.r[i].m128_f32[1],
+			m.r[i].m128_f32[2],
+			m.r[i].m128_f32[3]);
 
+		OutputDebugStringA(buffer);
+	}
+	OutputDebugStringA("\n");
+}
 
 // 파일 이름만 추출하여 char[64]에 반환하는 함수
 void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t bufferSize)

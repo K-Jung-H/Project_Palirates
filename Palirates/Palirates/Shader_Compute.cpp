@@ -52,7 +52,7 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 	ID3D12RootSignature* pd3dComputeRootSignature = NULL;
 
 	// 루트 파라미터 설정
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[2];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[3];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[0].NumDescriptors = 1;
@@ -60,23 +60,34 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 		pd3dDescriptorRanges[0].RegisterSpace = 0;
 		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = 0;
 
-		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[1].NumDescriptors = 1;
-		pd3dDescriptorRanges[1].BaseShaderRegister = 0; //u0: RWTexture2D
+		pd3dDescriptorRanges[1].BaseShaderRegister = 1; //t1: Velocity
 		pd3dDescriptorRanges[1].RegisterSpace = 0;
 		pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = 0;
+
+		pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+		pd3dDescriptorRanges[2].NumDescriptors = 1;
+		pd3dDescriptorRanges[2].BaseShaderRegister = 0; //u0: RWTexture2D
+		pd3dDescriptorRanges[2].RegisterSpace = 0;
+		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = 0;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[2];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[3];
 	{
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; //Texture2D
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
+		pd3dRootParameters[MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; //Texture2D
+		pd3dRootParameters[MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
 		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; //RWTexture2D
+		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2]; //RWTexture2D
 		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
@@ -239,7 +250,7 @@ CEdgeDetectCSShader::~CEdgeDetectCSShader()
 
 D3D12_SHADER_BYTECODE CEdgeDetectCSShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_EdgeDetection", "cs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_MotionBlur", "cs_5_1", ppd3dShaderBlob));
 }
 
 void CEdgeDetectCSShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
@@ -284,7 +295,7 @@ D3D12_INPUT_LAYOUT_DESC CTextureToFullScreenShader::CreateInputLayout(int nPipel
 D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VS_FullScreen", "vs_5_1", VertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Deffered_Shaders.hlsl", "VS_FullScreen", "vs_5_1", VertexShaderBlob));
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
@@ -296,7 +307,7 @@ D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreateVertexShader(ID3DBlob** 
 D3D12_SHADER_BYTECODE CTextureToFullScreenShader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PS_FullScreen", "ps_5_1", PixelShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Deffered_Shaders.hlsl", "PS_FullScreen", "ps_5_1", PixelShaderBlob));
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };

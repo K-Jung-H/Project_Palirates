@@ -5,7 +5,7 @@ Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Position: register(t1);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Material_Light_Info : register(t3);
-
+Texture2D<float2> T_Velocity : register(t4);
 
 cbuffer cb_Post_Camera : register(b0)
 {
@@ -77,6 +77,8 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     material.gSpecular_intensity = material_light_info.b;
     material.gEmissive_intensity = material_light_info.a;
 
+    //float2 v = T_Velocity.Sample(gssWrap, input.uv);
+    //return float4(v * 0.5f + 0.5f, 0, 1);
     //================================================================
 
     float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, material);

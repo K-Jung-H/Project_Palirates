@@ -36,6 +36,11 @@ cbuffer cbCameraInfo : register(b2)
 	float3					gvCameraPosition : packoffset(c8);
 };
 
+cbuffer cb_Prev_CameraInfo : register(b3)
+{
+    matrix gmtx_Ptrev_ViewProj : packoffset(c0);
+};
+
 
 //=========================================================
 
@@ -69,6 +74,7 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
     float4 world_Position : SV_TARGET1;
     float4 world_Normal_and_Camera_Distance : SV_TARGET2;
     float4 Material_Light_Info : SV_TARGET3;
+    float2 Velocity : SV_TARGET4;
 
 };
 
@@ -90,25 +96,36 @@ struct VS_STANDARD_OUTPUT
 	float3 tangentW : TANGENT;
 	float3 bitangentW : BITANGENT;
 	float2 uv : TEXCOORD;
-    float vDepth : vDEPTH;
+    
+    // For Motion_Vector
+    float2 screenUV : TEXCOORD1; 
+    float2 prevScreenUV : TEXCOORD2; 
 };
 
 //===========================================================
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
-	VS_STANDARD_OUTPUT output;
+    VS_STANDARD_OUTPUT output;
 
-	output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
+    float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = worldPos.xyz;
+
+    float4 currClip = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = currClip;
+
+    float4 prevClip = mul(worldPos, gmtx_Ptrev_ViewProj);
+
+    output.screenUV = currClip.xy / currClip.w * 0.5f + 0.5f;
+    output.prevScreenUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+
     
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
-    output.vDepth = positionV.z;
-	output.uv = input.uv;
-	return(output);
+    output.uv = input.uv;
+
+    return output;
 }
 
 //===========================================================
@@ -120,7 +137,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
+    output.Velocity = float2(0.0f, 0.0f);
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -159,7 +176,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
     output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
-
+    output.Velocity = input.screenUV - input.prevScreenUV;
+    
+    
     return (output);
 
 }
@@ -178,30 +197,29 @@ struct VS_STANDARD_INPUT_INSTANCE
     float4x4 instance_worldMatrix : WORLDMATRIX;
 };
 
-struct VS_STANDARD_OUTPUT_INSTANCE
-{
-    float4 position : SV_POSITION;
-    float3 positionW : POSITION;
-    float3 normalW : NORMAL;
-    float3 tangentW : TANGENT;
-    float3 bitangentW : BITANGENT;
-    float2 uv : TEXCOORD;
-
-};
-
 VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 {
     VS_STANDARD_OUTPUT output;
-    output.positionW = mul(float4(input.position, 1.0f), input.instance_worldMatrix).xyz;
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
+    
+    float4 worldPos = mul(float4(input.position, 1.0f), input.instance_worldMatrix);
+    output.positionW = worldPos.xyz;
+
+    float4 currClip = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = currClip;
+
+    float4 prevClip = mul(worldPos, gmtx_Ptrev_ViewProj);
+
+    output.screenUV = currClip.xy / currClip.w * 0.5f + 0.5f;
+    output.prevScreenUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+    
+
     
     output.normalW = mul(input.normal, (float3x3) input.instance_worldMatrix);
     output.tangentW = mul(input.tangent, (float3x3) input.instance_worldMatrix);
     output.bitangentW = mul(input.bitangent, (float3x3) input.instance_worldMatrix);
-    output.vDepth = positionV.z;
     output.uv = input.uv;
 		
+
     return (output);
 }
 
@@ -210,12 +228,12 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 #define MAX_VERTEX_INFLUENCES			4
 #define SKINNED_ANIMATION_BONES			256
 
-cbuffer cbBoneOffsets : register(b3)
+cbuffer cbBoneOffsets : register(b4)
 {
 	float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
 };
 
-cbuffer cbBoneTransforms : register(b4)
+cbuffer cbBoneTransforms : register(b5)
 {
 	float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
 };
@@ -238,19 +256,31 @@ VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     float4x4 mtxVertexToBoneWorld = (float4x4) 0.0f;
     for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
     {
-        mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+        mtxVertexToBoneWorld += input.weights[i] *
+            mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
     }
-    output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
+
+    float4 worldPos = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
+    output.positionW = worldPos.xyz;
+
+    float4 viewPos = mul(worldPos, gmtxView);
+    float4 currClip = mul(viewPos, gmtxProjection);
+    output.position = currClip;
+
+    float4 prevClip = mul(worldPos, gmtx_Ptrev_ViewProj);
+
+    output.screenUV = currClip.xy / currClip.w * 0.5f + 0.5f;
+    output.prevScreenUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+
+    
+    
     output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
     output.tangentW = mul(input.tangent, (float3x3) mtxVertexToBoneWorld).xyz;
     output.bitangentW = mul(input.bitangent, (float3x3) mtxVertexToBoneWorld).xyz;
 
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
-    output.vDepth = positionV.z;
     output.uv = input.uv;
 
-    return (output);
+    return output;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,7 +303,6 @@ struct VS_TERRAIN_OUTPUT
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
     
-    float vDepth : vDEPTH;
 };
 
 VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
@@ -286,7 +315,6 @@ VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 	output.uv0 = input.uv0;
 	output.uv1 = input.uv1;
     
-    output.vDepth = positionV.z;
 	return(output);
 }
 
@@ -298,6 +326,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Velocity = float2(0.0f, 0.0f);
     
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
@@ -326,8 +355,6 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
 
-    output.vDepth = positionV.z;
-
     return (output);
 }
 
@@ -338,7 +365,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
+    output.Velocity = float2(0.0f, 0.0f);
+    
     output.Albedo_Color = input.color;
     
     output.world_Position = float4(input.positionW, 1.0f);
@@ -416,7 +444,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
+    output.Velocity = float2(0.0f, 0.0f);
+    
     return (output);
 }
 

@@ -2,7 +2,8 @@
 #include "Shader.h"
 
 #define BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX 0 // 이전 렌더링 결과물
-#define RESULT_ROOT_PARAMETER_INDEX 1 // CS 동작 후 결과물
+#define MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX 1 // 모션 블러 G 버퍼
+#define RESULT_ROOT_PARAMETER_INDEX 2 // CS 동작 후 결과물
 
 class Post_ComputeShader : public PostProcessBaseShader
 {
