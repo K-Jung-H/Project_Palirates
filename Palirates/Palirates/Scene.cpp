@@ -114,58 +114,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 
-	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
-
-	string obj_name_1 = "test_obj_name_1";
-	string obj_name_2 = "test_obj_name_2";
-	string obj_name_3 = "test_obj_name_3";
-
-
-	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 2);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_1->SetPosition(100.0f, m_pTerrain->Get_Mesh_Height(100.0f, 100.0f), 100.0f);
-	humanObject_1->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
-	
-	//====================================================
-	// 테스트용 코드	
-//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
-	CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
-	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
-
-	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
-	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
-
-	test_obj->Add_Collider(0.0f);
-	test_obj2->Add_Collider(10.0f);
-
-	//====================================================
-
-	name_view = obj_name_2;
-	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
-	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_2->SetPosition(150.0f, m_pTerrain->Get_Mesh_Height(150.0f, 150.0f), 150.0f);
-	humanObject_2->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
-
-
-	name_view = obj_name_3;
-	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);
-	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_3->SetPosition(200.0f, m_pTerrain->Get_Mesh_Height(200.0f, 200.0f), 200.0f);
-
-	humanObject_3->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
-
-
-	//=====================================================
 #ifdef LOAD_SCENE
 	// Load Scene
 
@@ -194,8 +142,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	Object_Manager::Reserve_Update();
 
-	if (pHumanModel)
-		delete pHumanModel;
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -376,7 +322,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 33;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1; 
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -651,6 +597,9 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 {
 	m_fElapsedTime = fTimeElapsed;
 
+	obj_manager->Animate_Objects_All(fTimeElapsed);
+
+
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr->AnimateObjects(fTimeElapsed);
@@ -700,7 +649,6 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
 
-	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
 
 }
 
@@ -735,8 +683,11 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 
 }
 
-void CScene::Finalize_Frame(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	obj_manager->Post_Update_All();
+
+
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 		particle_manager->OnPostRender_All();

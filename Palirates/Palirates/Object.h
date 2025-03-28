@@ -436,6 +436,7 @@ private:
 
 	bool Active = true;
 
+	XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 public:
 	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
 
@@ -483,14 +484,16 @@ public:
 
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 
-	virtual void OnPrepareAnimate() { }
+	virtual void OnPrepareAnimate() {}
 	virtual void Animate(float fTimeElapsed);
 
 	virtual bool IsVisible(CCamera* pCamera);
-	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
 	virtual void OnLateUpdate() { }
+
+	virtual void Set_Last_Pos(XMFLOAT3 pos);
+	virtual void Record_Last_Pos();
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -508,6 +511,9 @@ public:
 
 	XMFLOAT3 GetToParentPosition();
 	XMFLOAT3 Get_World_Position();
+
+	CGameObject* Get_Root_Object();
+	XMFLOAT3 Get_Root_WorldPosition();
 	XMFLOAT3 Get_Root_Obj_Displacement();
 
 	void Move(XMFLOAT3 xmf3Offset);

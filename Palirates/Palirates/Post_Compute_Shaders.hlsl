@@ -165,9 +165,9 @@ void CS_EdgeDetection(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThrea
 
 Texture2D<float2> gtxtVelocity : register(t1);
 
-static const float BlurScale = 1.0f; // °¨µµ Á¶Àı
-static const float MaxBlurLength = 0.05f; // ÃÖ´ë ºí·¯ ±æÀÌ (NDC)
-static const float VelocityThreshold = 1e-4f; // ºí·¯ »ı·« ±âÁØ
+static const float BlurScale = 0.5f; // ê°ë„ ì¡°ì ˆ
+static const float MaxBlurLength = 0.05f; // ìµœëŒ€ ë¸”ëŸ¬ ê¸¸ì´ (NDC)
+static const float VelocityThreshold = 1e-4f; // ë¸”ëŸ¬ ìƒëµ ê¸°ì¤€
 
 [numthreads(CX_THREADS, CY_THREADS, 1)]
 void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
@@ -181,14 +181,17 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
     float4 baseColor = gtxtInput[gid.xy];
     float2 velocity = gtxtVelocity[gid.xy];
 
-    // °¨µµ Àû¿ë
+    // ê°ë„ ì ìš©
     velocity *= BlurScale;
-
-    // ±æÀÌ Á¦ÇÑ
+    
+    // UV ì¢Œí‘œ ë°˜ì „
+    velocity.y *= -1.0f; 
+    
+    // ê¸¸ì´ ì œí•œ
     float len = length(velocity);
     if (len < VelocityThreshold)
     {
-        gtxtRWOutput[gid.xy] = baseColor; // ºí·¯ »ı·«
+        gtxtRWOutput[gid.xy] = baseColor; // ë¸”ëŸ¬ ìƒëµ
         return;
     }
     if (len > MaxBlurLength)
@@ -196,13 +199,13 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         velocity = normalize(velocity) * MaxBlurLength;
     }
 
-    // ºí·¯ »ùÇÃ¸µ
+    // ë¸”ëŸ¬ ìƒ˜í”Œë§
     const int samples = 5;
     float3 accum = baseColor.rgb;
 
     for (int i = 1; i <= samples; ++i)
     {
-        float2 offset = velocity * (float(i) / samples);
+        float2 offset = -velocity * (float(i) / samples);
         float2 sampleUV = (float2) gid.xy + offset * texSize;
 
         int2 sampleCoord = int2(sampleUV);

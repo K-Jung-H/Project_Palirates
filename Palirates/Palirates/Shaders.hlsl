@@ -1,3 +1,6 @@
+#define FRAME_BUFFER_WIDTH 840.0f
+#define FRAME_BUFFER_HEIGHT 480.0f
+
 
 cbuffer Frame_Info : register(b0)
 {
@@ -23,10 +26,10 @@ struct Material_Info
 
 cbuffer cbGameObjectInfo : register(b1)
 {
-    matrix gmtxGameObject : packoffset(c0);
-    Material_Info material_info : packoffset(c4);
-    uint gnTexturesMask : packoffset(c7);
-
+    matrix gmtxGameObject : packoffset(c0); // 16개 (c0 ~ c3)
+    Material_Info material_info : packoffset(c4); // 8개 (c4 ~ c5)
+    float3 gObjectVelocity : packoffset(c6); // 3개 (c6.xyz)
+    uint gnTexturesMask : packoffset(c6.w); // 1개 (c6.w)
 };
 
 cbuffer cbCameraInfo : register(b2)
@@ -38,7 +41,7 @@ cbuffer cbCameraInfo : register(b2)
 
 cbuffer cb_Prev_CameraInfo : register(b3)
 {
-    matrix gmtx_Ptrev_ViewProj : packoffset(c0);
+    matrix gmtx_Prev_ViewProj : packoffset(c0);
 };
 
 
@@ -88,18 +91,17 @@ struct VS_STANDARD_INPUT
 	float3 bitangent : BITANGENT;
 };
 
+
 struct VS_STANDARD_OUTPUT
 {
-	float4 position : SV_POSITION;
-	float3 positionW : POSITION;
-	float3 normalW : NORMAL;
-	float3 tangentW : TANGENT;
-	float3 bitangentW : BITANGENT;
-	float2 uv : TEXCOORD;
-    
-    // For Motion_Vector
-    float2 screenUV : TEXCOORD1; 
-    float2 prevScreenUV : TEXCOORD2; 
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+    float3 tangentW : TANGENT;
+    float3 bitangentW : BITANGENT;
+    float2 uv : TEXCOORD;
+
+    float2 velocity : TEXCOORD1; // Velocity for Motion_Vector
 };
 
 //===========================================================
@@ -108,18 +110,35 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
     VS_STANDARD_OUTPUT output;
 
+    // 월드 공간 위치
     float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
     output.positionW = worldPos.xyz;
 
-    float4 currClip = mul(mul(worldPos, gmtxView), gmtxProjection);
-    output.position = currClip;
+    // 현재 클립 위치 (카메라 이동 포함)
+    float4 clipCurr = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = clipCurr;
+    float2 currNDC = clipCurr.xy / clipCurr.w;
 
-    float4 prevClip = mul(worldPos, gmtx_Ptrev_ViewProj);
+    // 이전 프레임 카메라에서 본 위치 (같은 worldPos)
+    float4 clipPrevCam = mul(worldPos, gmtx_Prev_ViewProj);
+    float2 prevNDCCam = clipPrevCam.xy / clipPrevCam.w;
 
-    output.screenUV = currClip.xy / currClip.w * 0.5f + 0.5f;
-    output.prevScreenUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+    float2 camVelocity = currNDC - prevNDCCam;
 
-    
+    // 객체 속도 → 방향 벡터 (w = 0)
+    float4 velocityClip = mul(mul(float4(gObjectVelocity, 0.0f), gmtxView), gmtxProjection);
+    float2 objVelocity = velocityClip.xy / clipCurr.w;
+
+    // 블렌딩 가중치 (속도 큰 쪽 중심)
+    float lenCam = length(camVelocity);
+    float lenObj = length(objVelocity);
+    float weight = lenObj / (lenObj + lenCam + 1e-5);
+
+    float2 blendedVelocity = lerp(camVelocity, objVelocity, weight);
+
+    output.velocity = blendedVelocity;
+
+    // 기타 속성
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
@@ -176,9 +195,10 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
     output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
-    output.Velocity = input.screenUV - input.prevScreenUV;
-    
-    
+    output.Velocity = input.velocity;
+
+
+
     return (output);
 
 }
@@ -200,27 +220,30 @@ struct VS_STANDARD_INPUT_INSTANCE
 VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 {
     VS_STANDARD_OUTPUT output;
-    
+
     float4 worldPos = mul(float4(input.position, 1.0f), input.instance_worldMatrix);
     output.positionW = worldPos.xyz;
 
     float4 currClip = mul(mul(worldPos, gmtxView), gmtxProjection);
     output.position = currClip;
 
-    float4 prevClip = mul(worldPos, gmtx_Ptrev_ViewProj);
+    float2 currUV = currClip.xy / currClip.w * 0.5f + 0.5f;
 
-    output.screenUV = currClip.xy / currClip.w * 0.5f + 0.5f;
-    output.prevScreenUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+    float4 prevClip = mul(worldPos, gmtx_Prev_ViewProj);
+    float2 prevUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+
+    float2 camVelocityUV = currUV - prevUV;
+    float2 camVelocityPx = camVelocityUV * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
     
-
+    // 고정된 객체는 카메라의 이동 반대 방향으로 블러링되야 자연스러움
+    output.velocity = -camVelocityPx; 
     
     output.normalW = mul(input.normal, (float3x3) input.instance_worldMatrix);
     output.tangentW = mul(input.tangent, (float3x3) input.instance_worldMatrix);
     output.bitangentW = mul(input.bitangent, (float3x3) input.instance_worldMatrix);
     output.uv = input.uv;
-		
 
-    return (output);
+    return output;
 }
 
 //==================================================================
@@ -249,10 +272,14 @@ struct VS_SKINNED_STANDARD_INPUT
 	float4 weights : BONEWEIGHT;
 };
 
+
+// 픽셀 좌표계 기반
+
 VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 {
     VS_STANDARD_OUTPUT output;
 
+    // 스키닝 적용
     float4x4 mtxVertexToBoneWorld = (float4x4) 0.0f;
     for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
     {
@@ -263,25 +290,25 @@ VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     float4 worldPos = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
     output.positionW = worldPos.xyz;
 
-    float4 viewPos = mul(worldPos, gmtxView);
-    float4 currClip = mul(viewPos, gmtxProjection);
-    output.position = currClip;
+    // 클립 공간 위치 계산
+    float4 clipCurr = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = clipCurr;
 
-    float4 prevClip = mul(worldPos, gmtx_Ptrev_ViewProj);
-
-    output.screenUV = currClip.xy / currClip.w * 0.5f + 0.5f;
-    output.prevScreenUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
-
+    // 객체 이동에 의한 velocity (뷰-투영 후 클립 → NDC → 픽셀)
+    float4 velocityClip = mul(mul(float4(gObjectVelocity, 0.0f), gmtxView), gmtxProjection);
+    float2 objVelocityNDC = velocityClip.xy / clipCurr.w;
+    float2 objVelocityPx = objVelocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
     
-    
+    output.velocity = objVelocityPx;
+
     output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
     output.tangentW = mul(input.tangent, (float3x3) mtxVertexToBoneWorld).xyz;
     output.bitangentW = mul(input.bitangent, (float3x3) mtxVertexToBoneWorld).xyz;
-
     output.uv = input.uv;
 
     return output;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

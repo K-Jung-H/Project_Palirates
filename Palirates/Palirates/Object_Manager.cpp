@@ -765,6 +765,45 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 
 }
 
+void Object_Manager::Post_Update(Object_Type type)
+{
+	switch (type)
+	{
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Record_Last_Pos();
+	}
+	break;
+
+	case Object_Type::non_skinned:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Record_Last_Pos();
+	}
+	break;
+
+	case Object_Type::fixed:
+	case Object_Type::etc:
+	default:
+	{
+		DebugOutput("Object_Manager::Last_Update() - Using_Wrong_Type");
+		::PostQuitMessage(0);
+	}
+	break;
+
+	}
+
+}
+
+void Object_Manager::Post_Update_All()
+{
+	Post_Update(Object_Type::skinned);
+	Post_Update(Object_Type::non_skinned);
+}
+
 std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Object_Type type)
 {
 	switch (type)

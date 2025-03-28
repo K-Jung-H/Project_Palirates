@@ -77,8 +77,6 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     material.gSpecular_intensity = material_light_info.b;
     material.gEmissive_intensity = material_light_info.a;
 
-    //float2 v = T_Velocity.Sample(gssWrap, input.uv);
-    //return float4(v * 0.5f + 0.5f, 0, 1);
     //================================================================
 
     float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, material);

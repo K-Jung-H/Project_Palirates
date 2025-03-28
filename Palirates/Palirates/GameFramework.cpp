@@ -840,9 +840,11 @@ void CGameFramework::FrameAdvance()
 
 		//scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
 		//scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
+		
 		// Particles's SO-Buffer
-		scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		// Cal obj's velocity
+		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		m_pPlayer->Record_Last_Pos();
 
 #ifndef WRITE_TEXT_UI
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],

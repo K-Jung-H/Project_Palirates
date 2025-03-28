@@ -527,9 +527,11 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	material_info.gEmissive_intensity = m_cEmissive.w;
 	material_info.gSpecular_intensity = m_fSpecular;
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
+//	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
+//	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_info, 16); // 16~23
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
@@ -1544,9 +1546,11 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
 }
 
+
+
 void CGameObject::Animate(float fTimeElapsed)
 {
-	OnPrepareRender();
+	OnPrepareAnimate();
 
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -1557,6 +1561,38 @@ void CGameObject::Animate(float fTimeElapsed)
 
 	if (m_pChild) 
 		m_pChild->Animate(fTimeElapsed);
+}
+
+void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
+{
+	previous_position.x = pos.x;
+	previous_position.y = pos.y;
+	previous_position.z = pos.z;
+}
+
+
+void CGameObject::Record_Last_Pos() 
+{
+	//CGameObject* root_obj_ptr = Get_Root_Object();
+	//XMFLOAT3 world_pos = root_obj_ptr->GetPosition();
+
+	//root_obj_ptr->previous_position.x = world_pos.x;
+	//root_obj_ptr->previous_position.y = world_pos.y;
+	//root_obj_ptr->previous_position.z = world_pos.z;
+	if (m_pMesh)
+	{
+		XMFLOAT3 world_pos = GetPosition();
+
+		previous_position.x = world_pos.x;
+		previous_position.y = world_pos.y;
+		previous_position.z = world_pos.z;
+	}
+
+	if (m_pSibling)
+		m_pSibling->Record_Last_Pos();
+
+	if (m_pChild)
+		m_pChild->Record_Last_Pos();
 }
 
 bool CGameObject::IsVisible(CCamera* pCamera)
@@ -1642,7 +1678,17 @@ void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandLis
 {
 	XMFLOAT4X4 xmf4x4World;
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(pxmf4x4World)));
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 16, &xmf4x4World, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 16, &xmf4x4World, 0);   // 0~15
+
+	//===============================================================================
+	XMFLOAT3 now_position = GetPosition();
+	XMFLOAT3 velocity = 	{ 
+		now_position.x - previous_position.x,
+		now_position.y - previous_position.y,
+		now_position.z - previous_position.z
+	};
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &velocity, 24);      // 24~26
+
 }
 
 void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList, CMaterial *pMaterial)
@@ -1803,21 +1849,27 @@ XMFLOAT3 CGameObject::Get_World_Position()
 	return XMFLOAT3(obj_pos.x + parent_pos.x, obj_pos.y + parent_pos.y, obj_pos.z + parent_pos.z);
 }
 
-XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
+CGameObject* CGameObject::Get_Root_Object()
 {
-	XMFLOAT3 worldPosition = GetPosition(); // 현재 오브젝트의 월드 위치
-	XMFLOAT3 rootPosition = { 0.0f, 0.0f, 0.0f };
-
-	// 루트 오브젝트까지 탐색
 	CGameObject* root = this;
-	while (root->m_pParent != NULL)
+	while (root->m_pParent != nullptr)
 	{
 		root = root->m_pParent;
 	}
+	return root;
+}
 
-	rootPosition = root->GetPosition(); // 루트의 로컬 위치(초기 위치)
+XMFLOAT3 CGameObject::Get_Root_WorldPosition()
+{
+	return Get_Root_Object()->GetPosition();
+}
 
-	// 현재 위치에서 루트 위치를 뺀 값이 "루트 프레임 기준 이동량"
+
+XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
+{
+	XMFLOAT3 worldPosition = GetPosition();
+	XMFLOAT3 rootPosition = Get_Root_WorldPosition();
+
 	return XMFLOAT3(
 		worldPosition.x - rootPosition.x,
 		worldPosition.y - rootPosition.y,

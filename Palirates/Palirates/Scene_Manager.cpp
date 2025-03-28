@@ -103,6 +103,7 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
     if (activeScene) 
     {
         activeScene->Animate_Objects(pd3dCommandList, fTimeElapsed);
+        
         activeScene->Update_Objects(pd3dDevice, pd3dCommandList);
     }
     else
@@ -205,10 +206,10 @@ void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 }
 
 // 렌더링이 모두 끝나면, 데이터  처리 작업
-void Scene_Manager::Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-    if (activeScene)  
-        activeScene->Finalize_Frame(pd3dDevice, pd3dCommandList, pCamera);
+    if (activeScene)    
+        activeScene->Post_Update(pd3dDevice, pd3dCommandList, pCamera);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
