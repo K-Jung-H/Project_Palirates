@@ -222,27 +222,27 @@ void CTexture::LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* comma
 	m_pdxgiBufferFormats[index] = format;
 	m_pnBufferElements[index] = elements;
 
-	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, &m_ppd3dTextureUploadBuffers[index]);
+	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_ppd3dTextureUploadBuffers[index]);
 }
 
-void CTexture::CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index) 
+void CTexture::CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state)
 {
 	m_pnResourceTypes[index] = RESOURCE_BUFFER;
 	m_pdxgiBufferFormats[index] = format;
 	m_pnBufferElements[index] = elements;
 	m_pnBufferStrides[index] = stride;
 
-	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, state, &m_ppd3dTextureUploadBuffers[index]);
+	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, D3D12_RESOURCE_FLAG_NONE, state, &m_ppd3dTextureUploadBuffers[index]);
 }
 
-void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index)
+void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state)
 {
 	m_pnResourceTypes[index] = RESOURCE_STRUCTURED_BUFFER;
 	m_pdxgiBufferFormats[index] = DXGI_FORMAT_UNKNOWN;
 	m_pnBufferElements[index] = elements;
 	m_pnBufferStrides[index] = stride;
 
-	m_ppd3dTextures[index] = CreateStructuredBufferResource(device, commandList, data, stride, elements, heapType, state, &m_ppd3dTextureUploadBuffers[index]);
+	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, state, &m_ppd3dTextureUploadBuffers[index]);
 }
 
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue)
@@ -907,7 +907,7 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void **)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
 	}
 }

@@ -24,12 +24,11 @@ class Deferred_CTerrainShader;
 //
 #define RESOURCE_TEXTURE1D			0x01
 #define RESOURCE_TEXTURE2D			0x02
-#define RESOURCE_TEXTURE2D_ARRAY	0x03	//[]
+#define RESOURCE_TEXTURE2D_ARRAY	0x03	
 #define RESOURCE_TEXTURE2DARRAY		0x04
 #define RESOURCE_TEXTURE_CUBE		0x05
 #define RESOURCE_BUFFER				0x06
 #define RESOURCE_STRUCTURED_BUFFER 0x07
-
 
 class CTexture 
 {
@@ -96,8 +95,8 @@ public:
 	void LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, wchar_t* filename, UINT resourceType, UINT index);
 	void LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index);
 
-	void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index);
-	void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index);
+	void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
+	void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
 
 	ID3D12Resource* CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue);
 

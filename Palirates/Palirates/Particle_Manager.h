@@ -15,11 +15,13 @@ struct CB_Particle_Update_Info
 
 class ParticleShader : public CShader
 {
+private:
+	ID3D12Resource* m_pUpdateConstantBuffer = nullptr;
+	CB_Particle_Update_Info* m_pMappedUpdateCB = nullptr;
+
+
+
 public:
-	ID3D12Resource* Particle_Update_Info = NULL;
-	CB_Particle_Update_Info* Mapped_Particle_Update_Info = NULL;
-
-
 	int									m_ncomputePipelineStates = 0;
 	ID3D12PipelineState** m_ppd3dcomputePipelineStates = NULL;
 	ID3D12RootSignature* m_pd3dComputeRootSignature = NULL;
@@ -38,35 +40,23 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
-	virtual D3D12_STREAM_OUTPUT_DESC CreateStreamOuputState(int nPipelineState);
 	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
 	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
-
-
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState = 0);
-
-	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState);
+	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState);
 
 	D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	ID3D12RootSignature* CreateComputeRootSignature(ID3D12Device* pd3dDevice);
 	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
-
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext);
-	void Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList, int index);
 
 	virtual void Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, UINT particle_count, float fTimeElapsed);
 	virtual void Release_Compute_ShaderVariables();
-};
 
-class Deffered_ParticleShader : public ParticleShader
-{
-public:
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
-	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState);
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext);
 
 };
 
@@ -81,7 +71,7 @@ enum class Particle_Type
 	etc
 };
 
-struct Particle_Info
+struct Particle_Format
 {
 	Particle_Type type = Particle_Type::etc;
 	XMFLOAT3 pos{};
@@ -114,7 +104,7 @@ public:
 	void OnPostRender_All();
 
 
-	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Info particle_info);
+	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
 
 };
 

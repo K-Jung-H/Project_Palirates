@@ -289,6 +289,32 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessView(ID3D12Device* pd3dDevice
     }
 }
 
+void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT resourceIndex, ID3D12Resource* pCounterResource, UINT nRootParameterIndex)
+{
+    CDescriptor_Heap* instance = Get_Instance();
+
+    // 🔒 기존 사용 방식 유지 (절대 변경 금지)
+    instance->UavCPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * 1);
+    instance->UavGPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * 1);
+
+    ID3D12Resource* pResource = pTexture->GetResource(resourceIndex);
+    if (pResource)
+    {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC desc = pTexture->GetUnorderedAccessViewDesc(resourceIndex);
+
+        pd3dDevice->CreateUnorderedAccessView(pResource, pCounterResource, &desc, instance->UavCPUDescriptorNextHandle);
+
+
+        pTexture->SetComputeUavGpuDescriptorHandle(0, instance->UavGPUDescriptorNextHandle);
+        pTexture->SetComputeUavRootParameter(0, nRootParameterIndex, 0, 1);
+
+
+        instance->UavCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+        instance->UavGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+    }
+}
+
+
 
 //===========================================================
 // 유틸리티 함수 - 힙 손상 위험 있음 - 사용 전에 검토 필요

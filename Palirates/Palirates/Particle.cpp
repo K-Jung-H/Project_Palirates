@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "Particle.h"
 
 //==============================================================================
@@ -17,17 +17,17 @@ Particle_Shape_Mesh::~Particle_Shape_Mesh()
 Cube_Shape_Mesh::Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize)
 	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
 {
-	XMFLOAT4 color1 = { 0.8f, 0.2f, 0.2f, 1.0f }; // ¿¹½Ã »ö»ó
+	XMFLOAT4 color1 = { 0.8f, 0.2f, 0.2f, 1.0f }; // ì˜ˆì‹œ ìƒ‰ìƒ
 	XMFLOAT4 color2 = { 0.2f, 0.8f, 0.2f, 1.0f };
 
 	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-	// Cube´Â 8°³ÀÇ Á¤Á¡ (8°³ÀÇ ²ÀÁşÁ¡)°ú 6°³ÀÇ ¸éÀ» °¡Áü
+	// CubeëŠ” 8ê°œì˜ ì •ì  (8ê°œì˜ ê¼­ì§“ì )ê³¼ 6ê°œì˜ ë©´ì„ ê°€ì§
 	m_nVertices = 8;
 	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
 	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
 
-	// Å¥ºê Á¤Á¡ À§Ä¡ Á¤ÀÇ
+	// íë¸Œ ì •ì  ìœ„ì¹˜ ì •ì˜
 	float halfSize = fSize / 2.0f;
 
 	m_pxmf3Positions[0] = XMFLOAT3(-halfSize, -halfSize, -halfSize);
@@ -39,75 +39,75 @@ Cube_Shape_Mesh::Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pxmf3Positions[6] = XMFLOAT3(halfSize, halfSize, halfSize);
 	m_pxmf3Positions[7] = XMFLOAT3(-halfSize, halfSize, halfSize);
 
-	// °¢ Á¤Á¡¿¡ »ö»ó ÇÒ´ç (¿¹½Ã·Î µÎ »ö»óÀ» ¹ø°¥¾Æ ÇÒ´ç)
+	// ê° ì •ì ì— ìƒ‰ìƒ í• ë‹¹ (ì˜ˆì‹œë¡œ ë‘ ìƒ‰ìƒì„ ë²ˆê°ˆì•„ í• ë‹¹)
 	for (int i = 0; i < m_nVertices; ++i)
 	{
 		m_pxmf4Colors[i] = XMFLOAT4(rand() % 2 == 0 ? color1 : color2);
 	}
 
-	// ¼­ºê¸Ş½¬ÀÇ °³¼ö´Â 1°³¸¸ »ç¿ëÇÏµµ·Ï ¼³Á¤
+	// ì„œë¸Œë©”ì‰¬ì˜ ê°œìˆ˜ëŠ” 1ê°œë§Œ ì‚¬ìš©í•˜ë„ë¡ ì„¤ì •
 	m_nSubMeshes = 1;
 
-	// ¼­ºê¸Ş½¬ ÀÎµ¦½º °³¼ö ¹× ÇÒ´ç
-	int nSubMeshIndices = 36; // Å¥ºê´Â 6°³ÀÇ ¸é, °¢ ¸éÀº 2°³ÀÇ »ï°¢Çü, ÇÑ ¸é´ç 6°³ÀÇ ÀÎµ¦½º => 6 * 6 = 36
+	// ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ê°œìˆ˜ ë° í• ë‹¹
+	int nSubMeshIndices = 36; // íë¸ŒëŠ” 6ê°œì˜ ë©´, ê° ë©´ì€ 2ê°œì˜ ì‚¼ê°í˜•, í•œ ë©´ë‹¹ 6ê°œì˜ ì¸ë±ìŠ¤ => 6 * 6 = 36
 	m_pnSubSetIndices = new int[m_nSubMeshes];
 	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
 
-	m_pnSubSetIndices[0] = nSubMeshIndices; // Ã¹ ¹øÂ° ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º °³¼ö ¼³Á¤
-	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // Ã¹ ¹øÂ° ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º ¹è¿­ ÇÒ´ç
+	m_pnSubSetIndices[0] = nSubMeshIndices; // ì²« ë²ˆì§¸ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ê°œìˆ˜ ì„¤ì •
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // ì²« ë²ˆì§¸ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ë°°ì—´ í• ë‹¹
 
 	int k = 0;
 
-	// Å¥ºêÀÇ ¸é¿¡ ´ëÇÑ ÀÎµ¦½º¸¦ ¼³Á¤ (°¢ ¸éÀ» 2°³ÀÇ »ï°¢ÇüÀ¸·Î ³ª´®)
-	// ¾Æ·¡ 6°³ÀÇ ¸éÀ» Á¤ÀÇ (°¢ ¸éÀº 2°³ÀÇ »ï°¢ÇüÀ¸·Î ³ª´©¾î 6°³ÀÇ ÀÎµ¦½º¸¦ °¡Áü)
-	// ¾Õ¸é
+	// íë¸Œì˜ ë©´ì— ëŒ€í•œ ì¸ë±ìŠ¤ë¥¼ ì„¤ì • (ê° ë©´ì„ 2ê°œì˜ ì‚¼ê°í˜•ìœ¼ë¡œ ë‚˜ëˆ”)
+	// ì•„ë˜ 6ê°œì˜ ë©´ì„ ì •ì˜ (ê° ë©´ì€ 2ê°œì˜ ì‚¼ê°í˜•ìœ¼ë¡œ ë‚˜ëˆ„ì–´ 6ê°œì˜ ì¸ë±ìŠ¤ë¥¼ ê°€ì§)
+	// ì•ë©´
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 2;
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3;
-	// µŞ¸é
+	// ë’·ë©´
 	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
 	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 7;
-	// ¿ŞÂÊ ¸é
+	// ì™¼ìª½ ë©´
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 7;
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 3;
-	// ¿À¸¥ÂÊ ¸é
+	// ì˜¤ë¥¸ìª½ ë©´
 	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
 	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 2;
-	// À§ÂÊ ¸é
+	// ìœ„ìª½ ë©´
 	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3; m_ppnSubSetIndices[0][k++] = 7;
 	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 6;
-	// ¾Æ·¡ÂÊ ¸é
+	// ì•„ë˜ìª½ ë©´
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5;
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 4;
 
-	// ¼­ºê¸Ş½¬ ÀÎµ¦½º ¹öÆÛ ¹× ¾÷·Îµå ¹öÆÛ »ı¼º
+	// ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ë²„í¼ ë° ì—…ë¡œë“œ ë²„í¼ ìƒì„±
 	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
 	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
 
-	// Ã¹ ¹øÂ° ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º ¹öÆÛ »ı¼º
+	// ì²« ë²ˆì§¸ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ë²„í¼ ìƒì„±
 	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
-		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices, 
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_INDEX_BUFFER,
 		&m_ppd3dSubSetIndexUploadBuffers[0]);
 
-	// ¼­ºê¸Ş½¬ ÀÎµ¦½º ¹öÆÛ ºä ¼³Á¤
+	// ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ë²„í¼ ë·° ì„¤ì •
 	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
 	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
 	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
 
 	//===========================================================
-	// Position Buffer »ı¼º
+	// Position Buffer ìƒì„±
 	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
 	//===========================================================
-	// Color Buffer »ı¼º
+	// Color Buffer ìƒì„±
 	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
 
 	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
 	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
@@ -160,11 +160,11 @@ Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	float fDeltaTheta = float((2.0f * XM_PI) / nSlices);
 	int k = 0;
 
-	//±¸ÀÇ À§(ºÏ±Ø)¸¦ ³ªÅ¸³»´Â Á¤Á¡ÀÌ´Ù. 
+	//êµ¬ì˜ ìœ„(ë¶ê·¹)ë¥¼ ë‚˜íƒ€ë‚´ëŠ” ì •ì ì´ë‹¤. 
 	m_pxmf3Positions[k++] = XMFLOAT3(0.0f, +fRadius, 0.0f);
 
 	float theta_i, phi_j;
-	//¿ø±âµÕ Ç¥¸éÀÇ Á¤Á¡ÀÌ´Ù. 
+	//ì›ê¸°ë‘¥ í‘œë©´ì˜ ì •ì ì´ë‹¤. 
 	for (int j = 1; j < nStacks; j++)
 	{
 		phi_j = fDeltaPhi * j;
@@ -177,7 +177,7 @@ Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 				fRadius * sinf(phi_j) * sinf(theta_i));
 		}
 	}
-	//±¸ÀÇ ¾Æ·¡(³²±Ø)¸¦ ³ªÅ¸³»´Â Á¤Á¡ÀÌ´Ù. 
+	//êµ¬ì˜ ì•„ë˜(ë‚¨ê·¹)ë¥¼ ë‚˜íƒ€ë‚´ëŠ” ì •ì ì´ë‹¤. 
 	m_pxmf3Positions[k] = XMFLOAT3(0.0f, -fRadius, 0.0f);
 
 	for (int i = 0; i < m_nVertices; ++i)
@@ -185,42 +185,42 @@ Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		m_pxmf4Colors[i] = XMFLOAT4(rand() % 2 == 0 ? color1 : color2);
 	}
 
-	// ¼­ºê¸Ş½¬ÀÇ °³¼ö´Â 1°³¸¸ »ç¿ëÇÏµµ·Ï ¼³Á¤
+	// ì„œë¸Œë©”ì‰¬ì˜ ê°œìˆ˜ëŠ” 1ê°œë§Œ ì‚¬ìš©í•˜ë„ë¡ ì„¤ì •
 	m_nSubMeshes = 1;
 
-	// ¼­ºê¸Ş½¬ ÀÎµ¦½º °³¼ö ¹× ÇÒ´ç
-	int nSubMeshIndices = (nSlices * 3) * 2 + (nSlices * (nStacks - 2) * 3 * 2);	 // ´ÜÀÏ ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º °³¼ö
-	m_pnSubSetIndices = new int[m_nSubMeshes];									 // ¼­ºê¸Ş½¬ ÀÎµ¦½º °³¼ö ÀúÀå ¹è¿­
-	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];							 // ¼­ºê¸Ş½¬ ÀÎµ¦½º ¹è¿­ Æ÷ÀÎÅÍ
+	// ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ê°œìˆ˜ ë° í• ë‹¹
+	int nSubMeshIndices = (nSlices * 3) * 2 + (nSlices * (nStacks - 2) * 3 * 2);	 // ë‹¨ì¼ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ê°œìˆ˜
+	m_pnSubSetIndices = new int[m_nSubMeshes];									 // ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ê°œìˆ˜ ì €ì¥ ë°°ì—´
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];							 // ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ë°°ì—´ í¬ì¸í„°
 
-	m_pnSubSetIndices[0] = nSubMeshIndices; // Ã¹ ¹øÂ° ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º °³¼ö ¼³Á¤
-	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // Ã¹ ¹øÂ° ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º ¹è¿­ ÇÒ´ç
+	m_pnSubSetIndices[0] = nSubMeshIndices; // ì²« ë²ˆì§¸ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ê°œìˆ˜ ì„¤ì •
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // ì²« ë²ˆì§¸ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ë°°ì—´ í• ë‹¹
 
 
 	k = 0;
-	//±¸ÀÇ À§ÂÊ ¿ø»ÔÀÇ Ç¥¸éÀ» Ç¥ÇöÇÏ´Â »ï°¢ÇüµéÀÇ ÀÎµ¦½ºÀÌ´Ù. 
+	//êµ¬ì˜ ìœ„ìª½ ì›ë¿”ì˜ í‘œë©´ì„ í‘œí˜„í•˜ëŠ” ì‚¼ê°í˜•ë“¤ì˜ ì¸ë±ìŠ¤ì´ë‹¤. 
 	for (int i = 0; i < nSlices; i++)
 	{
 		m_ppnSubSetIndices[0][k++] = 0;
 		m_ppnSubSetIndices[0][k++] = 1 + ((i + 1) % nSlices);
 		m_ppnSubSetIndices[0][k++] = 1 + i;
 	}
-	//±¸ÀÇ ¿ø±âµÕÀÇ Ç¥¸éÀ» Ç¥ÇöÇÏ´Â »ï°¢ÇüµéÀÇ ÀÎµ¦½ºÀÌ´Ù. 
+	//êµ¬ì˜ ì›ê¸°ë‘¥ì˜ í‘œë©´ì„ í‘œí˜„í•˜ëŠ” ì‚¼ê°í˜•ë“¤ì˜ ì¸ë±ìŠ¤ì´ë‹¤. 
 	for (int j = 0; j < nStacks - 2; j++)
 	{
 		for (int i = 0; i < nSlices; i++)
 		{
-			//»ç°¢ÇüÀÇ Ã¹ ¹øÂ° »ï°¢ÇüÀÇ ÀÎµ¦½ºÀÌ´Ù. 
+			//ì‚¬ê°í˜•ì˜ ì²« ë²ˆì§¸ ì‚¼ê°í˜•ì˜ ì¸ë±ìŠ¤ì´ë‹¤. 
 			m_ppnSubSetIndices[0][k++] = 1 + (i + (j * nSlices));
 			m_ppnSubSetIndices[0][k++] = 1 + (((i + 1) % nSlices) + (j * nSlices));
 			m_ppnSubSetIndices[0][k++] = 1 + (i + ((j + 1) * nSlices));
-			//»ç°¢ÇüÀÇ µÎ ¹øÂ° »ï°¢ÇüÀÇ ÀÎµ¦½ºÀÌ´Ù. 
+			//ì‚¬ê°í˜•ì˜ ë‘ ë²ˆì§¸ ì‚¼ê°í˜•ì˜ ì¸ë±ìŠ¤ì´ë‹¤. 
 			m_ppnSubSetIndices[0][k++] = 1 + (i + ((j + 1) * nSlices));
 			m_ppnSubSetIndices[0][k++] = 1 + (((i + 1) % nSlices) + (j * nSlices));
 			m_ppnSubSetIndices[0][k++] = 1 + (((i + 1) % nSlices) + ((j + 1) * nSlices));
 		}
 	}
-	//±¸ÀÇ ¾Æ·¡ÂÊ ¿ø»ÔÀÇ Ç¥¸éÀ» Ç¥ÇöÇÏ´Â »ï°¢ÇüµéÀÇ ÀÎµ¦½ºÀÌ´Ù. 
+	//êµ¬ì˜ ì•„ë˜ìª½ ì›ë¿”ì˜ í‘œë©´ì„ í‘œí˜„í•˜ëŠ” ì‚¼ê°í˜•ë“¤ì˜ ì¸ë±ìŠ¤ì´ë‹¤. 
 	for (int i = 0; i < nSlices; i++)
 	{
 		m_ppnSubSetIndices[0][k++] = (m_nVertices - 1);
@@ -228,31 +228,31 @@ Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		m_ppnSubSetIndices[0][k++] = ((m_nVertices - 1) - nSlices) + ((i + 1) % nSlices);
 	}
 
-	// ¼­ºê¸Ş½¬ ÀÎµ¦½º ¹öÆÛ ¹× ¾÷·Îµå ¹öÆÛ »ı¼º
+	// ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ë²„í¼ ë° ì—…ë¡œë“œ ë²„í¼ ìƒì„±
 	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
 	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
 
-	// Ã¹ ¹øÂ° ¼­ºê¸Ş½¬ÀÇ ÀÎµ¦½º ¹öÆÛ »ı¼º
+	// ì²« ë²ˆì§¸ ì„œë¸Œë©”ì‰¬ì˜ ì¸ë±ìŠ¤ ë²„í¼ ìƒì„±
 	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
 		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_INDEX_BUFFER,
 		&m_ppd3dSubSetIndexUploadBuffers[0]);
 
-	// ¼­ºê¸Ş½¬ ÀÎµ¦½º ¹öÆÛ ºä ¼³Á¤
+	// ì„œë¸Œë©”ì‰¬ ì¸ë±ìŠ¤ ë²„í¼ ë·° ì„¤ì •
 	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
 	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
 	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
 
 	//===========================================================
-	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
 	//===========================================================
-	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
 
 	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
 	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
@@ -279,227 +279,150 @@ void Sphere_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommand
 
 
 //==============================================================================
-
-
-ParticleMesh::ParticleMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles) : CMesh(pd3dDevice, pd3dCommandList)
-{
-	CreateVertexBuffer(pd3dDevice, pd3dCommandList, xmf3Position, xmf3Velocity, fLifetime, xmf3Acceleration, xmf3Color, xmf2Size);
-	CreateStreamOutputBuffer(pd3dDevice, pd3dCommandList, nMaxParticles);
-}
-
-void ParticleMesh::CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size)
-{
-	m_nVertices = 1;
-	m_nStride = sizeof(ParticleVertex);
-	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-
-	ParticleVertex pVertices[1];
-
-	pVertices[0].m_xmf3Position = xmf3Position;
-	pVertices[0].m_xmf3Velocity = xmf3Velocity;
-	pVertices[0].m_fLifetime = fLifetime;
-	pVertices[0].m_nType = PARTICLE_TYPE_EMITTER;
-
-	Particle_Init_Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, pVertices, m_nStride * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &ParticleUploadBuffer);
-
-	Particle_Info_Buffer_View.BufferLocation = Particle_Init_Buffer->GetGPUVirtualAddress();
-	Particle_Info_Buffer_View.StrideInBytes = m_nStride;
-	Particle_Info_Buffer_View.SizeInBytes = m_nStride * m_nVertices;
-
-	CS_UAV_Buffer = CreateUAVBuffer(pd3dDevice, (m_nStride * m_nMaxParticles));
-	::SynchronizeResourceTransition(pd3dCommandList, CS_UAV_Buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
-}
-
-void ParticleMesh::CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles)
+Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, UINT nMaxParticles)
 {
 	m_nMaxParticles = nMaxParticles;
+	m_nStride = sizeof(Particle_Info);
 
-	StreamOutputBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, (m_nStride * m_nMaxParticles), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_STREAM_OUT, NULL);
-	Particle_Draw_Buffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, (m_nStride * m_nMaxParticles), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	CreateBuffers(pd3dDevice, pd3dCmdList);
+	CreateCounterReadbackBuffer(pd3dDevice);
 
-	UINT64 nBufferFilledSize = 0;
-	Default_BufferFilled_Size = ::CreateBufferResource(pd3dDevice, pd3dCommandList, &nBufferFilledSize, sizeof(UINT64), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_STREAM_OUT, NULL);
-
-	Upload_BufferFilled_Size = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(UINT64), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, NULL);
-	Upload_BufferFilled_Size->Map(0, NULL, (void**)&Upload_BufferFilled_Size_N);
-
-#ifdef _WITH_QUERY_DATA_SO_STATISTICS
-	D3D12_QUERY_HEAP_DESC d3dQueryHeapDesc = { };
-	d3dQueryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_SO_STATISTICS;
-	d3dQueryHeapDesc.Count = 1;
-	d3dQueryHeapDesc.NodeMask = 0;
-	pd3dDevice->CreateQueryHeap(&d3dQueryHeapDesc, __uuidof(ID3D12QueryHeap), (void**)&m_pd3dSOQueryHeap);
-
-	m_pd3dSOQueryBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(D3D12_QUERY_DATA_SO_STATISTICS), D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, NULL);
-#else
-	ReadBack_BufferFilled_Size = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, sizeof(UINT64), D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, NULL);
-#endif
 }
 
-ParticleMesh::~ParticleMesh()
+Particle::~Particle()
 {
-	if (StreamOutputBuffer) StreamOutputBuffer->Release();
-	if (Particle_Draw_Buffer) Particle_Draw_Buffer->Release();
-	if (Default_BufferFilled_Size) Default_BufferFilled_Size->Release();
-	if (Upload_BufferFilled_Size) Upload_BufferFilled_Size->Release();
-
-#ifdef _WITH_QUERY_DATA_SO_STATISTICS
-	if (m_pd3dSOQueryBuffer) m_pd3dSOQueryBuffer->Release();
-	if (m_pd3dSOQueryHeap) m_pd3dSOQueryHeap->Release();
-#else
-	if (ReadBack_BufferFilled_Size) ReadBack_BufferFilled_Size->Release();
-#endif
+	ReleaseBuffers();
 }
 
-void ParticleMesh::PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+void Particle::CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (nPipelineState == 0)
-	{
-		if (b_reset)
-		{
-			b_reset = false;
+	particle_buffer_texture = new CTexture(3, RESOURCE_STRUCTURED_BUFFER, 0, 0, 1, 0, 0, 3, 0);
 
-			m_nVertices = 1;
+	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, nullptr, m_nMaxParticles, sizeof(Particle_Info), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, nullptr, m_nMaxParticles, sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 2, nullptr, m_nMaxParticles, sizeof(RenderInstance), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-			Particle_Info_Buffer_View.BufferLocation = Particle_Init_Buffer->GetGPUVirtualAddress();
-			Particle_Info_Buffer_View.StrideInBytes = m_nStride;
-			Particle_Info_Buffer_View.SizeInBytes = m_nStride * m_nVertices;
-		}
-		else
-		{
-			Particle_Info_Buffer_View.BufferLocation = Particle_Draw_Buffer->GetGPUVirtualAddress();
-			Particle_Info_Buffer_View.StrideInBytes = m_nStride;
-			Particle_Info_Buffer_View.SizeInBytes = m_nStride * m_nVertices;
-		}
+	counterBuffer_1 = CreateCounterBuffer(pd3dDevice);
+	counterBuffer_2 = CreateCounterBuffer(pd3dDevice);
+	counterBuffer_3 = CreateCounterBuffer(pd3dDevice);
 
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, counterBuffer_1, 1);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, counterBuffer_2, 2);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, counterBuffer_3, 3);
 
-		StreamOutputBuffer_View.BufferLocation = StreamOutputBuffer->GetGPUVirtualAddress();
-		StreamOutputBuffer_View.SizeInBytes = m_nStride * m_nMaxParticles;
-		StreamOutputBuffer_View.BufferFilledSizeLocation = Default_BufferFilled_Size->GetGPUVirtualAddress();
-
-		*Upload_BufferFilled_Size_N = 0;
-
-		::SynchronizeResourceTransition(pd3dCommandList, Default_BufferFilled_Size, D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_DEST);
-		pd3dCommandList->CopyResource(Default_BufferFilled_Size, Upload_BufferFilled_Size);
-		::SynchronizeResourceTransition(pd3dCommandList, Default_BufferFilled_Size, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_STREAM_OUT);
-	}
-	else if (nPipelineState == 1)
-	{
-		::SynchronizeResourceTransition(pd3dCommandList, Particle_Draw_Buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
-		::SynchronizeResourceTransition(pd3dCommandList, StreamOutputBuffer, D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_SOURCE);
-		pd3dCommandList->CopyResource(Particle_Draw_Buffer, StreamOutputBuffer);
-		::SynchronizeResourceTransition(pd3dCommandList, StreamOutputBuffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_STREAM_OUT);
-		::SynchronizeResourceTransition(pd3dCommandList, Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-
-		Particle_Info_Buffer_View.BufferLocation = Particle_Draw_Buffer->GetGPUVirtualAddress();
-		Particle_Info_Buffer_View.StrideInBytes = m_nStride;
-		Particle_Info_Buffer_View.SizeInBytes = m_nStride * m_nVertices;
-
-
-	}
+	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
+	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
+	m_RenderInstanceVBV.StrideInBytes = sizeof(RenderInstance);
+	m_RenderInstanceVBV.SizeInBytes = sizeof(RenderInstance) * m_nMaxParticles;
 }
 
-void ParticleMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
-{
-	if (nPipelineState == 0)
-	{
-		D3D12_STREAM_OUTPUT_BUFFER_VIEW pStreamOutputBufferViews[1] = { StreamOutputBuffer_View };
-		pd3dCommandList->SOSetTargets(0, 1, pStreamOutputBufferViews);
-
-#ifdef _WITH_QUERY_DATA_SO_STATISTICS
-		pd3dCommandList->BeginQuery(m_pd3dSOQueryHeap, D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0, 0);
-#endif
-		pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
-		pd3dCommandList->IASetVertexBuffers(m_nSlot, 1, &Particle_Info_Buffer_View);
-		pd3dCommandList->DrawInstanced(m_nVertices, 1, m_nOffset, 0);
-
-
-
-#ifdef _WITH_QUERY_DATA_SO_STATISTICS
-		pd3dCommandList->EndQuery(m_pd3dSOQueryHeap, D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0, 0);
-		pd3dCommandList->ResolveQueryData(m_pd3dSOQueryHeap, D3D12_QUERY_TYPE_SO_STATISTICS_STREAM0, 0, 1, m_pd3dSOQueryBuffer, 0);
-
-#else
-		::SynchronizeResourceTransition(pd3dCommandList, Default_BufferFilled_Size, D3D12_RESOURCE_STATE_STREAM_OUT, D3D12_RESOURCE_STATE_COPY_SOURCE);
-		pd3dCommandList->CopyResource(ReadBack_BufferFilled_Size, Default_BufferFilled_Size);
-		::SynchronizeResourceTransition(pd3dCommandList, Default_BufferFilled_Size, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_STREAM_OUT);
-
-#endif
-
-	}
-}
-
-
-void ParticleMesh::PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+void Particle::ReleaseBuffers()
 {
 }
 
-#define _WITH_DEBUG_STREAM_OUTPUT_VERTICES
-
-void ParticleMesh::OnPostRender(int nPipelineState)
+ID3D12Resource* Particle::CreateCounterBuffer(ID3D12Device* pd3dDevice)
 {
-	if (nPipelineState == 0)
-	{
-#ifdef _WITH_QUERY_DATA_SO_STATISTICS
-		D3D12_RANGE d3dReadRange = { 0, 0 };
-		UINT8* pBufferDataBegin = NULL;
-		m_pd3dSOQueryBuffer->Map(0, &d3dReadRange, (void**)&m_pd3dSOQueryDataStatistics);
-		if (m_pd3dSOQueryDataStatistics)
-			m_nVertices = (UINT)m_pd3dSOQueryDataStatistics->NumPrimitivesWritten;
-		m_pd3dSOQueryBuffer->Unmap(0, NULL);
-#else
-		UINT64* pnReadBackBufferFilledSize = NULL;
-		ReadBack_BufferFilled_Size->Map(0, NULL, (void**)&pnReadBackBufferFilledSize);
-		m_nVertices = UINT(*pnReadBackBufferFilledSize) / m_nStride;
-		ReadBack_BufferFilled_Size->Unmap(0, NULL);
-#endif
+	D3D12_RESOURCE_DESC desc = {};
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Width = sizeof(UINT); // 4ë°”ì´íŠ¸: ì¹´ìš´í„°ìš©
+	desc.Height = 1;
+	desc.DepthOrArraySize = 1;
+	desc.MipLevels = 1;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.SampleDesc.Count = 1;
+	desc.SampleDesc.Quality = 0;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProps.CreationNodeMask = 1;
+	heapProps.VisibleNodeMask = 1;
 
-		m_nCurrentParticles = m_nVertices;
-#ifdef _WITH_DEBUG_STREAM_OUTPUT_VERTICES
-		TCHAR pstrDebug[256] = { 0 };
-		_stprintf_s(pstrDebug, 256, _T("Stream Output Vertices = %d\n"), m_nVertices);
-		OutputDebugString(pstrDebug);
-#endif
-		if ((m_nVertices == 0) || (m_nVertices >= MAX_PARTICLES))
-			b_reset = true;
-	}
-}
-
-ID3D12Resource* ParticleMesh::CreateUAVBuffer(ID3D12Device* pd3dDevice, size_t bufferSize)
-{
-	D3D12_RESOURCE_DESC bufferDesc = {};
-	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	bufferDesc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-	bufferDesc.Width = bufferSize;
-	bufferDesc.Height = 1;
-	bufferDesc.DepthOrArraySize = 1;
-	bufferDesc.MipLevels = 1;
-	bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-	bufferDesc.SampleDesc.Count = 1;
-	bufferDesc.SampleDesc.Quality = 0;
-	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	bufferDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS; // UAVÀ» »ç¿ëÇÒ ¼ö ÀÖµµ·Ï ¼³Á¤
-
-	// Create the buffer with D3D12_HEAP_TYPE_DEFAULT and UAV state
-	ID3D12Resource* pd3dBuffer = nullptr;
-	D3D12_HEAP_PROPERTIES heapProperties = {};
-	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&pd3dBuffer));
+	ID3D12Resource* pCounterBuffer = nullptr;
+	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&pCounterBuffer));
 
 	if (FAILED(hr))
 	{
-		HRESULT removeReason = pd3dDevice->GetDeviceRemovedReason();
+		OutputDebugString(L"âŒ Failed to create Counter Buffer\n");
 		return nullptr;
 	}
 
-	return pd3dBuffer;
+	return pCounterBuffer;
 }
+
+void Particle::CreateCounterReadbackBuffer(ID3D12Device* pd3dDevice)
+{
+	if (!m_pCounterReadbackBuffer)
+	{
+		D3D12_HEAP_PROPERTIES heapProps = {};
+		heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+
+		D3D12_RESOURCE_DESC desc = {};
+		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+		desc.Width = sizeof(UINT);
+		desc.Height = 1;
+		desc.DepthOrArraySize = 1;
+		desc.MipLevels = 1;
+		desc.Format = DXGI_FORMAT_UNKNOWN;
+		desc.SampleDesc.Count = 1;
+		desc.SampleDesc.Quality = 0;
+		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+		pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_pCounterReadbackBuffer));
+	}
+}
+
+
+
+
+void Particle::RequestParticleCount(ID3D12GraphicsCommandList* pd3dCmdList)
+{
+	// ì¸ìŠ¤í„´ìŠ¤ ì •ë³´ ë²„í¼ì—ì„œ ì¹´ìš´í„° ì •ë³´ ë³µì‚¬í•˜ê¸°
+	// Dest (CPU ì ‘ê·¼ ê°€ëŠ¥í•œ ë²„í¼)
+	// Dest offset
+	// Src: Counter buffer
+	// Src offset
+	pd3dCmdList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, counterBuffer_3, 0, sizeof(UINT));
+}
+
+UINT Particle::Get_Particle_Num()
+{
+	if (!m_pCounterReadbackBuffer) 
+		return 0;
+
+	UINT count = 0;
+	void* pData = nullptr;
+	D3D12_RANGE range = { 0, sizeof(UINT) };
+
+	if (SUCCEEDED(m_pCounterReadbackBuffer->Map(0, &range, &pData)) && pData)
+	{
+		count = *reinterpret_cast<UINT*>(pData);
+		m_pCounterReadbackBuffer->Unmap(0, nullptr);
+	}
+	return count;
+}
+
+
+// ë Œë”ë§ìš© VBV ì—…ë°ì´íŠ¸
+void Particle::UpdateRenderInstanceVBV()
+{
+	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
+	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
+	m_RenderInstanceVBV.StrideInBytes = sizeof(RenderInstance);
+	m_RenderInstanceVBV.SizeInBytes = sizeof(RenderInstance) * m_nMaxParticles;
+}
+
+// ì¸ìŠ¤í„´ì‹± ë Œë”ë§
+void Particle::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, int instanceCount)
+{
+	pd3dCommandList->IASetVertexBuffers(1, 1, &m_RenderInstanceVBV);
+	pd3dCommandList->DrawInstanced(1, instanceCount, 0, 0);
+}
+
+
 //==============================================================================
 
 
@@ -516,61 +439,66 @@ void ParticleObject::ReleaseUploadBuffers()
 	CGameObject::ReleaseUploadBuffers();
 }
 
+void PrePare_Update()
+{
+
+}
+
 void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// Draw buffer¸¦ COPY_SOURCE »óÅÂ·Î ÀüÈ¯ÇÏ°í, UAV ¹öÆÛ¸¦ COPY_DEST »óÅÂ·Î ÀüÈ¯
-	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	//// Draw bufferë¥¼ COPY_SOURCE ìƒíƒœë¡œ ì „í™˜í•˜ê³ , UAV ë²„í¼ë¥¼ COPY_DEST ìƒíƒœë¡œ ì „í™˜
+	//::SynchronizeResourceTransition(pd3dCommandList, particle->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
-	// Draw buffer¿¡¼­ UAV ¹öÆÛ·Î º¹»ç
-	pd3dCommandList->CopyResource(particle_mesh->CS_UAV_Buffer, particle_mesh->Particle_Draw_Buffer);
+	//// Draw bufferì—ì„œ UAV ë²„í¼ë¡œ ë³µì‚¬
+	//pd3dCommandList->CopyResource(particle_mesh->CS_UAV_Buffer, particle_mesh->Particle_Draw_Buffer);
 
-	// UAV ¹öÆÛ¸¦ UNORDERED_ACCESS »óÅÂ·Î, Draw buffer´Â COPY_DEST »óÅÂ·Î ÀüÈ¯
-	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	//// UAV ë²„í¼ë¥¼ UNORDERED_ACCESS ìƒíƒœë¡œ, Draw bufferëŠ” COPY_DEST ìƒíƒœë¡œ ì „í™˜
+	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	// Draw buffer¿¡ ´ëÇØ UAV ºä¸¦ ¼³Á¤ÇÏ°í, Compute Shader ½ÇÇà
-	pd3dCommandList->SetComputeRootUnorderedAccessView(1, particle_mesh->CS_UAV_Buffer->GetGPUVirtualAddress());
+	//// Draw bufferì— ëŒ€í•´ UAV ë·°ë¥¼ ì„¤ì •í•˜ê³ , Compute Shader ì‹¤í–‰
+	//pd3dCommandList->SetComputeRootUnorderedAccessView(1, particle_mesh->CS_UAV_Buffer->GetGPUVirtualAddress());
 
-	int cs_threadGroup_Size = 256;
-	int dispatch_Size = (Get_Particle_Num() + cs_threadGroup_Size - 1) / cs_threadGroup_Size;
+	//int cs_threadGroup_Size = 256;
+	//int dispatch_Size = (Get_Particle_Num() + cs_threadGroup_Size - 1) / cs_threadGroup_Size;
 
 
-	pd3dCommandList->Dispatch(dispatch_Size, 1, 1);
+	//pd3dCommandList->Dispatch(dispatch_Size, 1, 1);
 
-	// UAV ¹öÆÛ¸¦ COPY_SOURCE »óÅÂ·Î ÀüÈ¯ÇÏ°í, Draw buffer¸¦ COPY_DEST »óÅÂ·Î ÀüÈ¯
-	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
-	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	//// UAV ë²„í¼ë¥¼ COPY_SOURCE ìƒíƒœë¡œ ì „í™˜í•˜ê³ , Draw bufferë¥¼ COPY_DEST ìƒíƒœë¡œ ì „í™˜
+	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
 
-	// UAV ¹öÆÛ¿¡¼­ Draw buffer·Î º¹»ç
-	pd3dCommandList->CopyResource(particle_mesh->Particle_Draw_Buffer, particle_mesh->CS_UAV_Buffer);
+	//// UAV ë²„í¼ì—ì„œ Draw bufferë¡œ ë³µì‚¬
+	//pd3dCommandList->CopyResource(particle_mesh->Particle_Draw_Buffer, particle_mesh->CS_UAV_Buffer);
 
-	// Draw buffer¸¦ ´Ù½Ã CONSTANT_BUFFER »óÅÂ·Î, UAV ¹öÆÛ´Â COPY_DEST »óÅÂ·Î ÀüÈ¯
-	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
+	//// Draw bufferë¥¼ ë‹¤ì‹œ CONSTANT_BUFFER ìƒíƒœë¡œ, UAV ë²„í¼ëŠ” COPY_DEST ìƒíƒœë¡œ ì „í™˜
+	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
 }
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
 {
 
-	if (progress == 0)
-	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	//if (progress == 0)
+	//{
+	//	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-		if (particle_mesh)
-		{
-			particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
-			particle_mesh->Render(pd3dCommandList, 0); //Stream Output
-		}
+	//	if (particle_mesh)
+	//	{
+	//		particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
+	//		particle_mesh->Render(pd3dCommandList, 0); //Stream Output
+	//	}
 
-	}
-	else if (progress == 1)
-	{
-		if (particle_mesh)
-			particle_mesh->PreRender(pd3dCommandList, 1); //Draw
+	//}
+	//else if (progress == 1)
+	//{
+	//	if (particle_mesh)
+	//		particle_mesh->PreRender(pd3dCommandList, 1); //Draw
 
-		if (shape_mesh)
-			shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->Particle_Info_Buffer_View, particle_mesh->Get_Num()); //Draw
+	//	if (shape_mesh)
+	//		shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->Particle_Info_Buffer_View, particle_mesh->Get_Num()); //Draw
 
-	}
+	//}
 }
 
 

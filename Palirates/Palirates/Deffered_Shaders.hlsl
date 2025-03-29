@@ -100,7 +100,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     
     //================================================================
 
-    return cColor;
+    return Light_Color;
     
     }
 
