@@ -9,7 +9,7 @@
 struct CB_Particle_Update_Info
 {
 	float ElapsedTime;
-	int Particle_N;
+	UINT Particle_N;
 };
 
 
@@ -19,7 +19,9 @@ private:
 	ID3D12Resource* m_pUpdateConstantBuffer = nullptr;
 	CB_Particle_Update_Info* m_pMappedUpdateCB = nullptr;
 
-
+	UINT m_cxThreadGroups;
+	UINT m_cyThreadGroups;
+	UINT m_czThreadGroups;
 
 public:
 	int									m_ncomputePipelineStates = 0;
@@ -51,12 +53,13 @@ public:
 	void Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList, int index);
 
 	virtual void Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, UINT particle_count, float fTimeElapsed);
+	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, CB_Particle_Update_Info* update_info);
 	virtual void Release_Compute_ShaderVariables();
 
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
 
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext);
+	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups);
 
 };
 

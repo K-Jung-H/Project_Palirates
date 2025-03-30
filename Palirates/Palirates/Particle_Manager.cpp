@@ -177,8 +177,7 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	m_nPipelineStates = 2;
 	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); //Stream Output Pipeline State
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 1); //Draw Pipeline State
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); //Rendering PSO
 
 
 	m_ncomputePipelineStates = 3;
@@ -186,10 +185,14 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 
 	m_pd3dComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
 
-	CreateComputePipelineState(pd3dDevice, m_pd3dComputeRootSignature, 0);
-	CreateComputePipelineState(pd3dDevice, m_pd3dComputeRootSignature, 1);
+	CreateComputePipelineState(pd3dDevice, m_pd3dComputeRootSignature, 0); // Update
+	CreateComputePipelineState(pd3dDevice, m_pd3dComputeRootSignature, 1); // Emit & Delete
 
 	Create_Compute_ShaderVariables(pd3dDevice, pd3dCommandList);
+
+	m_cxThreadGroups = 1;
+	m_cyThreadGroups = 1;
+	m_czThreadGroups = 1;
 }
 
 
@@ -197,9 +200,9 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 D3D12_SHADER_BYTECODE ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return CShader::CompileShaderFromFile(L"Particle_CS.hlsl", "CSMain", "cs_5_1", ppd3dShaderBlob);
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 1)
-		return CShader::CompileShaderFromFile(L"Particle_CS.hlsl", "CSMain", "cs_5_1", ppd3dShaderBlob);
+		return CShader::CompileShaderFromFile(L"Particles_Update_CS.hlsl", "UpdateCS", "cs_5_1", ppd3dShaderBlob);
 
 
 }
@@ -208,7 +211,7 @@ ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd
 {
 	ID3D12RootSignature* pd3dComputeRootSignature = NULL;
 
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[3];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[4];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 		pd3dDescriptorRanges[0].NumDescriptors = 1;
@@ -337,12 +340,6 @@ void ParticleShader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12
 	if (pd3dComputeShaderBlob) pd3dComputeShaderBlob->Release();
 }
 
-
-
-void ParticleShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
-{
-}
-
 void ParticleShader::Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
 	pd3dCommandList->SetComputeRootSignature(m_pd3dComputeRootSignature);
@@ -361,11 +358,11 @@ void ParticleShader::Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID
 
 }
 
-void ParticleShader::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, UINT particle_count, float fTimeElapsed)
+void ParticleShader::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, CB_Particle_Update_Info* update_info)
 {
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pUpdateConstantBuffer->GetGPUVirtualAddress();
-	m_pMappedUpdateCB->Particle_N = particle_count;
-	m_pMappedUpdateCB->ElapsedTime = fTimeElapsed;
+	m_pMappedUpdateCB->Particle_N = update_info->Particle_N;
+	m_pMappedUpdateCB->ElapsedTime = update_info->ElapsedTime;
 
 	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
 }
@@ -377,6 +374,16 @@ void ParticleShader::Release_Compute_ShaderVariables()
 
 	if (m_pUpdateConstantBuffer)
 		m_pUpdateConstantBuffer->Release();
+}
+
+void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->Dispatch(m_cxThreadGroups, m_cyThreadGroups, m_czThreadGroups);
+}
+
+void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups)
+{
+	pd3dCommandList->Dispatch(cxThreadGroups, cyThreadGroups, czThreadGroups);
 }
 
 //===================================================================
@@ -446,27 +453,35 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	//===================================================================
 
 	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info);
-	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info_2);
 
 	//===================================================================
 }
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	CB_Particle_Update_Info update_info;
+
 	for (auto& [type, shader_ptr] : particle_shader_map)
 	{
 		if (!shader_ptr)
 			continue;
 
-		shader_ptr->Set_Compute_Pipeline(pd3dCommandList);
+		shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 0);
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			int particle_num = particle_obj->Get_Particle_Num();
+			update_info.ElapsedTime = fTimeElapsed;
+//			update_info.Particle_N = particle_obj->Get_Particle_Num();
+			update_info.Particle_N = particle_obj->Test_Func(pd3dCommandList);
 
-			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, particle_num, fTimeElapsed); // CS에 파티클 정보 버퍼 업데이트 및 연결
+			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info); 
 
-			particle_obj->Animate(pd3dCommandList);
+			particle_obj->Update_Compute_ShaderVariables(pd3dCommandList);
+
+			shader_ptr->Dispatch(pd3dCommandList);
+
+			UINT n = particle_obj->Test_Func(pd3dCommandList);
+			DebugOutput(to_string(n) + "\n");
 		}
 	}
 }
@@ -509,10 +524,10 @@ void Particle_Manager::OnPostRender_All()
 void Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
 {
 	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
-//	Particle* new_particle_mesh = new Particle(pd3dDevice, pd3dCommandList, particle_info.pos, particle_info.velocity, 2.0f, particle_info.acceleration, particle_info.color, particle_info.size, particle_info.max_particles);
+	Particle* new_particle = new Particle(pd3dDevice, pd3dCommandList);
 
 	new_particle_obj->Set_Shape(particle_shape_mesh);
-	new_particle_obj->Set_Particle_OBJ(new_particle_mesh);
+	new_particle_obj->Set_Particle_OBJ(new_particle);
 	new_particle_obj->SetMesh(NULL);
 
 	particle_object_list_map[particle_info.type].push_back(new_particle_obj);

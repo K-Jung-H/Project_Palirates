@@ -11,7 +11,7 @@ struct RenderInstance
 {
 	XMFLOAT3 Position;
 	XMFLOAT3 Velocity;
-	XMFLOAT3 Color;
+	XMFLOAT4 Color;
 };
 
 struct Particle_Info
@@ -39,7 +39,7 @@ struct Particle_Info
 class Particle
 {
 public:
-	Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, UINT nMaxParticles);
+	Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles = MAX_PARTICLES);
 	virtual ~Particle();
 
 private:
@@ -74,15 +74,16 @@ public:
 	ID3D12Resource* CreateCounterBuffer(ID3D12Device* pd3dDevice);
 	void CreateCounterReadbackBuffer(ID3D12Device* pd3dDevice);
 
+	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 
 	// ·»´õ¸µ¿ë VBV ¾÷µ¥ÀÌÆ®
 	void UpdateRenderInstanceVBV();
 
-	void RequestParticleCount(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	// ÀÎ½ºÅÏ½Ì ·»´õ¸µ
-	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, int instanceCount);
+	void RequestParticleCount(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Post_Update(ID3D12GraphicsCommandList* pd3dCommandList) { RequestParticleCount(pd3dCommandList); }
+
 
 	UINT GetMaxParticles() const { return m_nMaxParticles; }
 	UINT Get_Particle_Num();
@@ -130,6 +131,7 @@ private:
 	Particle_Shape_Mesh* shape_mesh = NULL;
 	Particle* particle_obj = NULL;
 	CMaterial* particle_Material = NULL;
+	UINT particle_N = 0;
 
 public:
 	ParticleObject();
@@ -141,13 +143,17 @@ public:
 	void Set_Particle_OBJ(Particle* new_particle_obj = NULL) { particle_obj = new_particle_obj; }
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
 
-	virtual void PrePare_Update(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList) {};
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress_n = 0);
 	virtual void OnPostRender();
 
-	UINT Get_Particle_Num() { return particle_obj->Get_Particle_Num(); }
-
+	UINT Get_Particle_Num() { return particle_N; }
+	UINT Test_Func(ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		particle_obj->RequestParticleCount(pd3dCommandList);
+		return particle_obj->Get_Particle_Num();
+	}
 
 };

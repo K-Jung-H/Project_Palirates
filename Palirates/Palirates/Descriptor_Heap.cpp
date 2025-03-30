@@ -293,7 +293,6 @@ void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CText
 {
     CDescriptor_Heap* instance = Get_Instance();
 
-    // 🔒 기존 사용 방식 유지 (절대 변경 금지)
     instance->UavCPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * 1);
     instance->UavGPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * 1);
 
@@ -304,9 +303,8 @@ void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CText
 
         pd3dDevice->CreateUnorderedAccessView(pResource, pCounterResource, &desc, instance->UavCPUDescriptorNextHandle);
 
-
-        pTexture->SetComputeUavGpuDescriptorHandle(0, instance->UavGPUDescriptorNextHandle);
-        pTexture->SetComputeUavRootParameter(0, nRootParameterIndex, 0, 1);
+        pTexture->SetComputeUavGpuDescriptorHandle(resourceIndex, instance->UavGPUDescriptorNextHandle);
+        pTexture->SetComputeUavRootParameter(resourceIndex, nRootParameterIndex, resourceIndex, 1);
 
 
         instance->UavCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;

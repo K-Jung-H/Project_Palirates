@@ -296,10 +296,16 @@ Particle::~Particle()
 
 void Particle::CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	particle_buffer_texture = new CTexture(3, RESOURCE_STRUCTURED_BUFFER, 0, 0, 1, 0, 0, 3, 0);
+	particle_buffer_texture = new CTexture(3, RESOURCE_STRUCTURED_BUFFER, 0, 0, 3, 0, 0, 3, 0);
+
+	UINT* index_init = new UINT[m_nMaxParticles];
+	for (UINT i = 0; i < m_nMaxParticles; ++i)
+	{
+		index_init[i] = i;
+	}
 
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, nullptr, m_nMaxParticles, sizeof(Particle_Info), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, nullptr, m_nMaxParticles, sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, index_init, m_nMaxParticles, sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 2, nullptr, m_nMaxParticles, sizeof(RenderInstance), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	counterBuffer_1 = CreateCounterBuffer(pd3dDevice);
@@ -310,10 +316,21 @@ void Particle::CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, counterBuffer_2, 2);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, counterBuffer_3, 3);
 
+
 	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
 	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
 	m_RenderInstanceVBV.StrideInBytes = sizeof(RenderInstance);
 	m_RenderInstanceVBV.SizeInBytes = sizeof(RenderInstance) * m_nMaxParticles;
+}
+
+void Particle::UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+
+	particle_buffer_texture->UpdateComputeUavShaderVariables(pd3dCommandList);
+	//particle_buffer_texture->UpdateComputeUavShaderVariable(pd3dCommandList, 0, 0);
+	//particle_buffer_texture->UpdateComputeUavShaderVariable(pd3dCommandList, 1, 1);
+	//particle_buffer_texture->UpdateComputeUavShaderVariable(pd3dCommandList, 2, 2);
+
 }
 
 void Particle::ReleaseBuffers()
@@ -346,7 +363,7 @@ ID3D12Resource* Particle::CreateCounterBuffer(ID3D12Device* pd3dDevice)
 
 	if (FAILED(hr))
 	{
-		OutputDebugString(L"❌ Failed to create Counter Buffer\n");
+		OutputDebugString(L" Failed to create Counter Buffer\n");
 		return nullptr;
 	}
 
@@ -375,9 +392,6 @@ void Particle::CreateCounterReadbackBuffer(ID3D12Device* pd3dDevice)
 	}
 }
 
-
-
-
 void Particle::RequestParticleCount(ID3D12GraphicsCommandList* pd3dCmdList)
 {
 	// 인스턴스 정보 버퍼에서 카운터 정보 복사하기
@@ -385,7 +399,7 @@ void Particle::RequestParticleCount(ID3D12GraphicsCommandList* pd3dCmdList)
 	// Dest offset
 	// Src: Counter buffer
 	// Src offset
-	pd3dCmdList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, counterBuffer_3, 0, sizeof(UINT));
+	pd3dCmdList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, counterBuffer_2, 0, sizeof(UINT));
 }
 
 UINT Particle::Get_Particle_Num()
@@ -415,14 +429,6 @@ void Particle::UpdateRenderInstanceVBV()
 	m_RenderInstanceVBV.SizeInBytes = sizeof(RenderInstance) * m_nMaxParticles;
 }
 
-// 인스턴싱 렌더링
-void Particle::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, int instanceCount)
-{
-	pd3dCommandList->IASetVertexBuffers(1, 1, &m_RenderInstanceVBV);
-	pd3dCommandList->DrawInstanced(1, instanceCount, 0, 0);
-}
-
-
 //==============================================================================
 
 
@@ -439,66 +445,16 @@ void ParticleObject::ReleaseUploadBuffers()
 	CGameObject::ReleaseUploadBuffers();
 }
 
-void PrePare_Update()
+void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-
+	particle_obj->UpdateBuffers(pd3dCommandList);
 }
 
-void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	//// Draw buffer를 COPY_SOURCE 상태로 전환하고, UAV 버퍼를 COPY_DEST 상태로 전환
-	//::SynchronizeResourceTransition(pd3dCommandList, particle->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_SOURCE);
-
-	//// Draw buffer에서 UAV 버퍼로 복사
-	//pd3dCommandList->CopyResource(particle_mesh->CS_UAV_Buffer, particle_mesh->Particle_Draw_Buffer);
-
-	//// UAV 버퍼를 UNORDERED_ACCESS 상태로, Draw buffer는 COPY_DEST 상태로 전환
-	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-	//// Draw buffer에 대해 UAV 뷰를 설정하고, Compute Shader 실행
-	//pd3dCommandList->SetComputeRootUnorderedAccessView(1, particle_mesh->CS_UAV_Buffer->GetGPUVirtualAddress());
-
-	//int cs_threadGroup_Size = 256;
-	//int dispatch_Size = (Get_Particle_Num() + cs_threadGroup_Size - 1) / cs_threadGroup_Size;
-
-
-	//pd3dCommandList->Dispatch(dispatch_Size, 1, 1);
-
-	//// UAV 버퍼를 COPY_SOURCE 상태로 전환하고, Draw buffer를 COPY_DEST 상태로 전환
-	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
-	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
-
-	//// UAV 버퍼에서 Draw buffer로 복사
-	//pd3dCommandList->CopyResource(particle_mesh->Particle_Draw_Buffer, particle_mesh->CS_UAV_Buffer);
-
-	//// Draw buffer를 다시 CONSTANT_BUFFER 상태로, UAV 버퍼는 COPY_DEST 상태로 전환
-	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->Particle_Draw_Buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	//::SynchronizeResourceTransition(pd3dCommandList, particle_mesh->CS_UAV_Buffer, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_COPY_DEST);
-}
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress)
 {
+	// 메시기반 인스턴싱 하기
 
-	//if (progress == 0)
-	//{
-	//	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-	//	if (particle_mesh)
-	//	{
-	//		particle_mesh->PreRender(pd3dCommandList, 0); //Stream Output
-	//		particle_mesh->Render(pd3dCommandList, 0); //Stream Output
-	//	}
-
-	//}
-	//else if (progress == 1)
-	//{
-	//	if (particle_mesh)
-	//		particle_mesh->PreRender(pd3dCommandList, 1); //Draw
-
-	//	if (shape_mesh)
-	//		shape_mesh->Instancing_Render(pd3dCommandList, particle_mesh->Particle_Info_Buffer_View, particle_mesh->Get_Num()); //Draw
-
-	//}
 }
 
 
@@ -506,6 +462,8 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void ParticleObject::OnPostRender()
 {
-	if (particle_mesh)
-		particle_mesh->OnPostRender(0); //Read Stream Output Buffer Filled Size
+	if (particle_obj)
+	{
+		particle_N = particle_obj->Get_Particle_Num();
+	}
 }

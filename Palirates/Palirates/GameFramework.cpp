@@ -753,6 +753,8 @@ void CGameFramework::FrameAdvance()
 	hResult = Active_CommandAllocator->Reset();
 	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
 	{
+		CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
+
 		Update_Scene();
 	}
 	hResult = Active_CommandList->Close();

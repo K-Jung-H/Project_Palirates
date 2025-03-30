@@ -668,8 +668,7 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 	{
-		particle_manager->Render_All(pd3dCommandList, pCamera, 0);
-		particle_manager->Render_All(pd3dCommandList, pCamera, 1);
+//		particle_manager->Render_All(pd3dCommandList, pCamera, 0);
 	}
 
 #endif

@@ -5,7 +5,7 @@ Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Position: register(t1);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Material_Light_Info : register(t3);
-Texture2D<float2> T_Velocity : register(t4);
+Texture2D<float4> T_Velocity : register(t4);
 
 cbuffer cb_Post_Camera : register(b0)
 {
