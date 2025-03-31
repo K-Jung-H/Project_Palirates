@@ -16,6 +16,8 @@ private:
 
     //===============¼­¹ö===============
     std::map<int, CPlayer*> players;
+    int GetClientCount() const;
+    const std::unordered_map<int, CPlayer*>& GetAllPlayers() const;
 
 public:
     Scene_Manager();

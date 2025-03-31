@@ -255,3 +255,13 @@ CPlayer* Scene_Manager::GetPlayerById(int playerId)
     }
     return nullptr;
 }
+
+int Scene_Manager::GetClientCount() const
+{
+    return static_cast<int>(players.size());
+}
+
+const std::unordered_map<int, CPlayer*>& Scene_Manager::GetAllPlayers() const
+{
+    return players;
+}
