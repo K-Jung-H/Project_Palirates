@@ -285,7 +285,6 @@ Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdL
 	m_nStride = sizeof(Particle_Info);
 
 	CreateBuffers(pd3dDevice, pd3dCmdList);
-	CreateCounterReadbackBuffer(pd3dDevice);
 
 }
 
@@ -306,31 +305,33 @@ void Particle::CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, nullptr, m_nMaxParticles, sizeof(Particle_Info), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, index_init, m_nMaxParticles, sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 2, nullptr, m_nMaxParticles, sizeof(RenderInstance), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 2, nullptr, m_nMaxParticles, sizeof(Render_Instance), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	counterBuffer_1 = CreateCounterBuffer(pd3dDevice);
-	counterBuffer_2 = CreateCounterBuffer(pd3dDevice);
-	counterBuffer_3 = CreateCounterBuffer(pd3dDevice);
+	Particle_Info_List_counterBuffer = CreateCounterBuffer(pd3dDevice);
+	Particle_Info_List_readbackBuffer = CreateReadbackBuffer(pd3dDevice);
 
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, counterBuffer_1, 1);
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, counterBuffer_2, 2);
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, counterBuffer_3, 3);
+	FreeList_counterBuffer = CreateCounterBuffer(pd3dDevice);
+	FreeList_readbackBuffer = CreateReadbackBuffer(pd3dDevice);
 
+	Render_Instance_counterBuffer = CreateCounterBuffer(pd3dDevice);
+	Render_Instance_readbackBuffer = CreateReadbackBuffer(pd3dDevice);
+
+
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, FreeList_counterBuffer, 2);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, Render_Instance_counterBuffer, 3);
+
+	CreateReadbackBuffer(pd3dDevice);
 
 	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
 	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
-	m_RenderInstanceVBV.StrideInBytes = sizeof(RenderInstance);
-	m_RenderInstanceVBV.SizeInBytes = sizeof(RenderInstance) * m_nMaxParticles;
+	m_RenderInstanceVBV.StrideInBytes = sizeof(Render_Instance);
+	m_RenderInstanceVBV.SizeInBytes = sizeof(Render_Instance) * m_nMaxParticles;
 }
 
 void Particle::UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-
 	particle_buffer_texture->UpdateComputeUavShaderVariables(pd3dCommandList);
-	//particle_buffer_texture->UpdateComputeUavShaderVariable(pd3dCommandList, 0, 0);
-	//particle_buffer_texture->UpdateComputeUavShaderVariable(pd3dCommandList, 1, 1);
-	//particle_buffer_texture->UpdateComputeUavShaderVariable(pd3dCommandList, 2, 2);
-
 }
 
 void Particle::ReleaseBuffers()
@@ -370,41 +371,88 @@ ID3D12Resource* Particle::CreateCounterBuffer(ID3D12Device* pd3dDevice)
 	return pCounterBuffer;
 }
 
-void Particle::CreateCounterReadbackBuffer(ID3D12Device* pd3dDevice)
+void Particle::Post_Update(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (!m_pCounterReadbackBuffer)
+	Copy_CounterBuffer_Particle_Info(pd3dCommandList);
+	Copy_CounterBuffer_FreeList(pd3dCommandList);
+	Copy_CounterBuffer_Render_Instance(pd3dCommandList);
+}
+
+ID3D12Resource* Particle::CreateReadbackBuffer(ID3D12Device* pd3dDevice, UINT byteSize)
+{
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+
+	D3D12_RESOURCE_DESC desc = {};
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Width = byteSize;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	ID3D12Resource* pReadbackBuffer = nullptr;
+	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pReadbackBuffer));
+
+	if (FAILED(hr))
 	{
-		D3D12_HEAP_PROPERTIES heapProps = {};
-		heapProps.Type = D3D12_HEAP_TYPE_READBACK;
-
-		D3D12_RESOURCE_DESC desc = {};
-		desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-		desc.Width = sizeof(UINT);
-		desc.Height = 1;
-		desc.DepthOrArraySize = 1;
-		desc.MipLevels = 1;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.SampleDesc.Count = 1;
-		desc.SampleDesc.Quality = 0;
-		desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-		pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_pCounterReadbackBuffer));
+		OutputDebugString(L"[Particle] Failed to create Readback Buffer\n");
+		return nullptr;
 	}
+
+	return pReadbackBuffer;
 }
 
-void Particle::RequestParticleCount(ID3D12GraphicsCommandList* pd3dCmdList)
+
+void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 인스턴스 정보 버퍼에서 카운터 정보 복사하기
-	// Dest (CPU 접근 가능한 버퍼)
-	// Dest offset
-	// Src: Counter buffer
-	// Src offset
-	pd3dCmdList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, counterBuffer_2, 0, sizeof(UINT));
+	pd3dCommandList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, Particle_Info_List_counterBuffer, 0, sizeof(UINT));
 }
 
-UINT Particle::Get_Particle_Num()
+void Particle::Copy_CounterBuffer_FreeList(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, FreeList_counterBuffer, 0, sizeof(UINT));
+}
+
+void Particle::Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, Render_Instance_counterBuffer, 0, sizeof(UINT));
+}
+
+UINT Particle::Readback_CounterBuffer_Particle_Info_List()
 {
 	if (!m_pCounterReadbackBuffer) 
+		return 0;
+
+	UINT count = 0;
+	void* pData = nullptr;
+	D3D12_RANGE range = { 0, sizeof(UINT) };
+
+	if (SUCCEEDED(m_pCounterReadbackBuffer->Map(0, &range, &pData)) && pData)
+	{
+		count = *reinterpret_cast<UINT*>(pData);
+		m_pCounterReadbackBuffer->Unmap(0, nullptr);
+	}
+	return count;
+}
+
+UINT Particle::Readback_CounterBuffer_Particle_Info_List()
+{
+	if (!m_pCounterReadbackBuffer)
+		return 0;
+
+	UINT count = 0;
+	void* pData = nullptr;
+	D3D12_RANGE range = { 0, sizeof(UINT) };
+
+	if (SUCCEEDED(m_pCounterReadbackBuffer->Map(0, &range, &pData)) && pData)
+	{
+		count = *reinterpret_cast<UINT*>(pData);
+		m_pCounterReadbackBuffer->Unmap(0, nullptr);
+	}
+	return count;
+}
+
+UINT Particle::Readback_CounterBuffer_Particle_Info_List()
+{
+	if (!m_pCounterReadbackBuffer)
 		return 0;
 
 	UINT count = 0;
@@ -425,8 +473,8 @@ void Particle::UpdateRenderInstanceVBV()
 {
 	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
 	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
-	m_RenderInstanceVBV.StrideInBytes = sizeof(RenderInstance);
-	m_RenderInstanceVBV.SizeInBytes = sizeof(RenderInstance) * m_nMaxParticles;
+	m_RenderInstanceVBV.StrideInBytes = sizeof(Render_Instance);
+	m_RenderInstanceVBV.SizeInBytes = sizeof(Render_Instance) * m_nMaxParticles;
 }
 
 //==============================================================================
@@ -464,6 +512,6 @@ void ParticleObject::OnPostRender()
 {
 	if (particle_obj)
 	{
-		particle_N = particle_obj->Get_Particle_Num();
+		particle_N = particle_obj->Readback_CounterBuffer();
 	}
 }

@@ -8,8 +8,9 @@
 
 struct CB_Particle_Update_Info
 {
+	UINT FreeList_Size;
+	UINT Max_Particle_N;
 	float ElapsedTime;
-	UINT Particle_N;
 };
 
 

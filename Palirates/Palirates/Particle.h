@@ -7,7 +7,7 @@
 
 //==============================================================================
 
-struct RenderInstance
+struct Render_Instance
 {
 	XMFLOAT3 Position;
 	XMFLOAT3 Velocity;
@@ -49,9 +49,14 @@ private:
 	// RWStructuredBuffer<RenderInstance> 2
 	CTexture* particle_buffer_texture = NULL;
 
-	ID3D12Resource* counterBuffer_1 = NULL;
-	ID3D12Resource* counterBuffer_2 = NULL;
-	ID3D12Resource* counterBuffer_3 = NULL;
+	ID3D12Resource* Particle_Info_List_counterBuffer = NULL;
+	ID3D12Resource* Particle_Info_List_readbackBuffer = NULL;
+
+	ID3D12Resource* FreeList_counterBuffer = NULL;
+	ID3D12Resource* FreeList_readbackBuffer = NULL;
+
+	ID3D12Resource* Render_Instance_counterBuffer = NULL;
+	ID3D12Resource* Render_Instance_readbackBuffer = NULL;
 
 	// GPU에서 카운터 값을 복사하는 버퍼
 	ID3D12Resource* m_pCounterReadbackBuffer = nullptr;
@@ -72,7 +77,8 @@ public:
 
 	// 입자 개수 읽기 버퍼
 	ID3D12Resource* CreateCounterBuffer(ID3D12Device* pd3dDevice);
-	void CreateCounterReadbackBuffer(ID3D12Device* pd3dDevice);
+
+	ID3D12Resource* CreateReadbackBuffer(ID3D12Device* pd3dDevice, UINT byteSize = sizeof(UINT));
 
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
@@ -81,12 +87,19 @@ public:
 	void UpdateRenderInstanceVBV();
 
 
-	void RequestParticleCount(ID3D12GraphicsCommandList* pd3dCommandList);
-	void Post_Update(ID3D12GraphicsCommandList* pd3dCommandList) { RequestParticleCount(pd3dCommandList); }
+	void Post_Update(ID3D12GraphicsCommandList* pd3dCommandList);
 
 
-	UINT GetMaxParticles() const { return m_nMaxParticles; }
-	UINT Get_Particle_Num();
+	UINT Get_Particle_Max_Num() const { return m_nMaxParticles; }
+
+	void Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Copy_CounterBuffer_FreeList(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	UINT Readback_CounterBuffer_Particle_Info_List();
+	UINT Readback_CounterBuffer_FreeList();
+	UINT Readback_CounterBuffer_Render_Instance();
+
 };
 
 //==============================================================================
@@ -152,8 +165,8 @@ public:
 	UINT Get_Particle_Num() { return particle_N; }
 	UINT Test_Func(ID3D12GraphicsCommandList* pd3dCommandList)
 	{
-		particle_obj->RequestParticleCount(pd3dCommandList);
-		return particle_obj->Get_Particle_Num();
+		particle_obj->Copy_CounterBuffer(pd3dCommandList);
+		return particle_obj->Readback_CounterBuffer();
 	}
 
 };

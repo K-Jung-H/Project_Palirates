@@ -1,8 +1,9 @@
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
+    uint FreeList_Size;    
+    uint Max_Particle;
     float ElapsedTime;
-    uint Particle_N;
 }
 
 struct Particle_Info
@@ -25,16 +26,16 @@ struct Particle_Info
 };
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
-//ConsumeStructuredBuffer<uint> FreeList_Emit : register(u1);
-AppendStructuredBuffer<uint> FreeList_Emit : register(u1);
+ConsumeStructuredBuffer<uint> FreeList_Emit : register(u1);
 
 [numthreads(1, 1, 1)]
 void EmitCS(uint3 DTid : SV_DispatchThreadID)
 {
-    //uint index = FreeList_Emit.Consume();
-    if (Particle_N < 60)
-        FreeList_Emit.Append(0);
+    if (FreeList_Size <= 0)
+        return;
     
+    uint index = FreeList_Emit.Consume();
+ 
     Particle_Info p = (Particle_Info) 0;
     p.Position = float3(0.0f, 0.0f, 0.0f);
     p.Velocity = float3(0.0f, 3.0f, 0.0f);
@@ -46,5 +47,5 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     p.Type = 0;
     p.Active = 1;
 
-    //ParticleBuffer_Emit[index] = p;
+    ParticleBuffer_Emit[index] = p;
 }

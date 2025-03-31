@@ -361,7 +361,8 @@ void ParticleShader::Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID
 void ParticleShader::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, CB_Particle_Update_Info* update_info)
 {
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pUpdateConstantBuffer->GetGPUVirtualAddress();
-	m_pMappedUpdateCB->Particle_N = update_info->Particle_N;
+	m_pMappedUpdateCB->FreeList_Size = update_info->FreeList_Size;
+	m_pMappedUpdateCB->Max_Particle_N = update_info->Max_Particle_N;
 	m_pMappedUpdateCB->ElapsedTime = update_info->ElapsedTime;
 
 	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
@@ -472,7 +473,7 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 		{
 			update_info.ElapsedTime = fTimeElapsed;
 //			update_info.Particle_N = particle_obj->Get_Particle_Num();
-			update_info.Particle_N = particle_obj->Test_Func(pd3dCommandList);
+			update_info.FreeList_Size = particle_obj->Test_Func(pd3dCommandList);
 
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info); 
 
