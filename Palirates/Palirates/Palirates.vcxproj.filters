@@ -66,10 +66,22 @@
     <ClInclude Include="Object_StateMachine.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="UILayer.h">
+    <ClInclude Include="Scene_Manager.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Scene_Manager.h">
+    <ClInclude Include="UI_Manager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Particle_Manager.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Particle.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Descriptor_Heap.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Shader_Compute.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
@@ -116,10 +128,22 @@
     <ClCompile Include="Object_StateMachine.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="UILayer.cpp">
+    <ClCompile Include="Scene_Manager.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="Scene_Manager.cpp">
+    <ClCompile Include="UI_Manager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Particle_Manager.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Particle.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Descriptor_Heap.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Shader_Compute.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -139,5 +163,9 @@
   <ItemGroup>
     <FxCompile Include="Light.hlsl" />
     <FxCompile Include="Shaders.hlsl" />
+    <FxCompile Include="Particle_CS.hlsl" />
+    <FxCompile Include="Particle.hlsl" />
+    <FxCompile Include="Post_Shaders.hlsl" />
+    <FxCompile Include="Post_Compute_Shaders.hlsl" />
   </ItemGroup>
 </Project>

@@ -75,8 +75,7 @@ void CCamera::SetScissorRect(LONG xLeft, LONG yTop, LONG xRight, LONG yBottom)
 void CCamera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlaneDistance, float fAspectRatio, float fFOVAngle)
 {
 	m_xmf4x4Projection = Matrix4x4::PerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
-//	XMMATRIX xmmtxProjection = XMMatrixPerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
-//	XMStoreFloat4x4(&m_xmf4x4Projection, xmmtxProjection);
+
 }
 
 void CCamera::GenerateViewMatrix(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3LookAt, XMFLOAT3 xmf3Up)
@@ -105,6 +104,9 @@ void CCamera::RegenerateViewMatrix()
 	m_xmf4x4View._41 = -Vector3::DotProduct(m_xmf3Position, m_xmf3Right);
 	m_xmf4x4View._42 = -Vector3::DotProduct(m_xmf3Position, m_xmf3Up);
 	m_xmf4x4View._43 = -Vector3::DotProduct(m_xmf3Position, m_xmf3Look);
+
+	if(m_nMode == THIRD_PERSON_CAMERA)
+		GenerateFrustum();
 }
 
 void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -113,9 +115,18 @@ void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComm
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbCamera->Map(0, NULL, (void **)&m_pcbMappedCamera);
+
+	//==========================================================================
+
+	UINT ncbElementBytes_2 = ((sizeof(VS_CB_POST_CAMERA_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
+	post_Camera_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes_2, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	post_Camera_Info->Map(0, NULL, (void**)&Mapped_post_Camera_Info);
+
+
 }
 
-void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+void CCamera::Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	XMFLOAT4X4 xmf4x4View;
 	XMStoreFloat4x4(&xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4View)));
@@ -128,8 +139,16 @@ void CCamera::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 	::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbCamera->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(PARAMETER_CAMERA_CBV, d3dGpuVirtualAddress);
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress);
 }
+
+void CCamera::Update_PostRender_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{	
+
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &m_xmf3Position, 0);
+}
+
 
 void CCamera::ReleaseShaderVariables()
 {
@@ -138,12 +157,36 @@ void CCamera::ReleaseShaderVariables()
 		m_pd3dcbCamera->Unmap(0, NULL);
 		m_pd3dcbCamera->Release();
 	}
+
+	if (post_Camera_Info)
+	{
+		post_Camera_Info->Unmap(0, NULL);
+		post_Camera_Info->Release();
+	}
 }
 
 void CCamera::SetViewportsAndScissorRects(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	pd3dCommandList->RSSetViewports(1, &m_d3dViewport);
 	pd3dCommandList->RSSetScissorRects(1, &m_d3dScissorRect);
+}
+
+void CCamera::GenerateFrustum()
+{
+	m_xmFrustum.CreateFromMatrix(m_xmFrustum, XMLoadFloat4x4(&m_xmf4x4Projection));
+	XMMATRIX xmmtxInversView = XMMatrixInverse(NULL, XMLoadFloat4x4(&m_xmf4x4View));
+	m_xmFrustum.Transform(m_xmFrustum, xmmtxInversView);
+}
+
+bool CCamera::IsInFrustum(BoundingOrientedBox& xmBoundingBox)
+{
+	return(m_xmFrustum.Intersects(xmBoundingBox));
+}
+
+bool CCamera::IsInFrustum(const XMFLOAT3& position)
+{
+	XMVECTOR xmPoint = XMLoadFloat3(&position);
+	return m_xmFrustum.Intersects(xmPoint);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

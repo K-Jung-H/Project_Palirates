@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "UILayer.h"
+#include "UI_Manager.h"
 
 using namespace std;
 
@@ -227,6 +227,7 @@ void Text_UI_Renderer::InitializeDevice(ID3D12Device* pd3dDevice, ID3D12CommandQ
     for (UINT i = 0; i < m_nRenderTargets; i++)
     {
         D3D11_RESOURCE_FLAGS d3d11Flags = { D3D11_BIND_RENDER_TARGET };
+
         m_pd3d11On12Device->CreateWrappedResource(ppd3dRenderTargets[i], &d3d11Flags, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT, IID_PPV_ARGS(&m_ppd3d11WrappedRenderTargets[i]));
         IDXGISurface* pdxgiSurface = NULL;
         m_ppd3d11WrappedRenderTargets[i]->QueryInterface(__uuidof(IDXGISurface), (void**)&pdxgiSurface);
@@ -245,7 +246,6 @@ void Text_UI_Renderer::Render(UINT nFrame, std::vector<TextBlock*>* block_list_p
     m_pd2dDeviceContext->SetTarget(m_ppd2dRenderTargets[nFrame]);
     m_pd3d11On12Device->AcquireWrappedResources(ppResources, _countof(ppResources));
 
-    
     m_pd2dDeviceContext->BeginDraw();
     if (block_list_ptr != NULL)
     {
@@ -257,7 +257,6 @@ void Text_UI_Renderer::Render(UINT nFrame, std::vector<TextBlock*>* block_list_p
         }
     }
     m_pd2dDeviceContext->EndDraw();
-
     
     m_pd3d11On12Device->ReleaseWrappedResources(ppResources, _countof(ppResources));
     m_pd3d11DeviceContext->Flush();

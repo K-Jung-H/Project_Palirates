@@ -119,7 +119,7 @@ void CDescriptor_Heap::CreateGraphicsShaderResourceViews(ID3D12Device* pd3dDevic
 
     if (nRootParams <= 0)
     {
-        OutputDebugStringA("❗ Error: No graphics root parameters defined in texture!\n");
+        OutputDebugStringA(" Error: No graphics root parameters defined in texture!\n");
         __debugbreak();
     }
 
