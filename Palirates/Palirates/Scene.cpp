@@ -185,7 +185,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_5->test_num = 5;
 	obj_manager->Add_Object(humanObject_5, Object_Type::skinned);
 
-	name_view = obj_name_4;
+	name_view = obj_name_6;
 	std::shared_ptr<CMultiPlayerObject> humanObject_6 = std::make_shared<CMultiPlayerObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel6, 12);
 	humanObject_6->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 10.0f), 10.0f);
 	humanObject_6->Set_Name(obj_name_6);
@@ -626,13 +626,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
-			m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 		}		break;
 		case 'X':
 		{
 			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
-			m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 		}		break;
 		case 'C':
 		{
@@ -641,8 +639,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				auto multiPlayerObj = std::dynamic_pointer_cast<CMultiPlayerObject>((*it)[5]);
 				if (multiPlayerObj) {  
 					multiPlayerObj->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+					//multiPlayerObj->GetStateMachine()->changeState(State::Dive, Key_Value::None);
 					multiPlayerObj->SetStateElapsedTime(0.0f);
-					multiPlayerObj->GetSkinnedAnimationController()->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 				}
 			}
 		}		break;
@@ -654,9 +652,23 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				if (multiPlayerObj) {
 					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 					multiPlayerObj->SetStateElapsedTime(0.0f);
-					multiPlayerObj->GetSkinnedAnimationController()->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
 				}
 			}
+		}		break;
+		case '+':
+		{
+			/*CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
+			string obj_name_7 = "test_palyer7";
+
+
+			std::string_view name_view = obj_name_7;
+
+			std::shared_ptr<CMultiPlayerObject> humanObject_7 = std::make_shared<CMultiPlayerObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel6, 12);
+			humanObject_7->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 10.0f), 10.0f);
+			humanObject_7->Set_Name(obj_name_7);
+			humanObject_7->test_num = 7;
+			obj_manager->Add_Object(humanObject_7, Object_Type::skinned);*/
+
 		}		break;
 
 		default:

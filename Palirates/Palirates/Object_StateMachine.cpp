@@ -238,7 +238,7 @@ void PlayerStateMachine::update(float Elapsed_time)
 
     if (key_state.dive && Get_State() != State::Dive) {
         m_pOwner->SetStateElapsedTime(0.0f);
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+       // animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
         changeState(State::Dive, Key_Value::None);
     }
 
@@ -366,6 +366,16 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     case State::Run:
         break;
     case State::Dive:
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+        break;
+    case State::Knock_Down:
+        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+        break;
+    case State::Get_Up:
+        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
         break;
     case State::Jump:
         break;
@@ -512,7 +522,7 @@ void MultiPlayerStateMachine::update(float Elapsed_time)
 
             animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
 
-            float scaleFactor = 30.0f;
+            float scaleFactor = 20.0f;
             XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
 
             oss << L"XMFLOAT3: ("
@@ -530,11 +540,12 @@ void MultiPlayerStateMachine::update(float Elapsed_time)
 
             if (scaleShift.z > 0.001f) {
               //  m_pOwner->Move(finalMove, false);
+                m_pOwner->Move(finalMove);
             }
         }
         break;
     case State::Knock_Down:
-        /* if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
+         /*if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
              changeState(State::Idle, Key_Value::None);
          }*/
         m_pOwner->targetWeights[TRACK_KNOCK_DOWN] = 1.0f;
@@ -568,6 +579,16 @@ void MultiPlayerStateMachine::enterState(State state, Key_Value key_event)
     case State::Run:
         break;
     case State::Dive:
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+        break;
+    case State::Knock_Down:
+        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+        break;
+    case State::Get_Up:
+        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
+        animController->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
         break;
     case State::Jump:
         break;
@@ -598,6 +619,7 @@ void MultiPlayerStateMachine::exitState(State state, Key_Value key_event)
         break;
     case State::Get_Up:
         animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
+        break;
     case State::Jump:
         break;
     case State::Attack_Normal:

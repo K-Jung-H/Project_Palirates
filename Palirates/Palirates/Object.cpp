@@ -864,12 +864,14 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 		if (m_fPosition < 0.0f)
 			m_fPosition = 0.0f;
 		else {
-			m_fPosition = fTrackPosition + fTrackElapsedTime;
-			if (m_fPosition > fAnimationLength) {
-				m_fPosition = fAnimationLength;
-				//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
-				m_bFinished = true;
-				return(fAnimationLength);
+			if (!m_bFinished) {
+				m_fPosition = fTrackPosition + fTrackElapsedTime;
+				if (m_fPosition > fAnimationLength) {
+					m_fPosition = fAnimationLength;
+					//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+					m_bFinished = true;
+					return(fAnimationLength);
+				}
 			}
 		}
 		break;
@@ -3084,9 +3086,9 @@ CMultiPlayerObject::CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
 
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = 0;
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = 0;
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = 0;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
 
 	SetScale(10.0f, 10.0f, 10.0f);
 }
