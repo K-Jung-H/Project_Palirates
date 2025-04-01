@@ -926,9 +926,6 @@ CAnimationController::~CAnimationController()
 		delete[] m_ppd3dcbSkinningBoneTransforms;
 	}
 	
-	/*if (m_ppd3dcbSkinningBoneTransforms) 
-		delete[] m_ppd3dcbSkinningBoneTransforms;*/
-	
 	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) 
 		delete[] m_ppcbxmf4x4MappedSkinningBoneTransforms;
 
@@ -1083,7 +1080,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
 
 					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
-					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER) {
+					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
 						if (boneName == "Hips")
 						{
 							if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
@@ -2993,7 +2990,7 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
 		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 	}
-	n_Animation = 5;
+	n_Animation = nAnimationTracks;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 
@@ -3061,6 +3058,95 @@ void CMonsterObject::Animate(float fTimeElapsed)
 }
 
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
+	CGameObject::Render(pd3dCommandList, pCamera);
+	//GetStateMachine()->update(0.01f);
+}
+
+CMultiPlayerObject::CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
+	: m_StateMachine(std::make_unique<MultiPlayerStateMachine>(this))
+{
+	Object_type = OBJECT_TPYE_PLAYER;
+	CLoadedModelInfo* pHumanModel = pModel;
+	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
+
+	if (!pHumanModel) {
+		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+	}
+	n_Animation = nAnimationTracks;
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+
+	Set_Child(pHumanModel->m_pModelRootObject);
+	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = 0;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = 0;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = 0;
+
+	SetScale(10.0f, 10.0f, 10.0f);
+}
+
+CMultiPlayerObject::~CMultiPlayerObject()
+{
+}
+
+void CMultiPlayerObject::Animate(float fTimeElapsed)
+{
+
+	//SetPosition(25.0f, 1064.0f, 25.0f);
+	OnPrepareRender();
+
+	if (m_pSkinnedAnimationController)
+	{
+		/*if (Anime_test_FallingLoop)
+			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
+		else
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
+		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+	}
+
+	/*if (On_Ground)
+	{
+		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
+		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
+		AlignWithNormal(world_normal);
+	}*/
+
+	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
+	if (sibling_ptr != nullptr)
+		sibling_ptr->Animate(fTimeElapsed);
+
+	shared_ptr<CGameObject> child_ptr = Get_Child();
+	if (child_ptr != nullptr)
+		child_ptr->Animate(fTimeElapsed);
+
+	/*CAnimationController* animController = GetSkinnedAnimationController();
+	for (int i = 0; i < 5; i++)
+	{
+		if (test_num == 1 && i == 0) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else if (test_num == 2 && i == 1) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else if (test_num == 3 && i == 4) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else
+			animController->SetTrackWeight(i, 0.0f);
+	}*/
+	//CGameObject::Animate(fTimeElapsed);
+	GetStateMachine()->update(fTimeElapsed);
+	//m_StateMachine->update(fTimeElapsed);
+}
+
+void CMultiPlayerObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
 	CGameObject::Render(pd3dCommandList, pCamera);
 	//GetStateMachine()->update(0.01f);
 }

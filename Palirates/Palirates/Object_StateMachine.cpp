@@ -395,6 +395,198 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////
+
+MultiPlayerStateMachine::MultiPlayerStateMachine(CMultiPlayerObject* owner)
+    : StateMachine(State::Idle), m_pOwner(owner) {
+}
+
+void MultiPlayerStateMachine::update(float Elapsed_time)
+{
+    float blendSpeed = 6.0f * Elapsed_time;
+
+    if (isFirstUpdate) {
+        animController = m_pOwner->GetSkinnedAnimationController();
+        n_Ani = m_pOwner->n_Animation;
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = 0.0f;
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+        animController->SetTrackWeight(TRACK_IDLE, 1.0f);
+    }
+    else {
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+        }
+    }
+
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+
+    float moveX = m_pOwner->GetMoveX();
+    float moveZ = m_pOwner->GetMoveZ();
+
+    if (key_state.dive && Get_State() != State::Dive) {
+        m_pOwner->SetStateElapsedTime(0.0f);
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+        changeState(State::Dive, Key_Value::None);
+    }
+
+    switch (Get_State()) {
+    case State::Idle:
+        if (moveX == 0.0f && moveZ == 0.0f) {
+            m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+        }
+        else {
+            if (Get_State() != State::Run) {
+                changeState(State::Run, Key_Value::None);
+            }
+        }
+        break;
+
+    case State::Run:
+        if (moveX == 0.0f && moveZ == 0.0f) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        else {
+            float length = sqrtf(moveX * moveX + moveZ * moveZ);
+            float normX = moveX / length;
+            float normZ = moveZ / length;
+
+            int bestIndex = -1, secondIndex = -1;
+            float bestDot = -1.0f, secondDot = -1.0f;
+
+            for (int i = 0; i < 8; i++) {
+                float dot = normX * directions[i].x + normZ * directions[i].z;
+                if (dot > bestDot) {
+                    secondDot = bestDot;
+                    secondIndex = bestIndex;
+                    bestDot = dot;
+                    bestIndex = i;
+                }
+                else if (dot > secondDot) {
+                    secondDot = dot;
+                    secondIndex = i;
+                }
+            }
+
+            float totalDot = bestDot + secondDot;
+            float weight1 = bestDot / totalDot;
+            float weight2 = secondDot / totalDot;
+
+            m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
+            m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
+        }
+        break;
+    case State::Dive:
+
+        if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        else {
+            m_pOwner->targetWeights[TRACK_DIVEROLL_FORWARD] = 1.0f;
+
+            float fFixedSpeed = 300.0f;
+
+
+            std::wostringstream oss;
+            XMFLOAT3 vec = animController->HipsPosition;
+            XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
+
+            XMFLOAT3 shift;
+            shift.x = vec.x - vec2.x;
+            shift.y = vec.y - vec2.y;
+            shift.z = vec.z - vec2.z;
+
+            animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
+
+            float scaleFactor = 30.0f;
+            XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
+
+            oss << L"XMFLOAT3: ("
+                << scaleShift.x << L", "
+                << scaleShift.y << L", "
+                << scaleShift.z << L")\n";
+            //OutputDebugStringW(oss.str().c_str());
+
+            XMFLOAT3 moveDirection = m_pOwner->GetLook();
+            XMFLOAT3 finalMove = {
+                moveDirection.x * scaleShift.z,
+                moveDirection.y * scaleShift.z,
+                moveDirection.z * scaleShift.z
+            };
+
+            if (scaleShift.z > 0.001f) {
+              //  m_pOwner->Move(finalMove, false);
+            }
+        }
+        break;
+    case State::Knock_Down:
+        m_pOwner->targetWeights[TRACK_KNOCK_DOWN] = 1.0f;
+        break;
+    case State::Get_Up:
+        m_pOwner->targetWeights[TRACK_GET_UP] = 1.0f;
+        break;
+    }
+
+    for (int i = 0; i < n_Ani; i++)
+    {
+        float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
+        animController->SetTrackWeight(i, newWeight);
+    }
+
+    isFirstUpdate = false;
+
+    //doAction(currentState, Elapsed_time);
+}
+
+void MultiPlayerStateMachine::enterState(State state, Key_Value key_event)
+{
+
+    switch (state)
+    {
+    case State::Idle:
+        break;
+    case State::Run:
+        break;
+    case State::Dive:
+        break;
+    case State::Jump:
+        break;
+    case State::Attack_Normal:
+        break;
+
+    default:
+        break;
+    }
+}
+
+void MultiPlayerStateMachine::exitState(State state, Key_Value key_event)
+{
+
+    switch (state)
+    {
+    case State::Idle:
+        break;
+    case State::Run:
+        break;
+    case State::Dive:
+        key_state.dive = false;
+        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
+        DebugOutput("Dive->Idle\n");
+        break;
+    case State::Jump:
+        break;
+    case State::Attack_Normal:
+        break;
+
+    default:
+        break;
+    }
+}
+
+////////////////////////////////////////////////////////////
+
 MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
     : StateMachine(State::Idle), m_pOwner(owner) {
 
