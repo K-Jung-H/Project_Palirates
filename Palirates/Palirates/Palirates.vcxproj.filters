@@ -165,7 +165,9 @@
     <FxCompile Include="Shaders.hlsl" />
     <FxCompile Include="Particle_CS.hlsl" />
     <FxCompile Include="Particle.hlsl" />
-    <FxCompile Include="Deffered_Shaders.hlsl" />
     <FxCompile Include="Post_Compute_Shaders.hlsl" />
+    <FxCompile Include="Deffered_Shaders.hlsl" />
+    <FxCompile Include="Particles_Emit_CS.hlsl" />
+    <FxCompile Include="Particles_Update_Extract_CS.hlsl" />
   </ItemGroup>
 </Project>

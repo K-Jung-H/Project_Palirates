@@ -36,6 +36,13 @@ struct Particle_Info
 //==============================================================================
 #define MAX_PARTICLES				90000
 
+enum P_BufferType
+{
+	BUFFER_COUNTER = 0,
+	BUFFER_READBACK = 1,
+	BUFFER_COUNTER_RESET = 2
+};
+
 class Particle
 {
 public:
@@ -55,12 +62,11 @@ private:
 	ID3D12Resource* FreeList_counterBuffer = NULL;
 	ID3D12Resource* FreeList_readbackBuffer = NULL;
 
+
 	ID3D12Resource* Render_Instance_counterBuffer = NULL;
 	ID3D12Resource* Render_Instance_readbackBuffer = NULL;
 
-	// GPU에서 카운터 값을 복사하는 버퍼
-	ID3D12Resource* m_pCounterReadbackBuffer = nullptr;
-
+	ID3D12Resource* CounterResetBuffer = NULL;
 
 	// 버퍼 뷰
 	D3D12_VERTEX_BUFFER_VIEW m_RenderInstanceVBV = {};
@@ -70,25 +76,23 @@ private:
 	UINT m_nStride = sizeof(Particle_Info);
 
 public:
+	UINT N_Particle_Info_List = 0;
+	UINT N_FreeList = 0;
+	UINT N_Render_Instance = 0;
+
+
+public:
 
 
 	// 버퍼 생성 및 해제
-	void CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	// 입자 개수 읽기 버퍼
-	ID3D12Resource* CreateCounterBuffer(ID3D12Device* pd3dDevice);
-
-	ID3D12Resource* CreateReadbackBuffer(ID3D12Device* pd3dDevice, UINT byteSize = sizeof(UINT));
-
+	ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize = sizeof(UINT));
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 
 	// 렌더링용 VBV 업데이트
 	void UpdateRenderInstanceVBV();
-
-
-	void Post_Update(ID3D12GraphicsCommandList* pd3dCommandList);
-
 
 	UINT Get_Particle_Max_Num() const { return m_nMaxParticles; }
 
@@ -96,10 +100,27 @@ public:
 	void Copy_CounterBuffer_FreeList(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList);
 
+	void Copy_CounterBuffer_All(ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		Copy_CounterBuffer_Particle_Info(pd3dCommandList);
+		Copy_CounterBuffer_FreeList(pd3dCommandList);
+		Copy_CounterBuffer_Render_Instance(pd3dCommandList);
+
+	}
+
 	UINT Readback_CounterBuffer_Particle_Info_List();
 	UINT Readback_CounterBuffer_FreeList();
 	UINT Readback_CounterBuffer_Render_Instance();
 
+	void Readback_All()
+	{
+		Readback_CounterBuffer_Particle_Info_List();
+		Readback_CounterBuffer_FreeList();
+		Readback_CounterBuffer_Render_Instance();
+	}
+
+	void ResetCounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* counterBuffer);
+	void Reset_Instance_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 };
 
 //==============================================================================
@@ -142,7 +163,7 @@ class ParticleObject : public CGameObject
 {
 private:
 	Particle_Shape_Mesh* shape_mesh = NULL;
-	Particle* particle_obj = NULL;
+	Particle* particle_data = NULL;
 	CMaterial* particle_Material = NULL;
 	UINT particle_N = 0;
 
@@ -153,20 +174,19 @@ public:
 	void ReleaseUploadBuffers();
 
 	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
-	void Set_Particle_OBJ(Particle* new_particle_obj = NULL) { particle_obj = new_particle_obj; }
+	void Set_Particle_OBJ(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList) {};
+
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress_n = 0);
-	virtual void OnPostRender();
 
+	Particle* Get_Particle_Data() { return particle_data; }
 	UINT Get_Particle_Num() { return particle_N; }
-	UINT Test_Func(ID3D12GraphicsCommandList* pd3dCommandList)
-	{
-		particle_obj->Copy_CounterBuffer(pd3dCommandList);
-		return particle_obj->Readback_CounterBuffer();
-	}
-
+	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
+	UINT Get_Size_FreeList() { return particle_data->N_FreeList; }
+	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }
+	UINT Get_Size_Render_Instance() { return particle_data->N_Render_Instance; }
 };

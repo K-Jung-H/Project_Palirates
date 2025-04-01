@@ -180,7 +180,7 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); //Rendering PSO
 
 
-	m_ncomputePipelineStates = 3;
+	m_ncomputePipelineStates = 2;
 	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
 
 	m_pd3dComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
@@ -202,7 +202,7 @@ D3D12_SHADER_BYTECODE ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShader
 	if (nPipelineState == 0)
 		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 1)
-		return CShader::CompileShaderFromFile(L"Particles_Update_CS.hlsl", "UpdateCS", "cs_5_1", ppd3dShaderBlob);
+		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Extract_CS", "cs_5_1", ppd3dShaderBlob);
 
 
 }
@@ -460,6 +460,12 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	Emit_Particles(pd3dCommandList, fTimeElapsed);
+	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
+}
+
+void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
 	CB_Particle_Update_Info update_info;
 
 	for (auto& [type, shader_ptr] : particle_shader_map)
@@ -471,19 +477,78 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
+			Particle* particle_data = particle_obj->Get_Particle_Data();
 			update_info.ElapsedTime = fTimeElapsed;
-//			update_info.Particle_N = particle_obj->Get_Particle_Num();
-			update_info.FreeList_Size = particle_obj->Test_Func(pd3dCommandList);
+			update_info.FreeList_Size = particle_data->N_FreeList;
+			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
 
-			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info); 
+			particle_data->UpdateBuffers(pd3dCommandList);
+			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
+			shader_ptr->Dispatch(pd3dCommandList, particle_data->N_FreeList/64, 1, 1);
 
-			particle_obj->Update_Compute_ShaderVariables(pd3dCommandList);
-
-			shader_ptr->Dispatch(pd3dCommandList);
-
-			UINT n = particle_obj->Test_Func(pd3dCommandList);
-			DebugOutput(to_string(n) + "\n");
 		}
+	}
+}
+
+void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	CB_Particle_Update_Info update_info;
+
+	for (auto& [type, shader_ptr] : particle_shader_map)
+	{
+		if (!shader_ptr)
+			continue;
+
+		shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1);
+
+		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+		{
+			Particle* particle_data = particle_obj->Get_Particle_Data();
+			update_info.ElapsedTime = fTimeElapsed;
+			update_info.FreeList_Size = particle_data->N_FreeList;
+			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
+
+			particle_data->UpdateBuffers(pd3dCommandList);
+			particle_data->Reset_Instance_CounterBuffer(pd3dCommandList);
+
+			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
+			shader_ptr->Dispatch(pd3dCommandList, particle_data->Get_Particle_Max_Num() /64, 1, 1);
+
+
+
+		}
+	}
+}
+
+
+void Particle_Manager::Sync_AfterAnimate(ID3D12GraphicsCommandList* pd3dCommandList, Particle_Type type)
+{
+	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+	{
+		Particle* particle_data = particle_obj->Get_Particle_Data();
+
+		if (particle_data != NULL)
+		{
+			particle_data->Copy_CounterBuffer_All(pd3dCommandList);
+			particle_data->Readback_All();
+			DebugOutput("======================================\n");
+			DebugOutput("Particle_Info_List : " + to_string(particle_data->N_Particle_Info_List) + "\n");
+			DebugOutput("FreeList : " + to_string(particle_data->N_FreeList) + "\n");
+			DebugOutput("Render_Instance : " + to_string(particle_data->N_Render_Instance) + "\n");
+			DebugOutput("======================================\n");
+		}
+	}
+}
+
+void Particle_Manager::Sync_AfterAnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (auto& [type, shader_ptr] : particle_shader_map)
+	{
+		if (!shader_ptr)
+			continue;
+
+		Sync_AfterAnimate(pd3dCommandList, type);
+
 	}
 }
 
@@ -509,18 +574,7 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	Render(pd3dCommandList, pCamera, N, Particle_Type::sample_3);
 }
 
-void Particle_Manager::OnPostRender(Particle_Type type)
-{
-	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
-		particle_obj->OnPostRender();
-}
 
-void Particle_Manager::OnPostRender_All()
-{
-	OnPostRender(Particle_Type::sample_1);
-	OnPostRender(Particle_Type::sample_2);
-	OnPostRender(Particle_Type::sample_3);
-}
 
 void Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
 {

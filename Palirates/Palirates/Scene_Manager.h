@@ -37,7 +37,10 @@ public:
 
     void Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     void Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
-    void Update_Active_Particles(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
+
+    void Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
+    void After_Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList);
+
 
     void Update_UI();
 

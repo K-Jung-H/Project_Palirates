@@ -100,12 +100,18 @@ public:
 	~Particle_Manager();
 
 	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
 	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+
+	void Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+
+
+	void Sync_AfterAnimate(ID3D12GraphicsCommandList* pd3dCommandList, Particle_Type type);
+	void Sync_AfterAnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N, Particle_Type type);
 	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N);
-	void OnPostRender(Particle_Type type);
-	void OnPostRender_All();
 
 
 	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);

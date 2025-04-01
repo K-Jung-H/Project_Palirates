@@ -110,11 +110,21 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 }
 
-void Scene_Manager::Update_Active_Particles(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+void Scene_Manager::Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 #ifdef RENDER_PARTICLE
     if (activeScene)
         activeScene->Animate_Particles(pd3dCommandList, fTimeElapsed);    
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+#endif
+}
+
+void Scene_Manager::After_Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+#ifdef RENDER_PARTICLE
+    if (activeScene)
+        activeScene->After_Animate_Particles(pd3dCommandList);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 #endif

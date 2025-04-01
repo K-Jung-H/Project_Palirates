@@ -71,7 +71,9 @@ public:
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
 	void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+
 	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void After_Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	
 	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

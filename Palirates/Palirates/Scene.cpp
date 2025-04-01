@@ -636,6 +636,15 @@ void CScene::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float
 #endif
 }
 
+void CScene::After_Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+		particle_manager->Sync_AfterAnimateObjects(pd3dCommandList);
+
+#endif
+}
+
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_pd3dGraphicsRootSignature)
@@ -685,21 +694,12 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Post_Update_All();
-
-
-#ifdef RENDER_PARTICLE
-	if (particle_manager)
-		particle_manager->OnPostRender_All();
-
-#endif
 }
 
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
-
-//	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 76); //SuperCobra(17), Gunship(2), Player:Mi24(1), Angrybot()
 
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 

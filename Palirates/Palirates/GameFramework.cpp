@@ -497,11 +497,7 @@ void CGameFramework::ReleaseShaderVariables()
 
 void CGameFramework::Build_Scenes()
 {
-	Active_CommandAllocator = Render_CommandAllocator;
-	Active_CommandList = Render_CommandList;
-
-	Active_CommandAllocator->Reset();
-	Active_CommandList->Reset(Active_CommandAllocator, NULL);
+	BeginGPUStage(GPU_Stage::Render);
 
 	CreateShaderVariables();
 
@@ -560,12 +556,7 @@ void CGameFramework::Build_Scenes()
 
 	//========================================================
 
-	Active_CommandList->Close();
-	ID3D12CommandList *ppd3dCommandLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-//	WaitForGpuComplete();
-	SignalFence(GPU_Stage::Render);
+	EndGPUStage(GPU_Stage::Render);
 	WaitForGpuComplete(GPU_Stage::Render);
 
 	scene_manager->ReleaseUploadBuffers();
@@ -653,7 +644,7 @@ void CGameFramework::Update_Scene()
 
 	//==============================================================
 
-	scene_manager->Update_Active_Particles(m_pd3dDevice, Active_CommandList, fTimeElapsed);
+	scene_manager->Update_Active_Particles(Active_CommandList, fTimeElapsed);
 
 	//===============================================================
 
@@ -661,11 +652,71 @@ void CGameFramework::Update_Scene()
 
 }
 
-
-void CGameFramework::SafeSyncStage(GPU_Stage stage)
+void CGameFramework::After_Update_Scene()
 {
-	SignalFence(stage);
-	WaitForGpuComplete(stage);
+	scene_manager->After_Update_Active_Particles(Active_CommandList);
+}
+
+void CGameFramework::BeginGPUStage(GPU_Stage stage)
+{
+	SafeSyncStage(stage); // 이전 작업 완료 보장
+
+	switch (stage)
+	{
+	case GPU_Stage::Compute:
+		Active_CommandAllocator = Compute_CommandAllocator;
+		Active_CommandList = Compute_CommandList;
+		break;
+	case GPU_Stage::Render:
+		Active_CommandAllocator = Render_CommandAllocator;
+		Active_CommandList = Render_CommandList;
+		break;
+	case GPU_Stage::Post:
+		Active_CommandAllocator = Post_CommandAllocator;
+		Active_CommandList = Post_CommandList;
+		break;
+	}
+
+	Active_CommandAllocator->Reset();
+	Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+}
+
+void CGameFramework::EndGPUStage(GPU_Stage stage, bool wait )
+{
+	Active_CommandList->Close();
+	ID3D12CommandList* cmdLists[] = { Active_CommandList };
+	p_CommandQueue->ExecuteCommandLists(1, cmdLists);
+
+	SignalFence(stage, true);
+
+	if (wait)
+		WaitForGpuComplete(stage);
+}
+
+HRESULT CGameFramework::SignalFence(GPU_Stage stage, bool shouldAdvanceFence)
+{
+	UINT bufferIndex = SwapChainBuffer_Index;
+	UINT64* fenceValue = nullptr;
+
+	switch (stage)
+	{
+	case GPU_Stage::Compute:
+		fenceValue = &m_ComputeFenceValues[bufferIndex];
+		break;
+	case GPU_Stage::Render:
+		fenceValue = &m_RenderFenceValues[bufferIndex];
+		break;
+	case GPU_Stage::Post:
+		fenceValue = &m_PostFenceValues[bufferIndex];
+		break;
+	default:
+		return E_FAIL;
+	}
+
+	if (shouldAdvanceFence)
+		++(*fenceValue);
+
+	return p_CommandQueue->Signal(m_pd3dFence, *fenceValue);
 }
 
 void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
@@ -684,10 +735,11 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	case GPU_Stage::Post:
 		fenceValue = m_PostFenceValues[bufferIndex];
 		break;
+	default:
+		return;
 	}
 
-	if (fenceValue == 0) 
-		return;
+	if (fenceValue == 0) return;
 
 	if (m_pd3dFence->GetCompletedValue() < fenceValue)
 	{
@@ -696,155 +748,130 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	}
 }
 
-HRESULT CGameFramework::SignalFence(GPU_Stage stage)
+void CGameFramework::SafeSyncStage(GPU_Stage stage)
 {
-	UINT bufferIndex = SwapChainBuffer_Index;
-	HRESULT hResult = 0;
+	SignalFence(stage, false); // fence 증가 없이 현재 값으로만 signal
+	WaitForGpuComplete(stage);
+}
+
+UINT64 CGameFramework::GetFenceValue(GPU_Stage stage, UINT bufferIndex) const
+{
 	switch (stage)
 	{
-	case GPU_Stage::Compute:
-		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_ComputeFenceValues[bufferIndex]);
-		break;
-	case GPU_Stage::Render:
-		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_RenderFenceValues[bufferIndex]);
-		break;
-	case GPU_Stage::Post:
-		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_PostFenceValues[bufferIndex]);
-		break;
+	case GPU_Stage::Compute: 
+		return m_ComputeFenceValues[bufferIndex];
+
+	case GPU_Stage::Render:  
+		return m_RenderFenceValues[bufferIndex];
+
+	case GPU_Stage::Post:    
+		return m_PostFenceValues[bufferIndex];
+
+	default: 
+		return 0;
 	}
-	return hResult;
 }
+
 
 void CGameFramework::MoveToNextFrame()
 {
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	// Present 이후, Render 스테이지의 마지막 Fence로 처리
-	UINT64 nFenceValue = ++m_RenderFenceValues[SwapChainBuffer_Index];
-	HRESULT hResult = SignalFence(GPU_Stage::Render);
+	// Present 후, 다음 프레임을 위한 Render Fence 증가 및 signal
+	UINT64& renderFence = m_RenderFenceValues[SwapChainBuffer_Index];
+	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, ++renderFence);
 
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+	if (m_pd3dFence->GetCompletedValue() < renderFence)
 	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+		m_pd3dFence->SetEventOnCompletion(renderFence, m_hFenceEvent);
 		WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+}
+
+void CGameFramework::PrepareStage(GPU_Stage stage)
+{
+	CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
+
+	if (stage == GPU_Stage::Render || stage == GPU_Stage::Post)
+	{
+		if (m_pCamera)
+			m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
 	}
 }
 
 //#define _WITH_PLAYER_TOP
 
-void CGameFramework::Prepare_Render()
-{
-	m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
-	CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
-}
-
 void CGameFramework::FrameAdvance()
 {
-	HRESULT hResult;
-
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
 
-	// ====================== [1] Compute Phase ======================
-	Active_CommandAllocator = Compute_CommandAllocator;
-	Active_CommandList = Compute_CommandList;
-	
-	SafeSyncStage(GPU_Stage::Compute);
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+	// ====================== [1] Compute: Update Scene ======================
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
 	{
-		CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
-
 		Update_Scene();
 	}
-	hResult = Active_CommandList->Close();
-	ID3D12CommandList* computeCmdLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, computeCmdLists);
-	SignalFence(GPU_Stage::Compute); 
-	// ====================== [2] UI (CPU-only) ======================
+	EndGPUStage(GPU_Stage::Compute);
+
+	// 다음 Compute 단계와의 동기화 보장
+	SafeSyncStage(GPU_Stage::Compute);
+
+	// ====================== [2] Compute: After Update ======================
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
+	{
+		After_Update_Scene();
+	}
+	EndGPUStage(GPU_Stage::Compute);
+
+	// ====================== [3] UI (CPU-only) ======================
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
 
-	// ====================== [3] Render Phase ======================
-	Active_CommandAllocator = Render_CommandAllocator;
-	Active_CommandList = Render_CommandList;
-
-	SafeSyncStage(GPU_Stage::Render);
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+	// ====================== [4] Render Phase ======================
+	BeginGPUStage(GPU_Stage::Render);
+	PrepareStage(GPU_Stage::Render);
 	{
-		Prepare_Render();
+		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-
-		D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-		Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-		// OMSetRenderTargets by G_Buffer
 		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
-
 
 		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 		UpdateShaderVariables();
 		scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-		if (m_pPlayer)
-			m_pPlayer->Render(Active_CommandList, m_pCamera);
+		if (m_pPlayer) m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-		// Set Back_Buffer's Resource State : PRESENT -> RENDER_TARGET
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
 		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
 		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
-
 	}
-	hResult = Active_CommandList->Close();
-	ID3D12CommandList* renderCmdLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, renderCmdLists);
-	SignalFence(GPU_Stage::Render);
+	EndGPUStage(GPU_Stage::Render);
 
-	// ====================== [4] Post Phase ======================
-	Active_CommandAllocator = Post_CommandAllocator;
-	Active_CommandList = Post_CommandList;
-
-	SafeSyncStage(GPU_Stage::Post);
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+	// ====================== [5] Post Process Phase ======================
+	BeginGPUStage(GPU_Stage::Post);
+	PrepareStage(GPU_Stage::Post);
 	{
-		Prepare_Render(); 
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-		{
-			post_shader->OnPrepareRender(Active_CommandList);
-			post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
-			post_shader->Set_RootSignature_SRV(Active_CommandList, 1, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
-			post_shader->Dispatch(Active_CommandList);
-		}
+		post_shader->OnPrepareRender(Active_CommandList);
+		post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
+		post_shader->Set_RootSignature_SRV(Active_CommandList, 1, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
+		post_shader->Dispatch(Active_CommandList);
 
 		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-		{
-			fullscreen_shader->OnPrepareRender(Active_CommandList);
-			fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
-
-			//테스트 용 코드
-			// G 버퍼 텍스처에 접근해서 바로 최종 화면으로 전달
-			// 이걸 그대로 post_shader에 추가해서, G 버퍼의 원소를 다시 CS의 리소스로 활용하기
-			//fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
-
-			fullscreen_shader->Render(Active_CommandList);
-		}
+		fullscreen_shader->OnPrepareRender(Active_CommandList);
+		fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
+		fullscreen_shader->Render(Active_CommandList);
 
 		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-
-		//scene_manager->Prepare_Post_Render_Scene(m_pd3dDevice, Active_CommandList);
-		//scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-		
-		// Particles's SO-Buffer
-		// Cal obj's velocity
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 		m_pPlayer->Record_Last_Pos();
 
@@ -852,20 +879,15 @@ void CGameFramework::FrameAdvance()
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 #endif
-
 	}
-	hResult = Active_CommandList->Close();
-	ID3D12CommandList* postCmdLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, postCmdLists);
-	SignalFence(GPU_Stage::Post);
+	EndGPUStage(GPU_Stage::Post);
 
-
-
+	// ====================== [6] Text UI Rendering ======================
 #ifdef WRITE_TEXT_UI
 	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
 #endif
 
-	// ====================== [5] Present ======================
+	// ====================== [7] Present ======================
 #ifdef _WITH_PRESENT_PARAMETERS
 	DXGI_PRESENT_PARAMETERS dxgiPresentParameters = {};
 	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
@@ -877,7 +899,7 @@ void CGameFramework::FrameAdvance()
 #endif
 #endif
 
-	// ====================== [6] Swap & FPS ======================
+	// ====================== [8] Frame Sync ======================
 	MoveToNextFrame();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);

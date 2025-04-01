@@ -1,9 +1,3 @@
-cbuffer CB_Particle_Update_Info : register(b0)
-{
-    float ElapsedTime;
-    int Particle_N;
-}
-
 struct Particle_Info
 {
     float3 Position;
@@ -23,17 +17,38 @@ struct Particle_Info
     uint Active;
 };
 
+struct Render_Instance
+{
+    float3 Position;
+    float3 Velocity;
+    float4 Color;
+};
+
+cbuffer CB_Particle_Update_Info : register(b0)
+{
+    uint FreeList_Size;
+    uint Max_Particle;
+    float ElapsedTime;
+}
+
+
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
 AppendStructuredBuffer<uint> FreeList_Update : register(u1);
+AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u2);
 
 [numthreads(64, 1, 1)]
-void UpdateCS(uint3 DTid : SV_DispatchThreadID)
+void Update_Extract_CS(uint3 DTid : SV_DispatchThreadID)
 {
+        
     uint index = DTid.x;
+    if (index >= Max_Particle)
+        return; // 안전성
+
     Particle_Info particle = ParticleBuffer_Update[index];
 
     if (particle.Active == 0)
         return;
+    
 
     // 생명 시간 증가
     particle.Lifetime += ElapsedTime;
@@ -49,7 +64,17 @@ void UpdateCS(uint3 DTid : SV_DispatchThreadID)
         // 물리 시뮬레이션
         particle.Velocity += particle.Acceleration * ElapsedTime;
         particle.Position += particle.Velocity * ElapsedTime;
+
+        // 렌더링용 인스턴스 생성
+        Render_Instance instance;
+        instance.Position = particle.Position;
+        instance.Velocity = particle.Velocity;
+        instance.Color = float4(particle.Color, 1.0f); // 알파는 기본 1
+
+        // 렌더링 리스트에 추가
+        RenderInstanceBuffer.Append(instance);
     }
 
+    // 입자 상태 업데이트
     ParticleBuffer_Update[index] = particle;
 }

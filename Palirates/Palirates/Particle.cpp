@@ -284,7 +284,7 @@ Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdL
 	m_nMaxParticles = nMaxParticles;
 	m_nStride = sizeof(Particle_Info);
 
-	CreateBuffers(pd3dDevice, pd3dCmdList);
+	Create_Resource_Buffers(pd3dDevice, pd3dCmdList);
 
 }
 
@@ -293,7 +293,7 @@ Particle::~Particle()
 	ReleaseBuffers();
 }
 
-void Particle::CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	particle_buffer_texture = new CTexture(3, RESOURCE_STRUCTURED_BUFFER, 0, 0, 3, 0, 0, 3, 0);
 
@@ -303,25 +303,28 @@ void Particle::CreateBuffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		index_init[i] = i;
 	}
 
+	N_FreeList = m_nMaxParticles;
+
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, nullptr, m_nMaxParticles, sizeof(Particle_Info), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, index_init, m_nMaxParticles, sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 2, nullptr, m_nMaxParticles, sizeof(Render_Instance), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-	Particle_Info_List_counterBuffer = CreateCounterBuffer(pd3dDevice);
-	Particle_Info_List_readbackBuffer = CreateReadbackBuffer(pd3dDevice);
+	Particle_Info_List_counterBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER);
+	Particle_Info_List_readbackBuffer = CreateBuffer(pd3dDevice, BUFFER_READBACK);
 
-	FreeList_counterBuffer = CreateCounterBuffer(pd3dDevice);
-	FreeList_readbackBuffer = CreateReadbackBuffer(pd3dDevice);
+	FreeList_counterBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER);
+	FreeList_readbackBuffer = CreateBuffer(pd3dDevice, BUFFER_READBACK);
 
-	Render_Instance_counterBuffer = CreateCounterBuffer(pd3dDevice);
-	Render_Instance_readbackBuffer = CreateReadbackBuffer(pd3dDevice);
+	Render_Instance_counterBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER);
+	Render_Instance_readbackBuffer = CreateBuffer(pd3dDevice, BUFFER_READBACK);
+
+	CounterResetBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET);
 
 
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, FreeList_counterBuffer, 2);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, Render_Instance_counterBuffer, 3);
 
-	CreateReadbackBuffer(pd3dDevice);
 
 	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
 	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
@@ -338,135 +341,156 @@ void Particle::ReleaseBuffers()
 {
 }
 
-ID3D12Resource* Particle::CreateCounterBuffer(ID3D12Device* pd3dDevice)
+ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize)
 {
 	D3D12_RESOURCE_DESC desc = {};
 	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	desc.Width = sizeof(UINT); // 4바이트: 카운터용
+	desc.Width = byteSize;
 	desc.Height = 1;
 	desc.DepthOrArraySize = 1;
 	desc.MipLevels = 1;
 	desc.Format = DXGI_FORMAT_UNKNOWN;
 	desc.SampleDesc.Count = 1;
-	desc.SampleDesc.Quality = 0;
 	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	D3D12_HEAP_PROPERTIES heapProps = {};
-	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	heapProps.CreationNodeMask = 1;
-	heapProps.VisibleNodeMask = 1;
+	D3D12_RESOURCE_STATES resourceState = {};
 
-	ID3D12Resource* pCounterBuffer = nullptr;
-	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&pCounterBuffer));
+	switch (type)
+	{
+	case BUFFER_COUNTER:
+		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		resourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		break;
+
+	case BUFFER_READBACK:
+		heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+		break;
+
+	case BUFFER_COUNTER_RESET:
+		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		break;
+	}
+
+	ID3D12Resource* pBuffer = nullptr;
+	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, resourceState, nullptr, IID_PPV_ARGS(&pBuffer));
 
 	if (FAILED(hr))
 	{
-		OutputDebugString(L" Failed to create Counter Buffer\n");
+		OutputDebugString(L"[Particle] Failed to create buffer\n");
 		return nullptr;
 	}
 
-	return pCounterBuffer;
-}
-
-void Particle::Post_Update(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	Copy_CounterBuffer_Particle_Info(pd3dCommandList);
-	Copy_CounterBuffer_FreeList(pd3dCommandList);
-	Copy_CounterBuffer_Render_Instance(pd3dCommandList);
-}
-
-ID3D12Resource* Particle::CreateReadbackBuffer(ID3D12Device* pd3dDevice, UINT byteSize)
-{
-	D3D12_HEAP_PROPERTIES heapProps = {};
-	heapProps.Type = D3D12_HEAP_TYPE_READBACK;
-
-	D3D12_RESOURCE_DESC desc = {};
-	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	desc.Width = byteSize;
-	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-	ID3D12Resource* pReadbackBuffer = nullptr;
-	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&pReadbackBuffer));
-
-	if (FAILED(hr))
+	// CounterReset 버퍼의 경우,  0으로 초기화
+	if (type == BUFFER_COUNTER_RESET)
 	{
-		OutputDebugString(L"[Particle] Failed to create Readback Buffer\n");
-		return nullptr;
+		UINT zero = 0;
+		UINT8* mappedPtr = nullptr;
+		pBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedPtr));
+		memcpy(mappedPtr, &zero, sizeof(UINT));
+		pBuffer->Unmap(0, nullptr);
 	}
 
-	return pReadbackBuffer;
+	return pBuffer;
 }
-
 
 void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	pd3dCommandList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, Particle_Info_List_counterBuffer, 0, sizeof(UINT));
+	pd3dCommandList->CopyBufferRegion(Particle_Info_List_readbackBuffer, 0, Particle_Info_List_counterBuffer, 0, sizeof(UINT));
 }
 
 void Particle::Copy_CounterBuffer_FreeList(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	pd3dCommandList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, FreeList_counterBuffer, 0, sizeof(UINT));
+	pd3dCommandList->CopyBufferRegion(FreeList_readbackBuffer, 0, FreeList_counterBuffer, 0, sizeof(UINT));
 }
 
 void Particle::Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	pd3dCommandList->CopyBufferRegion(m_pCounterReadbackBuffer, 0, Render_Instance_counterBuffer, 0, sizeof(UINT));
+	pd3dCommandList->CopyBufferRegion(Render_Instance_readbackBuffer, 0, Render_Instance_counterBuffer, 0, sizeof(UINT));
 }
 
 UINT Particle::Readback_CounterBuffer_Particle_Info_List()
 {
-	if (!m_pCounterReadbackBuffer) 
+	if (!Particle_Info_List_readbackBuffer)
 		return 0;
 
 	UINT count = 0;
 	void* pData = nullptr;
 	D3D12_RANGE range = { 0, sizeof(UINT) };
 
-	if (SUCCEEDED(m_pCounterReadbackBuffer->Map(0, &range, &pData)) && pData)
+	if (SUCCEEDED(Particle_Info_List_readbackBuffer->Map(0, &range, &pData)) && pData)
 	{
 		count = *reinterpret_cast<UINT*>(pData);
-		m_pCounterReadbackBuffer->Unmap(0, nullptr);
+		Particle_Info_List_readbackBuffer->Unmap(0, nullptr);
 	}
+
+	N_Particle_Info_List = count;
 	return count;
 }
 
-UINT Particle::Readback_CounterBuffer_Particle_Info_List()
+UINT Particle::Readback_CounterBuffer_FreeList()
 {
-	if (!m_pCounterReadbackBuffer)
+	if (!FreeList_readbackBuffer)
 		return 0;
 
 	UINT count = 0;
 	void* pData = nullptr;
 	D3D12_RANGE range = { 0, sizeof(UINT) };
 
-	if (SUCCEEDED(m_pCounterReadbackBuffer->Map(0, &range, &pData)) && pData)
+	if (SUCCEEDED(FreeList_readbackBuffer->Map(0, &range, &pData)) && pData)
 	{
 		count = *reinterpret_cast<UINT*>(pData);
-		m_pCounterReadbackBuffer->Unmap(0, nullptr);
+		FreeList_readbackBuffer->Unmap(0, nullptr);
 	}
+
+	N_FreeList = count;
 	return count;
 }
 
-UINT Particle::Readback_CounterBuffer_Particle_Info_List()
+UINT Particle::Readback_CounterBuffer_Render_Instance()
 {
-	if (!m_pCounterReadbackBuffer)
+	if (!Render_Instance_readbackBuffer)
 		return 0;
 
 	UINT count = 0;
 	void* pData = nullptr;
 	D3D12_RANGE range = { 0, sizeof(UINT) };
 
-	if (SUCCEEDED(m_pCounterReadbackBuffer->Map(0, &range, &pData)) && pData)
+	if (SUCCEEDED(Render_Instance_readbackBuffer->Map(0, &range, &pData)) && pData)
 	{
 		count = *reinterpret_cast<UINT*>(pData);
-		m_pCounterReadbackBuffer->Unmap(0, nullptr);
+		Render_Instance_readbackBuffer->Unmap(0, nullptr);
 	}
+
+	N_Render_Instance = count;
 	return count;
 }
 
+
+void Particle::ResetCounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* counterBuffer)
+{
+	if (!counterBuffer)
+	{
+		OutputDebugString(L"[ResetCounterBuffer] Null counter buffer\n");
+		return;
+	}
+
+	SynchronizeResourceTransition(pd3dCommandList, counterBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
+
+	pd3dCommandList->CopyBufferRegion(counterBuffer, 0, CounterResetBuffer, 0, sizeof(UINT));
+
+	SynchronizeResourceTransition(pd3dCommandList, counterBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+}
+
+void Particle::Reset_Instance_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	ResetCounterBuffer(pd3dCommandList, Render_Instance_counterBuffer);
+}
 
 // 렌더링용 VBV 업데이트
 void Particle::UpdateRenderInstanceVBV()
@@ -495,7 +519,7 @@ void ParticleObject::ReleaseUploadBuffers()
 
 void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	particle_obj->UpdateBuffers(pd3dCommandList);
+	particle_data->UpdateBuffers(pd3dCommandList);
 }
 
 
@@ -503,15 +527,4 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 {
 	// 메시기반 인스턴싱 하기
 
-}
-
-
-
-
-void ParticleObject::OnPostRender()
-{
-	if (particle_obj)
-	{
-		particle_N = particle_obj->Readback_CounterBuffer();
-	}
 }
