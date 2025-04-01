@@ -914,17 +914,20 @@ CAnimationController::~CAnimationController()
 	if (m_pAnimationTracks) 
 		delete[] m_pAnimationTracks;
 
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
-	{
-		if (m_ppd3dcbSkinningBoneTransforms[i]) {
-			m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
-			m_ppd3dcbSkinningBoneTransforms[i]->Release();
-			m_ppd3dcbSkinningBoneTransforms[i] = nullptr;
+	if (m_ppd3dcbSkinningBoneTransforms) {
+		for (int i = 0; i < m_nSkinnedMeshes; i++)
+		{
+			if (m_ppd3dcbSkinningBoneTransforms[i]) {
+				m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
+				m_ppd3dcbSkinningBoneTransforms[i]->Release();
+				m_ppd3dcbSkinningBoneTransforms[i] = nullptr;
+			}
 		}
+		delete[] m_ppd3dcbSkinningBoneTransforms;
 	}
 	
-	if (m_ppd3dcbSkinningBoneTransforms) 
-		delete[] m_ppd3dcbSkinningBoneTransforms;
+	/*if (m_ppd3dcbSkinningBoneTransforms) 
+		delete[] m_ppd3dcbSkinningBoneTransforms;*/
 	
 	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) 
 		delete[] m_ppcbxmf4x4MappedSkinningBoneTransforms;

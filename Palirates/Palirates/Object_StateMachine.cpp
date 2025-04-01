@@ -213,7 +213,7 @@ PlayerStateMachine::PlayerStateMachine(CPlayer* owner)
 
 void PlayerStateMachine::update(float Elapsed_time)
 {
-    float blendSpeed = 8.0f * Elapsed_time;
+    float blendSpeed = 6.0f * Elapsed_time;
 
     if (isFirstUpdate) {
         animController = m_pOwner->GetSkinnedAnimationController();
@@ -403,7 +403,7 @@ MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
 //#define ADD
 void MonsterStateMachine::update(float Elapsed_time)
 {
-    float blendSpeed = 8.0f * Elapsed_time;
+    float blendSpeed = 6.0f * Elapsed_time;
 
     stateElapsedTime += Elapsed_time;
 
