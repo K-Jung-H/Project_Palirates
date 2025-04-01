@@ -332,9 +332,15 @@ void PlayerStateMachine::update(float Elapsed_time)
         }
         break;
     case State::Knock_Down:
+       /* if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }*/
         m_pOwner->targetWeights[TRACK_KNOCK_DOWN] = 1.0f;
         break;
     case State::Get_Up:
+        if (animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
         m_pOwner->targetWeights[TRACK_GET_UP] = 1.0f;
         break;
     }
@@ -384,6 +390,12 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         key_state.dive = false;
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
         DebugOutput("Dive->Idle\n");
+        break;
+    case State::Knock_Down:
+        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
+        break;
+    case State::Get_Up:
+        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
         break;
     case State::Jump:
         break;
@@ -522,9 +534,15 @@ void MultiPlayerStateMachine::update(float Elapsed_time)
         }
         break;
     case State::Knock_Down:
+        /* if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
+             changeState(State::Idle, Key_Value::None);
+         }*/
         m_pOwner->targetWeights[TRACK_KNOCK_DOWN] = 1.0f;
         break;
     case State::Get_Up:
+        if (animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
         m_pOwner->targetWeights[TRACK_GET_UP] = 1.0f;
         break;
     }
@@ -575,6 +593,11 @@ void MultiPlayerStateMachine::exitState(State state, Key_Value key_event)
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
         DebugOutput("Dive->Idle\n");
         break;
+    case State::Knock_Down:
+        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
+        break;
+    case State::Get_Up:
+        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
     case State::Jump:
         break;
     case State::Attack_Normal:
