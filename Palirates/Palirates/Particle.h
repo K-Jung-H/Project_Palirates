@@ -34,7 +34,7 @@ struct Particle_Info
 };
 
 //==============================================================================
-#define MAX_PARTICLES				90000
+#define MAX_PARTICLES				9000
 
 enum P_BufferType
 {
@@ -87,7 +87,7 @@ public:
 	// 버퍼 생성 및 해제
 	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize = sizeof(UINT));
+	ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 

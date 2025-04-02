@@ -384,7 +384,10 @@ void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups)
 {
-	pd3dCommandList->Dispatch(cxThreadGroups, cyThreadGroups, czThreadGroups);
+	if (cxThreadGroups < 1 || cyThreadGroups < 1 || czThreadGroups < 1)
+		pd3dCommandList->Dispatch(1, 1, 1);
+	else
+		pd3dCommandList->Dispatch(cxThreadGroups, cyThreadGroups, czThreadGroups);
 }
 
 //===================================================================
@@ -484,7 +487,7 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
-			shader_ptr->Dispatch(pd3dCommandList, particle_data->N_FreeList/64, 1, 1);
+			shader_ptr->Dispatch(pd3dCommandList, particle_data->N_FreeList, 1, 1);
 
 		}
 	}
@@ -512,7 +515,7 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 			particle_data->Reset_Instance_CounterBuffer(pd3dCommandList);
 
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
-			shader_ptr->Dispatch(pd3dCommandList, particle_data->Get_Particle_Max_Num() /64, 1, 1);
+			shader_ptr->Dispatch(pd3dCommandList, particle_data->Get_Particle_Max_Num(), 1, 1);
 
 
 

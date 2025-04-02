@@ -321,10 +321,15 @@ void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	CounterResetBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET);
 
 
+
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, FreeList_counterBuffer, 2);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, Render_Instance_counterBuffer, 3);
 
+	{
+		ID3D12Resource* FreeList_Init_Buffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), m_nMaxParticles);
+		pd3dCommandList->CopyBufferRegion(FreeList_counterBuffer, 0, FreeList_Init_Buffer, 0, sizeof(UINT));
+	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
 	m_RenderInstanceVBV.BufferLocation = RenderInstance_buffer;
@@ -341,7 +346,7 @@ void Particle::ReleaseBuffers()
 {
 }
 
-ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize)
+ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize, UINT initialValue)
 {
 	D3D12_RESOURCE_DESC desc = {};
 	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -378,7 +383,14 @@ ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType ty
 	}
 
 	ID3D12Resource* pBuffer = nullptr;
-	HRESULT hr = pd3dDevice->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &desc, resourceState, nullptr, IID_PPV_ARGS(&pBuffer));
+	HRESULT hr = pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		resourceState,
+		nullptr,
+		IID_PPV_ARGS(&pBuffer)
+	);
 
 	if (FAILED(hr))
 	{
@@ -386,18 +398,18 @@ ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType ty
 		return nullptr;
 	}
 
-	// CounterReset 버퍼의 경우,  0으로 초기화
+	// 초기값 설정 (BUFFER_COUNTER_RESET 전용)
 	if (type == BUFFER_COUNTER_RESET)
 	{
-		UINT zero = 0;
 		UINT8* mappedPtr = nullptr;
 		pBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedPtr));
-		memcpy(mappedPtr, &zero, sizeof(UINT));
+		memcpy(mappedPtr, &initialValue, sizeof(UINT));
 		pBuffer->Unmap(0, nullptr);
 	}
 
 	return pBuffer;
 }
+
 
 void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {

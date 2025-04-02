@@ -36,13 +36,12 @@ RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
 AppendStructuredBuffer<uint> FreeList_Update : register(u1);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u2);
 
-[numthreads(64, 1, 1)]
+[numthreads(1, 1, 1)]
 void Update_Extract_CS(uint3 DTid : SV_DispatchThreadID)
-{
-        
+{  
     uint index = DTid.x;
     if (index >= Max_Particle)
-        return; // ¾ÈÀü¼º
+        return; 
 
     Particle_Info particle = ParticleBuffer_Update[index];
 
