@@ -415,7 +415,7 @@ Object_Manager::~Object_Manager()
 
 }
 
-void Object_Manager::Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Type type)
+void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Type type)
 {
 	switch (type)
 	{

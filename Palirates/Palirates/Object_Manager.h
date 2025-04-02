@@ -137,7 +137,7 @@ public:
 	Object_Manager();
 	~Object_Manager();
 
-	void Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Type type);
+	void Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Type type);
 	void Delete_Object(std::shared_ptr<CGameObject > obj_ptr);
 	void Set_Terrain_Object(std::shared_ptr<CHeightMapTerrain > obj_ptr) { terrain_ptr = obj_ptr; }
 

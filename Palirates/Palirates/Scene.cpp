@@ -137,20 +137,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_1->Set_Name(obj_name_1);
 	humanObject_1->test_num = 1;
 	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
-	
-	//====================================================
-	// 테스트용 코드	
-//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
-	/*CGameObject* test_obj  = humanObject_1->FindFrame("MiddleFinger3_R");
-	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
-
-	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
-	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
-
-	test_obj->Add_Collider(0.0f);
-	test_obj2->Add_Collider(10.0f);*/
-
-	//====================================================
 
 	name_view = obj_name_2;
 	std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
@@ -176,6 +162,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_4->SetPosition(5.0f, m_pTerrain->Get_Mesh_Height(5.0f, 10.0f), 10.0f);
 	humanObject_4->Set_Name(obj_name_4);
 	humanObject_4->test_num = 4;
+	//humanObject_4->GetSkinnedAnimationController()->m_pAnimationTracks[0].m_fPosition = 0.5f;
 	obj_manager->Add_Object(humanObject_4, Object_Type::skinned);
 
 	name_view = obj_name_5;
@@ -183,6 +170,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_5->SetPosition(15.0f, m_pTerrain->Get_Mesh_Height(15.0f, 20.0f), 20.0f);
 	humanObject_5->Set_Name(obj_name_5);
 	humanObject_5->test_num = 5;
+	//humanObject_5->GetSkinnedAnimationController()->m_pAnimationTracks[0].m_fPosition = 0.5f;
 	obj_manager->Add_Object(humanObject_5, Object_Type::skinned);
 
 	name_view = obj_name_6;

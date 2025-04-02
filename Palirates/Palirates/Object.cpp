@@ -900,8 +900,8 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 	for (int i = 0; i < m_nSkinnedMeshes; i++) 
 		m_ppSkinnedMeshes[i] = pModel->m_ppSkinnedMeshes[i];
 
-	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes];
-	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes];
+	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes]();
+	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes]();
 
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
@@ -921,11 +921,12 @@ CAnimationController::~CAnimationController()
 		{
 			if (m_ppd3dcbSkinningBoneTransforms[i]) {
 				m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
-				m_ppd3dcbSkinningBoneTransforms[i]->Release();
-				m_ppd3dcbSkinningBoneTransforms[i] = nullptr;
+			//	m_ppd3dcbSkinningBoneTransforms[i]->Release();
+				m_ppd3dcbSkinningBoneTransforms[i] = NULL;
 			}
 		}
 		delete[] m_ppd3dcbSkinningBoneTransforms;
+		m_ppd3dcbSkinningBoneTransforms = NULL;
 	}
 	
 	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) 
