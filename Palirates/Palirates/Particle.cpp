@@ -318,9 +318,7 @@ void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	Render_Instance_counterBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER);
 	Render_Instance_readbackBuffer = CreateBuffer(pd3dDevice, BUFFER_READBACK);
 
-	CounterResetBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET);
-
-
+	CounterResetBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), 0);
 
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, FreeList_counterBuffer, 2);
@@ -329,6 +327,9 @@ void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	{
 		ID3D12Resource* FreeList_Init_Buffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), m_nMaxParticles);
 		pd3dCommandList->CopyBufferRegion(FreeList_counterBuffer, 0, FreeList_Init_Buffer, 0, sizeof(UINT));
+		pd3dCommandList->CopyBufferRegion(Particle_Info_List_counterBuffer, 0, FreeList_Init_Buffer, 0, sizeof(UINT));
+
+
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS RenderInstance_buffer = particle_buffer_texture->GetResource(2)->GetGPUVirtualAddress();
@@ -410,6 +411,15 @@ ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType ty
 	return pBuffer;
 }
 
+void Particle::Uav_Synchronization(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	barrier.UAV.pResource = particle_buffer_texture->GetResource(1);
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+	pd3dCommandList->ResourceBarrier(1, &barrier);
+}
 
 void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -502,6 +512,13 @@ void Particle::ResetCounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList, ID
 void Particle::Reset_Instance_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	ResetCounterBuffer(pd3dCommandList, Render_Instance_counterBuffer);
+	N_Render_Instance = 0;
+}
+
+void Particle::Reset_FreeList_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	ResetCounterBuffer(pd3dCommandList, FreeList_counterBuffer);
+	N_FreeList = 0;
 }
 
 // 렌더링용 VBV 업데이트
@@ -512,6 +529,9 @@ void Particle::UpdateRenderInstanceVBV()
 	m_RenderInstanceVBV.StrideInBytes = sizeof(Render_Instance);
 	m_RenderInstanceVBV.SizeInBytes = sizeof(Render_Instance) * m_nMaxParticles;
 }
+
+
+
 
 //==============================================================================
 

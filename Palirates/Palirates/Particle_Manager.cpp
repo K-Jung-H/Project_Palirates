@@ -463,8 +463,16 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	Emit_Particles(pd3dCommandList, fTimeElapsed);
-	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
+	if (test_b)
+	{
+		Emit_Particles(pd3dCommandList, fTimeElapsed);
+		test_b = false;
+	}
+	else
+	{
+		Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
+		test_b = true;
+	}
 }
 
 void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -485,10 +493,31 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 			update_info.FreeList_Size = particle_data->N_FreeList;
 			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
 
-			particle_data->UpdateBuffers(pd3dCommandList);
-			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
-			shader_ptr->Dispatch(pd3dCommandList, particle_data->N_FreeList, 1, 1);
 
+			particle_data->UpdateBuffers(pd3dCommandList);
+
+
+			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
+			shader_ptr->Dispatch(pd3dCommandList, 9000, 1, 1);
+
+
+			particle_data->Uav_Synchronization(pd3dCommandList);
+
+		}
+	}
+}
+
+void Particle_Manager::Test_F(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (auto& [type, shader_ptr] : particle_shader_map)
+	{
+		if (!shader_ptr)
+			continue;
+		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+		{
+			Particle* particle_data = particle_obj->Get_Particle_Data();
+			particle_data->Reset_FreeList_CounterBuffer(pd3dCommandList);
+			particle_data->Reset_Instance_CounterBuffer(pd3dCommandList);
 		}
 	}
 }
@@ -511,8 +540,11 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 			update_info.FreeList_Size = particle_data->N_FreeList;
 			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
 
+//			particle_data->Reset_FreeList_CounterBuffer(pd3dCommandList);
+//			particle_data->Reset_Instance_CounterBuffer(pd3dCommandList);
+			particle_data->Uav_Synchronization(pd3dCommandList);
 			particle_data->UpdateBuffers(pd3dCommandList);
-			particle_data->Reset_Instance_CounterBuffer(pd3dCommandList);
+
 
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 			shader_ptr->Dispatch(pd3dCommandList, particle_data->Get_Particle_Max_Num(), 1, 1);
@@ -534,11 +566,19 @@ void Particle_Manager::Sync_AfterAnimate(ID3D12GraphicsCommandList* pd3dCommandL
 		{
 			particle_data->Copy_CounterBuffer_All(pd3dCommandList);
 			particle_data->Readback_All();
+
+			if(test_b)
+				DebugOutput("\n- Update\n");
+			else
+				DebugOutput("\n- Emit\n");
+
 			DebugOutput("======================================\n");
 			DebugOutput("Particle_Info_List : " + to_string(particle_data->N_Particle_Info_List) + "\n");
 			DebugOutput("FreeList : " + to_string(particle_data->N_FreeList) + "\n");
 			DebugOutput("Render_Instance : " + to_string(particle_data->N_Render_Instance) + "\n");
 			DebugOutput("======================================\n");
+			DebugOutput("\n");
+
 		}
 	}
 }

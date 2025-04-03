@@ -68,6 +68,8 @@ private:
 
 	ID3D12Resource* CounterResetBuffer = NULL;
 
+	ID3D12Resource* for_debug_buffer = NULL;
+
 	// 버퍼 뷰
 	D3D12_VERTEX_BUFFER_VIEW m_RenderInstanceVBV = {};
 
@@ -92,6 +94,7 @@ public:
 	void ReleaseBuffers();
 
 	// 렌더링용 VBV 업데이트
+	void Uav_Synchronization(ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateRenderInstanceVBV();
 
 	UINT Get_Particle_Max_Num() const { return m_nMaxParticles; }
@@ -120,7 +123,10 @@ public:
 	}
 
 	void ResetCounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* counterBuffer);
+
+	void Reset_FreeList_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Reset_Instance_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
+
 };
 
 //==============================================================================

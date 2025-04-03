@@ -64,7 +64,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 70, 10);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 50);
 	//CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
 	
 
@@ -812,9 +812,17 @@ void CGameFramework::FrameAdvance()
 	{
 		Update_Scene();
 	}
-	EndGPUStage(GPU_Stage::Compute);
+	EndGPUStage(GPU_Stage::Compute, true);
 
 	// 다음 Compute 단계와의 동기화 보장
+	SafeSyncStage(GPU_Stage::Compute);
+
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
+
+	scene_manager->Get_Active_Scene()->particle_manager->Test_F(Active_CommandList);
+
+	EndGPUStage(GPU_Stage::Compute, true);
 	SafeSyncStage(GPU_Stage::Compute);
 
 	// ====================== [2] Compute: After Update ======================
@@ -823,7 +831,8 @@ void CGameFramework::FrameAdvance()
 	{
 		After_Update_Scene();
 	}
-	EndGPUStage(GPU_Stage::Compute);
+	EndGPUStage(GPU_Stage::Compute, true);
+	SafeSyncStage(GPU_Stage::Compute);
 
 	// ====================== [3] UI (CPU-only) ======================
 #ifdef WRITE_TEXT_UI

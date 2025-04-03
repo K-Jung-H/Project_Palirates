@@ -27,14 +27,27 @@ struct Particle_Info
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
 ConsumeStructuredBuffer<uint> FreeList_Emit : register(u1);
+#define THREAD_COUNT 64
+groupshared int g_ConsumeCount;
 
-[numthreads(1, 1, 1)]
-void EmitCS(uint3 DTid : SV_DispatchThreadID)
+[numthreads(THREAD_COUNT, 1, 1)]
+void EmitCS(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID)
 {
-    uint tid = DTid.x;
-    if (tid >= FreeList_Size)
-        return;
-    
+
+    if (GTid.x == 0)
+    {
+        g_ConsumeCount = FreeList_Size;
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+
+    int myIndex;
+    InterlockedAdd(g_ConsumeCount, -1, myIndex);
+
+    if (myIndex < 0)
+        return; 
+
     uint index = FreeList_Emit.Consume();
 
     Particle_Info p = (Particle_Info) 0;
@@ -42,12 +55,11 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     p.Velocity = float3(0.0f, 3.0f, 0.0f);
     p.Acceleration = float3(0.0f, -9.8f, 0.0f);
     p.Lifetime = 0.0f;
-    p.MaxLifetime = 1.0f;
+    p.MaxLifetime = 0.0f;
     p.Color = float3(1.0f, 1.0f, 0.0f);
     p.Size = float2(10.0f, 10.0f);
     p.Type = 0;
     p.Active = 1;
 
     ParticleBuffer_Emit[index] = p;
-
 }
