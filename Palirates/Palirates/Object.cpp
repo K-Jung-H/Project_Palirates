@@ -268,6 +268,11 @@ int CTexture::GetBufferElements(int index) const
 	return m_pnBufferElements[index];
 }
 
+int CTexture::GetBufferStrides(int index) const
+{
+	return m_pnBufferStrides[index];
+}
+
 D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 {
 	ID3D12Resource* resource = GetResource(index);
@@ -363,6 +368,7 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC CTexture::GetUnorderedAccessViewDesc(int index)
 		uav.Buffer.FirstElement = 0;
 		uav.Buffer.NumElements = m_pnBufferElements[index];
 		uav.Buffer.StructureByteStride = m_pnBufferStrides[index];
+
 		uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 		break;
 	}

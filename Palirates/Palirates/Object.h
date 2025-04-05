@@ -104,6 +104,8 @@ public:
 
 	DXGI_FORMAT GetBufferFormat(int index) const;
 	int GetBufferElements(int index) const;
+	int GetBufferStrides(int index) const;
+
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
 	D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);

@@ -627,23 +627,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
 }
 
-void CScene::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
-{
-#ifdef RENDER_PARTICLE
-	if (particle_manager)
-		particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
-
-#endif
-}
-
-void CScene::After_Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-#ifdef RENDER_PARTICLE
-	if (particle_manager)
-		particle_manager->Sync_AfterAnimateObjects(pd3dCommandList);
-
-#endif
-}
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
@@ -677,7 +660,7 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 	{
-//		particle_manager->Render_All(pd3dCommandList, pCamera, 0);
+		particle_manager->Render_All(pd3dCommandList, pCamera);
 	}
 
 #endif

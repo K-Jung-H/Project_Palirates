@@ -39,7 +39,10 @@ public:
     void Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
 
     void Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
-    void After_Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList);
+    void Copy_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
+    void Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
+
+    void After_Update_Active_Particles();
 
 
     void Update_UI();

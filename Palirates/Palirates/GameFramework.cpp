@@ -654,7 +654,6 @@ void CGameFramework::Update_Scene()
 
 void CGameFramework::After_Update_Scene()
 {
-	scene_manager->After_Update_Active_Particles(Active_CommandList);
 }
 
 void CGameFramework::BeginGPUStage(GPU_Stage stage)
@@ -813,28 +812,26 @@ void CGameFramework::FrameAdvance()
 		Update_Scene();
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
-
-	// 다음 Compute 단계와의 동기화 보장
-	SafeSyncStage(GPU_Stage::Compute);
-
-	BeginGPUStage(GPU_Stage::Compute);
-	PrepareStage(GPU_Stage::Compute);
-
-	scene_manager->Get_Active_Scene()->particle_manager->Test_F(Active_CommandList);
-
-	EndGPUStage(GPU_Stage::Compute, true);
-	SafeSyncStage(GPU_Stage::Compute);
-
 	// ====================== [2] Compute: After Update ======================
+
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-		After_Update_Scene();
+		scene_manager->Copy_Particles_Update_Result(Active_CommandList);
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
-	SafeSyncStage(GPU_Stage::Compute);
+
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
+	{
+		scene_manager->Clear_Particles_Update_Result(Active_CommandList);
+	}
+	EndGPUStage(GPU_Stage::Compute, true);
 
 	// ====================== [3] UI (CPU-only) ======================
+
+	scene_manager->After_Update_Active_Particles();
+
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif

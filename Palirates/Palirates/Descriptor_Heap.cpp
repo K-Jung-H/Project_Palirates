@@ -301,14 +301,14 @@ void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CText
     {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = pTexture->GetUnorderedAccessViewDesc(resourceIndex);
 
+        if (pCounterResource != NULL) // Consume, Append
+            desc.Buffer.CounterOffsetInBytes = 0;
+
         pd3dDevice->CreateUnorderedAccessView(pResource, pCounterResource, &desc, instance->UavCPUDescriptorNextHandle);
 
         pTexture->SetComputeUavGpuDescriptorHandle(resourceIndex, instance->UavGPUDescriptorNextHandle);
         pTexture->SetComputeUavRootParameter(resourceIndex, nRootParameterIndex, resourceIndex, 1);
 
-
-        instance->UavCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
-        instance->UavGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
     }
 }
 

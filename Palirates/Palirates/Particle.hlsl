@@ -158,12 +158,11 @@ void GSParticleStreamOutput(point VS_PARTICLE_INPUT input[1], inout PointStream<
 struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 {
     float3 position : POSITION;
-    float4 color : COLOR;
-    
-    float3 world_position : WORLD_POSITION;
-    float3 velocity : VELOCITY;
-    float lifetime : LIFETIME;
-    uint type : PARTICLETYPE;
+
+
+    float3 instancePos : INSTANCE_POSITION;
+    float3 velocity : INSTANCE_VELOCITY;
+    float4 color : INSTANCE_COLOR;
 };
 
 struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
@@ -171,18 +170,6 @@ struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
     float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float4 color : COLOR;
-    
-    float lifetime : LIFETIME;
-    uint type : PARTICLETYPE;
-};
-
-struct GS_PARTICLE_DRAW_OUTPUT
-{
-    float4 position : SV_Position;
-    float4 color : COLOR;
-    
-    float lifetime : LIFETIME;
-    uint type : PARTICLETYPE;
 };
 
 
@@ -191,7 +178,7 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
     VS_INSTANCE_PARTICLE_DRAW_OUTPUT output = (VS_INSTANCE_PARTICLE_DRAW_OUTPUT) 0;
     
     // 파티클 위치 계산 (월드 좌표 적용)
-    float4 particleWorldPosition = float4(input.position + input.world_position, 1.0f);
+    float4 particleWorldPosition = float4(input.position + input.instancePos, 1.0f);
     
     float4 positionW = mul(particleWorldPosition, gmtxGameObject);
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);    
@@ -199,8 +186,7 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
     
     // 색상과 기타 속성 설정
     output.color = input.color;
-    output.lifetime = input.lifetime;
-    output.type = input.type;
+
     
     return output;
 }
@@ -215,30 +201,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
-    // 초기 색상
-    float4 cColor = input.color;
-    
-    // 파티클 타입에 따라 색상 변경
-    if (input.type == PARTICLE_TYPE_EMITTER)
-    {
-        cColor = float4(1.0f, 0.1f, 0.1f, 1.0f); // 붉은색
-    }
-    else if (input.type == PARTICLE_TYPE_SHELL)
-    {
-        cColor = float4(0.1f, 0.0f, 1.0f, 1.0f); // 파란색
-    }
-    else if (input.type == PARTICLE_TYPE_FLARE01)
-    {
-        cColor = float4(1.0f, 1.0f, 0.1f, 1.0f); // 노란색
-    }
-    else if (input.type == PARTICLE_TYPE_FLARE02)
-    {
-        cColor = float4(0.0f, 1.0f, 0.1f, 1.0f); // 초록색
-    }
-    else if (input.type == PARTICLE_TYPE_FLARE03)
-    {
-        cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
-    }
+
 
     output.Albedo_Color = input.color;
     
@@ -253,36 +216,3 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
 
 
 
-
-
-float4 PSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
-{
-    // 초기 색상
-    float4 cColor = input.color;
-    
-    // 파티클 타입에 따라 색상 변경
-    if (input.type == PARTICLE_TYPE_EMITTER)
-    {
-        cColor = float4(1.0f, 0.1f, 0.1f, 1.0f); // 붉은색
-    }
-    else if (input.type == PARTICLE_TYPE_SHELL)
-    {
-        cColor = float4(0.1f, 0.0f, 1.0f, 1.0f); // 파란색
-    }
-    else if (input.type == PARTICLE_TYPE_FLARE01)
-    {
-        cColor = float4(1.0f, 1.0f, 0.1f, 1.0f); // 노란색
-    }
-    else if (input.type == PARTICLE_TYPE_FLARE02)
-    {
-        cColor = float4(0.0f, 1.0f, 0.1f, 1.0f); // 초록색
-    }
-    else if (input.type == PARTICLE_TYPE_FLARE03)
-    {
-        cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
-    }
-    
-//    cColor = float4(0.0f, 1.0f, 0.0f, 1.0f);
-    // 색상 반환
-    return cColor;
-}

@@ -113,20 +113,72 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
 void Scene_Manager::Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 #ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
     if (activeScene)
-        activeScene->Animate_Particles(pd3dCommandList, fTimeElapsed);    
+        particle_manager = activeScene->Get_Particle_Manager();
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
+#endif
+}
+void Scene_Manager::Copy_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+#ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
+    if (activeScene)
+        particle_manager = activeScene->Get_Particle_Manager();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->Copy_CounterBuffer(pd3dCommandList);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
 #endif
 }
 
-void Scene_Manager::After_Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList)
+void Scene_Manager::Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
     if (activeScene)
-        activeScene->After_Animate_Particles(pd3dCommandList);
+        particle_manager = activeScene->Get_Particle_Manager();
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->Clear_CounterBuffer(pd3dCommandList);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
+#endif
+}
+
+
+void Scene_Manager::After_Update_Active_Particles()
+{
+#ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
+    if (activeScene)
+        particle_manager = activeScene->Get_Particle_Manager();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->Sync_AfterAnimateObjects();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
 #endif
 }
 

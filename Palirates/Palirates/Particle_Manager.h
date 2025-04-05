@@ -8,9 +8,15 @@
 
 struct CB_Particle_Update_Info
 {
-	UINT FreeList_Size;
 	UINT Max_Particle_N;
 	float ElapsedTime;
+	XMFLOAT2 pad0;
+
+	XMFLOAT3 EmitRegionMin; // AABB 시작점
+	float  pad1;
+
+	XMFLOAT3 EmitRegionMax; // AABB 끝점
+	float  pad2;
 };
 
 
@@ -96,7 +102,7 @@ private:
 	CTexture* m_pRandowmValueTexture = NULL;
 
 
-	bool test_b = true;
+	bool test_button = true;
 
 public:
 	Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -110,15 +116,17 @@ public:
 	void Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 
 
-	void Sync_AfterAnimate(ID3D12GraphicsCommandList* pd3dCommandList, Particle_Type type);
-	void Sync_AfterAnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Sync_AfterAnimate(Particle_Type type);
+	void Sync_AfterAnimateObjects();
 
-	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N, Particle_Type type);
-	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int N);
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Particle_Type type);
+	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 
 	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
 
-	void Test_F(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Clear_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
+
 };
 

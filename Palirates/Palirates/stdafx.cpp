@@ -417,3 +417,22 @@ XMFLOAT4 Get_Random_Color(float w)
 
 	return XMFLOAT4{ R,G,B,w };
 }
+
+std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area)
+{
+	XMFLOAT3 min_point = 
+	{
+		center.x - area.x,
+		center.y - area.y,
+		center.z - area.z
+	};
+
+	XMFLOAT3 max_point =
+	{
+		center.x + area.x,
+		center.y + area.y,
+		center.z + area.z
+	};
+
+	return { min_point, max_point };
+}
