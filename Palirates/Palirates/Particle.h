@@ -6,6 +6,35 @@
 #include "Descriptor_Heap.h"
 
 //==============================================================================
+#define MAX_PARTICLES				900 * 64
+
+enum class Particle_Type
+{
+	sample_1,
+	sample_2,
+	sample_3,
+	etc
+};
+
+struct Particle_Format
+{
+	Particle_Type type = Particle_Type::etc;
+	UINT max_particles = MAX_PARTICLES;
+
+	XMFLOAT3 center{};
+	XMFLOAT3 area_xyz{};
+
+	float MaxLifetime;
+
+	XMFLOAT3 main_direction {};
+	XMFLOAT3 velocity {};
+	XMFLOAT3 acceleration {};
+
+	XMFLOAT3 color{};
+	XMFLOAT2 size{};
+
+
+};
 
 struct Render_Instance
 {
@@ -34,7 +63,7 @@ struct Particle_Info
 };
 
 //==============================================================================
-#define MAX_PARTICLES				900 * 64
+
 
 enum P_BufferType
 {
@@ -46,7 +75,7 @@ enum P_BufferType
 class Particle
 {
 public:
-	Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles = MAX_PARTICLES);
+	Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
 	virtual ~Particle();
 
 private:
@@ -73,7 +102,6 @@ private:
 
 	// 기타
 	UINT m_nMaxParticles = MAX_PARTICLES;
-	UINT m_nStride = sizeof(Particle_Info);
 
 public:
 	UINT N_Particle_Info_List = 0;
@@ -84,13 +112,13 @@ public:
 
 
 	// 버퍼 생성 및 해제
-	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
 
 	ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 
-	Particle_Info* Init_Particle_Data();
+	Particle_Info* Init_Particle_Data(const Particle_Format& particle_info);
 
 	// 렌더링용 VBV 업데이트
 	D3D12_VERTEX_BUFFER_VIEW Update_Render_Instance_VBV();
@@ -175,7 +203,7 @@ private:
 	
 	XMFLOAT3 area_xyz {};
 	XMFLOAT3 center {};
-
+	XMFLOAT3 direction {};
 public:
 	ParticleObject();
 	virtual ~ParticleObject();
@@ -183,7 +211,7 @@ public:
 	void ReleaseUploadBuffers();
 
 	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
-	void Set_Particle_OBJ(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
+	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -195,8 +223,15 @@ public:
 	Particle* Get_Particle_Data() { return particle_data; }
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 	
+	void Set_Area(XMFLOAT3 new_area) { area_xyz = new_area; }
+	void Set_Center(XMFLOAT3 new_center) { center = new_center; }
 	XMFLOAT3 Get_Area() { return area_xyz; }
 	XMFLOAT3 Get_Center() { return center; };
+
+	void Set_Main_Direction(const XMFLOAT3& input);
+	XMFLOAT3 Get_Main_Direction();
+
+	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(center, area_xyz); }
 	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }
 	UINT Get_Size_Render_Instance() { return particle_data->N_Render_Instance; }
 };

@@ -37,6 +37,9 @@ cbuffer CB_Particle_Update_Info : register(b0)
 
     float3 EmitRegionMax;
     float pad2;
+    
+    float3 Main_Direction;
+    float pad3;
 }
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
@@ -106,32 +109,9 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
 
     // 무작위 위치 (Y는 항상 상단)
     p.Position = RandomEmitPosition(index, EmitRegionMin, EmitRegionMax);
-    p.Velocity = RandomSpreadDirection(index, float3(0.0f, -1.0f, 0.0f), 1.0f);
-    p.Acceleration = float3(0.0f, -0.0f, 0.0f);
-
-    
-    // p.Velocity = float3(0.0f, 0.0f, 0.0f);
-    p.Acceleration = float3(0.0f, -9.8f, 0.0f);
+   
+    p.Velocity = RandomSpreadDirection(index, Main_Direction, 1.0f);    
     p.Lifetime = 0.0f;
-    p.MaxLifetime = 10.0f;
-    p.Size = float2(10.0f, 10.0f);
-    p.Type = 0;
-
-    switch (p.Type)
-    {
-        case 0:
-            p.Color = float3(1.0f, 1.0f, 0.0f);
-            break; // Spark
-        case 1:
-            p.Color = float3(0.8f, 0.9f, 1.0f);
-            break; // Snow
-        case 2:
-            p.Color = float3(0.7f, 0.6f, 0.4f);
-            break; // Sand
-        case 3:
-            p.Color = float3(0.3f, 0.6f, 1.0f);
-            break; // Splash
-    }
 
     ParticleBuffer_Emit[index] = p;
 }

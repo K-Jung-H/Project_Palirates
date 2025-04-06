@@ -377,6 +377,7 @@ void ParticleShader::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* p
 	m_pMappedUpdateCB->ElapsedTime = update_info->ElapsedTime;
 	m_pMappedUpdateCB->EmitRegionMin = update_info->EmitRegionMin;
 	m_pMappedUpdateCB->EmitRegionMax = update_info->EmitRegionMax;
+	m_pMappedUpdateCB->Main_Direction = update_info->Main_Direction;
 
 	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
 }
@@ -441,11 +442,9 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList);
 
 	//===================================================================
-	//ParticleShader* test_shader = new ParticleShader();
-	//test_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-
 	ParticleShader* test_shader = new ParticleShader();
 	test_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+
 	//===================================================================
 	particle_shader_map[Particle_Type::sample_1] = test_shader;
 	particle_shader_map[Particle_Type::sample_2] = NULL;
@@ -453,25 +452,43 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	//===================================================================
 	Particle_Format test_info;
 	test_info.type = Particle_Type::sample_1;
-	test_info.pos = XMFLOAT3(10.0f, 10.0f, 10.0f);
+	test_info.max_particles = 100;
+
+	test_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
+	test_info.area_xyz = XMFLOAT3(10.0f, 10.0f, 10.0f);
+	
+	test_info.MaxLifetime = 5.0f;
+
+	test_info.main_direction = XMFLOAT3(0.0f, -1.0f, -1.0f);
 	test_info.velocity = XMFLOAT3(0.0f, 0.0f, 10.0f);
 	test_info.acceleration = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
 	test_info.size = XMFLOAT2(10.0f, 10.0f);
 	test_info.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
 
 
-	Particle_Format test_info_2;
-	test_info_2.type = Particle_Type::sample_1;
-	test_info_2.pos = XMFLOAT3(10.0f, 10.0f, 10.0f);
-	test_info_2.velocity = XMFLOAT3(1.0f, 0.0f, 0.0f);
-	test_info_2.acceleration = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	test_info_2.size = XMFLOAT2(10.0f, 10.0f);
-	test_info_2.color = XMFLOAT3(1.0f, 0.0f, 0.0f);
+
 	//===================================================================
 
 	Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_info);
 
 	//===================================================================
+}
+
+void Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
+{
+	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
+	new_particle_obj->Set_Shape(particle_shape_mesh);
+
+	new_particle_obj->Set_Center(particle_info.center);
+	new_particle_obj->Set_Area(particle_info.area_xyz);
+	new_particle_obj->Set_Main_Direction(particle_info.main_direction);
+
+
+	Particle* new_particle_data = new Particle(pd3dDevice, pd3dCommandList, particle_info);
+	new_particle_obj->Set_Particle_Data(new_particle_data);
+
+	particle_object_list_map[particle_info.type].push_back(new_particle_obj);
 }
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -493,15 +510,20 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
+			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = particle_obj->GetAABB();
+
 			Particle* particle_data = particle_obj->Get_Particle_Data();
-			update_info.ElapsedTime = fTimeElapsed;
 			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
+			update_info.ElapsedTime = fTimeElapsed;
+			update_info.EmitRegionMin = aabb_pos.first;
+			update_info.EmitRegionMax = aabb_pos.second;
+			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 
 
-			shader_ptr->Dispatch(pd3dCommandList, MAX_PARTICLES, 1, 1);
+			shader_ptr->Dispatch(pd3dCommandList, update_info.Max_Particle_N, 1, 1);
 		}
 	}
 
@@ -523,16 +545,15 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			XMFLOAT3 center = particle_obj->Get_Center();
-			XMFLOAT3 area = particle_obj->Get_Area();
-			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = GetAABB(center, area);
+			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = particle_obj->GetAABB();
 
 
 			Particle* particle_data = particle_obj->Get_Particle_Data();
-			update_info.ElapsedTime = fTimeElapsed;
 			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
+			update_info.ElapsedTime = fTimeElapsed;
 			update_info.EmitRegionMin = aabb_pos.first;
 			update_info.EmitRegionMax = aabb_pos.second;
+			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
@@ -639,17 +660,3 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	Render(pd3dCommandList, pCamera, Particle_Type::sample_3);
 }
 
-
-
-void Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
-{
-	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
-	Particle* new_particle = new Particle(pd3dDevice, pd3dCommandList);
-
-	new_particle_obj->Set_Shape(particle_shape_mesh);
-	new_particle_obj->Set_Particle_OBJ(new_particle);
-	new_particle_obj->SetMesh(NULL);
-
-	particle_object_list_map[particle_info.type].push_back(new_particle_obj);
-	
-}

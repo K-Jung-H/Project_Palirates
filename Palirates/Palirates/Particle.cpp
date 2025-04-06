@@ -279,12 +279,11 @@ void Sphere_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommand
 
 
 //==============================================================================
-Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, UINT nMaxParticles)
+Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, Particle_Format particle_format)
 {
-	m_nMaxParticles = nMaxParticles;
-	m_nStride = sizeof(Particle_Info);
+	m_nMaxParticles = particle_format.max_particles;
 
-	Create_Resource_Buffers(pd3dDevice, pd3dCmdList);
+	Create_Resource_Buffers(pd3dDevice, pd3dCmdList, particle_format);
 
 }
 
@@ -293,11 +292,11 @@ Particle::~Particle()
 	ReleaseBuffers();
 }
 
-void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format)
 {
 	particle_buffer_texture = new CTexture(4, RESOURCE_STRUCTURED_BUFFER, 0, 0, 4, 0, 0, 4, 0);
 
-	Particle_Info* particle_init_data = Init_Particle_Data();
+	Particle_Info* particle_init_data = Init_Particle_Data(particle_format);
 
 
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, particle_init_data, m_nMaxParticles, sizeof(Particle_Info), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -424,23 +423,23 @@ ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType ty
 	return pBuffer;
 }
 
-Particle_Info* Particle::Init_Particle_Data()
+Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
 { 
 	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
 	{
-		particle_info[i].Active = 1;
+		particle_info[i].Active = 0;
 		particle_info[i].Type = 0;
 
-		particle_info[i].MaxLifetime = 1.0f;
+		particle_info[i].MaxLifetime = particle_format.MaxLifetime;
 		particle_info[i].Lifetime = 0.0f;
 
 		particle_info[i].Position = XMFLOAT3{};
 		particle_info[i].Velocity = XMFLOAT3{};
-		particle_info[i].Acceleration = XMFLOAT3{};
+		particle_info[i].Acceleration = particle_format.acceleration;
 
-		particle_info[i].Color = XMFLOAT3{};
-		particle_info[i].Size = XMFLOAT2{};
+		particle_info[i].Color = particle_format.color;
+		particle_info[i].Size = particle_format.size;
 
 		particle_info[i].Padding1 = 0.0f;
 		particle_info[i].Padding2 = 0.0f;
@@ -602,6 +601,8 @@ void Particle::Reset_Debug_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
 
 ParticleObject::ParticleObject() : CGameObject(1)
 {
+	m_pMesh = NULL;
+
 	area_xyz = XMFLOAT3{ 1000.0f,100.0f,1000.0f };
 	center = XMFLOAT3{ 0.0f,0.0f ,0.0f };
 }
@@ -613,6 +614,33 @@ ParticleObject::~ParticleObject()
 void ParticleObject::ReleaseUploadBuffers()
 {
 	CGameObject::ReleaseUploadBuffers();
+}
+
+void ParticleObject::Set_Main_Direction(const XMFLOAT3& input)
+{
+	XMVECTOR dirVec = XMLoadFloat3(&input);
+	if (XMVector3Equal(dirVec, XMVectorZero()))
+	{
+		direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		return;
+	}
+
+	dirVec = XMVector3Normalize(dirVec);
+	XMStoreFloat3(&direction, dirVec);
+}
+
+XMFLOAT3 ParticleObject::Get_Main_Direction()
+{
+	XMVECTOR dirVec = XMLoadFloat3(&direction);
+
+	if (XMVector3Equal(dirVec, XMVectorZero()))
+		return XMFLOAT3(0.0f, 1.0f, 0.0f);
+	
+	XMVECTOR normalizedDir = XMVector3Normalize(dirVec);
+	XMFLOAT3 result;
+	XMStoreFloat3(&result, normalizedDir);
+
+	return result;
 }
 
 void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)

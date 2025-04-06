@@ -29,12 +29,15 @@ cbuffer CB_Particle_Update_Info : register(b0)
     uint Max_Particle_N;
     float ElapsedTime;
     float2 pad0;
-    
+
     float3 EmitRegionMin;
     float pad1;
 
     float3 EmitRegionMax;
     float pad2;
+    
+    float3 Main_Direction;
+    float pad3;
 }
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);

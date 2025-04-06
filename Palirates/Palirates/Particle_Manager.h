@@ -17,6 +17,9 @@ struct CB_Particle_Update_Info
 
 	XMFLOAT3 EmitRegionMax; // AABB 끝점
 	float  pad2;
+
+	XMFLOAT3 Main_Direction; // 파티클 흐름 방향
+	float  pad3;
 };
 
 
@@ -73,25 +76,7 @@ public:
 
 //==============================================================================
 
-enum class Particle_Type
-{
-	sample_1,
-	sample_2,
-	sample_3,
-	etc
-};
 
-struct Particle_Format
-{
-	Particle_Type type = Particle_Type::etc;
-	XMFLOAT3 pos{};
-	XMFLOAT3 velocity{};
-	XMFLOAT3 acceleration{};
-	XMFLOAT3 color{};
-	XMFLOAT2 size{};
-	UINT max_particles = MAX_PARTICLES;
-
-};
 
 class Particle_Manager
 {
