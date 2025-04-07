@@ -170,6 +170,7 @@ struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
     float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float4 color : COLOR;
+    float2 velocity : VELOCITY;
 };
 
 
@@ -186,7 +187,15 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
     
     // 색상과 기타 속성 설정
     output.color = input.color;
+    
 
+
+    // 객체 이동에 의한 velocity (뷰-투영 후 클립 → NDC → 픽셀)
+    float4 velocityClip = mul(mul(float4(input.velocity, 0.0f), gmtxView), gmtxProjection);
+    float2 objVelocityNDC = velocityClip.xy / output.position.w;
+    float2 objVelocityPx = objVelocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
+    
+    output.velocity = objVelocityPx;
     
     return output;
 }
@@ -199,7 +208,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
 
 
@@ -210,7 +219,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
     output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
-    
+    output.Velocity_Mask_Obj_Id = float4(input.velocity, 0.0f, 10.0f);
+
     return output;
 }
 

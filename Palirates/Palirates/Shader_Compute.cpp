@@ -250,7 +250,7 @@ CEdgeDetectCSShader::~CEdgeDetectCSShader()
 
 D3D12_SHADER_BYTECODE CEdgeDetectCSShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_MotionBlur", "cs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_EdgeDetection", "cs_5_1", ppd3dShaderBlob));
 }
 
 void CEdgeDetectCSShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)

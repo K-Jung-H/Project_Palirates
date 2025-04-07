@@ -24,27 +24,6 @@ UINT gnDsvDescriptorIncrementSize = 0;
  DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 
-void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
-{
-	HRESULT hResult = pd3dCommandQueue->Signal(pd3dFence, nFenceValue);
-
-	if (pd3dFence->GetCompletedValue() < nFenceValue)
-	{
-		hResult = pd3dFence->SetEventOnCompletion(nFenceValue, hFenceEvent);
-		::WaitForSingleObject(hFenceEvent, INFINITE);
-	}
-}
-
-void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
-{
-	pd3dCommandList->Close();
-
-	ID3D12CommandList* ppd3dCommandLists[] = { pd3dCommandList };
-	pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-	::WaitForGpuComplete(pd3dCommandQueue, pd3dFence, nFenceValue, hFenceEvent);
-}
-
 void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
 {
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
