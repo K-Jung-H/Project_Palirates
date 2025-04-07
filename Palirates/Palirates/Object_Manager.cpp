@@ -431,6 +431,12 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 	{		
 		Add_Object_To_Unordered_Map(obj_ptr, fixed_obj_info_map);
 	}	break;
+	case Object_Type::player:
+	{
+		if (obj_ptr->m_pSkinnedAnimationController != NULL)
+			player_list.push_back(std::dynamic_pointer_cast<CTerrainPlayer>(obj_ptr));
+	}
+		break;
 	case Object_Type::etc:
 		break;
 	default:
@@ -523,6 +529,13 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			}
 	}
 	break;
+	case Object_Type::player:
+	{
+		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Animate(fTimeElapsed);
+	}
+	break;
 
 	case Object_Type::fixed:
 	case Object_Type::etc:
@@ -541,6 +554,7 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 {
 	Animate_Objects(Object_Type::skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
+	Animate_Objects(Object_Type::player, fTimeElapsed);
 
 }
 
@@ -594,6 +608,17 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 	{
 		if(terrain_ptr)
 			Synchronize_Active_Objects_and_Tile();
+	} break;
+
+	case Object_Type::player:
+	{
+		bool Is_Visible = false;
+		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		{
+			Is_Visible = obj_ptr->IsVisible(pCamera);
+			obj_ptr->Set_Active(Is_Visible);
+
+		}
 	} break;
 
 	case Object_Type::etc:
@@ -740,6 +765,19 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	}
 	break;
 
+	case Object_Type::player:
+	{
+		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		{
+			if (obj_ptr->Get_Active())
+			{
+				obj_ptr->UpdateTransform(NULL);
+				obj_ptr->Render(pd3dCommandList, pCamera);
+			}
+		}
+	}
+	break;
+
 	case Object_Type::etc:
 	default:
 	{
@@ -761,6 +799,7 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 //	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
 
 }
@@ -776,7 +815,7 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 	case Object_Type::non_skinned:
 		return &non_skinned_object_list;
 		break;
-	
+
 	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
@@ -803,6 +842,10 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
+std::vector<std::shared_ptr<CTerrainPlayer>>* Object_Manager::Get_Player_List()
+{
+	return &player_list;
+}
 
 void Object_Manager::Clear_Object_List(Object_Type type)
 {

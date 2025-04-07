@@ -921,7 +921,7 @@ CAnimationController::~CAnimationController()
 		{
 			if (m_ppd3dcbSkinningBoneTransforms[i]) {
 				m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
-			//	m_ppd3dcbSkinningBoneTransforms[i]->Release();
+	//			m_ppd3dcbSkinningBoneTransforms[i]->Release();
 				m_ppd3dcbSkinningBoneTransforms[i] = NULL;
 			}
 		}
@@ -1292,11 +1292,9 @@ CGameObject::~CGameObject()
 	Material_list.clear();
 	Material_list.shrink_to_fit();
 
-
-	if (m_pSkinnedAnimationController)
-	{
-		delete m_pSkinnedAnimationController;
-		m_pSkinnedAnimationController = nullptr; 
+	int k = m_pSkinnedAnimationController.use_count();
+	if (k == 1) {
+		m_pSkinnedAnimationController.reset();
 	}
 
 	DebugOutput("\nDelete GameObject: ", m_pstrFrameName);
@@ -1338,7 +1336,7 @@ CGameObject::CGameObject(const CGameObject& other)
 	
 
 	if (other.m_pSkinnedAnimationController != nullptr)	
-		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController); 
+		m_pSkinnedAnimationController = std::make_shared <CAnimationController>(*other.m_pSkinnedAnimationController);
 	
 }
 
@@ -1402,8 +1400,8 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 	if (other.m_pSkinnedAnimationController != nullptr)
 	{
 		if (m_pSkinnedAnimationController != nullptr) 
-			delete m_pSkinnedAnimationController;  
-		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  
+			m_pSkinnedAnimationController.reset();  
+		m_pSkinnedAnimationController = std::make_shared <CAnimationController>(*other.m_pSkinnedAnimationController);
 	}
 
 	return *this;
@@ -2959,7 +2957,7 @@ CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommand
 		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
 
 	Set_Child(pAngrybotModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = new CAngrybotAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
+	m_pSkinnedAnimationController = std::make_shared <CAngrybotAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
 }
 
 CAngrybotObject::~CAngrybotObject()
@@ -2974,7 +2972,7 @@ CHumanObject::CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
 
 	Set_Child(pHumanModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
 }
 
 CHumanObject::~CHumanObject()
@@ -2998,7 +2996,7 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	targetWeights.resize(n_Animation, 0.0f);
 
 	Set_Child(pHumanModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
@@ -3081,7 +3079,7 @@ CMultiPlayerObject::CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	targetWeights.resize(n_Animation, 0.0f);
 
 	Set_Child(pHumanModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);

@@ -179,13 +179,15 @@ public:
 
 
 
-
 	POINT						m_ptOldCursorPos;
 	_TCHAR						m_pszFrameRate[70];
 
 	//=================서버=================
 	Scene_Manager& GetSceneManager() { return *scene_manager; } 
-	CPlayer* GetPlayer() { return m_pPlayer; } 
+	CPlayer* GetPlayer() { return m_pPlayer; }
+	bool multiMode{ false };
+	int nPlayer{ 0 };
+	int ClientNum{ 0 };
 	//=================서버=================
 
 #ifdef WRITE_TEXT_UI

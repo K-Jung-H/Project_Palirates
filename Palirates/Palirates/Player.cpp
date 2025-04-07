@@ -80,7 +80,8 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	else
 	{
 		m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-		m_pCamera->Move(xmf3Shift);
+		if (m_pCamera)
+			m_pCamera->Move(xmf3Shift);
 	}
 }
 
@@ -301,7 +302,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	n_Animation = 12;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
 	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
@@ -496,6 +497,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	if (child_ptr != nullptr)
 		child_ptr->Animate(fTimeElapsed);
 
+	GetStateMachine()->update(fTimeElapsed);
 }
 
 

@@ -128,6 +128,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	string obj_name_4 = "test_palyer2";
 	string obj_name_5 = "test_palyer3";
 	string obj_name_6 = "test_palyer4";
+	string obj_name_7 = "test_palyer5";
+	string obj_name_8 = "test_palyer6";
 
 
 	std::string_view name_view = obj_name_1;
@@ -179,6 +181,20 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	humanObject_6->Set_Name(obj_name_6);
 	humanObject_6->test_num = 6;
 	obj_manager->Add_Object(humanObject_6, Object_Type::skinned);
+
+	name_view = obj_name_7;
+	std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain.get());
+	humanObject_7->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f));
+	humanObject_7->Set_Name(obj_name_7);
+	//humanObject_7->test_num = 6;
+	obj_manager->Add_Object(humanObject_7, Object_Type::skinned);
+
+	name_view = obj_name_8;
+	std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain.get());
+	humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
+	humanObject_8->Set_Name(obj_name_8);
+	//humanObject_7->test_num = 6;
+	obj_manager->Add_Object(humanObject_8, Object_Type::player);
 
 	//=====================================================
 #ifdef LOAD_SCENE
@@ -631,6 +647,15 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 					multiPlayerObj->SetStateElapsedTime(0.0f);
 				}
 			}
+
+			if (it && it->size() > 6) {
+				auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
+				if (multiPlayerObj) {
+					multiPlayerObj->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+					//multiPlayerObj->GetStateMachine()->changeState(State::Dive, Key_Value::None);
+					multiPlayerObj->SetStateElapsedTime(0.0f);
+				}
+			}
 		}		break;
 		case 'V':
 		{
@@ -640,6 +665,38 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				if (multiPlayerObj) {
 					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 					multiPlayerObj->SetStateElapsedTime(0.0f);
+				}
+			}
+
+			if (it && it->size() > 6) {
+				auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
+				if (multiPlayerObj) {
+					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+					multiPlayerObj->SetStateElapsedTime(0.0f);
+				}
+			}
+
+		}		break;
+		case 'B': 
+		{
+			auto it = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (it && it->size() > 6) {
+				auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
+				if (multiPlayerObj) {
+					//multiPlayerObj->SetCamera(m_pPlayer->GetCamera());
+					//m_pPlayer->DelCamera();
+				/*	std::shared_ptr<CPlayer> tempShared = multiPlayerObj;  
+					multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>(std::shared_ptr<CPlayer>(m_pPlayer));
+					m_pPlayer = tempShared.get();*/
+
+					std::weak_ptr<CTerrainPlayer> weakMultiPlayer = multiPlayerObj;  // weak_ptr로 참조 유지
+					std::shared_ptr<CPlayer> tempShared = multiPlayerObj;  // 기존 shared_ptr을 유지
+					multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>(tempShared); // 안전한 캐스팅
+					m_pPlayer = tempShared.get(); // raw pointer 할당
+
+					if (auto locked = weakMultiPlayer.lock()) {
+						multiPlayerObj = locked;  // 원본 shared_ptr을 다시 참조
+					}
 				}
 			}
 		}		break;
@@ -762,6 +819,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	UpdateShaderVariables(pd3dCommandList);
 
 	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+	obj_manager->Animate_Objects(Object_Type::player, m_fElapsedTime);
 
 }
 

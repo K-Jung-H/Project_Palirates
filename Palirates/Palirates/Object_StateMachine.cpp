@@ -116,13 +116,13 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
 
     std::unordered_map<int, std::pair<Key_Value, Key_Value>> keyMappings = {
     { VK_UP,    { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
-    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  // W 키
+    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  
 
     { VK_DOWN,  { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },
-    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  // S 키
+    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  
 
     { VK_LEFT,  { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },
-    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },  // A 키
+    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } }, 
 
     { VK_RIGHT, { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
     { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },  
