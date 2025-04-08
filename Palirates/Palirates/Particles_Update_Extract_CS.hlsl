@@ -7,10 +7,10 @@ struct Particle_Info
     float MaxLifetime;
 
     float3 Acceleration;
-    float pad1;
+    float Rotate_Value;
 
     float3 Color;
-    float pad2;
+    float pad1;
 
     float2 Size;
     uint Type;
@@ -20,31 +20,26 @@ struct Particle_Info
 struct Render_Instance
 {
     float3 Position;
-    float3 Velocity;
+    float4 Velocity_and_Rotate;
     float4 Color;
 };
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
-    uint Max_Particle_N;
-    float ElapsedTime;
-    float2 pad0;
-
     float3 EmitRegionMin;
-    float pad1;
+    float ElapsedTime;
 
     float3 EmitRegionMax;
-    float pad2;
-    
+    uint Max_Particle_N;
+
     float3 Main_Direction;
-    float pad3;
+    float Init_Velocity_Value;
 }
+
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
-
-
 
 float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
 {
@@ -63,48 +58,70 @@ float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
     return dir;
 }
 
+void Update_Snow(inout Particle_Info p, uint index)
+{
+    float spinSpeed = 2.5f;
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Velocity += RandomSpreadDirection(index, Main_Direction, 2.0f);
+    p.Position += p.Velocity * ElapsedTime;
+
+    p.Rotate_Value += spinSpeed * ElapsedTime;
+}
+
+void Update_Spark(inout Particle_Info p, uint index)
+{
+    float spinSpeed = 8.0f;
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Velocity += RandomSpreadDirection(index, Main_Direction, 1.0f);
+    p.Position += p.Velocity * ElapsedTime;
+    p.Rotate_Value += spinSpeed * ElapsedTime;
+}
+
+void Extract_Instance(in Particle_Info p)
+{
+    Render_Instance inst;
+    inst.Position = p.Position;
+    inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
+    inst.Color = float4(p.Color, 1.0f);
+
+    InterlockedAdd(debug_buffer[3], 1); // 렌더 개수 카운트
+    RenderInstanceBuffer.Append(inst);
+}
+
 [numthreads(1, 1, 1)]
-void Update_Extract_CS(uint3 DTid : SV_DispatchThreadID)
+void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 {
     uint index = DTid.x;
-
     if (index >= Max_Particle_N)
         return;
 
-    Particle_Info particle = ParticleBuffer_Update[index];
+    Particle_Info p = ParticleBuffer_Update[index];
+    if (p.Active == 0)
+        return;
 
-    if (particle.Active == 1)
+    p.Lifetime += ElapsedTime;
+
+    bool out_of_bounds =
+        p.Position.x < EmitRegionMin.x || p.Position.x > EmitRegionMax.x ||
+        p.Position.y < EmitRegionMin.y || p.Position.y > EmitRegionMax.y ||
+        p.Position.z < EmitRegionMin.z || p.Position.z > EmitRegionMax.z;
+
+    if (p.Lifetime >= p.MaxLifetime || out_of_bounds)
     {
-        particle.Lifetime += ElapsedTime;
-        
-        bool out_of_bounds =
-        particle.Position.x < EmitRegionMin.x || particle.Position.x > EmitRegionMax.x ||
-        particle.Position.y < EmitRegionMin.y || particle.Position.y > EmitRegionMax.y ||
-        particle.Position.z < EmitRegionMin.z || particle.Position.z > EmitRegionMax.z;
-
-        if (particle.Lifetime >= particle.MaxLifetime || out_of_bounds)
-        {
-            particle.Active = 0;
-            // 디버그 용: 비활성화 입자 개수 기록
-            InterlockedAdd(debug_buffer[2], 1);
-        }
-        else
-        {
-            particle.Velocity += particle.Acceleration * ElapsedTime;
-            particle.Position += particle.Velocity * ElapsedTime;
-            particle.Velocity += RandomSpreadDirection(index, particle.Velocity, 1.0f);
-            
-            Render_Instance instance;
-            instance.Position = particle.Position;
-            instance.Velocity = particle.Velocity;
-            instance.Color = float4(particle.Color, 1.0f);
-
-            
-            // 디버그 용: 활성화 입자 개수 기록
-            InterlockedAdd(debug_buffer[3], 1);
-            RenderInstanceBuffer.Append(instance);
-        }
-
-        ParticleBuffer_Update[index] = particle;
+        p.Active = 0;
+        InterlockedAdd(debug_buffer[2], 1); // 비활성화
     }
+    else
+    {
+        // 타입별 동작 처리
+        if (p.Type == 0)
+            Update_Snow(p, index);
+        else if (p.Type == 1)
+            Update_Spark(p, index);
+
+        // 인스턴스 추출
+        Extract_Instance(p);
+    }
+
+    ParticleBuffer_Update[index] = p;
 }

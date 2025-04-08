@@ -275,8 +275,8 @@ CTextureToFullScreenShader::~CTextureToFullScreenShader()
 
 void CTextureToFullScreenShader::CreateShader(ID3D12Device* pd3dDevice)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	FullScreen_RootSignature_ptr = CreateGraphicsRootSignature(pd3dDevice);
 
@@ -420,8 +420,8 @@ void CTextureToFullScreenShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3d
 	if (FullScreen_RootSignature_ptr)
 		pd3dCommandList->SetGraphicsRootSignature(FullScreen_RootSignature_ptr);
 
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 

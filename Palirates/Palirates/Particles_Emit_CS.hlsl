@@ -9,10 +9,10 @@ struct Particle_Info
     float MaxLifetime;
 
     float3 Acceleration;
-    float pad1;
+    float Rotate_Value;
 
     float3 Color;
-    float pad2;
+    float pad1;
 
     float2 Size;
     uint Type;
@@ -28,23 +28,18 @@ struct Render_Instance
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
+    float3 EmitRegionMin; 
+    float ElapsedTime; 
+
+    float3 EmitRegionMax; 
     uint Max_Particle_N;
-    float ElapsedTime;
-    float2 pad0;
 
-    float3 EmitRegionMin;
-    float pad1;
-
-    float3 EmitRegionMax;
-    float pad2;
-    
-    float3 Main_Direction;
-    float pad3;
+    float3 Main_Direction; 
+    float Init_Velocity_Value;
 }
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
-
 RWStructuredBuffer<uint> debug_buffer : register(u2);
 
 
@@ -80,6 +75,24 @@ float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
     return dir;
 }
 
+void Emit_Snow(inout Particle_Info p, uint index)
+{
+    p.Position = RandomEmitPosition(index, EmitRegionMin, EmitRegionMax);
+    float3 dir = RandomSpreadDirection(index, Main_Direction, 0.5f);
+    p.Velocity = normalize(dir) * Init_Velocity_Value;
+
+}
+
+void Emit_Spark(inout Particle_Info p, uint index)
+{
+    float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
+    p.Position = center;
+    float3 dir = RandomSpreadDirection(index, Main_Direction, 2.0f);
+    p.Velocity = normalize(dir) * Init_Velocity_Value;
+    p.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+
+}
+
 
 #define THREAD_COUNT 64
 [numthreads(THREAD_COUNT, 1, 1)]
@@ -90,28 +103,21 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     if (index >= Max_Particle_N)
         return;
 
-    // 디버깅: Emit 호출 수 기록
-    InterlockedAdd(debug_buffer[0], 1);
+    InterlockedAdd(debug_buffer[0], 1); // 호출 카운트
 
-    // 현재 파티클 상태 확인
     Particle_Info p = ParticleBuffer_Emit[index];
-
     if (p.Active == 1)
         return;
 
-    // 디버깅: Emit 된 인자 개수 저장
-    InterlockedAdd(debug_buffer[1], 1);
+    InterlockedAdd(debug_buffer[1], 1); // emit 카운트
 
-    // ========================
-    // 파티클 초기화
-    // ========================
     p.Active = 1;
-
-    // 무작위 위치 (Y는 항상 상단)
-    p.Position = RandomEmitPosition(index, EmitRegionMin, EmitRegionMax);
-   
-    p.Velocity = RandomSpreadDirection(index, Main_Direction, 1.0f);    
     p.Lifetime = 0.0f;
+
+    if (p.Type == 0)
+        Emit_Snow(p, index);
+    else if (p.Type == 1)
+        Emit_Spark(p, index);
 
     ParticleBuffer_Emit[index] = p;
 }

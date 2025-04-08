@@ -62,11 +62,11 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed) { }
 	virtual void ReleaseObjects() { }
 
-	int Get_Num_PipelineState() { return m_nPipelineStates; };
+	int Get_Num_PipelineState() { return m_ngraphicsPipelineStates; };
 protected:
 
-	int															m_nPipelineStates = 0;
-	ID3D12PipelineState					**m_ppd3dPipelineStates = NULL;
+	int															m_ngraphicsPipelineStates = 0;
+	ID3D12PipelineState					**m_ppd3dgraphicsPipelineStates = NULL;
 
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC	m_d3dPipelineStateDesc;

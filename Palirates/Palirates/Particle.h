@@ -10,15 +10,16 @@
 
 enum class Particle_Type
 {
+	spread,
 	sample_1,
 	sample_2,
-	sample_3,
 	etc
 };
 
 struct Particle_Format
 {
-	Particle_Type type = Particle_Type::etc;
+	Particle_Type shader_type = Particle_Type::etc;
+	UINT particle_type;
 	UINT max_particles = MAX_PARTICLES;
 
 	XMFLOAT3 center{};
@@ -27,7 +28,7 @@ struct Particle_Format
 	float MaxLifetime;
 
 	XMFLOAT3 main_direction {};
-	XMFLOAT3 velocity {};
+	int init_velocity_value {};
 	XMFLOAT3 acceleration {};
 
 	XMFLOAT3 color{};
@@ -39,7 +40,7 @@ struct Particle_Format
 struct Render_Instance
 {
 	XMFLOAT3 Position;
-	XMFLOAT3 Velocity;
+	XMFLOAT4  Velocity_and_Rotate;
 	XMFLOAT4 Color;
 };
 
@@ -52,14 +53,14 @@ struct Particle_Info
 	float    MaxLifetime;
 
 	XMFLOAT3 Acceleration;
-	float    Padding1;
+	float Roate_Value;
 
 	XMFLOAT3 Color;
-	float    Padding2;
+	float    Padding1;
 
 	XMFLOAT2 Size;
 	UINT     Type;
-	UINT     Active;  // 0: 죽은 입자
+	UINT     Active;
 };
 
 //==============================================================================
@@ -81,7 +82,7 @@ public:
 private:
 	// 주요 리소스
 	// RWStructuredBuffer<Particle_Info> 0
-	// RWStructuredBuffer<RenderInstance> 2
+	// RWStructuredBuffer<RenderInstance> 1
 
 	CTexture* particle_buffer_texture = NULL;
 
@@ -204,6 +205,7 @@ private:
 	XMFLOAT3 area_xyz {};
 	XMFLOAT3 center {};
 	XMFLOAT3 direction {};
+	int Init_Velocity_Value {};
 public:
 	ParticleObject();
 	virtual ~ParticleObject();
@@ -212,6 +214,8 @@ public:
 
 	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
 	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
+	void Init_Info(Particle_Format particle_info);
+
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -230,6 +234,8 @@ public:
 
 	void Set_Main_Direction(const XMFLOAT3& input);
 	XMFLOAT3 Get_Main_Direction();
+
+	int Get_Init_Velocity_Value() { return Init_Velocity_Value; }
 
 	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(center, area_xyz); }
 	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }

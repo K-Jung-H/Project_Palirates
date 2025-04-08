@@ -429,7 +429,7 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
 	{
 		particle_info[i].Active = 0;
-		particle_info[i].Type = 0;
+		particle_info[i].Type = particle_format.particle_type;
 
 		particle_info[i].MaxLifetime = particle_format.MaxLifetime;
 		particle_info[i].Lifetime = 0.0f;
@@ -437,12 +437,12 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		particle_info[i].Position = XMFLOAT3{};
 		particle_info[i].Velocity = XMFLOAT3{};
 		particle_info[i].Acceleration = particle_format.acceleration;
+		particle_info[i].Roate_Value = 0.0f;
 
 		particle_info[i].Color = particle_format.color;
 		particle_info[i].Size = particle_format.size;
 
 		particle_info[i].Padding1 = 0.0f;
-		particle_info[i].Padding2 = 0.0f;
 	}
 
 	return particle_info;
@@ -614,6 +614,15 @@ ParticleObject::~ParticleObject()
 void ParticleObject::ReleaseUploadBuffers()
 {
 	CGameObject::ReleaseUploadBuffers();
+}
+
+void ParticleObject::Init_Info(Particle_Format particle_info)
+{
+	Set_Center(particle_info.center);
+	Set_Area(particle_info.area_xyz);
+	Set_Main_Direction(particle_info.main_direction);
+	
+	Init_Velocity_Value = particle_info.init_velocity_value;
 }
 
 void ParticleObject::Set_Main_Direction(const XMFLOAT3& input)
