@@ -1132,6 +1132,67 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 	}
 }
 
+void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)
+{
+	if (!m_pAnimationTracks || !m_pAnimationSets) return;
+
+	// 본 초기화
+	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+	{
+		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
+	}
+
+	float totalWeight = 0.0f;
+	for (int k = 0; k < m_nAnimationTracks; k++)
+	{
+		if (m_pAnimationTracks[k].m_bEnable)
+		{
+			totalWeight += m_pAnimationTracks[k].m_fWeight;
+		}
+	}
+
+	for (int k = 0; k < m_nAnimationTracks; k++)
+	{
+		if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
+		{
+			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+			float fPosition = m_pAnimationTracks[k].m_fPosition; 
+
+			for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+			{
+				XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
+				XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+
+				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
+
+				const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+					if (boneName == "Hips")
+					{
+						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+						}
+						//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
+						//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+						//}
+						blendedTransform._41 = 0.0f;
+						//blendedTransform._42 = 0.8762761f;
+						blendedTransform._43 = 0.0f;
+
+					}
+				}
+
+				m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
+			}
+			m_pAnimationTracks[k].HandleCallback();
+		}
+	}
+
+	// 트랜스폼 적용
+	pRootGameObject->UpdateTransform(nullptr);
+}
+
 void CAnimationController::ServerAdvanceTime(const ServerAnimationSyncData& syncData)
 {
 
@@ -2536,10 +2597,21 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 	m_pMesh->Set_BoundingBox(ptr); 
 }
 
+ServerAnimationSyncData CGameObject::MakeSyncData()
+{
+	ServerAnimationSyncData data;
+	data.position = GetPosition();
+	data.lookVector = GetLook();
+	data.currentState = State::Idle;
+
+	return data;
+}
+
 void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
+	
+	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
-
 }
 
 

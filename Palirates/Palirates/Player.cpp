@@ -271,7 +271,9 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 void CPlayer::SetLookDirection(const XMFLOAT3& look)
 {
 	CGameObject::SetLookDirection(look);
-	//m_xmf3Look = look;
+	m_xmf3Look = GetLook();
+	m_xmf3Right = GetRight();
+	m_xmf3Up = GetUp();
 
 }
 
@@ -491,7 +493,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 			GetStateMachine()->update(fTimeElapsed);
 		}
 		else if (Object_type == OBJECT_TPYE_PLAYER) {
-			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
 	}
@@ -572,8 +574,27 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
 	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
 }
 
+ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
+{
+	ServerAnimationSyncData data = CGameObject::MakeSyncData();
+	data.currentState = GetStateMachine()->Get_State();
+	for (int i = 0; i < n_Animation; i++) {
+		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
+		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
+	}
+
+	return data;
+}
+
 void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
+	CGameObject::ApplySyncData(syncData);
 	SetPosition(syncData.position);
-
+	GetStateMachine()->SetState(syncData.currentState);
+	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	for (int i = 0; i < n_Animation; i++) {
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+	}
+	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
 }

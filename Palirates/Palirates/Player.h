@@ -127,6 +127,7 @@ public:
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
+	
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData) {};
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
@@ -195,6 +196,7 @@ public:
 	void AlignWithNormal(XMFLOAT3 normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
+	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 };
 
