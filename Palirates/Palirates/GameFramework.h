@@ -6,6 +6,43 @@
 #include "Scene.h"
 #include "UI_Manager.h"
 #include "Scene_Manager.h"
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <string>
+#include <thread>
+#include <mutex>
+
+#pragma comment(lib, "ws2_32.lib")
+
+enum class GPU_Stage
+{
+	Compute,
+	Render,
+	Post
+};
+
+class ServerSyncManager
+{
+public:
+	void AddPlayerSyncData(int playerId, const ServerAnimationSyncData& data)
+	{
+		syncDataMap[playerId] = data;
+	}
+
+	ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
+		return syncDataMap.at(clientNum); 
+	}
+
+	std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
+	{
+		return syncDataMap;
+	}
+
+	void ClearAll() { syncDataMap.clear(); }
+
+private:
+	std::unordered_map<int, ServerAnimationSyncData> syncDataMap;
+};
 
 struct CB_FRAMEWORK_INFO
 {
@@ -50,14 +87,28 @@ public:
 	void Update_Scene();
     void FrameAdvance();
 
-	void WaitForGpuComplete();
+	void Prepare_Render();
+
+	void SafeSyncStage(GPU_Stage stage);
+	void WaitForGpuComplete(GPU_Stage stage);
+	HRESULT SignalFence(GPU_Stage stage);
+
 	void MoveToNextFrame();
-	void Clear_RenderTarget(XMFLOAT3 background_color);
 
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+
+	//=================서버=================
+	void ConnectToServer(const std::string& ip, int port);
+	void SendPacket();
+	std::string ReceiveData();
+	void NetworkLoop();
+	void Disconnect();
+
+	Scene_Manager sceneManager;
+	//=================서버=================
 
 private:
 	HINSTANCE					m_hInstance;
@@ -73,15 +124,25 @@ private:
 	bool						m_bMsaa4xEnable = false;
 	UINT						m_nMsaa4xQualityLevels = 0;
 
-	static const UINT			m_nSwapChainBuffers = 4;
-	UINT						m_nSwapChainBufferIndex;
+	static const UINT			N_SwapChainBuffers = 2;
+	UINT						SwapChainBuffer_Index;
 
-	ID3D12Resource				*m_ppd3dSwapChainBackBuffers[m_nSwapChainBuffers];
-	ID3D12DescriptorHeap		*m_pd3dRtvDescriptorHeap = NULL;
+	//=======================================================
+	//	RTV
+	ID3D12Resource				*ptr_SwapChainBackBuffer_List[N_SwapChainBuffers];
+	ID3D12DescriptorHeap		*ptr_Rtv_DescriptorHeap = NULL;
+	D3D12_CPU_DESCRIPTOR_HANDLE		SwapChainBack_Buffer_RTV_CPUHandle_list[N_SwapChainBuffers];
 
+	ID3D12Resource* ptr_RTV_Buffer_List[RTV_Format_Num];
+	D3D12_CPU_DESCRIPTOR_HANDLE		RTV_Buffer_CPUHandle_list[RTV_Format_Num];
+
+	//=======================================================
+	// DSV
 	ID3D12Resource				*m_pd3dDepthStencilBuffer = NULL;
 	ID3D12DescriptorHeap		*m_pd3dDsvDescriptorHeap = NULL;
-
+	D3D12_CPU_DESCRIPTOR_HANDLE		DsvDescriptorCPUHandle;
+	//=======================================================
+	// Command
 	ID3D12CommandQueue			*p_CommandQueue = NULL;
 
 	ID3D12CommandAllocator		*Compute_CommandAllocator = NULL;
@@ -90,37 +151,70 @@ private:
 	ID3D12GraphicsCommandList	*Compute_CommandList = NULL;
 	ID3D12GraphicsCommandList* Render_CommandList = NULL;
 
+	ID3D12CommandAllocator* Post_CommandAllocator = nullptr;
+	ID3D12GraphicsCommandList* Post_CommandList = nullptr;
+
 	// 사용할 커멘드 할당자, 큐로 연결하여 사용
 	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
 	ID3D12GraphicsCommandList* Active_CommandList = NULL;
-
+	//=======================================================
 
 	ID3D12Fence					*m_pd3dFence = NULL;
-	UINT64						m_nFenceValues[m_nSwapChainBuffers];
+	UINT64						m_nFenceValues[N_SwapChainBuffers];
 	HANDLE						m_hFenceEvent;
+
+	UINT64						m_ComputeFenceValues[N_SwapChainBuffers];
+	UINT64						m_RenderFenceValues[N_SwapChainBuffers];
+	UINT64						m_PostFenceValues[N_SwapChainBuffers];
+
+
+	//=======================================================
+
+	//=================서버=================
+	SOCKET serverSocket;
+	sockaddr_in serverAddr;
+	std::thread networkThread;
+	std::mutex networkMutex;
+	bool isRunning;
+	//=================서버=================
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
 #endif
-
+protected:
+	ID3D12Resource* FrameworkInfo = NULL;
+	CB_FRAMEWORK_INFO* MappedFrameworkInfo = NULL;
+	
 	CGameTimer					m_GameTimer;
 
+public:
+	PostProcessBaseShader* MRT_shader = NULL;
 	Scene_Manager* scene_manager = NULL;
+
+	Post_ComputeShader* post_shader = NULL;
+	CTextureToFullScreenShader* fullscreen_shader = NULL;
 
 
 	CPlayer						*m_pPlayer = NULL;
 	CCamera						*m_pCamera = NULL;
 
-	POINT						m_ptOldCursorPos;
 
+
+	POINT						m_ptOldCursorPos;
 	_TCHAR						m_pszFrameRate[70];
+
+	//=================서버=================
+	Scene_Manager& GetSceneManager() { return *scene_manager; } 
+	CPlayer* GetPlayer() { return m_pPlayer; }
+	bool multiMode{ false };
+	int nPlayer{ 0 };
+	int ClientNum{ 0 };
+	ServerSyncManager syncManager;
+	ServerSyncManager& GetSyncManager() { return syncManager; }
+	//=================서버=================
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;
 #endif 
-
-protected:
-	ID3D12Resource* FrameworkInfo = NULL;
-	CB_FRAMEWORK_INFO* MappedFrameworkInfo = NULL;
 };
 

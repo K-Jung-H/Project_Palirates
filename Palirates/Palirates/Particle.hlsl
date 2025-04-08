@@ -169,6 +169,7 @@ struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
 {
     float4 position : SV_POSITION;
+    float3 positionW : POSITION;
     float4 color : COLOR;
     
     float lifetime : LIFETIME;
@@ -191,8 +192,10 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
     
     // 파티클 위치 계산 (월드 좌표 적용)
     float4 particleWorldPosition = float4(input.position + input.world_position, 1.0f);
-    float4 worldPos = mul(particleWorldPosition, gmtxGameObject);
-    output.position = mul(mul(worldPos, gmtxView), gmtxProjection);
+    
+    float4 positionW = mul(particleWorldPosition, gmtxGameObject);
+    output.position = mul(mul(positionW, gmtxView), gmtxProjection);    
+    output.positionW = positionW.xyz;
     
     // 색상과 기타 속성 설정
     output.color = input.color;
@@ -203,6 +206,54 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
 }
 
 // Pixel Shader
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input)
+{
+    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
+    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    
+    // 초기 색상
+    float4 cColor = input.color;
+    
+    // 파티클 타입에 따라 색상 변경
+    if (input.type == PARTICLE_TYPE_EMITTER)
+    {
+        cColor = float4(1.0f, 0.1f, 0.1f, 1.0f); // 붉은색
+    }
+    else if (input.type == PARTICLE_TYPE_SHELL)
+    {
+        cColor = float4(0.1f, 0.0f, 1.0f, 1.0f); // 파란색
+    }
+    else if (input.type == PARTICLE_TYPE_FLARE01)
+    {
+        cColor = float4(1.0f, 1.0f, 0.1f, 1.0f); // 노란색
+    }
+    else if (input.type == PARTICLE_TYPE_FLARE02)
+    {
+        cColor = float4(0.0f, 1.0f, 0.1f, 1.0f); // 초록색
+    }
+    else if (input.type == PARTICLE_TYPE_FLARE03)
+    {
+        cColor = float4(0.0f, 1.0f, 0.0f, 1.0f); // 보라색
+    }
+
+    output.Albedo_Color = input.color;
+    
+    output.world_Position = float4(input.positionW, 1.0f);
+    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
+
+    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+    
+    return output;
+}
+
+
+
+
+
 float4 PSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_TARGET
 {
     // 초기 색상

@@ -7,9 +7,23 @@
 #include "DDSTextureLoader12.h"
 #include "WICTextureLoader12.h"
 
-UINT gnCbvSrvDescriptorIncrementSize = 0;
+UINT gnCbvSrvUavDescriptorIncrementSize = 0;
 UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
+
+
+ DXGI_FORMAT RenderTarget_Config::RTV_FORMATS[RTV_Format_Num] =
+{
+	DXGI_FORMAT_R8G8B8A8_UNORM, // AlbedoColor
+	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_pos
+	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_normal & camera_distance
+	DXGI_FORMAT_R8G8B8A8_UNORM, // Material_Light_Info
+
+
+};
+
+ DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
 
 void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
 {
@@ -173,6 +187,12 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	return(CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nBytes, D3D12_RESOURCE_DIMENSION_BUFFER, nBytes, 1, 1, 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer));
 }
 
+ID3D12Resource* CreateStructuredBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nStride, UINT nElements, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
+{
+	return CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nStride * nElements, D3D12_RESOURCE_DIMENSION_BUFFER, nStride * nElements, 1, 1, 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer);
+}
+
+
 ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates)
 {
 	ID3D12Resource* pd3dTexture = NULL;
@@ -263,6 +283,16 @@ ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12Graphics
 	d3dTextureResourceDesc.Flags = d3dResourceFlags;
 
 	HRESULT hResult = pd3dDevice->CreateCommittedResource(&d3dHeapPropertiesDesc, D3D12_HEAP_FLAG_NONE, &d3dTextureResourceDesc, d3dResourceStates, pd3dClearValue, __uuidof(ID3D12Resource), (void**)&pd3dTexture);
+	
+	if (FAILED(hResult))
+	{
+		OutputDebugString(L"[ERROR] CreateCommittedResource failed!\n");
+
+		wchar_t msg[512];
+		swprintf_s(msg, L"Format=%d, Width=%d, Height=%d, ArraySize=%d, Mip=%d\n",
+			(int)dxgiFormat, nWidth, nHeight, nElements, nMipLevels);
+		OutputDebugString(msg);
+	}
 
 	return(pd3dTexture);
 }
