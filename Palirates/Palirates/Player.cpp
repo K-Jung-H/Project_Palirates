@@ -494,7 +494,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 		}
 		else if (Object_type == OBJECT_TPYE_PLAYER) {
 			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-			GetStateMachine()->update(fTimeElapsed);
+			//GetStateMachine()->update(fTimeElapsed);
 		}
 	}
 
