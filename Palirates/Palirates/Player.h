@@ -101,6 +101,8 @@ public:
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
 
+	virtual void SetLookDirection(const XMFLOAT3& look);
+
 //	virtual void Animate(float fTimeElapsed);
 
 	virtual void Animate_test();
@@ -125,10 +127,14 @@ public:
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData) {};
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
 	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
+	void SetStateMachine(std::unique_ptr<StateMachine> it) {
+		m_StateMachine = std::move(it);
+	}
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 
@@ -188,5 +194,7 @@ public:
 
 	void AlignWithNormal(XMFLOAT3 normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
+
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 };
 

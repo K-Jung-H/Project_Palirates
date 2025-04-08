@@ -347,7 +347,13 @@ void PlayerStateMachine::update(float Elapsed_time)
 
     for (int i = 0; i < n_Ani; i++)
     {
-        float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
+        float prev = m_pOwner->prevWeights[i];
+        float target = m_pOwner->targetWeights[i];
+
+        if (fabs(prev - target) < 0.0001f)
+            continue;
+
+        float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
     }
 
@@ -419,7 +425,7 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
 
 ////////////////////////////////////////////////////////////////////////////
 
-MultiPlayerStateMachine::MultiPlayerStateMachine(CMultiPlayerObject* owner)
+MultiPlayerStateMachine::MultiPlayerStateMachine(std::shared_ptr<CTerrainPlayer> owner)
     : StateMachine(State::Idle), m_pOwner(owner) {
 }
 
@@ -540,7 +546,7 @@ void MultiPlayerStateMachine::update(float Elapsed_time)
 
             if (scaleShift.z > 0.001f) {
               //  m_pOwner->Move(finalMove, false);
-                m_pOwner->Move(finalMove);
+                //m_pOwner->Move(finalMove);
             }
         }
         break;
@@ -560,13 +566,24 @@ void MultiPlayerStateMachine::update(float Elapsed_time)
 
     for (int i = 0; i < n_Ani; i++)
     {
-        float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
+        float prev = m_pOwner->prevWeights[i];
+        float target = m_pOwner->targetWeights[i];
+
+        if (fabs(prev - target) < 0.0001f)
+            continue;
+
+        float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
     }
 
     isFirstUpdate = false;
 
     //doAction(currentState, Elapsed_time);
+}
+
+void MultiPlayerStateMachine::server_update(XMFLOAT3 pos, XMFLOAT3 look, State state, float ble_pos1, float ble_pos2)
+{
+
 }
 
 void MultiPlayerStateMachine::enterState(State state, Key_Value key_event)
@@ -731,14 +748,22 @@ void MonsterStateMachine::update(float Elapsed_time)
          DebugOutput(message3);
      }*/
 
-    string message2 = "M" + std::to_string(m_pOwner->test_num) + " weight: ";
+    //string message2 = "M" + std::to_string(m_pOwner->test_num) + " weight: ";
     for (int i = 0; i < n_Ani; i++)
     {
-        float newWeight = m_pOwner->prevWeights[i] + (m_pOwner->targetWeights[i] - m_pOwner->prevWeights[i]) * blendSpeed;
+
+        float prev = m_pOwner->prevWeights[i];
+        float target = m_pOwner->targetWeights[i];
+
+        if (fabs(prev - target) < 0.0001f)
+            continue;
+
+        float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
-        message2 += std::to_string(newWeight) + " ";
+
+       // message2 += std::to_string(newWeight) + " ";
     }
-    message2 += "\n";
+   // message2 += "\n";
     // DebugOutput(message2);
 
     string message;

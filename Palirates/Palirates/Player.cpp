@@ -267,6 +267,14 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
 }
 
+
+void CPlayer::SetLookDirection(const XMFLOAT3& look)
+{
+	CGameObject::SetLookDirection(look);
+	//m_xmf3Look = look;
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 #define _WITH_DEBUG_CALLBACK_DATA
@@ -475,10 +483,17 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (Anime_test_FallingLoop)
+		/*if (Anime_test_FallingLoop)
 			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
-		else
+		else*/
+		if (Object_type == OBJECT_TPYE_MAIN_PLAYER) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
+		}
+		else if (Object_type == OBJECT_TPYE_PLAYER) {
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
+		}
 	}
 
 	if (On_Ground)
@@ -497,7 +512,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	if (child_ptr != nullptr)
 		child_ptr->Animate(fTimeElapsed);
 
-	GetStateMachine()->update(fTimeElapsed);
+	
 }
 
 
@@ -555,4 +570,10 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
 	
 	m_xmf3Right = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Up, m_xmf3Look, true));
 	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
+}
+
+void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
+{
+	SetPosition(syncData.position);
+
 }
