@@ -30,7 +30,7 @@ public:
 	}
 
 	ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
-		return syncDataMap.at(clientNum); // 존재 안 하면 예외 발생
+		return syncDataMap.at(clientNum); 
 	}
 
 	std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
