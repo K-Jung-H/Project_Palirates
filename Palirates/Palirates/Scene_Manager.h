@@ -15,9 +15,8 @@ private:
     CPostProcessingShader* MRT_shader = NULL;
 
     //===============서버===============
-    std::map<int, CPlayer*> players;
-    int GetClientCount() const;
-    const std::unordered_map<int, CPlayer*>& GetAllPlayers() const;
+    std::unordered_map<int, CPlayer*> players;
+    
 
 public:
     Scene_Manager();
@@ -60,4 +59,7 @@ public:
     //===============서버===============
     //void AddPlayer(int playerId, CPlayer* player);
     CPlayer* GetPlayerById(int playerId);
+
+    int GetClientCount() const;
+    const std::unordered_map<int, CPlayer*>& GetAllPlayers() const;
 };

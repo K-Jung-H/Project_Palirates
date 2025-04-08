@@ -54,7 +54,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             float x, y, z;
             int state;
 
-            if (sscanf_s(packet.c_str(), "MOVE,%f,%f,%f,%d", &x, &y, &z, &state) == 4)
+            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &state) == 5)
             {
                 Scene* scene = sceneManager.getScene(clientId);
                 if (scene)

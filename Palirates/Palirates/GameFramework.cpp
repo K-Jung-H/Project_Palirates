@@ -1040,27 +1040,24 @@ void CGameFramework::PrintClientStatus()
 {
 	ClearConsole();
 
-	// 1. 클라이언트 수 가져오기
-	int totalClients = scene_manager->GetClientCount();  // Step 3에서 구현 예정
-	std::cout << "[현재 서버 접속 인원] : " << totalClients << "명" << std::endl;
+	int totalClients = scene_manager->GetClientCount();
+	//std::cout << "[현재 서버 접속 인원] : " << totalClients << "명" << std::endl;
 
-	// 2. 내 위치 출력
 	CPlayer* myPlayer = GetPlayer();
 	if (myPlayer)
 	{
 		DirectX::XMFLOAT3 pos = myPlayer->GetPosition();
-		std::cout << "[내 위치] - (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+		std::wcout << L"[내 위치] - (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 	}
 
-	// 3. 다른 클라이언트 위치 출력
-	const auto& players = scene_manager->GetAllPlayers();  // Step 3에서 구현 예정
+	const auto& players = scene_manager->GetAllPlayers();
 
 	for (const auto& [id, player] : players)
 	{
-		if (player != myPlayer) // 내 자신은 제외
+		if (player != myPlayer)
 		{
 			DirectX::XMFLOAT3 pos = player->GetPosition();
-			std::cout << "[클라이언트 " << id << " 위치] - (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+			std::wcout << L"[클라이언트 " << id << " 위치] - (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 		}
 	}
 }

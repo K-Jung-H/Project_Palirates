@@ -85,6 +85,7 @@ public:
 	std::string ReceiveData();
 	void NetworkLoop();
 	void Disconnect();
+	void PrintClientStatus();
 
 	Scene_Manager sceneManager;
 	//=================서버=================
@@ -182,6 +183,7 @@ public:
 	_TCHAR						m_pszFrameRate[70];
 
 	//=================서버=================
+
 	Scene_Manager& GetSceneManager() { return *scene_manager; } 
 	CPlayer* GetPlayer() { return m_pPlayer; } 
 	//=================서버=================
