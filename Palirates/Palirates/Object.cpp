@@ -850,7 +850,8 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 			m_fPosition = fTrackPosition + fTrackElapsedTime;
 			if (m_fPosition > fAnimationLength)
 			{
-				m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+				//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+				m_fPosition = 0;
 				return(fAnimationLength);
 			}
 		}
