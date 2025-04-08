@@ -532,8 +532,12 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::player:
 	{
 		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
-			if (obj_ptr->Get_Active())
+			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
+				/*std::wostringstream oss;
+				oss << obj_ptr->GetSkinnedAnimationController()->m_pAnimationTracks[0].m_fSpeed << '\n';
+				OutputDebugStringW(oss.str().c_str());*/
+			}
 	}
 	break;
 

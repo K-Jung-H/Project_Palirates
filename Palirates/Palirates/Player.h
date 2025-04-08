@@ -62,6 +62,7 @@ protected:
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
 
+	bool MultiMode{ false };
 	//=================서버=================
 	int id;  
 	int state;
@@ -136,6 +137,7 @@ public:
 	void SetStateMachine(std::unique_ptr<StateMachine> it) {
 		m_StateMachine = std::move(it);
 	}
+	void DelStateMachine() { m_StateMachine.reset(); }
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 
@@ -144,7 +146,9 @@ public:
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
 
-
+	void MultiModeOn() { MultiMode = true; }
+	void MultiModeOff() { MultiMode = false; }
+	bool CheckMultiMode() { return MultiMode; }
 
 	//=================서버=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)

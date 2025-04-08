@@ -21,7 +21,28 @@ enum class GPU_Stage
 	Post
 };
 
+class ServerSyncManager
+{
+public:
+	void AddPlayerSyncData(int playerId, const ServerAnimationSyncData& data)
+	{
+		syncDataMap[playerId] = data;
+	}
 
+	ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
+		return syncDataMap.at(clientNum); // 존재 안 하면 예외 발생
+	}
+
+	std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
+	{
+		return syncDataMap;
+	}
+
+	void ClearAll() { syncDataMap.clear(); }
+
+private:
+	std::unordered_map<int, ServerAnimationSyncData> syncDataMap;
+};
 
 struct CB_FRAMEWORK_INFO
 {
@@ -188,6 +209,8 @@ public:
 	bool multiMode{ false };
 	int nPlayer{ 0 };
 	int ClientNum{ 0 };
+	ServerSyncManager syncManager;
+	ServerSyncManager& GetSyncManager() { return syncManager; }
 	//=================서버=================
 
 #ifdef WRITE_TEXT_UI

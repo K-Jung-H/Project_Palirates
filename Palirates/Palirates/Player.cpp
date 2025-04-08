@@ -39,6 +39,8 @@ CPlayer::~CPlayer()
 	ReleaseShaderVariables();
 
 	if (m_pCamera) delete m_pCamera;
+
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController.reset();
 }
 
 void CPlayer::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -488,7 +490,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 		/*if (Anime_test_FallingLoop)
 			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
 		else*/
-		if (Object_type == OBJECT_TPYE_MAIN_PLAYER) {
+		if (Object_type == OBJECT_TPYE_MAIN_PLAYER && !CheckMultiMode()) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
