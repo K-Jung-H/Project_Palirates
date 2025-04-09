@@ -408,6 +408,64 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			if (wParam == 'U') {
+				ServerAnimationSyncData data;
+				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+				data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
+				data.currentState = State::Dive;
+				for (int i = 0; i < m_pPlayer->n_Animation; i++) {
+					if (i == TRACK_DIVEROLL_FORWARD)
+						data.trackPositions.push_back(0.5f);
+					else data.trackPositions.push_back(0.0f);
+					if (i == TRACK_DIVEROLL_FORWARD)
+						data.Weights.push_back(1.0f);
+					else data.Weights.push_back(0.0f);
+				}
+
+				GetSyncManager().AddPlayerSyncData(ClientNum, data);
+				m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+			}
+			if (nMessageID == WM_KEYDOWN && wParam == 'T') {
+				//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+				//if (obj_list && obj_list->size() < 7) {
+					if (!Active_CommandList) {
+						OutputDebugString(L"Active_CommandList is nullptr!\n");
+						return 0;
+					}
+
+					HRESULT hr = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+					if (FAILED(hr)) {
+						OutputDebugString(L"CommandList Reset Failed!\n");
+						return 0;
+					}
+
+					//CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->GetGraphicsRootSignature(), "Model/First_Mate_v12.bin", NULL);
+					string player_name = "test_palyer" + std::to_string(nPlayer);
+
+
+					std::string_view name_view = player_name;
+
+					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->GetGraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
+					humanObject_7->Set_Name(player_name);
+					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
+					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
+					nPlayer++;
+
+					string message2 = "Player list :";
+					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+					for (auto& obj : *player_list) {
+						string name = obj->m_pstrFrameName;
+						message2 += name + ", ";
+					}
+					message2 += "\n";
+					DebugOutput(message2);
+
+					Active_CommandList->Close();
+					ID3D12CommandList* ppCommandLists[] = { Active_CommandList };
+					p_CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+				//}
+			}
 			break;
 	}
 	return(0);
@@ -518,7 +576,6 @@ void CGameFramework::Build_Scenes()
 	
 	scene_manager->Set_Shader(MRT_shader);
 
-	// 후처리 담당 전용 루트 시그니처 만들기 static으로 선언해서 부모객체에 박아놓기.
 	Post_ComputeShader::CreateComputeRootSignature(m_pd3dDevice);
 	
 	for (UINT i = 0; i < N_SwapChainBuffers; ++i)
@@ -550,10 +607,10 @@ void CGameFramework::Build_Scenes()
 
 	m_pPlayer = pPlayer;
 	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
-//	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
+	//	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
 
 	m_pCamera = m_pPlayer->GetCamera();
-
+	
 	//========================================================
 
 	EndGPUStage(GPU_Stage::Render);
@@ -593,19 +650,26 @@ void CGameFramework::ProcessInput()
 		DWORD dwDirection = 0;
 
 		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;   // 방향키 위 또는 W
+			dwDirection |= DIR_FORWARD;   
 		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;  // 방향키 아래 또는 S
+			dwDirection |= DIR_BACKWARD;  
 		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;      // 방향키 왼쪽 또는 A
+			dwDirection |= DIR_LEFT;    
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;     // 방향키 오른쪽 또는 D
+			dwDirection |= DIR_RIGHT;   
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;        // Page Up 또는 Q
+			dwDirection |= DIR_UP;       
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;      // Page Down 또는 E
+			dwDirection |= DIR_DOWN;      
 
-		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		if (multiMode) {
+			auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+			auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+			player->GetStateMachine()->handleEvent(pKeysBuffer);
+		}
+		else {
+			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		}
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -620,19 +684,33 @@ void CGameFramework::ProcessInput()
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
-			if (cxDelta || cyDelta)
-			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+			if (multiMode) {
+				auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+				auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						player->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						player->Rotate(cyDelta, cxDelta, 0.0f);
+				}
+				if (dwDirection)
+					player->Move(dwDirection, 1 * 12.25f, true);
 			}
-			if (dwDirection) 
-				m_pPlayer->Move(dwDirection, 10* 12.25f, true);
+			else {
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				}
+				if (dwDirection)
+					m_pPlayer->Move(dwDirection, 1 * 12.25f, true);
+			}
 		}
 	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-	m_pPlayer->GetStateMachine()->update(m_GameTimer.GetTimeElapsed());
+	
 }
 
 void CGameFramework::Update_Scene()
@@ -642,14 +720,32 @@ void CGameFramework::Update_Scene()
 
 	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
+	// test 
+	ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
+	data.position.x += 10.0f;
+
+	GetSyncManager().AddPlayerSyncData(ClientNum, data);
+	//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+
+	auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+	auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+
+	player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+	// test 
+
 	//==============================================================
 
 	scene_manager->Update_Active_Particles(Active_CommandList, fTimeElapsed);
 
 	//===============================================================
 
-	m_pPlayer->Animate(fTimeElapsed);
+	if (multiMode) {
 
+	}
+	else {
+		m_pPlayer->Animate(fTimeElapsed);
+		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	}
 }
 
 void CGameFramework::After_Update_Scene()

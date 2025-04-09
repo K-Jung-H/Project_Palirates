@@ -1,15 +1,8 @@
-// stdafx.h : 자주 사용하지만 자주 변경되지는 않는
-// 표준 시스템 포함 파일 및 프로젝트 관련 포함 파일이
-// 들어 있는 포함 파일입니다.
-
-
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN             // 거의 사용되지 않는 내용은 Windows 헤더에서 제외합니다.
-// Windows 헤더 파일:
+#define WIN32_LEAN_AND_MEAN     
 #include <windows.h>
 
-// C의 런타임 헤더 파일입니다.
 #include <stdlib.h>
 #include <malloc.h>
 #include <memory.h>
@@ -23,19 +16,20 @@
 #include <fstream>
 #include <vector>
 
-// 추가한 헤더
-#include <cwchar>  // wcsrchr 사용을 위한 헤더
-#include <cstring> // wcstombs 함수 사용을 위한 헤더
+#include <iostream>
+#include <sstream>
+#include <cwchar>  
+#include <cstring> 
 #include <cstdio>
 #include <unordered_set>
 
 #include <unordered_map>
 #include <map>
 #include <array>
+#include <random>
 
 using namespace std;
 
-// UI
 #include <d2d1_3.h>
 #include <dwrite.h>
 #include <d3d11on12.h>
@@ -135,7 +129,7 @@ extern HINSTANCE						ghAppInstance;
 #define RENDER_PARTICLE
 
 
-#define DEBUG_MESSAGE
+//#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
 //#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
 //#define DEBUG_MESSAGE_TILE_MAP

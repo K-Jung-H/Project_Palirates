@@ -62,7 +62,8 @@ protected:
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
 
-	//=================¼­¹ö=================
+	bool MultiMode{ false };
+	//=================Â¼Â­Â¹Ã¶=================
 	int id;  
 	int state;
 
@@ -101,11 +102,14 @@ public:
 
 	CCamera *GetCamera() { return(m_pCamera); }
 	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
+	void DelCamera() { m_pCamera = nullptr; }
 
 	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
+
+	virtual void SetLookDirection(const XMFLOAT3& look);
 
 //	virtual void Animate(float fTimeElapsed);
 
@@ -131,10 +135,16 @@ public:
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
+	
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData) {};
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
 	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
+	void SetStateMachine(std::unique_ptr<StateMachine> it) {
+		m_StateMachine = std::move(it);
+	}
+	void DelStateMachine() { m_StateMachine.reset(); }
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 
@@ -143,11 +153,11 @@ public:
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
 
-	std::vector<float> prevWeights;
-	std::vector<float> targetWeights;
+	void MultiModeOn() { MultiMode = true; }
+	void MultiModeOff() { MultiMode = false; }
+	bool CheckMultiMode() { return MultiMode; }
 
-
-	//=================¼­¹ö=================
+	//=================Â¼Â­Â¹Ã¶=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
 		: id(playerId), state(startState)
 	{
@@ -196,5 +206,8 @@ public:
 
 	void AlignWithNormal(XMFLOAT3 normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
+
+	virtual ServerAnimationSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 };
 

@@ -21,7 +21,28 @@ enum class GPU_Stage
 	Post
 };
 
+class ServerSyncManager
+{
+public:
+	void AddPlayerSyncData(int playerId, const ServerAnimationSyncData& data)
+	{
+		syncDataMap[playerId] = data;
+	}
 
+	ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
+		return syncDataMap.at(clientNum); 
+	}
+
+	std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
+	{
+		return syncDataMap;
+	}
+
+	void ClearAll() { syncDataMap.clear(); }
+
+private:
+	std::unordered_map<int, ServerAnimationSyncData> syncDataMap;
+};
 
 struct CB_FRAMEWORK_INFO
 {
@@ -93,7 +114,7 @@ public:
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-	//=================¼­¹ö=================
+	//=================ì„œë²„=================
 	void ConnectToServer(const std::string& ip, int port);
 	void SendPacket();
 	std::string ReceiveData();
@@ -101,7 +122,7 @@ public:
 	void Disconnect();
 
 	Scene_Manager sceneManager;
-	//=================¼­¹ö=================
+	//=================ì„œë²„=================
 
 private:
 	HINSTANCE					m_hInstance;
@@ -147,7 +168,7 @@ private:
 	ID3D12CommandAllocator* Post_CommandAllocator = nullptr;
 	ID3D12GraphicsCommandList* Post_CommandList = nullptr;
 
-	// »ç¿ëÇÒ Ä¿¸àµå ÇÒ´çÀÚ, Å¥·Î ¿¬°áÇÏ¿© »ç¿ë
+	// ì‚¬ìš©í•  ì»¤ë©˜ë“œ í• ë‹¹ì, íë¡œ ì—°ê²°í•˜ì—¬ ì‚¬ìš©
 	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
 	ID3D12GraphicsCommandList* Active_CommandList = NULL;
 	//=======================================================
@@ -163,13 +184,13 @@ private:
 
 	//=======================================================
 
-	//=================¼­¹ö=================
+	//=================ì„œë²„=================
 	SOCKET serverSocket;
 	sockaddr_in serverAddr;
 	std::thread networkThread;
 	std::mutex networkMutex;
 	bool isRunning;
-	//=================¼­¹ö=================
+	//=================ì„œë²„=================
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
@@ -193,14 +214,18 @@ public:
 
 
 
-
 	POINT						m_ptOldCursorPos;
 	_TCHAR						m_pszFrameRate[70];
 
-	//=================¼­¹ö=================
+	//=================ì„œë²„=================
 	Scene_Manager& GetSceneManager() { return *scene_manager; } 
-	CPlayer* GetPlayer() { return m_pPlayer; } 
-	//=================¼­¹ö=================
+	CPlayer* GetPlayer() { return m_pPlayer; }
+	bool multiMode{ false };
+	int nPlayer{ 0 };
+	int ClientNum{ 0 };
+	ServerSyncManager syncManager;
+	ServerSyncManager& GetSyncManager() { return syncManager; }
+	//=================ì„œë²„=================
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;

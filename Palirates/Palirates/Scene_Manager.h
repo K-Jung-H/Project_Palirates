@@ -14,7 +14,6 @@ private:
 
     PostProcessBaseShader* MRT_shader = NULL;
 
-    //===============¼­¹ö===============
     std::map<int, CPlayer*> players;
 
 public:
@@ -64,7 +63,7 @@ public:
 
     void ReleaseUploadBuffers();
 
-    //===============¼­¹ö===============
+    //===============Â¼Â­Â¹Ã¶===============
     //void AddPlayer(int playerId, CPlayer* player);
     CPlayer* GetPlayerById(int playerId);
 };
