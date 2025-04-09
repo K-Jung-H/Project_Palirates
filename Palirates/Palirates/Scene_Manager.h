@@ -16,7 +16,6 @@ private:
 
     std::map<int, CPlayer*> players;
 
-
 public:
     Scene_Manager();
     Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
@@ -37,7 +36,13 @@ public:
 
     void Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     void Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
-    void Update_Active_Particles(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
+
+    void Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
+    void Copy_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
+    void Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
+
+    void After_Update_Active_Particles();
+
 
     void Update_UI();
 
@@ -52,7 +57,7 @@ public:
     void Prepare_Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     void Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
-    void Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    void Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Render_Scene_UI(UINT nFrame);
 

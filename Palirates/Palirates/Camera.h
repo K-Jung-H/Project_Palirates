@@ -6,6 +6,11 @@
 #define SPACESHIP_CAMERA			0x02
 #define THIRD_PERSON_CAMERA			0x03
 
+struct VS_CB_PREV_CAMERA_INFO 
+{
+	XMFLOAT4X4 m_xmf4x4PrevViewProj;
+};
+
 struct VS_CB_CAMERA_INFO
 {
 	XMFLOAT4X4						m_xmf4x4View;
@@ -13,12 +18,6 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT3						m_xmf3Position;
 };
 
-struct VS_CB_POST_CAMERA_INFO
-{
-	XMFLOAT4X4					m_xm_Inv_View;
-	XMFLOAT4X4					m_xm_Inv_Proj;
-	XMFLOAT3						m_xmf3Position;
-};
 
 class CPlayer;
 
@@ -51,12 +50,19 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
+
+
 	BoundingFrustum m_xmFrustum;
 
 	//==============================================
+	XMFLOAT4X4						m_xmf4x4_Prev_View;
+	XMFLOAT4X4						m_xmf4x4_Prev_Projection;
 
-	ID3D12Resource* post_Camera_Info = NULL;
-	VS_CB_POST_CAMERA_INFO* Mapped_post_Camera_Info = NULL;
+	ID3D12Resource* m_pd3dcb_Prev_Camera = NULL;
+	VS_CB_PREV_CAMERA_INFO* m_pcbMapped_Prev_Camera = NULL;
+
+
+	//==============================================
 
 public:
 	CCamera();
@@ -66,7 +72,8 @@ public:
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 	virtual void Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void Update_PostRender_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Update_Deffered_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	
 	void GenerateViewMatrix();

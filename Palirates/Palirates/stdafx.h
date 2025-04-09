@@ -86,23 +86,23 @@ extern HINSTANCE						ghAppInstance;
 //=====================================
 #define ROOT_PARAMETER_FRAME_CBV_INDEX 0 
 #define ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX 1
-#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 2
-#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 3
-#define ROOT_PARAMETER_CAMERA_CBV_INDEX 4
-
+#define ROOT_PARAMETER_CAMERA_CBV_INDEX 2
+#define ROOT_PARAMETER_PREV_CAMERA_CBV_INDEX 3
+#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 4
+#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 5
 //=====================================
-#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 5
-#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 6
-#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 7
-#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 8
-#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 6
+#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 7
+#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 8
+#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 10
 
-#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 10
-#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 11
-#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 12
-#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 13
+#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 11
+#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 12
+#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
+#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 14
 //=====================================
-#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 14
+#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 15
 
 #define ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX 0
 #define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 1
@@ -126,7 +126,7 @@ extern HINSTANCE						ghAppInstance;
 #define WRITE_TEXT_UI
 //#define RENDER_OBB
 //#define LOAD_SCENE
-//#define RENDER_PARTICLE
+#define RENDER_PARTICLE
 
 
 //#define DEBUG_MESSAGE
@@ -140,7 +140,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 4
+#define RTV_Format_Num 5
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;
@@ -150,11 +150,8 @@ struct RenderTarget_Config
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);
-extern void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
-extern void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 
-extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
-extern ID3D12Resource* CreateStructuredBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nStride, UINT nElements, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAGS d3dResourceFlags = D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
 
 extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 extern ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
@@ -170,11 +167,13 @@ extern void DebugOutput(const std::wstring& message);
 extern void DebugOutput(const std::string& message1, const char message2[]);
 extern void DebugOutput(const std::string& message1, const std::string& message2);
 extern void DebugOutput(const std::string& message1, const std::wstring& message2);
+extern void DebugPrintMatrix(const XMMATRIX& m);
 
 extern void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t bufferSize = STR_LENGTH);
 
 
 extern XMFLOAT4 Get_Random_Color(float w);
+extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area);
 #define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 
 

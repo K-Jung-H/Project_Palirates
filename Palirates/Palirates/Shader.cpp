@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // File: Shader.cpp
 //-----------------------------------------------------------------------------
 
@@ -15,12 +15,12 @@ CShader::~CShader()
 	ReleaseShaderVariables();
 	ReleaseObjects();
 
-	if (m_ppd3dPipelineStates)
+	if (m_ppd3dgraphicsPipelineStates)
 	{
-		for (int i = 0; i < m_nPipelineStates; i++) 
-			if (m_ppd3dPipelineStates[i]) 
-				m_ppd3dPipelineStates[i]->Release();
-		delete[] m_ppd3dPipelineStates;
+		for (int i = 0; i < m_ngraphicsPipelineStates; i++) 
+			if (m_ppd3dgraphicsPipelineStates[i]) 
+				m_ppd3dgraphicsPipelineStates[i]->Release();
+		delete[] m_ppd3dgraphicsPipelineStates;
 	}
 
 	DebugOutput("\n============\ndelete shader\n============\n");
@@ -268,7 +268,7 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 	d3dPipelineStateDesc.DSVFormat = GetDSVFormat(nPipelineState);
 	d3dPipelineStateDesc.SampleDesc.Count = 1;
 	d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dPipelineStates[nPipelineState]);
+	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 
 	if (pd3dVertexShaderBlob) pd3dVertexShaderBlob->Release();
@@ -280,8 +280,8 @@ void CShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSi
 }
 void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState)
 {
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 
@@ -303,8 +303,8 @@ CTerrainShader::~CTerrainShader()
 
 void CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 2;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 2;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // solid
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 1); // wireframe
@@ -383,8 +383,8 @@ CSkyBoxShader::~CSkyBoxShader()
 }
 void CSkyBoxShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
 }
@@ -458,8 +458,8 @@ CStandardShader::~CStandardShader()
 
 void CStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // 기본 그리기
 }
@@ -509,8 +509,8 @@ D3D12_SHADER_BYTECODE CStandardShader::CreatePixelShader(ID3DBlob** PixelShaderB
 
 void CStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 
@@ -525,8 +525,8 @@ CStandard_Instance_Shader::~CStandard_Instance_Shader()
 
 void CStandard_Instance_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); 
 
@@ -584,8 +584,8 @@ D3D12_SHADER_BYTECODE CStandard_Instance_Shader::CreatePixelShader(ID3DBlob** Pi
 
 void CStandard_Instance_Shader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 
@@ -751,8 +751,8 @@ D3D12_SHADER_BYTECODE PostProcessBaseShader::CreatePixelShader(ID3DBlob** ppd3dS
 
 void PostProcessBaseShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 	
 	m_pd3dGraphicsRootSignature = CreateGraphicsRootSignature(pd3dDevice);
 	CreateGraphicsPipelineState(pd3dDevice, m_pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // 기본 그리기
@@ -786,7 +786,7 @@ void PostProcessBaseShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice
 	d3dPipelineStateDesc.SampleMask = UINT_MAX;
 
 	d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dPipelineStates[0]);
+	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dgraphicsPipelineStates[0]);
 
 	if (pd3dVertexShaderBlob) pd3dVertexShaderBlob->Release();
 	if (pd3dPixelShaderBlob) pd3dPixelShaderBlob->Release();
@@ -794,16 +794,47 @@ void PostProcessBaseShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice
 	if (d3dPipelineStateDesc.InputLayout.pInputElementDescs) delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
+D3D12_CLEAR_VALUE PostProcessBaseShader::Get_ClearValue_For_RTVFormat(DXGI_FORMAT format)
+{
+	D3D12_CLEAR_VALUE clearValue = {};
+	clearValue.Format = format;
+
+	if (format == DXGI_FORMAT_R16G16_FLOAT) 
+	{
+		// Velocity
+		clearValue.Color[0] = 0.0f;		clearValue.Color[1] = 0.0f;
+	}
+	else if (format == DXGI_FORMAT_R8G8B8A8_UNORM) 
+	{
+		// Albedo
+		clearValue.Color[0] = 1.0f;		clearValue.Color[1] = 1.0f;
+		clearValue.Color[2] = 1.0f;		clearValue.Color[3] = 1.0f;
+	}
+	else if (format == DXGI_FORMAT_R16G16B16A16_FLOAT) 
+	{
+		// 위치나 노멀
+		clearValue.Color[0] = 0.0f;		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;		clearValue.Color[3] = 0.0f;
+	}
+	else
+	{
+		clearValue.Color[0] = 0.0f;		clearValue.Color[1] = 0.0f;
+		clearValue.Color[2] = 0.0f;		clearValue.Color[3] = 0.0f;
+	}
+
+	return clearValue;
+}
+
 void PostProcessBaseShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle)
 {
 	m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1, 0, 0, nRenderTargets, 0, 0);
 
-	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R8G8B8A8_UNORM, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < nRenderTargets; i++)
 	{
-		d3dClearValue.Format = pdxgiFormats[i];
-		m_pTexture->CreateTexture(pd3dDevice, NULL, i, RESOURCE_TEXTURE2D, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 1, 0, pdxgiFormats[i], D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &d3dClearValue);
+		D3D12_CLEAR_VALUE clearValue = Get_ClearValue_For_RTVFormat(pdxgiFormats[i]);
 
+		m_pTexture->CreateTexture( pd3dDevice, nullptr, i, RESOURCE_TEXTURE2D, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 1, 0, 
+			pdxgiFormats[i], D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON, &clearValue);
 	}
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -841,10 +872,13 @@ void PostProcessBaseShader::Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList
 
 	for (int i = 0; i < nResources; i++)
 	{
+		DXGI_FORMAT format = m_pTexture->GetBufferFormat(i); 
+		D3D12_CLEAR_VALUE clearValue = Get_ClearValue_For_RTVFormat(format);
+
 		::SynchronizeResourceTransition(pd3dCommandList, GetTextureResource(i), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = GetRtvCPUDescriptorHandle(i);
-		pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, Colors::White, 0, NULL);
+		pd3dCommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, clearValue.Color, 0, NULL);
 		pd3dAllRtvCPUHandles[nRenderTargets + i] = d3dRtvCPUDescriptorHandle;
 	}
 	pd3dCommandList->OMSetRenderTargets(nRenderTargets + nResources, pd3dAllRtvCPUHandles, FALSE, pd3dDsvCPUHandle);
@@ -872,8 +906,8 @@ void PostProcessBaseShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 
 
 
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 
@@ -898,12 +932,12 @@ G_BufferMerger_Shader::~G_BufferMerger_Shader()
 
 D3D12_SHADER_BYTECODE G_BufferMerger_Shader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Deffered_Shaders.hlsl", "VS_Textured_ScreenRect", "vs_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE G_BufferMerger_Shader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CompileShaderFromFile(L"Post_Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
+	return(CShader::CompileShaderFromFile(L"Deffered_Shaders.hlsl", "PS_Textured_ScreenRect", "ps_5_1", ppd3dShaderBlob));
 }
 
 void G_BufferMerger_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -937,8 +971,8 @@ CSkinnedAnimationStandardShader::~CSkinnedAnimationStandardShader()
 
 void CSkinnedAnimationStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); // 기본 그리기
 }
@@ -988,8 +1022,8 @@ D3D12_SHADER_BYTECODE CSkinnedAnimationStandardShader::CreatePixelShader(ID3DBlo
 
 void CSkinnedAnimationStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 
@@ -1048,8 +1082,8 @@ D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreatePixelShader(ID3DBlob** Pi
 
 void Deferred_CStandard_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // PSO - 0
 }
@@ -1083,7 +1117,7 @@ void Deferred_CStandard_Shader::CreateGraphicsPipelineState(ID3D12Device* pd3dDe
 	d3dPipelineStateDesc.SampleDesc.Count = 1;
 
 	d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dPipelineStates[nPipelineState]);
+	HRESULT hResult = pd3dDevice->CreateGraphicsPipelineState(&d3dPipelineStateDesc, __uuidof(ID3D12PipelineState), (void**)&m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 	if (pd3dVertexShaderBlob) pd3dVertexShaderBlob->Release();
 	if (pd3dPixelShaderBlob) pd3dPixelShaderBlob->Release();
@@ -1101,8 +1135,8 @@ Deferred_CStandard_Instance_Shader::~Deferred_CStandard_Instance_Shader()
 
 void Deferred_CStandard_Instance_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // PSO - 0
 
@@ -1162,8 +1196,8 @@ D3D12_SHADER_BYTECODE Deferred_CStandard_Instance_Shader::CreatePixelShader(ID3D
 
 void Deferred_CStandard_Instance_Shader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
 
@@ -1180,8 +1214,8 @@ Deferred_CTerrainShader::~Deferred_CTerrainShader()
 
 void Deferred_CTerrainShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_nPipelineStates = 2;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 2;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // PSO - 0 solid
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 1); // PSO - 1 wireframe
@@ -1263,8 +1297,8 @@ Deferred_CSkyBoxShader::~Deferred_CSkyBoxShader()
 
 void Deferred_CSkyBoxShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0);
 }
@@ -1337,8 +1371,8 @@ Deferred_CSkinnedAnimationStandardShader::~Deferred_CSkinnedAnimationStandardSha
 
 void Deferred_CSkinnedAnimationStandardShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0);  // 기본 그리기
 }
@@ -1388,7 +1422,7 @@ D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreatePixelShade
 
 void Deferred_CSkinnedAnimationStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (m_ppd3dPipelineStates && m_ppd3dPipelineStates[nPipelineState])
-		pd3dCommandList->SetPipelineState(m_ppd3dPipelineStates[nPipelineState]);
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }

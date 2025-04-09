@@ -158,6 +158,9 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
+	void Post_Update(Object_Type type);
+	void Post_Update_All();
+
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
 	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
 

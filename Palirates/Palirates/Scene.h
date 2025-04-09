@@ -71,16 +71,16 @@ public:
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
 	void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-
 	
 	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
-	void Finalize_Frame(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	void ReleaseUploadBuffers();
+
+	Particle_Manager* Get_Particle_Manager() { return particle_manager; }
 
 	CPlayer								*m_pPlayer = NULL;
 

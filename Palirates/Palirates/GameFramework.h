@@ -85,13 +85,27 @@ public:
     void ProcessInput();
 
 	void Update_Scene();
+	void After_Update_Scene();
+
     void FrameAdvance();
 
-	void Prepare_Render();
+	void PrepareStage(GPU_Stage stage);
 
-	void SafeSyncStage(GPU_Stage stage);
+	//void SafeSyncStage(GPU_Stage stage);
+	//void WaitForGpuComplete(GPU_Stage stage);
+	//HRESULT SignalFence(GPU_Stage stage);
+
+	void BeginGPUStage(GPU_Stage stage);
+	void EndGPUStage(GPU_Stage stage, bool wait = true);
+	HRESULT SignalFence(GPU_Stage stage, bool shouldAdvanceFence);
 	void WaitForGpuComplete(GPU_Stage stage);
-	HRESULT SignalFence(GPU_Stage stage);
+	void SafeSyncStage(GPU_Stage stage);
+	UINT64 GetFenceValue(GPU_Stage stage, UINT bufferIndex) const;
+
+	//UINT64& GetFenceValue(GPU_Stage stage, UINT bufferIndex);
+	//UINT64 SignalFence(GPU_Stage stage);
+	//void WaitForGpuStageComplete(GPU_Stage stage);
+	//void FlushGPUStage(GPU_Stage stage);
 
 	void MoveToNextFrame();
 

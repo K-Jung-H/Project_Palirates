@@ -102,8 +102,8 @@ public:
 	void LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, wchar_t* filename, UINT resourceType, UINT index);
 	void LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index);
 
-	void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index);
-	void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index);
+	void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
+	void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
 
 	ID3D12Resource* CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue);
 
@@ -111,6 +111,8 @@ public:
 
 	DXGI_FORMAT GetBufferFormat(int index) const;
 	int GetBufferElements(int index) const;
+	int GetBufferStrides(int index) const;
+
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
 	D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);
@@ -461,6 +463,7 @@ private:
 
 	bool Active = true;
 
+	XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 public:
 	CGameObject* m_pParent = NULL; 
 
@@ -513,14 +516,16 @@ public:
 
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 
-	virtual void OnPrepareAnimate() { }
+	virtual void OnPrepareAnimate() {}
 	virtual void Animate(float fTimeElapsed);
 
 	virtual bool IsVisible(CCamera* pCamera);
-	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
 	virtual void OnLateUpdate() { }
+
+	virtual void Set_Last_Pos(XMFLOAT3 pos);
+	virtual void Record_Last_Pos();
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -538,6 +543,9 @@ public:
 
 	XMFLOAT3 GetToParentPosition();
 	XMFLOAT3 Get_World_Position();
+
+	CGameObject* Get_Root_Object();
+	XMFLOAT3 Get_Root_WorldPosition();
 	XMFLOAT3 Get_Root_Obj_Displacement();
 
 	void Move(XMFLOAT3 xmf3Offset);

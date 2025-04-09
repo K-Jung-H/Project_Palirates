@@ -2,7 +2,8 @@
 #include "Shader.h"
 
 #define BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX 0 // 이전 렌더링 결과물
-#define RESULT_ROOT_PARAMETER_INDEX 1 // CS 동작 후 결과물
+#define MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX 1 // 모션 블러 G 버퍼
+#define RESULT_ROOT_PARAMETER_INDEX 2 // CS 동작 후 결과물
 
 class Post_ComputeShader : public PostProcessBaseShader
 {
@@ -37,6 +38,7 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 	virtual void Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int back_buffer_index);
+	virtual void Set_RootSignature_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int rootsignature_index, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle);
 
 	virtual void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 	virtual void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState = 0);
