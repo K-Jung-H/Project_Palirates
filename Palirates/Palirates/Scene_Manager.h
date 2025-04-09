@@ -58,7 +58,7 @@ public:
 
     void ReleaseUploadBuffers();
 
-    //===============¼­¹ö===============
+    //===============Â¼Â­Â¹Ã¶===============
     //void AddPlayer(int playerId, CPlayer* player);
     CPlayer* GetPlayerById(int playerId);
 };

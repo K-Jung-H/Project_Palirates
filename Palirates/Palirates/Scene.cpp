@@ -58,8 +58,6 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
 //	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-
 	m_pLights[3].m_bEnable = false;
 	m_pLights[3].m_nType = SPOT_LIGHT;
 	m_pLights[3].m_fRange = 600.0f;
@@ -1032,7 +1030,6 @@ void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
 	humanObject_2->Set_Name(name_view);
 	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
-
 
 	name_view = obj_name_3;
 	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pHumanModel, 1);

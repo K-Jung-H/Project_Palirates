@@ -63,7 +63,7 @@ protected:
 	float moveZ{ 0.0f };
 
 	bool MultiMode{ false };
-	//=================¼­¹ö=================
+	//=================Â¼Â­Â¹Ã¶=================
 	int id;  
 	int state;
 
@@ -150,7 +150,7 @@ public:
 	void MultiModeOff() { MultiMode = false; }
 	bool CheckMultiMode() { return MultiMode; }
 
-	//=================¼­¹ö=================
+	//=================Â¼Â­Â¹Ã¶=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
 		: id(playerId), state(startState)
 	{

@@ -327,7 +327,6 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC CTexture::GetUnorderedAccessViewDesc(int index)
 {
 	ID3D12Resource* resource = GetResource(index);
 	auto desc = resource->GetDesc();
-
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uav{};
 
 	int type = GetTextureType(index);
@@ -2014,7 +2013,6 @@ void CGameObject::SetLookDirection(const XMFLOAT3& look)
 	m_xmf4x4Parent = xmf4x4New;
 	UpdateTransform(NULL);
 }
-
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
