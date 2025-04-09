@@ -10,7 +10,7 @@
 // CPlayer
 
 CPlayer::CPlayer() 
-	: m_StateMachine(std::make_unique<StateMachine>(this))
+	: m_StateMachine(std::make_unique<PlayerStateMachine>(this))
 {
 	m_pCamera = NULL;
 
@@ -39,6 +39,8 @@ CPlayer::~CPlayer()
 	ReleaseShaderVariables();
 
 	if (m_pCamera) delete m_pCamera;
+
+	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController.reset();
 }
 
 void CPlayer::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -80,7 +82,8 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	else
 	{
 		m_xmf3Position = Vector3::Add(m_xmf3Position, xmf3Shift);
-		m_pCamera->Move(xmf3Shift);
+		if (m_pCamera)
+			m_pCamera->Move(xmf3Shift);
 	}
 }
 
@@ -266,6 +269,16 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
 }
 
+
+void CPlayer::SetLookDirection(const XMFLOAT3& look)
+{
+	CGameObject::SetLookDirection(look);
+	m_xmf3Look = GetLook();
+	m_xmf3Right = GetRight();
+	m_xmf3Up = GetUp();
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 #define _WITH_DEBUG_CALLBACK_DATA
@@ -287,19 +300,21 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext) : CPlayer()
 {
+	Object_type = OBJECT_TPYE_MAIN_PLAYER;
+
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	  
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Angrybot.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_test_ani8.bin", NULL);
-	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Wench_v12.bin", NULL);
+	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Captain_v12.bin", NULL);
+	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
 	Set_Child(pAngrybotModel->m_pModelRootObject);
 
 	n_Animation = 12;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
 	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
@@ -316,7 +331,9 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	}
 
 	// Once type Setting
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = 0;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
 
 	m_pSkinnedAnimationController->SetCallbackKeys(1, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -470,10 +487,17 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (Anime_test_FallingLoop)
+		/*if (Anime_test_FallingLoop)
 			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
-		else
+		else*/
+		if (Object_type == OBJECT_TPYE_MAIN_PLAYER && !CheckMultiMode()) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
+		}
+		else if (Object_type == OBJECT_TPYE_PLAYER) {
+			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			//GetStateMachine()->update(fTimeElapsed);
+		}
 	}
 
 	if (On_Ground)
@@ -492,6 +516,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	if (child_ptr != nullptr)
 		child_ptr->Animate(fTimeElapsed);
 
+	
 }
 
 
@@ -549,4 +574,29 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
 	
 	m_xmf3Right = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Up, m_xmf3Look, true));
 	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
+}
+
+ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
+{
+	ServerAnimationSyncData data = CGameObject::MakeSyncData();
+	data.currentState = GetStateMachine()->Get_State();
+	for (int i = 0; i < n_Animation; i++) {
+		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
+		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
+	}
+
+	return data;
+}
+
+void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
+{
+	CGameObject::ApplySyncData(syncData);
+	SetPosition(syncData.position);
+	GetStateMachine()->SetState(syncData.currentState);
+	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	for (int i = 0; i < n_Animation; i++) {
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+	}
+	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
 }

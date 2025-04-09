@@ -119,7 +119,7 @@ void CDescriptor_Heap::CreateGraphicsShaderResourceViews(ID3D12Device* pd3dDevic
 
     if (nRootParams <= 0)
     {
-        OutputDebugStringA("❗ Error: No graphics root parameters defined in texture!\n");
+        OutputDebugStringA(" Error: No graphics root parameters defined in texture!\n");
         __debugbreak();
     }
 
@@ -238,7 +238,7 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessViews(ID3D12Device* pd3dDevic
         }
     }
 
-    // ✔️ 루트 파라미터 인덱스 저장 (핸들 인덱스도 같이 전달)
+    // 루트 파라미터 인덱스 저장 (핸들 인덱스도 같이 전달)
     pTexture->SetComputeUavRootParameter(0, nRootParameterIndex, nHandleStartIndex, nTextures);
 }
 
