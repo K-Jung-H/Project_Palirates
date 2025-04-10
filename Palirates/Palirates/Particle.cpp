@@ -623,7 +623,7 @@ void ParticleObject::Init_Info(Particle_Format particle_info)
 	Set_Main_Direction(particle_info.main_direction);
 	
 	Init_Velocity_Value = particle_info.init_velocity_value;
-}
+ }
 
 void ParticleObject::Set_Main_Direction(const XMFLOAT3& input)
 {

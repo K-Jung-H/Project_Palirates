@@ -699,6 +699,20 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 };
 
+class Trail_Object : public CGameObject
+{
+private:
+	Trail_Mesh* trail_mesh = NULL;
+	float m_fAccumulatedTime = 0.0f;
+public:
+	Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual ~Trail_Object();
+
+	virtual void Animate(float fTimeElapsed, const XMFLOAT3 top, const XMFLOAT3 bottom);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+};
+
+
 //==================================================================================
 
 class CAngrybotAnimationController : public CAnimationController

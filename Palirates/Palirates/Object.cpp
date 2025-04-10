@@ -517,6 +517,10 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
 		Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		Object_Manager::trail_shader = std::make_shared<Deferred_Trail_Shader>();
+		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	//}
 }
 
@@ -3105,6 +3109,50 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // 세그먼트 수
+	m_fAccumulatedTime = 0.0f;
+}
+
+Trail_Object::~Trail_Object()
+{
+
+}
+
+void Trail_Object::Animate(float fTimeElapsed, const XMFLOAT3 top, const XMFLOAT3 bottom)
+{
+	m_fAccumulatedTime += fTimeElapsed;
+
+	//float radius = 30.0f;
+	//float radius_2 = 10.0f;
+	//float speed = 2.0f;
+
+	//float angle = m_fAccumulatedTime * speed;
+	//float y = cosf(angle) * radius;
+	//float z = sinf(angle) * radius;
+	//float x = 0.0f;
+
+	//float y_2 = cosf(radius_2) * radius;
+	//float z_2= sinf(radius_2) * radius;
+
+	//XMFLOAT3 top = XMFLOAT3(x + 1.0f, y + 1.0f, z);   // 폭 있는 폴리곤 (좌/우)
+	//XMFLOAT3 bottom = XMFLOAT3(x - 1.0f, y_2 - 1.0f, z_2);
+
+	trail_mesh->AddSegment(top, bottom, m_fAccumulatedTime);
+	trail_mesh->UpdateTrail(m_fAccumulatedTime);
+	trail_mesh->UpdateIndexBuffer();
+	trail_mesh->UpdateVertexBuffer();
+}
+
+void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	trail_mesh->Render(pd3dCommandList, 0);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 CAngrybotAnimationController::CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel) : CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pModel)
 {
 }
@@ -3179,7 +3227,7 @@ void CMonsterObject::Animate(float fTimeElapsed)
 {
 
 	//SetPosition(25.0f, 1064.0f, 25.0f);
-	OnPrepareRender();
+	OnPrepareAnimate();
 
 	if (m_pSkinnedAnimationController)
 	{

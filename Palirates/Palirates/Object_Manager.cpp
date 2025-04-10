@@ -403,6 +403,8 @@ void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
 
 
 std::shared_ptr<CShader> Object_Manager::instance_shader = NULL;
+std::shared_ptr<CShader> Object_Manager::trail_shader = NULL;
+
 bool Object_Manager::do_instance_update = false;
 
 
@@ -436,7 +438,14 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 		if (obj_ptr->m_pSkinnedAnimationController != NULL)
 			player_list.push_back(std::dynamic_pointer_cast<CTerrainPlayer>(obj_ptr));
 	}
-		break;
+	break;
+	
+	case Object_Type::trail:
+	{
+		if (obj_ptr != NULL)
+			trail_obj_list.push_back(obj_ptr);
+	}
+	break;
 	case Object_Type::etc:
 		break;
 	default:
@@ -541,6 +550,15 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	}
 	break;
 
+	case Object_Type::trail:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
+		{
+			obj_ptr->Animate(fTimeElapsed);
+		}
+	}
+	break;
+
 	case Object_Type::fixed:
 	case Object_Type::etc:
 	default:
@@ -559,6 +577,7 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 	Animate_Objects(Object_Type::skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
+	Animate_Objects(Object_Type::trail, fTimeElapsed);
 
 }
 
@@ -782,6 +801,17 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	}
 	break;
 
+	case Object_Type::trail:
+	{
+		trail_shader->Setting_Render(pd3dCommandList, 0);
+		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
+		{
+			obj_ptr->Render(pd3dCommandList, pCamera);
+		}
+
+	}
+	break;
+
 	case Object_Type::etc:
 	default:
 	{
@@ -802,9 +832,10 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 {
 
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
-//	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
 
 }
 

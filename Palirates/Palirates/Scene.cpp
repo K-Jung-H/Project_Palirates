@@ -112,50 +112,50 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 
-	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel3 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel4 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel5 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Wench_v12.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
+	//CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+	//CLoadedModelInfo* pGargoyleModel2 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
+	//CLoadedModelInfo* pGargoyleModel3 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+	//CLoadedModelInfo* pGargoyleModel4 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
+	//CLoadedModelInfo* pGargoyleModel5 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Wench_v12.bin", NULL);
+	//CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
 
 
-	string obj_name_1 = "test_obj_name_1";
-	string obj_name_2 = "test_obj_name_2";
-	string obj_name_3 = "test_obj_name_3";
-	string obj_name_4 = "test_palyer2";
-	string obj_name_5 = "test_palyer3";
-	string obj_name_6 = "test_palyer4";
-	string obj_name_7 = "test_palyer5";
-	string obj_name_8 = "test_palyer6";
+	//string obj_name_1 = "test_obj_name_1";
+	//string obj_name_2 = "test_obj_name_2";
+	//string obj_name_3 = "test_obj_name_3";
+	//string obj_name_4 = "test_palyer2";
+	//string obj_name_5 = "test_palyer3";
+	//string obj_name_6 = "test_palyer4";
+	//string obj_name_7 = "test_palyer5";
+	//string obj_name_8 = "test_palyer6";
 
 
-	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CMonsterObject> humanObject_1 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
-	humanObject_1->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
-	humanObject_1->SetScale(30.0f, 30.0f, 30.0f);
-	humanObject_1->Set_Name(obj_name_1);
-	humanObject_1->test_num = 1;
-	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
+	//std::string_view name_view = obj_name_1;
+	//std::shared_ptr<CMonsterObject> humanObject_1 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel, 5);
+	//humanObject_1->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
+	//humanObject_1->SetScale(30.0f, 30.0f, 30.0f);
+	//humanObject_1->Set_Name(obj_name_1);
+	//humanObject_1->test_num = 1;
+	//obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
 
-	name_view = obj_name_2;
-	std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
-	humanObject_2->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 10.0f), 10.0f);
-	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_2->Set_Name(obj_name_2);
-	humanObject_2->test_num = 2;
-	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
+	//name_view = obj_name_2;
+	//std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel2, 5);
+	//humanObject_2->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 10.0f), 10.0f);
+	//humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
+	//humanObject_2->Set_Name(obj_name_2);
+	//humanObject_2->test_num = 2;
+	//obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
 
-	name_view = obj_name_3;
-	std::shared_ptr<CMonsterObject> humanObject_3 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel3, 5);
-	humanObject_3->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
-	humanObject_3->SetScale(15.0f, 15.0f, 15.0f);
-	humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	XMFLOAT3 tt = { 0.0f, 1.0f, 0.0f };
-	humanObject_3->Rotate(&tt, 90.0f);
-	humanObject_3->Set_Name(obj_name_3);
-	humanObject_3->test_num = 3;
-	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
+	//name_view = obj_name_3;
+	//std::shared_ptr<CMonsterObject> humanObject_3 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel3, 5);
+	//humanObject_3->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
+	//humanObject_3->SetScale(15.0f, 15.0f, 15.0f);
+	//humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	//XMFLOAT3 tt = { 0.0f, 1.0f, 0.0f };
+	//humanObject_3->Rotate(&tt, 90.0f);
+	//humanObject_3->Set_Name(obj_name_3);
+	//humanObject_3->test_num = 3;
+	//obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
 
 	//name_view = obj_name_4;
 	//std::shared_ptr<CMultiPlayerObject> humanObject_4 = std::make_shared<CMultiPlayerObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel4, 12);
@@ -180,21 +180,27 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//humanObject_6->test_num = 6;
 	//obj_manager->Add_Object(humanObject_6, Object_Type::skinned);
 
-	name_view = obj_name_7;
-	std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain.get());
-	humanObject_7->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f));
-	humanObject_7->Set_Name(obj_name_7);
-	//humanObject_7->test_num = 6;
-	obj_manager->Add_Object(humanObject_7, Object_Type::skinned);
+	//name_view = obj_name_7;
+	//std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain.get());
+	//humanObject_7->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 30.0f), 30.0f));
+	//humanObject_7->Set_Name(obj_name_7);
+	////humanObject_7->test_num = 6;
+	//obj_manager->Add_Object(humanObject_7, Object_Type::skinned);
 
-	name_view = obj_name_8;
-	std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain.get());
-	humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
-	humanObject_8->Set_Name(obj_name_8);
-	humanObject_8->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(humanObject_8));
-	humanObject_8->Object_type = OBJECT_TPYE_PLAYER;
+	//name_view = obj_name_8;
+	//std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, m_pTerrain.get());
+	//humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
+	//humanObject_8->Set_Name(obj_name_8);
+	//humanObject_8->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(humanObject_8));
+	//humanObject_8->Object_type = OBJECT_TPYE_PLAYER;
 
-	obj_manager->Add_Object(humanObject_8, Object_Type::player);
+	//obj_manager->Add_Object(humanObject_8, Object_Type::player);
+
+	std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+
+	obj_manager->Add_Object(trail_obj, Object_Type::trail);
+
+	
 
 	//=====================================================
 #ifdef LOAD_SCENE
@@ -784,6 +790,15 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
+
+	//test
+
+	XMFLOAT3 pos_b = m_pPlayer->GetPosition();
+	XMFLOAT3 pos_t = { pos_b.x, pos_b.y + 20.0f, pos_b.z };
+	CGameObject* temp_ptr = obj_manager->trail_obj_list[0].get();
+	Trail_Object* trail_test_ptr = static_cast<Trail_Object*>(temp_ptr);
+	trail_test_ptr->Animate(fTimeElapsed, pos_t, pos_b);
+
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

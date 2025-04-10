@@ -313,3 +313,46 @@ public:
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 };
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct TrailVertexSide
+{
+	float side; // -1.0 or +1.0
+	float time; // 생성 시간 or 나이
+};
+
+class Trail_Mesh : public CStandardMesh
+{
+public:
+	Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments);
+	virtual ~Trail_Mesh();
+
+	void AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float fTime);
+	void UpdateTrail(float currentTime);
+	void UpdateIndexBuffer();
+	void UpdateVertexBuffer();
+	void ResetTrail();
+
+	void SetSegmentThreshold(float fThreshold);
+	void SetTrailLifespan(float fSeconds);
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = nullptr) override;
+
+protected:
+	int m_nMaxTrailSegments = 0;
+	int m_nCurrentIndex = 0;
+	int m_nActiveSegments = 0;
+
+	float m_fSegmentThreshold = 1.0f;
+	float m_fTrailLifespan = 2.0f;
+
+	XMFLOAT3 m_vLastTop = {};
+	XMFLOAT3 m_vLastBottom = {};
+
+	TrailVertexSide* m_pTrailSideData = nullptr;
+	ID3D12Resource* m_pd3dTrailSideBuffer = nullptr;
+	ID3D12Resource* m_pd3dTrailSideUploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTrailSideBufferView = {};
+};

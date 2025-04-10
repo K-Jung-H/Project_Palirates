@@ -1401,3 +1401,179 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void 
 	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[7] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, m_d3dNormalBufferView, m_d3dTangentBufferView, m_d3dBiTangentBufferView, m_d3dBoneIndexBufferView, m_d3dBoneWeightBufferView };
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
 }
+
+
+//===============================================================
+Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments)
+	: CStandardMesh(pd3dDevice, pd3dCmdList), m_nMaxTrailSegments(nMaxTrailSegments)
+{
+	m_nVertices = m_nMaxTrailSegments * 2;
+
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices]{};
+	m_pxmf2TextureCoords0 = new XMFLOAT2[m_nVertices]{};
+	m_pTrailSideData = new TrailVertexSide[m_nVertices]{};
+
+	m_nSubMeshes = 1;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+	m_ppnSubSetIndices[0] = new UINT[(m_nMaxTrailSegments - 1) * 6]{};
+	m_pnSubSetIndices[0] = 0;
+
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+
+	size_t vbSize = sizeof(XMFLOAT3) * m_nVertices;
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCmdList, m_pxmf3Positions, vbSize,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_pd3dPositionUploadBuffer);
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = static_cast<UINT>(vbSize);
+
+	size_t uvSize = sizeof(XMFLOAT2) * m_nVertices;
+	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCmdList, m_pxmf2TextureCoords0, uvSize,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_pd3dTextureCoord0UploadBuffer);
+	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord0BufferView.SizeInBytes = static_cast<UINT>(uvSize);
+
+	size_t sideSize = sizeof(TrailVertexSide) * m_nVertices;
+	m_pd3dTrailSideBuffer = CreateBufferResource(pd3dDevice, pd3dCmdList, m_pTrailSideData, sideSize,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_pd3dTrailSideUploadBuffer);
+	m_d3dTrailSideBufferView.BufferLocation = m_pd3dTrailSideBuffer->GetGPUVirtualAddress();
+	m_d3dTrailSideBufferView.StrideInBytes = sizeof(TrailVertexSide);
+	m_d3dTrailSideBufferView.SizeInBytes = static_cast<UINT>(sideSize);
+
+	size_t ibSize = sizeof(UINT) * (m_nMaxTrailSegments - 1) * 6;
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCmdList, m_ppnSubSetIndices[0], ibSize,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_ppd3dSubSetIndexUploadBuffers[0]);
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = static_cast<UINT>(ibSize);
+
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+}
+
+Trail_Mesh::~Trail_Mesh()
+{
+	if (m_pd3dTrailSideBuffer) m_pd3dTrailSideBuffer->Release();
+	if (m_pTrailSideData) delete[] m_pTrailSideData;
+}
+
+void Trail_Mesh::SetSegmentThreshold(float fThreshold) { m_fSegmentThreshold = fThreshold; }
+void Trail_Mesh::SetTrailLifespan(float fSeconds) { m_fTrailLifespan = fSeconds; }
+
+void Trail_Mesh::ResetTrail()
+{
+	m_nCurrentIndex = 0;
+	m_nActiveSegments = 0;
+	memset(m_pxmf3Positions, 0, sizeof(XMFLOAT3) * m_nVertices);
+	memset(m_pxmf2TextureCoords0, 0, sizeof(XMFLOAT2) * m_nVertices);
+	memset(m_pTrailSideData, 0, sizeof(TrailVertexSide) * m_nVertices);
+	memset(m_ppnSubSetIndices[0], 0, sizeof(UINT) * (m_nMaxTrailSegments - 1) * 6);
+	m_pnSubSetIndices[0] = 0;
+
+	UpdateVertexBuffer();
+	UpdateIndexBuffer();
+}
+
+void Trail_Mesh::AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float fTime)
+{
+	float dist = Vector3::Distance(top, m_vLastTop) + Vector3::Distance(bottom, m_vLastBottom);
+
+	if (m_nActiveSegments > 0 && dist < m_fSegmentThreshold) 
+		return;
+
+	m_vLastTop = top;
+	m_vLastBottom = bottom;
+
+	int i0 = m_nCurrentIndex;
+	int i1 = (m_nCurrentIndex + 1) % m_nVertices;
+
+	m_pxmf3Positions[i0] = top;
+	m_pxmf3Positions[i1] = bottom;
+
+	m_pxmf2TextureCoords0[i0] = { 0.0f, 0.0f };
+	m_pxmf2TextureCoords0[i1] = { 0.0f, 1.0f };
+
+	m_pTrailSideData[i0] = { +1.0f, fTime };
+	m_pTrailSideData[i1] = { -1.0f, fTime };
+
+	m_nCurrentIndex = (m_nCurrentIndex + 2) % m_nVertices;
+	if (m_nActiveSegments < m_nMaxTrailSegments)
+		m_nActiveSegments++;
+}
+
+void Trail_Mesh::UpdateTrail(float currentTime)
+{
+	while (m_nActiveSegments > 0)
+	{
+		int idx = (m_nCurrentIndex + m_nVertices - m_nActiveSegments * 2) % m_nVertices;
+		float segTime = m_pTrailSideData[idx].time;
+		if ((currentTime - segTime) > m_fTrailLifespan)
+			m_nActiveSegments--;
+		else break;
+	}
+}
+
+void Trail_Mesh::UpdateIndexBuffer()
+{
+	if (m_nActiveSegments < 2) return;
+
+	UINT* indices = m_ppnSubSetIndices[0];
+	int startIndex = (m_nCurrentIndex + m_nVertices - (m_nActiveSegments * 2)) % m_nVertices;
+	int nIndices = (m_nActiveSegments - 1) * 6;
+
+	for (int i = 0; i < m_nActiveSegments - 1; ++i)
+	{
+		int idx0 = (startIndex + i * 2) % m_nVertices;
+		int idx1 = (startIndex + i * 2 + 1) % m_nVertices;
+		int idx2 = (startIndex + i * 2 + 2) % m_nVertices;
+		int idx3 = (startIndex + i * 2 + 3) % m_nVertices;
+
+		int base = i * 6;
+		indices[base + 0] = idx0;
+		indices[base + 1] = idx1;
+		indices[base + 2] = idx2;
+		indices[base + 3] = idx2;
+		indices[base + 4] = idx1;
+		indices[base + 5] = idx3;
+	}
+
+	UINT8* pMapped = nullptr;
+	D3D12_RANGE readRange = { 0, 0 };
+	m_ppd3dSubSetIndexBuffers[0]->Map(0, &readRange, reinterpret_cast<void**>(&pMapped));
+	memcpy(pMapped, indices, sizeof(UINT) * nIndices);
+	m_ppd3dSubSetIndexBuffers[0]->Unmap(0, nullptr);
+
+	m_pnSubSetIndices[0] = nIndices;
+}
+
+void Trail_Mesh::UpdateVertexBuffer()
+{
+	D3D12_RANGE readRange = { 0, 0 };
+	void* pData = nullptr;
+
+	m_pd3dPositionBuffer->Map(0, &readRange, &pData);
+	memcpy(pData, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices);
+	m_pd3dPositionBuffer->Unmap(0, nullptr);
+
+	m_pd3dTextureCoord0Buffer->Map(0, &readRange, &pData);
+	memcpy(pData, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices);
+	m_pd3dTextureCoord0Buffer->Unmap(0, nullptr);
+
+	m_pd3dTrailSideBuffer->Map(0, &readRange, &pData);
+	memcpy(pData, m_pTrailSideData, sizeof(TrailVertexSide) * m_nVertices);
+	m_pd3dTrailSideBuffer->Unmap(0, nullptr);
+}
+
+void Trail_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW views[] = {
+		m_d3dPositionBufferView,
+		m_d3dTextureCoord0BufferView,
+		m_d3dTrailSideBufferView
+	};
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
+	pd3dCommandList->IASetIndexBuffer(&m_pd3dSubSetIndexBufferViews[0]);
+}

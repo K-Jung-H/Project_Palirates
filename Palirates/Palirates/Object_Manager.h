@@ -104,6 +104,7 @@ enum class Object_Type
 	non_skinned,
 	fixed,
 	player,
+	trail,
 	etc
 };
 
@@ -119,6 +120,8 @@ private:
 
 	std::vector<std::shared_ptr<CTerrainPlayer>> player_list;
 
+
+
 private:
 	// 고정된 사물 객체
 	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;		// 사물 객체 정보
@@ -132,6 +135,11 @@ private:
 
 
 public:
+	//test 
+	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
+	static std::shared_ptr<CShader> trail_shader;
+
+
 	void Classify_Objects_By_Tile();
 
 	static std::shared_ptr<CShader> instance_shader;

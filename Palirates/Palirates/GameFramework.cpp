@@ -721,16 +721,16 @@ void CGameFramework::Update_Scene()
 	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
 	// test 
-	ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
-	data.position.x += 10.0f;
+	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
+	//data.position.x += 10.0f;
 
-	GetSyncManager().AddPlayerSyncData(ClientNum, data);
-	//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+	//GetSyncManager().AddPlayerSyncData(ClientNum, data);
+	////m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 
-	auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-	auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+	//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
 
-	player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 	// test 
 
 	//==============================================================
