@@ -62,11 +62,11 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed) { }
 	virtual void ReleaseObjects() { }
 
-	int Get_Num_PipelineState() { return m_nPipelineStates; };
+	int Get_Num_PipelineState() { return m_ngraphicsPipelineStates; };
 protected:
 
-	int															m_nPipelineStates = 0;
-	ID3D12PipelineState					**m_ppd3dPipelineStates = NULL;
+	int															m_ngraphicsPipelineStates = 0;
+	ID3D12PipelineState					**m_ppd3dgraphicsPipelineStates = NULL;
 
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC	m_d3dPipelineStateDesc;
@@ -166,6 +166,7 @@ public:
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
 	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState);
 
+	D3D12_CLEAR_VALUE Get_ClearValue_For_RTVFormat(DXGI_FORMAT format);
 	virtual void CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle);
 
 	virtual void Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle);

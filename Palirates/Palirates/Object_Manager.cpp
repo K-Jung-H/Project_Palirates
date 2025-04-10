@@ -16,8 +16,8 @@ BoundingBox_Shader::~BoundingBox_Shader()
 }
 void BoundingBox_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
 }
@@ -144,7 +144,7 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D1
 	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
-	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
@@ -351,7 +351,7 @@ void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dD
 	UINT bufferSize = sizeof(Instance_Info) * instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
-	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
@@ -806,6 +806,45 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
 
+}
+
+void Object_Manager::Post_Update(Object_Type type)
+{
+	switch (type)
+	{
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Record_Last_Pos();
+	}
+	break;
+
+	case Object_Type::non_skinned:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Record_Last_Pos();
+	}
+	break;
+
+	case Object_Type::fixed:
+	case Object_Type::etc:
+	default:
+	{
+		DebugOutput("Object_Manager::Last_Update() - Using_Wrong_Type");
+		::PostQuitMessage(0);
+	}
+	break;
+
+	}
+
+}
+
+void Object_Manager::Post_Update_All()
+{
+	Post_Update(Object_Type::skinned);
+	Post_Update(Object_Type::non_skinned);
 }
 
 std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Object_Type type)

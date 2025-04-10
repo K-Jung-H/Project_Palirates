@@ -238,7 +238,7 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessViews(ID3D12Device* pd3dDevic
         }
     }
 
-    // ✔️ 루트 파라미터 인덱스 저장 (핸들 인덱스도 같이 전달)
+    // 루트 파라미터 인덱스 저장 (핸들 인덱스도 같이 전달)
     pTexture->SetComputeUavRootParameter(0, nRootParameterIndex, nHandleStartIndex, nTextures);
 }
 
@@ -288,6 +288,30 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessView(ID3D12Device* pd3dDevice
         }
     }
 }
+
+void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT resourceIndex, ID3D12Resource* pCounterResource, UINT nRootParameterIndex)
+{
+    CDescriptor_Heap* instance = Get_Instance();
+
+    instance->UavCPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * 1);
+    instance->UavGPUDescriptorNextHandle.ptr += (::gnCbvSrvUavDescriptorIncrementSize * 1);
+
+    ID3D12Resource* pResource = pTexture->GetResource(resourceIndex);
+    if (pResource)
+    {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC desc = pTexture->GetUnorderedAccessViewDesc(resourceIndex);
+
+        if (pCounterResource != NULL) // Consume, Append
+            desc.Buffer.CounterOffsetInBytes = 0;
+
+        pd3dDevice->CreateUnorderedAccessView(pResource, pCounterResource, &desc, instance->UavCPUDescriptorNextHandle);
+
+        pTexture->SetComputeUavGpuDescriptorHandle(resourceIndex, instance->UavGPUDescriptorNextHandle);
+        pTexture->SetComputeUavRootParameter(resourceIndex, nRootParameterIndex, resourceIndex, 1);
+
+    }
+}
+
 
 
 //===========================================================
