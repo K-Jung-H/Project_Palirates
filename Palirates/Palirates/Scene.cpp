@@ -815,8 +815,8 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	UpdateShaderVariables(pd3dCommandList);
 
 
-	obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
-	obj_manager->Animate_Objects(Object_Type::player, m_fElapsedTime);
+	//obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
+	//obj_manager->Animate_Objects(Object_Type::player, m_fElapsedTime);
 
 }
 
