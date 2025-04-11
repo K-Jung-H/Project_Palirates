@@ -345,7 +345,7 @@ D3D12_BLEND_DESC CTextureToFullScreenShader::CreateBlendState(int n)
 	d3dBlendDesc.AlphaToCoverageEnable = FALSE;
 	d3dBlendDesc.IndependentBlendEnable = FALSE;
 
-	d3dBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+	d3dBlendDesc.RenderTarget[0].BlendEnable = FALSE;
 	d3dBlendDesc.RenderTarget[0].LogicOpEnable = FALSE;
 	d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
 	d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;

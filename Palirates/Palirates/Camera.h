@@ -71,8 +71,8 @@ public:
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	virtual void Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
-
+	virtual void Update_Render_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	void Update_Last_Frame_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Update_Deffered_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	

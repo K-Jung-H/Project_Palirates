@@ -66,8 +66,10 @@ public:
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void ReleaseObjects();
 
-	ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
-	ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
+	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
+	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
+
+	ID3D12RootSignature *Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
 	void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
@@ -76,6 +78,11 @@ public:
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+
+	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+
 	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	void ReleaseUploadBuffers();
@@ -85,7 +92,8 @@ public:
 	CPlayer								*m_pPlayer = NULL;
 
 protected:
-	ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
+	ID3D12RootSignature					*m_MRT_GraphicsRootSignature = NULL;
+	ID3D12RootSignature					*m_Transparent_GraphicsRootSignature = NULL;
 
 public:
 	float								m_fElapsedTime = 0.0f;

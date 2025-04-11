@@ -518,9 +518,9 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		Object_Manager::trail_shader = std::make_shared<Deferred_Trail_Shader>();
-		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	//}
 }
 
@@ -3120,24 +3120,48 @@ Trail_Object::~Trail_Object()
 
 }
 
-void Trail_Object::Animate(float fTimeElapsed, const XMFLOAT3 top, const XMFLOAT3 bottom)
+void Trail_Object::Animate(float fTimeElapsed)
 {
+	if (!m_pTargetObject) 
+		return;
+
 	m_fAccumulatedTime += fTimeElapsed;
+	m_fSegmentTimer += fTimeElapsed;
+	if (m_fSegmentTimer < m_fSegmentInterval) 
+		return;
+	m_fSegmentTimer = 0.0f;
 
-	//float radius = 30.0f;
-	//float radius_2 = 10.0f;
-	//float speed = 2.0f;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_pTargetObject->m_xmf4x4World);
 
-	//float angle = m_fAccumulatedTime * speed;
-	//float y = cosf(angle) * radius;
-	//float z = sinf(angle) * radius;
-	//float x = 0.0f;
+	XMFLOAT3 top, bottom;
 
-	//float y_2 = cosf(radius_2) * radius;
-	//float z_2= sinf(radius_2) * radius;
+	if (m_bUseTargetScale)
+	{
+		// apply parent's scale value
+		XMVECTOR worldTop = XMVector3TransformCoord(XMLoadFloat3(&m_vLocalTop), worldMatrix);
+		XMVECTOR worldBottom = XMVector3TransformCoord(XMLoadFloat3(&m_vLocalBottom), worldMatrix);
+		XMStoreFloat3(&top, worldTop);
+		XMStoreFloat3(&bottom, worldBottom);
+	}
+	else
+	{
+		// not apply parent's scale value
+		XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);
+		XMVECTOR up = XMVector3Normalize(worldMatrix.r[1]);
+		XMVECTOR look = XMVector3Normalize(worldMatrix.r[2]);
+		XMVECTOR trans = worldMatrix.r[3];
 
-	//XMFLOAT3 top = XMFLOAT3(x + 1.0f, y + 1.0f, z);   // 폭 있는 폴리곤 (좌/우)
-	//XMFLOAT3 bottom = XMFLOAT3(x - 1.0f, y_2 - 1.0f, z_2);
+		XMMATRIX rotationMatrix = XMMATRIX(right, up, look, XMVectorSet(0, 0, 0, 1));
+
+		XMVECTOR localTopVec = XMVectorSet(m_vLocalTop.x, m_vLocalTop.y, m_vLocalTop.z, 0.0f);
+		XMVECTOR localBottomVec = XMVectorSet(m_vLocalBottom.x, m_vLocalBottom.y, m_vLocalBottom.z, 0.0f);
+
+		XMVECTOR worldTop = XMVectorAdd(trans, XMVector3TransformNormal(localTopVec, rotationMatrix));
+		XMVECTOR worldBottom = XMVectorAdd(trans, XMVector3TransformNormal(localBottomVec, rotationMatrix));
+
+		XMStoreFloat3(&top, worldTop);
+		XMStoreFloat3(&bottom, worldBottom);
+	}
 
 	trail_mesh->AddSegment(top, bottom, m_fAccumulatedTime);
 	trail_mesh->UpdateTrail(m_fAccumulatedTime);

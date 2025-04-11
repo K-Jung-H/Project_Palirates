@@ -1518,7 +1518,8 @@ void Trail_Mesh::UpdateTrail(float currentTime)
 
 void Trail_Mesh::UpdateIndexBuffer()
 {
-	if (m_nActiveSegments < 2) return;
+	if (m_nActiveSegments < 2) 
+		return;
 
 	UINT* indices = m_ppnSubSetIndices[0];
 	int startIndex = (m_nCurrentIndex + m_nVertices - (m_nActiveSegments * 2)) % m_nVertices;

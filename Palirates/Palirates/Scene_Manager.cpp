@@ -221,10 +221,32 @@ void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphic
 }
 
 
-void Scene_Manager::Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     if (activeScene)
         activeScene->Render(pd3dDevice, pd3dCommandList, pCamera);
+
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
+void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)
+    {
+        activeScene->Prepare_Transparent_Render(pd3dDevice, pd3dCommandList, pCamera);
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
+
+void Scene_Manager::Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)
+        activeScene->Transparent_Render(pd3dDevice, pd3dCommandList, pCamera);
 
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");

@@ -835,9 +835,13 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
-	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
-
 }
+
+void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
+}
+
 
 void Object_Manager::Post_Update(Object_Type type)
 {

@@ -445,7 +445,7 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 					std::string_view name_view = player_name;
 
-					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->GetGraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
 					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
 					humanObject_7->Set_Name(player_name);
 					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
@@ -603,7 +603,7 @@ void CGameFramework::Build_Scenes()
 
 
 	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
+	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
 
 	m_pPlayer = pPlayer;
 	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
@@ -943,7 +943,7 @@ void CGameFramework::FrameAdvance()
 
 		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 		UpdateShaderVariables();
-		scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 		if (m_pPlayer) m_pPlayer->Render(Active_CommandList, m_pCamera);
 
@@ -971,6 +971,24 @@ void CGameFramework::FrameAdvance()
 		fullscreen_shader->OnPrepareRender(Active_CommandList);
 		fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
 		fullscreen_shader->Render(Active_CommandList);
+	}
+		EndGPUStage(GPU_Stage::Post);
+
+		BeginGPUStage(GPU_Stage::Post);
+		PrepareStage(GPU_Stage::Post);
+	{
+
+		// test
+		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &dsvHandle);
+
+		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+		UpdateShaderVariables();
+
+
+		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
 
 		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 

@@ -133,7 +133,7 @@ D3D12_RASTERIZER_DESC ParticleShader::CreateRasterizerState(int nPipelineState)
 	return(d3dRasterizerDesc);
 }
 
-void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState)
+void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, int nPipelineState)
 {
 	ID3DBlob* pd3dVertexShaderBlob = NULL, * pd3dPixelShaderBlob = NULL, * pd3dGeometryShaderBlob = NULL;
 
@@ -151,12 +151,9 @@ void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D1
 
 	d3dPipelineStateDesc.SampleMask = UINT_MAX;
 	d3dPipelineStateDesc.PrimitiveTopologyType = GetPrimitiveTopologyType(nPipelineState);
-	d3dPipelineStateDesc.NumRenderTargets = nRenderTargets;
-
-	for (UINT i = 0; i < nRenderTargets; ++i)
-		d3dPipelineStateDesc.RTVFormats[i] = (pdxgiRtvFormats) ? pdxgiRtvFormats[i] : DXGI_FORMAT_R8G8B8A8_UNORM;
-
-	d3dPipelineStateDesc.DSVFormat = dxgiDsvFormat;
+	d3dPipelineStateDesc.NumRenderTargets = GetNumRenderTargets(nPipelineState);
+	d3dPipelineStateDesc.RTVFormats[0] = GetRTVFormat(nPipelineState, 0);
+	d3dPipelineStateDesc.DSVFormat = GetDSVFormat(nPipelineState);
 	d3dPipelineStateDesc.SampleDesc.Count = 1;
 	d3dPipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 
@@ -169,7 +166,7 @@ void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D1
 		delete[] d3dPipelineStateDesc.InputLayout.pInputElementDescs;
 }
 
-void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
+void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	//==================================================
 	// Common Variables Part
@@ -177,7 +174,7 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	m_ngraphicsPipelineStates = 1;
 	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); 
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0); 
 
 	if (common_ComputeRootSignature == NULL)
 		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
@@ -418,7 +415,7 @@ D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateComputeShader(ID3DBlob** ppd3
 
 //===================================================================
 
-Particle_Manager::Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+Particle_Manager::Particle_Manager()
 {
 }
 
@@ -427,23 +424,28 @@ Particle_Manager::~Particle_Manager()
 
 }
 
+void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	ParticleShader* spread_shader = new Spread_ParticleShader();
+	spread_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	ParticleShader* spread_shader_2 = new Spread_ParticleShader();
+	spread_shader_2->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	//===================================================================
+
+	particle_shader_map[Particle_Type::spread] = spread_shader;
+	particle_shader_map[Particle_Type::sample_1] = spread_shader_2;
+	particle_shader_map[Particle_Type::sample_2] = NULL;
+}
+
 void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList);
 
 	//===================================================================
-	ParticleShader* spread_shader = new Spread_ParticleShader();
-	spread_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 
-	ParticleShader* spread_shader_2 = new Spread_ParticleShader();
-	spread_shader_2->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-
-	//===================================================================
-	particle_shader_map[Particle_Type::spread] = spread_shader;
-	particle_shader_map[Particle_Type::sample_1] = spread_shader_2;
-	particle_shader_map[Particle_Type::sample_2] = NULL;
-	//===================================================================
 	Particle_Format test_snow_info;
 	{
 		test_snow_info.shader_type = Particle_Type::spread;

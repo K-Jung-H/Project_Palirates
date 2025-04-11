@@ -94,4 +94,52 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
 }
 
 
+//==================================================================
 
+struct VS_TRAIL_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD0;
+    float2 sideTime : TEXCOORD1;
+};
+
+struct VS_TRAIL_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float2 uv : TEXCOORD0;
+    float time : TEXCOORD1;
+};
+
+
+VS_TRAIL_OUTPUT Trail_VS(VS_TRAIL_INPUT input)
+{
+    VS_TRAIL_OUTPUT output;
+
+    float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = worldPos.xyz;
+
+    float4 viewPos = mul(worldPos, gmtxView);
+    output.position = mul(viewPos, gmtxProjection);
+
+    output.uv = input.uv;
+    output.time = input.sideTime.y; // 세그먼트 생성 시간 전달
+
+    return output;
+}
+
+
+
+float4 Trail_PS(VS_TRAIL_OUTPUT input) : SV_Target
+{
+    float trailAge = gfCurrentTime - input.time; // 현재 시각 - 생성 시각
+    float lifespan = 5.0f; // 생존 시간 (초)
+    float fade = saturate(1.0f - trailAge / lifespan); // 오래될수록 투명해짐
+
+    float3 baseColor = float3(1.0f, 0.2f, 0.1f); // 붉은 계열 트레일
+    float4 trailColor = float4(baseColor, fade); // 알파 적용
+
+    return trailColor;
+
+
+}

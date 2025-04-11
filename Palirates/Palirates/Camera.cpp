@@ -126,7 +126,7 @@ void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComm
 
 }
 
-void CCamera::Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+void CCamera::Update_Render_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	XMFLOAT4X4 xmf4x4View;
 	XMStoreFloat4x4(&xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4View)));
@@ -135,20 +135,21 @@ void CCamera::Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCo
 	XMFLOAT4X4 xmf4x4Projection;
 	XMStoreFloat4x4(&xmf4x4Projection, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4Projection)));
 	::memcpy(&m_pcbMappedCamera->m_xmf4x4Projection, &xmf4x4Projection, sizeof(XMFLOAT4X4));
-
 	::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress_1 = m_pd3dcbCamera->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress_1);
+}
 
-	//==================================================================================
 
+void CCamera::Update_Last_Frame_Info(ID3D12GraphicsCommandList* pd3dCommandList)
+{
 	XMMATRIX xmPrevView = XMLoadFloat4x4(&m_xmf4x4_Prev_View);
 	XMMATRIX xmPrevProj = XMLoadFloat4x4(&m_xmf4x4_Prev_Projection);
 	XMMATRIX xmPrevViewProj = XMMatrixTranspose(xmPrevView * xmPrevProj);
 
 	XMFLOAT4X4 xmf4x4PrevViewProj;
-	XMStoreFloat4x4(&xmf4x4PrevViewProj, xmPrevViewProj); 
+	XMStoreFloat4x4(&xmf4x4PrevViewProj, xmPrevViewProj);
 
 	memcpy(&m_pcbMapped_Prev_Camera->m_xmf4x4PrevViewProj, &xmf4x4PrevViewProj, sizeof(XMFLOAT4X4));
 

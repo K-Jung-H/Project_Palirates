@@ -163,8 +163,12 @@ public:
 
 	
 	void Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
-	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+
 
 	void Post_Update(Object_Type type);
 	void Post_Update_All();

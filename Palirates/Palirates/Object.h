@@ -704,11 +704,32 @@ class Trail_Object : public CGameObject
 private:
 	Trail_Mesh* trail_mesh = NULL;
 	float m_fAccumulatedTime = 0.0f;
+
+	CGameObject* m_pTargetObject = nullptr;
+	bool m_bUseTargetScale = true;
+
+	XMFLOAT3 m_vLocalTop = {};
+	XMFLOAT3 m_vLocalBottom = {};
+
+	float m_fSegmentInterval = 0.05f;            // 최소 세그먼트 생성 간격 (초)
+	float m_fSegmentTimer = 0.0f;
 public:
 	Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~Trail_Object();
 
-	virtual void Animate(float fTimeElapsed, const XMFLOAT3 top, const XMFLOAT3 bottom);
+	void Set_Trail_Target(CGameObject* target, bool bUseScale = true)
+	{
+		m_pTargetObject = target;
+		m_bUseTargetScale = bUseScale;
+	}
+
+	void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom)
+	{
+		m_vLocalTop = top;
+		m_vLocalBottom = bottom;
+	}
+
+	virtual void Animate(float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 };
 
