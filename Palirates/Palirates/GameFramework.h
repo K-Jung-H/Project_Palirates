@@ -48,11 +48,6 @@ struct CB_FRAMEWORK_INFO
 {
 	float m_fCurrentTime;      
 	float m_fElapsedTime;         
-
-	float m_fSecondsPerFirework;    
-	int m_nFlareParticlesToEmit;     
-	int m_nMaxFlareType2Particles;   
-	XMFLOAT3 m_xmf3Gravity;          
 };
 
 class CGameFramework
@@ -205,8 +200,10 @@ public:
 	PostProcessBaseShader* MRT_shader = NULL;
 	Scene_Manager* scene_manager = NULL;
 
-	Post_ComputeShader* post_shader = NULL;
-	CTextureToFullScreenShader* fullscreen_shader = NULL;
+
+	Post_Effect_Manager* post_effect_manager = NULL;
+	//Post_ComputeShader* post_shader = NULL;
+	//CTextureToFullScreenShader* fullscreen_shader = NULL;
 
 
 	CPlayer						*m_pPlayer = NULL;

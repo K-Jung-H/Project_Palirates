@@ -8,28 +8,26 @@
 
 struct CB_Particle_Update_Info
 {
-	XMFLOAT3 EmitRegionMin; // AABB 시작점
+	XMFLOAT3 EmitRegionMin;
 	float ElapsedTime;
 
-	XMFLOAT3 EmitRegionMax; // AABB 끝점
+	XMFLOAT3 EmitRegionMax;
 	UINT Max_Particle_N;
 
-	XMFLOAT3 Main_Direction; // 파티클 흐름 방향
-	float  Init_Velocity_Value;
+	XMFLOAT3 Main_Direction;
+	float Init_Velocity_Value;
 };
 
 class ParticleShader : public CShader
 {
 private:
-	ID3D12Resource* m_pUpdateConstantBuffer = nullptr;
-	CB_Particle_Update_Info* m_pMappedUpdateCB = nullptr;
+	CB_Particle_Update_Info m_UpdateInfo = {};
 
 	UINT m_cxThreadGroups;
 	UINT m_cyThreadGroups;
 	UINT m_czThreadGroups;
 
 	static ID3D12RootSignature* common_ComputeRootSignature;
-
 
 public:
 	int									m_ncomputePipelineStates = 0;
@@ -60,9 +58,7 @@ public:
 	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
 	void Set_Compute_Pipeline(ID3D12GraphicsCommandList* pd3dCommandList, int index);
 
-	virtual void Create_Compute_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, CB_Particle_Update_Info* update_info);
-	virtual void Release_Compute_ShaderVariables();
 
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 

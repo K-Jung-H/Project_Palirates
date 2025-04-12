@@ -82,9 +82,13 @@ void Extract_Instance(in Particle_Info p)
     Render_Instance inst;
     inst.Position = p.Position;
     inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
-    inst.Color = float4(p.Color, 1.0f);
 
-    InterlockedAdd(debug_buffer[3], 1); // 렌더 개수 카운트
+    float normalizedLife = saturate(p.Lifetime / p.MaxLifetime); // 0.0 ~ 1.0
+    float alpha = 1.0f - normalizedLife; 
+
+    inst.Color = float4(p.Color, alpha); 
+
+    InterlockedAdd(debug_buffer[3], 1); 
     RenderInstanceBuffer.Append(inst);
 }
 

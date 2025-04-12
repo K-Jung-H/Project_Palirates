@@ -70,6 +70,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
+	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
 
 
@@ -532,15 +533,8 @@ void CGameFramework::UpdateShaderVariables()
 	MappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GetTotalTime();
 	MappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
 
-
-	MappedFrameworkInfo->m_fSecondsPerFirework = 1.0f;
-	MappedFrameworkInfo->m_nFlareParticlesToEmit = 10;
-	MappedFrameworkInfo->m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
-	MappedFrameworkInfo->m_nMaxFlareType2Particles = 10;
-
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = FrameworkInfo->GetGPUVirtualAddress();
 	Active_CommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAME_CBV_INDEX, d3dGpuVirtualAddress);
-
 }
 
 void CGameFramework::ReleaseShaderVariables()
@@ -583,11 +577,11 @@ void CGameFramework::Build_Scenes()
 		Post_ComputeShader::CreateBackBufferSRV(m_pd3dDevice, ptr_SwapChainBackBuffer_List[i], i, DXGI_FORMAT_R8G8B8A8_UNORM);
 	}
 
-	post_shader = new CEdgeDetectCSShader();
-	post_shader->CreateShader(m_pd3dDevice);
-	
-	fullscreen_shader = new CTextureToFullScreenShader();
-	fullscreen_shader->CreateShader(m_pd3dDevice);
+	//post_shader = new CEdgeDetectCSShader();
+	//post_shader->CreateShader(m_pd3dDevice);
+	//
+	//fullscreen_shader = new CTextureToFullScreenShader();
+	//fullscreen_shader->CreateShader(m_pd3dDevice);
 	//==========================================
 
 
@@ -955,42 +949,28 @@ void CGameFramework::FrameAdvance()
 	}
 	EndGPUStage(GPU_Stage::Render);
 
-	// ====================== [5] Post Process Phase ======================
+	// ====================== [5] Post Process Phase - Screen Effects ======================
 	BeginGPUStage(GPU_Stage::Post);
 	PrepareStage(GPU_Stage::Post);
 	{
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-		post_shader->OnPrepareRender(Active_CommandList);
-		post_shader->Set_BackBuffer_SRV(Active_CommandList, SwapChainBuffer_Index);
-		post_shader->Set_RootSignature_SRV(Active_CommandList, 1, MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
-		post_shader->Dispatch(Active_CommandList);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
+		post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
+		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
+		post_effect_manager->Clear_Reserved_Effect();
 
-		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-		fullscreen_shader->OnPrepareRender(Active_CommandList);
-		fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, post_shader->GetOutputTextureSRV());
-		fullscreen_shader->Render(Active_CommandList);
-	}
-		EndGPUStage(GPU_Stage::Post);
+		// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
 
-		BeginGPUStage(GPU_Stage::Post);
-		PrepareStage(GPU_Stage::Post);
-	{
-
-		// test
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &dsvHandle);
 
+
 		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
 		UpdateShaderVariables();
-
-
 		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-
-		SynchronizeResourceTransition(Active_CommandList, post_shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 		m_pPlayer->Record_Last_Pos();

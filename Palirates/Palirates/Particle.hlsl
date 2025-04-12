@@ -69,6 +69,16 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
 
     return output;
 }
+
+float4 PS_Transparent_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_Target
+{
+    float4 particle_color = input.color;
+
+    return float4(particle_color);
+}
+
+
+
 // Pixel Shader
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input)
 {
@@ -140,6 +150,4 @@ float4 Trail_PS(VS_TRAIL_OUTPUT input) : SV_Target
     float4 trailColor = float4(baseColor, fade); // 알파 적용
 
     return trailColor;
-
-
 }

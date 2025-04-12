@@ -430,7 +430,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 //	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -960,7 +960,6 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 {
 //	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 
-
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
@@ -991,7 +990,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 	{
-		//particle_manager->Render_All(pd3dCommandList, pCamera);
+		particle_manager->Render_All(pd3dCommandList, pCamera);
 	}
 #endif
 
@@ -1030,7 +1029,6 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
-//	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, -100.0f * xmf3Scale.y, 0.0f));
 
 
@@ -1120,7 +1118,7 @@ void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 #endif
 
 	//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);

@@ -260,6 +260,29 @@ void CEdgeDetectCSShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGr
 	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
 }
 
+//==============================================================================
+
+CMotionBlurShader::CMotionBlurShader()
+{
+}
+
+CMotionBlurShader::~CMotionBlurShader()
+{
+}
+
+
+D3D12_SHADER_BYTECODE CMotionBlurShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_MotionBlur", "cs_5_1", ppd3dShaderBlob));
+}
+
+void CMotionBlurShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
+{
+	Post_ComputeShader::CreateShader(pd3dDevice, cxThreadGroups, cyThreadGroups, czThreadGroups, nPipelineState);
+
+	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
+}
+
 
 //==========================================================================================
 
@@ -434,4 +457,74 @@ void CTextureToFullScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandLi
 void CTextureToFullScreenShader::Set_SRV_ScreenTexture(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle)
 {
 	pd3dCommandList->SetGraphicsRootDescriptorTable(BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX, srv_handle);
+}
+
+//=====================================================================
+
+Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
+{
+	CEdgeDetectCSShader* edge_detect_shader = new CEdgeDetectCSShader();
+	CMotionBlurShader* motion_blur_shader = new CMotionBlurShader();
+
+	fullscreen_shader = new CTextureToFullScreenShader();
+
+
+	m_EffectMap[Effect_Type::Motion_Blur] = motion_blur_shader;
+	m_EffectMap[Effect_Type::Outline] = edge_detect_shader;
+	m_EffectMap[Effect_Type::etc] = NULL;
+
+
+	edge_detect_shader->CreateShader(pd3dDevice);
+	motion_blur_shader->CreateShader(pd3dDevice);
+
+	fullscreen_shader->CreateShader(pd3dDevice);
+}
+
+void Post_Effect_Manager::Clear_Reserved_Effect()
+{
+	m_ActiveEffects.clear();
+}
+
+void Post_Effect_Manager::Add_Effect(Effect_Type type, UINT rootIndex, D3D12_GPU_DESCRIPTOR_HANDLE* srvHandle)
+{
+	ReservedEffect effect;
+	effect.type = type;
+	effect.root_param_index = rootIndex;
+	effect.srv_handle = srvHandle; 
+
+	m_ActiveEffects.push_back(effect);
+}
+
+void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index)
+{
+	if (!m_ActiveEffects.size())
+		return;
+	
+	Post_ComputeShader* shader = NULL;
+
+	for (const ReservedEffect& reserved : m_ActiveEffects)
+	{
+		shader = m_EffectMap[reserved.type];
+		if (!shader) 
+			continue;
+
+		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+
+		shader->OnPrepareRender(pd3dCommandList);
+		shader->Set_BackBuffer_SRV(pd3dCommandList, back_buffer_index);
+
+		if (reserved.srv_handle)
+			shader->Set_RootSignature_SRV(pd3dCommandList, reserved.root_param_index, *reserved.srv_handle);
+		
+
+		shader->Dispatch(pd3dCommandList);
+
+		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+
+
+	fullscreen_shader->OnPrepareRender(pd3dCommandList);
+	fullscreen_shader->Set_SRV_ScreenTexture(pd3dCommandList, shader->GetOutputTextureSRV());
+	fullscreen_shader->Render(pd3dCommandList);
 }

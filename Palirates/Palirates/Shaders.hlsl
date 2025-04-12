@@ -6,12 +6,6 @@ cbuffer Frame_Info : register(b0)
 {
     float gfCurrentTime; 
     float gfElapsedTime; 
-
-    float gfSecondsPerFirework; 
-    int gnFlareParticlesToEmit; 
-    int gnMaxFlareType2Particles; 
-    float3 gf3Gravity; 
-
 };
 
 struct Material_Info

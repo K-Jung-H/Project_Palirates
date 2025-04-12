@@ -65,6 +65,18 @@ public:
 
 };
 
+class CMotionBlurShader : public Post_ComputeShader
+{
+public:
+	CMotionBlurShader();
+	virtual ~CMotionBlurShader();
+
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState = 0);
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups = 1, UINT cyThreadGroups = 1, UINT czThreadGroups = 1, int nPipelineState = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
+
+};
+
 //=======================================================================
 
 class CTextureToFullScreenShader : public CStandardShader
@@ -92,4 +104,38 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Set_SRV_ScreenTexture(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle);
+};
+
+//========================================================================
+
+enum class Effect_Type
+{
+	Motion_Blur,
+	Outline,
+	 etc,
+};
+
+struct ReservedEffect
+{
+	Effect_Type type;
+	UINT root_param_index;
+	const D3D12_GPU_DESCRIPTOR_HANDLE* srv_handle = nullptr;
+};
+
+class Post_Effect_Manager
+{
+private:
+	std::unordered_map<Effect_Type, Post_ComputeShader*> m_EffectMap;
+
+	std::vector<ReservedEffect> m_ActiveEffects;
+
+	CTextureToFullScreenShader* fullscreen_shader = NULL;
+
+public:
+	Post_Effect_Manager(ID3D12Device* device);
+
+	void Clear_Reserved_Effect();                    
+	void Add_Effect(Effect_Type type, UINT rootIndex, D3D12_GPU_DESCRIPTOR_HANDLE* srvHandle);
+	void Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index);
+
 };
