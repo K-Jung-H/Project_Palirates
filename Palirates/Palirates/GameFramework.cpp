@@ -955,8 +955,8 @@ void CGameFramework::FrameAdvance()
 	{
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
+//		post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
 		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
 
