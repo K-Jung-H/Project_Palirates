@@ -128,7 +128,6 @@ public:
 
 	void Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList);
-
 	void Copy_DebugBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 
 
@@ -136,7 +135,7 @@ public:
 	{
 		Copy_CounterBuffer_Particle_Info(pd3dCommandList);
 		Copy_CounterBuffer_Render_Instance(pd3dCommandList);
-		Copy_DebugBuffer(pd3dCommandList);
+//		Copy_DebugBuffer(pd3dCommandList);
 	}
 
 	UINT Readback_CounterBuffer_Particle_Info_List();
@@ -147,7 +146,7 @@ public:
 	{
 		Readback_CounterBuffer_Particle_Info_List();
 		Readback_CounterBuffer_Render_Instance();
-		Readback_DebugBuffer();
+//		Readback_DebugBuffer();
 
 	}
 

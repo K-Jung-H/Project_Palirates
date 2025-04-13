@@ -574,8 +574,8 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 
 void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 {
-	Animate_Objects(Object_Type::skinned, fTimeElapsed);
-	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
+//	Animate_Objects(Object_Type::skinned, fTimeElapsed);
+//	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
 	Animate_Objects(Object_Type::trail, fTimeElapsed);
 

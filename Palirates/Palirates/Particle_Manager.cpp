@@ -525,9 +525,6 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 			shader_ptr->Dispatch(pd3dCommandList, update_info.Max_Particle_N, 1, 1);
 		}
 	}
-
-	DebugOutput("\Emit - Dispatch Called!");
-
 }
 
 
@@ -562,8 +559,6 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		}
 	}
-
-	DebugOutput("\nUpdate - Dispatch Called!");
 }
 
 
@@ -616,11 +611,11 @@ void Particle_Manager::Sync_AfterAnimate( Particle_Type type)
 			particle_data->Readback_All();
 
 
-			DebugOutput("======================================\n");
-			DebugOutput("Particle_Info_List : " + to_string(particle_data->N_Particle_Info_List) + "\n");
-			DebugOutput("Render_Instance : " + to_string(particle_data->N_Render_Instance) + "\n");
-			DebugOutput("======================================\n");
-			DebugOutput("\n");
+			//DebugOutput("======================================\n");
+			//DebugOutput("Particle_Info_List : " + to_string(particle_data->N_Particle_Info_List) + "\n");
+			//DebugOutput("Render_Instance : " + to_string(particle_data->N_Render_Instance) + "\n");
+			//DebugOutput("======================================\n");
+			//DebugOutput("\n");
 
 		}
 	}

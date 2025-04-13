@@ -532,18 +532,18 @@ UINT Particle::Readback_DebugBuffer()
 
 	if (SUCCEEDED(Debug_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&debugData))) && debugData)
 	{
-		UINT emit_cs_called = debugData[0]; // Emit에서 InterlockedAdd된 값
-		UINT emitCount = debugData[1]; // Emit 조건 최대값 (예: Max_Particle)
-		UINT killCount = debugData[2]; // Kill 처리된 파티클 수
-		UINT renderCount = debugData[3]; // 실제 RenderInstanceBuffer에 Append된 수
+		//UINT emit_cs_called = debugData[0]; // Emit에서 InterlockedAdd된 값
+		//UINT emitCount = debugData[1]; // Emit 조건 최대값 (예: Max_Particle)
+		//UINT killCount = debugData[2]; // Kill 처리된 파티클 수
+		//UINT renderCount = debugData[3]; // 실제 RenderInstanceBuffer에 Append된 수
 
-		DebugOutput("\n[GPU Debug Info]\n");
-		DebugOutput("------------------------------\n");
-		DebugOutput(" Emit_CS_Called				 : " + to_string(emit_cs_called) + "\n");
-		DebugOutput(" EmitCount	 : " + to_string(emitCount) + "\n");
-		DebugOutput(" KillCount				 : " + to_string(killCount) + "\n");
-		DebugOutput(" RenderCount		     : " + to_string(renderCount) + "\n");
-		DebugOutput("------------------------------\n");
+		//DebugOutput("\n[GPU Debug Info]\n");
+		//DebugOutput("------------------------------\n");
+		//DebugOutput(" Emit_CS_Called				 : " + to_string(emit_cs_called) + "\n");
+		//DebugOutput(" EmitCount	 : " + to_string(emitCount) + "\n");
+		//DebugOutput(" KillCount				 : " + to_string(killCount) + "\n");
+		//DebugOutput(" RenderCount		     : " + to_string(renderCount) + "\n");
+		//DebugOutput("------------------------------\n");
 
 		Debug_ReadBack_buffer->Unmap(0, nullptr);
 

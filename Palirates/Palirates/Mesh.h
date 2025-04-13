@@ -316,11 +316,20 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//struct TrailVertexSide
+//{
+//	float side; // -1.0 or +1.0
+//	float time; // 생성 시간 or 나이
+//};
 
 struct TrailVertexSide
 {
-	float side; // -1.0 or +1.0
-	float time; // 생성 시간 or 나이
+	float side;      // +1.0 for top, -1.0 for bottom
+	float time;      // creation time
+	float centerY;   // Y position of the segment's center
+	float offsetY;   // distance from centerY (used to shrink height)
+	float ratio;     // 0.0 = oldest, 1.0 = newest (used for fading)
 };
 
 class Trail_Mesh : public CStandardMesh
@@ -330,7 +339,10 @@ public:
 	virtual ~Trail_Mesh();
 
 	void AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float fTime);
+	
 	void UpdateTrail(float currentTime);
+	void UpdateSegmentRatios();
+
 	void UpdateIndexBuffer();
 	void UpdateVertexBuffer();
 	void ResetTrail();

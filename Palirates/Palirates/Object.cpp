@@ -3111,7 +3111,7 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 //
 Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // 세그먼트 수
+	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // N = length,  N * 32
 	m_fAccumulatedTime = 0.0f;
 }
 

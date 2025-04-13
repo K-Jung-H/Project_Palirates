@@ -204,11 +204,14 @@ void Post_ComputeShader::ReleaseShaderVariables()
 
 void Post_ComputeShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
-	if (Post_ComputeRootSignature_ptr)
-		pd3dCommandList->SetComputeRootSignature(Post_ComputeRootSignature_ptr);
-
 	if (Post_computePipelineStates && Post_computePipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(Post_computePipelineStates[nPipelineState]);
+}
+
+void Post_ComputeShader::OnPrepare_RootSignature(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (Post_ComputeRootSignature_ptr)
+		pd3dCommandList->SetComputeRootSignature(Post_ComputeRootSignature_ptr);
 }
 
 void Post_ComputeShader::Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int back_buffer_index)
@@ -501,6 +504,8 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 		return;
 	
 	Post_ComputeShader* shader = NULL;
+	Post_ComputeShader::OnPrepare_RootSignature(pd3dCommandList);
+	D3D12_GPU_DESCRIPTOR_HANDLE input_srv = Post_ComputeShader::g_BackBufferSRVs[back_buffer_index];
 
 	for (const ReservedEffect& reserved : m_ActiveEffects)
 	{
@@ -508,23 +513,29 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 		if (!shader) 
 			continue;
 
-		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
+		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(),
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 		shader->OnPrepareRender(pd3dCommandList);
-		shader->Set_BackBuffer_SRV(pd3dCommandList, back_buffer_index);
+
+		// uses the last output(SRV) as input
+		shader->Set_RootSignature_SRV(pd3dCommandList, BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX, input_srv);
 
 		if (reserved.srv_handle)
 			shader->Set_RootSignature_SRV(pd3dCommandList, reserved.root_param_index, *reserved.srv_handle);
-		
 
 		shader->Dispatch(pd3dCommandList);
 
-		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(),
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		// Passed as input to the next effect
+		input_srv = shader->GetOutputTextureSRV(); 
 	}
 
-
+	// Pass the final result to the fullscreen shader
 	fullscreen_shader->OnPrepareRender(pd3dCommandList);
-	fullscreen_shader->Set_SRV_ScreenTexture(pd3dCommandList, shader->GetOutputTextureSRV());
+	fullscreen_shader->Set_SRV_ScreenTexture(pd3dCommandList, input_srv);
 	fullscreen_shader->Render(pd3dCommandList);
+
 }

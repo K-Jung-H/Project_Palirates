@@ -711,8 +711,10 @@ private:
 	XMFLOAT3 m_vLocalTop = {};
 	XMFLOAT3 m_vLocalBottom = {};
 
-	float m_fSegmentInterval = 0.05f;            // 최소 세그먼트 생성 간격 (초)
+	// Minimum segment creation interval N/s
+	float m_fSegmentInterval = 0.001f;
 	float m_fSegmentTimer = 0.0f;
+
 public:
 	Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~Trail_Object();

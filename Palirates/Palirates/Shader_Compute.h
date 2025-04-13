@@ -8,8 +8,7 @@
 class Post_ComputeShader : public PostProcessBaseShader
 {
 private:
-	// 스왑체인 개수만큼 생성하기
-	static D3D12_GPU_DESCRIPTOR_HANDLE g_BackBufferSRVs[2]; 
+
 	static ID3D12RootSignature* Post_ComputeRootSignature_ptr;
 
 	int									n_Post_computePipelineStates = 0;
@@ -18,6 +17,9 @@ private:
 	D3D12_GPU_DESCRIPTOR_HANDLE m_PostOutputSRV {};
 
 public:
+	// 스왑체인 개수만큼 생성하기
+	static D3D12_GPU_DESCRIPTOR_HANDLE g_BackBufferSRVs[2];
+
 	Post_ComputeShader();
 	virtual ~Post_ComputeShader();
 
@@ -37,7 +39,11 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
-	virtual void Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int back_buffer_index);
+
+	//////
+	static void OnPrepare_RootSignature(ID3D12GraphicsCommandList* pd3dCommandList);
+	static void Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int back_buffer_index);
+
 	virtual void Set_RootSignature_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int rootsignature_index, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle);
 
 	virtual void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);

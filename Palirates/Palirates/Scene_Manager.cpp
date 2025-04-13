@@ -44,7 +44,8 @@ std::shared_ptr<CScene> Scene_Manager::Load_Scene(std::string_view sceneName)
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
     {
-        activeScene = it->second;  // 기존 씬을 활성화
+        // Activate existing scene
+        activeScene = it->second;  
         return activeScene;
     }
 
@@ -73,8 +74,6 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
     {
         it->second->BuildObjects(pd3dDevice, pd3dCommandList);
 
-//        material_reflectance_data_manager->Create_ShaderVariables(pd3dDevice, pd3dCommandList);
-
 #ifdef WRITE_TEXT_UI
         it->second->Build_Text_UI(text_ui_renderer.get());
 #endif
@@ -102,8 +101,7 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
 {
     if (activeScene) 
     {
-        activeScene->Animate_Objects(pd3dCommandList, fTimeElapsed);
-        
+        activeScene->Animate_Objects(pd3dCommandList, fTimeElapsed); 
         activeScene->Update_Objects(pd3dDevice, pd3dCommandList);
     }
     else
@@ -127,6 +125,7 @@ void Scene_Manager::Update_Active_Particles(ID3D12GraphicsCommandList* pd3dComma
 
 #endif
 }
+
 void Scene_Manager::Copy_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_PARTICLE
@@ -279,17 +278,7 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 }
 
-void Scene_Manager::Prepare_Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-    
-}
 
-void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-
-}
-
-// 렌더링이 모두 끝나면, 데이터  처리 작업
 void Scene_Manager::Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     if (activeScene)    

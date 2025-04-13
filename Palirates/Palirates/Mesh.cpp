@@ -1490,14 +1490,20 @@ void Trail_Mesh::AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float f
 	int i0 = m_nCurrentIndex;
 	int i1 = (m_nCurrentIndex + 1) % m_nVertices;
 
+	float centerY = (top.y + bottom.y) * 0.5f;
+	float offsetY = fabs(top.y - bottom.y) * 0.5f;
+
+	float segmentIndex = (float)(m_nActiveSegments);                // the new segment's index
+	float ratio = 1.0f - (segmentIndex / (float)(m_nMaxTrailSegments - 1)); // fixed ratio at add time
+
 	m_pxmf3Positions[i0] = top;
 	m_pxmf3Positions[i1] = bottom;
 
+	m_pTrailSideData[i0] = { +1.0f, fTime, centerY, +offsetY, 1.0f };
+	m_pTrailSideData[i1] = { -1.0f, fTime, centerY, -offsetY, 1.0f };
+
 	m_pxmf2TextureCoords0[i0] = { 0.0f, 0.0f };
 	m_pxmf2TextureCoords0[i1] = { 0.0f, 1.0f };
-
-	m_pTrailSideData[i0] = { +1.0f, fTime };
-	m_pTrailSideData[i1] = { -1.0f, fTime };
 
 	m_nCurrentIndex = (m_nCurrentIndex + 2) % m_nVertices;
 	if (m_nActiveSegments < m_nMaxTrailSegments)
@@ -1513,6 +1519,27 @@ void Trail_Mesh::UpdateTrail(float currentTime)
 		if ((currentTime - segTime) > m_fTrailLifespan)
 			m_nActiveSegments--;
 		else break;
+	}
+}
+
+void Trail_Mesh::UpdateSegmentRatios()
+{
+	if (m_nActiveSegments < 2) 
+		return;
+
+	// Calculate ring buffer start
+	int startIndex = (m_nCurrentIndex + m_nVertices - (m_nActiveSegments * 2)) % m_nVertices;
+
+	for (int i = 0; i < m_nActiveSegments; ++i)
+	{
+		// ratio = index-based interpolation (0.0 ~ 1.0)
+		float ratio = (float)(i) / (float)(m_nActiveSegments - 1); // tail = 0.0, head = 1.0
+
+		int topIdx = (startIndex + i * 2) % m_nVertices;
+		int bottomIdx = (startIndex + i * 2 + 1) % m_nVertices;
+
+		m_pTrailSideData[topIdx].ratio = ratio;
+		m_pTrailSideData[bottomIdx].ratio = ratio;
 	}
 }
 
@@ -1552,6 +1579,8 @@ void Trail_Mesh::UpdateIndexBuffer()
 
 void Trail_Mesh::UpdateVertexBuffer()
 {
+	UpdateSegmentRatios();
+
 	D3D12_RANGE readRange = { 0, 0 };
 	void* pData = nullptr;
 

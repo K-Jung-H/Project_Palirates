@@ -65,15 +65,10 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	CoInitialize(NULL);
 
 	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 50);
-	//CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
-	
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
-
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
-
-
 	Build_Scenes();
 
 	return(true);
@@ -728,9 +723,9 @@ void CGameFramework::Update_Scene()
 	// test 
 
 	//==============================================================
-
+#ifdef RENDER_PARTICLE
 	scene_manager->Update_Active_Particles(Active_CommandList, fTimeElapsed);
-
+#endif
 	//===============================================================
 
 	if (multiMode) {
@@ -742,13 +737,9 @@ void CGameFramework::Update_Scene()
 	}
 }
 
-void CGameFramework::After_Update_Scene()
-{
-}
-
 void CGameFramework::BeginGPUStage(GPU_Stage stage)
 {
-	SafeSyncStage(stage); // 이전 작업 완료 보장
+	SafeSyncStage(stage); // Ensure previous work is completed
 
 	switch (stage)
 	{
@@ -839,7 +830,7 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 
 void CGameFramework::SafeSyncStage(GPU_Stage stage)
 {
-	SignalFence(stage, false); // fence 증가 없이 현재 값으로만 signal
+	SignalFence(stage, false); // Signal only to current value without fence increase
 	WaitForGpuComplete(stage);
 }
 
@@ -911,6 +902,7 @@ void CGameFramework::FrameAdvance()
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
 
+
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
@@ -939,9 +931,14 @@ void CGameFramework::FrameAdvance()
 		UpdateShaderVariables();
 		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-		if (m_pPlayer) m_pPlayer->Render(Active_CommandList, m_pCamera);
+		if (m_pPlayer) 
+			m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		
+		// Merge G-Buffers
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
 		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
@@ -955,23 +952,31 @@ void CGameFramework::FrameAdvance()
 	{
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-//		post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4));
+		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
+
+		// Reserve Effects
+		post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		
+		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
 
 
 		// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
 
+		// Use previously stored depth buffer values
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &dsvHandle);
 
 
+		// Rendering Transparent object
 		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 		UpdateShaderVariables();
 		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
 
+		// Record moving Object's Last Pos to use motion blur
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 		m_pPlayer->Record_Last_Pos();
 
