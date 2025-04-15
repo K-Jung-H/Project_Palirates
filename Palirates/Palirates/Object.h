@@ -20,6 +20,8 @@ class CTerrainShader;
 class CStandardShader;
 
 class Deferred_CTerrainShader;
+class Deferred_Plane_Shader;
+class CS_Wave_Shader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -687,6 +689,41 @@ public:
 
 	void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);
 	void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
+};
+
+class Plane_Object : public CGameObject
+{
+private:
+	CTexture* Plane_BaseTexture;
+	CTexture* Plane_DetailTexture;
+
+public:
+	static Deferred_Plane_Shader* plane_shader;
+	CMaterial* Plane_Material;
+
+	Plane_Object() {}
+	Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual ~Plane_Object();
+	
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+	void Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+
+};
+
+class Wave_Object : public Plane_Object
+{
+private:
+	static CS_Wave_Shader* cs_wave_shader;
+	CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+
+public:
+	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual ~Wave_Object();
+
+	void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 };
 
 

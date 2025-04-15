@@ -32,7 +32,6 @@ private:
 public:
 	int									m_ncomputePipelineStates = 0;
 	ID3D12PipelineState** m_ppd3dcomputePipelineStates = NULL;
-//	ID3D12RootSignature* m_pd3dComputeRootSignature = NULL;
 
 public:
 	ParticleShader();

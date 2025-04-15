@@ -183,9 +183,6 @@ void Post_ComputeShader::CreateResourcesAndUavs(ID3D12Device* pd3dDevice, UINT n
 	m_PostOutputSRV = CDescriptor_Heap::CreateShaderResourceView(pd3dDevice, m_pTexture->GetResource(0), format);
 }
 
-
-
-
 void Post_ComputeShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 
@@ -538,4 +535,186 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 	fullscreen_shader->Set_SRV_ScreenTexture(pd3dCommandList, input_srv);
 	fullscreen_shader->Render(pd3dCommandList);
 
+}
+
+//=====================================================================
+
+D3D12_SHADER_BYTECODE CS_Wave_Shader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Wave.hlsl", "CS_Global_Wave_Height", "cs_5_1", ppd3dShaderBlob));
+	else if (nPipelineState == 1)
+		return(CShader::CompileShaderFromFile(L"Wave.hlsl", "CS_Boat_Wave_Height", "cs_5_1", ppd3dShaderBlob));
+	else if (nPipelineState == 2)
+		return(CShader::CompileShaderFromFile(L"Wave.hlsl", "CS_Wave_Normal", "cs_5_1", ppd3dShaderBlob));
+}
+
+ID3D12RootSignature* CS_Wave_Shader::CreateComputeRootSignature(ID3D12Device* pd3dDevice)
+{
+	ID3D12RootSignature* pd3dComputeRootSignature = NULL;
+
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[3];
+	{
+		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; // Read - HeightMap
+		pd3dDescriptorRanges[0].NumDescriptors = 1;
+		pd3dDescriptorRanges[0].BaseShaderRegister = 0; //t0: Texture2D
+		pd3dDescriptorRanges[0].RegisterSpace = 0;
+		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = 0;
+
+		pd3dDescriptorRanges[1].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV; // Write - HeightMap
+		pd3dDescriptorRanges[1].NumDescriptors = 1;
+		pd3dDescriptorRanges[1].BaseShaderRegister = 0; //u0: RWTexture2D
+		pd3dDescriptorRanges[1].RegisterSpace = 0;
+		pd3dDescriptorRanges[1].OffsetInDescriptorsFromTableStart = 0;
+
+		pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV; // NormalMap
+		pd3dDescriptorRanges[2].NumDescriptors = 1;
+		pd3dDescriptorRanges[2].BaseShaderRegister = 1; //u1: RWTexture2D
+		pd3dDescriptorRanges[2].RegisterSpace = 0;
+		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = 0;
+	}
+
+	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	{
+		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[0].Descriptor.ShaderRegister = 0; //Frame_Info
+		pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[1].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[0]; //Texture2D
+		pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[1]; //RWTexture2D
+		pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2]; //RWTexture2D
+		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	}
+
+	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc = {};
+	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
+	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
+	d3dRootSignatureDesc.NumStaticSamplers = 0;
+	d3dRootSignatureDesc.pStaticSamplers = nullptr;
+	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
+
+	ID3DBlob* pd3dSignatureBlob = NULL;
+	ID3DBlob* pd3dErrorBlob = NULL;
+
+
+	HRESULT b = D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
+
+	if (FAILED(b))
+	{
+		if (pd3dErrorBlob)
+		{
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+			pd3dErrorBlob->Release();
+		}
+		return nullptr;
+	}
+
+	b = pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pd3dComputeRootSignature);
+
+	if (FAILED(b))
+	{
+		if (pd3dErrorBlob)
+		{
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+			pd3dErrorBlob->Release();
+		}
+	}
+
+
+	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
+	if (pd3dErrorBlob) pd3dErrorBlob->Release();
+
+	return(pd3dComputeRootSignature);
+}
+void CS_Wave_Shader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState)
+{
+	ID3DBlob* pd3dComputeShaderBlob = NULL;
+
+	// 계산 파이프라인 상태 구성 구조체
+	D3D12_COMPUTE_PIPELINE_STATE_DESC d3dComputePipelineStateDesc;
+	::ZeroMemory(&d3dComputePipelineStateDesc, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
+	d3dComputePipelineStateDesc.pRootSignature = pd3dComputeRootSignature;
+	d3dComputePipelineStateDesc.CS = CreateComputeShader(&pd3dComputeShaderBlob, nPipelineState);
+	d3dComputePipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+	// 계산 파이프라인 상태 객체 생성
+	HRESULT hResult = pd3dDevice->CreateComputePipelineState(&d3dComputePipelineStateDesc, IID_PPV_ARGS(&Wave_computePipelineStates[nPipelineState]));
+
+	if (pd3dComputeShaderBlob)
+		pd3dComputeShaderBlob->Release();
+}
+
+void CS_Wave_Shader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
+{
+	n_Wave_computePipelineStates = 1;
+	Wave_computePipelineStates = new ID3D12PipelineState * [n_Wave_computePipelineStates];
+
+	if (Wave_ComputeRootSignature_ptr == NULL)
+		Wave_ComputeRootSignature_ptr = CreateComputeRootSignature(pd3dDevice);
+
+	CreateComputePipelineState(pd3dDevice, Wave_ComputeRootSignature_ptr, 0);
+	CreateComputePipelineState(pd3dDevice, Wave_ComputeRootSignature_ptr, 1);
+	CreateComputePipelineState(pd3dDevice, Wave_ComputeRootSignature_ptr, 2);
+
+
+	m_cxThreadGroups = cxThreadGroups;
+	m_cyThreadGroups = cyThreadGroups;
+	m_czThreadGroups = czThreadGroups;
+}
+
+
+void CS_Wave_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(Wave_Frame_Info) + 255) & ~255); //256의 배수
+	Frame_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	Frame_Info->Map(0, NULL, (void**)&m_pcbMappedFrame_Info);
+}
+
+void CS_Wave_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, Wave_Frame_Info* wave_info)
+{
+	::memcpy(&m_pcbMappedFrame_Info->boat_dir, &wave_info->boat_dir, sizeof(XMFLOAT3));
+	::memcpy(&m_pcbMappedFrame_Info->boat_pos, &wave_info->boat_pos, sizeof(XMFLOAT3));
+	::memcpy(&m_pcbMappedFrame_Info->ElapsedTime, &wave_info->ElapsedTime, sizeof(float));
+	::memcpy(&m_pcbMappedFrame_Info->wave_seed, &wave_info->wave_seed, sizeof(float));
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = Frame_Info->GetGPUVirtualAddress();
+	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
+
+}
+
+void CS_Wave_Shader::ReleaseShaderVariables()
+{
+
+}
+
+void CS_Wave_Shader::OnPrepareDispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+{
+	if (Wave_computePipelineStates && Wave_computePipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(Wave_computePipelineStates[nPipelineState]);
+
+	if (Wave_ComputeRootSignature_ptr)
+		pd3dCommandList->SetComputeRootSignature(Wave_ComputeRootSignature_ptr);
+}
+
+void CS_Wave_Shader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->Dispatch(m_cxThreadGroups, m_cyThreadGroups, m_czThreadGroups);
 }

@@ -800,6 +800,161 @@ void CubeMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_B
 		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
 	}
 }
+
+//===============================================================================
+
+PlaneMesh::PlaneMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float width, int segments)
+	: CMesh(pd3dDevice, pd3dCommandList)
+{
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	int vertexCount = segments * segments;
+	m_nVertices = vertexCount;
+
+	m_pxmf3Positions = new XMFLOAT3[vertexCount];
+	m_pxmf2TextureCoords0 = new XMFLOAT2[vertexCount];
+	m_pxmf4Colors = new XMFLOAT4[vertexCount];
+
+	float halfWidth = width * 0.5f;
+	float step = width / (segments - 1);
+
+	XMFLOAT4 color1 = { 1.0f, 0.0f, 0.0f, 1.0f };
+	XMFLOAT4 color2 = { 1.0f, 1.0f, 0.0f, 1.0f };
+
+	int i = 0;
+	for (int z = 0; z < segments; ++z)
+	{
+		for (int x = 0; x < segments; ++x, ++i)
+		{
+			float fx = -halfWidth + x * step;
+			float fz = -halfWidth + z * step;
+
+			m_pxmf3Positions[i] = XMFLOAT3(fx, 0.0f, fz);
+			m_pxmf2TextureCoords0[i] = XMFLOAT2(static_cast<float>(x) / (segments - 1), static_cast<float>(z) / (segments - 1));
+			m_pxmf4Colors[i] = ((x + z) % 2 == 0) ? color1 : color2;
+		}
+	}
+
+	int quadCount = (segments - 1) * (segments - 1);
+	int indexCount = quadCount * 6;
+
+	m_nSubMeshes = 1;
+	m_pnSubSetIndices = new int[1];
+	m_ppnSubSetIndices = new UINT * [1];
+	m_ppnSubSetIndices[0] = new UINT[indexCount];
+	m_pnSubSetIndices[0] = indexCount;
+
+	UINT* indices = m_ppnSubSetIndices[0];
+	int k = 0;
+
+	for (int z = 0; z < segments - 1; ++z)
+	{
+		for (int x = 0; x < segments - 1; ++x)
+		{
+			int i0 = x + z * segments;
+			int i1 = (x + 1) + z * segments;
+			int i2 = x + (z + 1) * segments;
+			int i3 = (x + 1) + (z + 1) * segments;
+
+			indices[k++] = i0;
+			indices[k++] = i2;
+			indices[k++] = i1;
+
+			indices[k++] = i1;
+			indices[k++] = i2;
+			indices[k++] = i3;
+		}
+	}
+
+	m_pxmf2TextureCoords1 = new XMFLOAT2[m_nVertices];
+
+	i = 0;
+	for (int z = 0; z < segments; ++z)
+	{
+		for (int x = 0; x < segments; ++x, ++i)
+		{
+			m_pxmf2TextureCoords1[i] = XMFLOAT2(static_cast<float>(x % 2), static_cast<float>(z % 2));
+		}
+	}
+
+
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	//===================================================================
+
+	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+
+	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
+
+	//===================================================================
+
+	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+
+	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	//===================================================================
+
+	m_pd3dTextureCoord1Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords1, sizeof(XMFLOAT2) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord1UploadBuffer);
+
+	m_d3dTextureCoord1BufferView.BufferLocation = m_pd3dTextureCoord1Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord1BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord1BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	//===================================================================
+
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [1];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [1];
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[1];
+
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * m_pnSubSetIndices[0],
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * m_pnSubSetIndices[0];
+}
+PlaneMesh::~PlaneMesh()
+{
+}
+
+void PlaneMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW views[] = {
+		m_d3dPositionBufferView,
+		m_d3dColorBufferView,
+		m_d3dTextureCoord0BufferView,
+		m_d3dTextureCoord1BufferView
+	};
+	pd3dCommandList->IASetVertexBuffers(0, _countof(views), views);
+}
+
+void PlaneMesh::ReleaseUploadBuffers()
+{
+	if (m_pd3dTextureCoord0UploadBuffer) m_pd3dTextureCoord0UploadBuffer->Release();
+	if (m_pd3dTextureCoord1UploadBuffer) m_pd3dTextureCoord1UploadBuffer->Release();
+	if (m_pd3dColorUploadBuffer) m_pd3dColorUploadBuffer->Release();
+
+	m_pd3dTextureCoord0UploadBuffer = nullptr;
+	m_pd3dTextureCoord1UploadBuffer = nullptr;
+	m_pd3dColorUploadBuffer = nullptr;
+
+	CMesh::ReleaseUploadBuffers(); 
+}
+//===============================================================================
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
 CStandardMesh::CStandardMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CMesh(pd3dDevice, pd3dCommandList)
@@ -1607,3 +1762,4 @@ void Trail_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* p
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
 	pd3dCommandList->IASetIndexBuffer(&m_pd3dSubSetIndexBufferViews[0]);
 }
+

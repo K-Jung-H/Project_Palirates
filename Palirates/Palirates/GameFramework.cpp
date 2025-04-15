@@ -572,13 +572,6 @@ void CGameFramework::Build_Scenes()
 		Post_ComputeShader::CreateBackBufferSRV(m_pd3dDevice, ptr_SwapChainBackBuffer_List[i], i, DXGI_FORMAT_R8G8B8A8_UNORM);
 	}
 
-	//post_shader = new CEdgeDetectCSShader();
-	//post_shader->CreateShader(m_pd3dDevice);
-	//
-	//fullscreen_shader = new CTextureToFullScreenShader();
-	//fullscreen_shader->CreateShader(m_pd3dDevice);
-	//==========================================
-
 
 
 	//========================================================
@@ -586,17 +579,24 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Register_Scene("Scene_1", Scene_1);
 	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
 
+
 	//std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
 	//scene_manager->Register_Scene("Scene_2", Scene_2);
 	//scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
 
 
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
 
+
+	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
+	
+	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
+	//Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
+	
 	m_pPlayer = pPlayer;
+	//m_pPlayer = observer;
+
 	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
-	//	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
+	//scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
 
 	m_pCamera = m_pPlayer->GetCamera();
 	
@@ -955,8 +955,8 @@ void CGameFramework::FrameAdvance()
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
 
 		// Reserve Effects
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
+		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
 		
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);

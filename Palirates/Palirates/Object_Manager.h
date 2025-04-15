@@ -105,6 +105,7 @@ enum class Object_Type
 	fixed,
 	player,
 	trail,
+	plane,
 	etc
 };
 
@@ -136,6 +137,11 @@ private:
 
 public:
 	//test 
+	Wave_Object* wave_obj = NULL;
+	std::vector<std::shared_ptr<CGameObject>> plane_obj_list;
+
+	
+
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
 	static std::shared_ptr<CShader> trail_shader;
 

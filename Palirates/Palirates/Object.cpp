@@ -1587,11 +1587,8 @@ void CGameObject::SetShader(CShader *pShader)
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-
-
 	if (Material_list.size() > nMaterial)
 		Material_list[nMaterial]->SetShader(pShader);
-
 }
 
 void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
@@ -3067,6 +3064,215 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 }
 
+Deferred_Plane_Shader* Plane_Object::plane_shader = NULL;
+
+
+Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+{
+	if (plane_shader == nullptr)
+	{
+		plane_shader = new Deferred_Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	int side_vertex_n = 10;
+	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	SetMesh(plane_mesh);	
+
+	Plane_Material = new CMaterial(2);
+
+	Plane_Material->SetShader(plane_shader);
+}
+
+Plane_Object::~Plane_Object()
+{
+}
+
+void Plane_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
+
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
+void Plane_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+	Plane_BaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_BaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_BaseTexture, 0, 3);
+
+	Plane_Material->SetTexture(Plane_BaseTexture, 0);
+}
+
+void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+
+	Plane_DetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_DetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_DetailTexture, 0, 4);
+
+	Plane_Material->SetTexture(Plane_DetailTexture, 1);
+
+}
+
+CS_Wave_Shader* Wave_Object::cs_wave_shader = NULL;
+
+Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+	: Plane_Object()
+{
+	if (plane_shader == nullptr)
+	{
+		plane_shader = new Deferred_Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	if (cs_wave_shader == nullptr)
+	{
+		cs_wave_shader = new CS_Wave_Shader();
+		cs_wave_shader->CreateShader(pd3dDevice);
+		cs_wave_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	int side_vertex_n = 100;
+	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	SetMesh(plane_mesh);
+
+	Plane_Material = new CMaterial(2);
+	Plane_Material->SetShader(plane_shader);
+
+	// Compute optimal texture resolution based on desired texel size
+	float desiredTexelSize = 5.0f; // 1 texel per 5 units
+	int texWidth = static_cast<int>(ceil(nLength / desiredTexelSize));
+	int texHeight = static_cast<int>(ceil(nLength / desiredTexelSize));
+
+	wave_data_texture = new CTexture(
+		3,                 // 3 textures: HeightMap_Read, HeightMap_Write, NormalMap
+		RESOURCE_TEXTURE2D,
+		0,                 // No samplers
+		3,                 // Graphics SRV RootParameters (HeightMap, NormalMap separately)
+		3,                 // Compute UAV RootParameter
+		3,                 // Compute SRV RootParameter
+		3,                 // Graphics SRV handles
+		3,                 // Compute UAV handles
+		3                  // Compute SRV handle
+	);
+
+	// HeightMap_Read: index 0 (read-only SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, texWidth, texHeight, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr);
+
+	// HeightMap_Write: index 1 (UAV + SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, texWidth, texHeight, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+
+	// NormalMap: index 2 (UAV + SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, texWidth, texHeight, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+
+
+	UINT ROOT_INDEX_READ = 1;
+	UINT ROOT_INDEX_WRITE_HEIGHT = 2;
+	UINT ROOT_INDEX_WRITE_NORMAL = 3;
+	// HeightMap_Read (index 0) → SRV (CS용)
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 0, ROOT_INDEX_READ);
+
+
+	// HeightMap_Write (index 1) → UAV (CS용)
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 1, ROOT_INDEX_READ);
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 1, ROOT_INDEX_WRITE_HEIGHT);
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 1, 5);
+
+
+	// NormalMap (index 2) → UAV (CS용)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 2, 2);
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 2, 6);
+
+}
+
+
+Wave_Object::~Wave_Object()
+{
+}
+
+void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	if (!cs_wave_shader)
+		return;
+
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
+
+	Wave_Frame_Info wave_info{};
+	wave_info.ElapsedTime = fTimeElapsed;
+
+	cs_wave_shader->UpdateShaderVariables(pd3dCommandList, &wave_info);
+	
+	
+	wave_data_texture->UpdateComputeSrvShaderVariables(pd3dCommandList);
+	wave_data_texture->UpdateComputeUavShaderVariables(pd3dCommandList);
+
+	cs_wave_shader->Dispatch(pd3dCommandList);
+
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
+	cs_wave_shader->Dispatch(pd3dCommandList);
+
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
+	cs_wave_shader->Dispatch(pd3dCommandList);
+
+}
+
+void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
+
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)

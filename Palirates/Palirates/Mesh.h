@@ -123,8 +123,6 @@ public:
 	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) {}
 };
 
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CHeightMapImage
@@ -209,6 +207,33 @@ class CSkyBoxMesh : public CMesh
 public:
 	CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f);
 	virtual ~CSkyBoxMesh();
+};
+
+class PlaneMesh : public CMesh
+{
+public:
+	PlaneMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float width, int segments);
+	virtual ~PlaneMesh();
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
+	virtual void ReleaseUploadBuffers() override;
+
+protected:
+	XMFLOAT4* m_pxmf4Colors = nullptr;
+	XMFLOAT2* m_pxmf2TextureCoords0 = nullptr;
+	XMFLOAT2* m_pxmf2TextureCoords1 = nullptr;
+
+	ID3D12Resource* m_pd3dColorBuffer = nullptr;
+	ID3D12Resource* m_pd3dColorUploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dColorBufferView = {};
+
+	ID3D12Resource* m_pd3dTextureCoord0Buffer = nullptr;
+	ID3D12Resource* m_pd3dTextureCoord0UploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord0BufferView = {};
+
+	ID3D12Resource* m_pd3dTextureCoord1Buffer = nullptr;
+	ID3D12Resource* m_pd3dTextureCoord1UploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord1BufferView = {};
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -316,12 +341,7 @@ public:
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//struct TrailVertexSide
-//{
-//	float side; // -1.0 or +1.0
-//	float time; // 생성 시간 or 나이
-//};
+
 
 struct TrailVertexSide
 {
@@ -368,3 +388,4 @@ protected:
 	ID3D12Resource* m_pd3dTrailSideUploadBuffer = nullptr;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dTrailSideBufferView = {};
 };
+

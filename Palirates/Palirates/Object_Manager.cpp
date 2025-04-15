@@ -446,6 +446,14 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 			trail_obj_list.push_back(obj_ptr);
 	}
 	break;
+
+	case Object_Type::plane:
+	{
+		if (obj_ptr != NULL)
+			plane_obj_list.push_back(obj_ptr);
+	}
+	break;
+
 	case Object_Type::etc:
 		break;
 	default:
@@ -599,6 +607,7 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		else
 			info.Update_Instance_Data(pd3dDevice, pd3dCommandList);
 	}
+
 }
 
 void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
@@ -803,12 +812,28 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::trail:
 	{
+		if (!trail_obj_list.size())
+			break;
+
 		trail_shader->Setting_Render(pd3dCommandList, 0);
 		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
 		{
 			obj_ptr->Render(pd3dCommandList, pCamera);
 		}
 
+	}
+	break;
+
+	case Object_Type::plane:
+	{
+		if (!plane_obj_list.size())
+			break;
+
+		trail_shader->Setting_Render(pd3dCommandList, 0);
+		for (std::shared_ptr<CGameObject>& obj_ptr : plane_obj_list)
+		{
+			obj_ptr->Render(pd3dCommandList, pCamera);
+		}
 	}
 	break;
 

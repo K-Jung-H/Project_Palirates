@@ -8,7 +8,6 @@
 class Post_ComputeShader : public PostProcessBaseShader
 {
 private:
-
 	static ID3D12RootSignature* Post_ComputeRootSignature_ptr;
 
 	int									n_Post_computePipelineStates = 0;
@@ -144,4 +143,50 @@ public:
 	void Add_Effect(Effect_Type type, UINT rootIndex, D3D12_GPU_DESCRIPTOR_HANDLE* srvHandle);
 	void Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index);
 
+};
+
+//========================================================================
+
+
+struct Wave_Frame_Info 
+{
+	XMFLOAT3 boat_pos;
+	float ElapsedTime;
+
+	XMFLOAT3 boat_dir;
+	float wave_seed;
+};
+
+
+class CS_Wave_Shader : CShader
+{
+private:
+	ID3D12RootSignature* Wave_ComputeRootSignature_ptr;
+
+	int									n_Wave_computePipelineStates = 0;
+	ID3D12PipelineState** Wave_computePipelineStates = NULL;
+
+
+	ID3D12Resource* Frame_Info = NULL;
+	Wave_Frame_Info* m_pcbMappedFrame_Info= NULL;
+
+public:
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState = 0);
+
+	static ID3D12RootSignature* CreateComputeRootSignature(ID3D12Device* pd3dDevice);
+	void CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState = 0);
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups = 1, UINT cyThreadGroups = 1, UINT czThreadGroups = 1, int nPipelineState = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, Wave_Frame_Info* wave_info);
+	virtual void ReleaseShaderVariables();
+
+	void OnPrepareDispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
+	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList);
+
+protected:
+	UINT							m_cxThreadGroups = 0;
+	UINT							m_cyThreadGroups = 0;
+	UINT							m_czThreadGroups = 0;
 };
