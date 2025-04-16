@@ -408,13 +408,13 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 		pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[5].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
-		pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// n = 6, t1 = Normal_Map
 		pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[6].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
-		pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -430,7 +430,7 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 	pd3dSamplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
 	pd3dSamplerDescs[0].ShaderRegister = 0;
 	pd3dSamplerDescs[0].RegisterSpace = 0;
-	pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dSamplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
 	pd3dSamplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -443,7 +443,7 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 	pd3dSamplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
 	pd3dSamplerDescs[1].ShaderRegister = 1;
 	pd3dSamplerDescs[1].RegisterSpace = 0;
-	pd3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	pd3dSamplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_ALLOW_STREAM_OUTPUT;
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
@@ -1263,46 +1263,10 @@ void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	string obj_name_3 = "test_obj_name_3";
 
 
-	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CHumanObject> humanObject_1 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pHumanModel, 2);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackAnimationSet(1, 2);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(0, true);
-	humanObject_1->m_pSkinnedAnimationController->SetTrackEnable(1, true);
-	humanObject_1->SetPosition(410.0f, m_pTerrain->Get_Mesh_Height(NULL, 400.0f, 735.0f), 735.0f);
-	humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_1->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
-
-	//====================================================
-	// 테스트용 코드	
-//	humanObject_1->m_pSkinnedAnimationController->Bone_Info();
-	CGameObject* test_obj = humanObject_1->FindFrame("MiddleFinger3_R");
-	CGameObject* test_obj2 = humanObject_1->FindFrame("Shoulder_R");
-
-	CGameObject* test_obj123 = humanObject_1->FindFrame("Head");
-	CGameObject* test_obj2123 = humanObject_1->FindFrame("Feet");
-
-	test_obj->Add_Collider(0.0f);
-	test_obj2->Add_Collider(10.0f);
 
 	//====================================================
 
-	name_view = obj_name_2;
-	std::shared_ptr<CHumanObject> humanObject_2 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pHumanModel, 1);
-	humanObject_2->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 1);
-	humanObject_2->SetPosition(430.0f, m_pTerrain->Get_Mesh_Height(400.0f, 700.0f), 700.0f);
-	humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_2->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
-
-	name_view = obj_name_3;
-	std::shared_ptr<CHumanObject> humanObject_3 = std::make_shared<CHumanObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pHumanModel, 1);
-	humanObject_3->m_pSkinnedAnimationController->SetTrackAnimationSet(0, 2);
-	humanObject_3->SetPosition(400.0f, m_pTerrain->Get_Mesh_Height(400.0f, 720.0f), 720.0f);
-	humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	humanObject_3->Set_Name(name_view);
-	obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
+	
 
 	//=====================================================
 #ifdef LOAD_SCENE

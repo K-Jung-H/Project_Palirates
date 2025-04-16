@@ -74,7 +74,12 @@ struct VS_TERRAIN_OUTPUT
 VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
 {
     VS_TERRAIN_OUTPUT output;
+        
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
+
+  //  float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f);
+  //  output.positionW.y += height  * 100.0f;
+    
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
     output.position = mul(positionV, gmtxProjection);
     output.color = input.color;
@@ -100,7 +105,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     //output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     
-    output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0);
+    //output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0);
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);

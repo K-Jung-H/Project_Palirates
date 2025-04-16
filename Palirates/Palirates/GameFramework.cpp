@@ -575,28 +575,28 @@ void CGameFramework::Build_Scenes()
 
 
 	//========================================================
-	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
-	scene_manager->Register_Scene("Scene_1", Scene_1);
-	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
+	//std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
+	//scene_manager->Register_Scene("Scene_1", Scene_1);
+	//scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
 
 
-	//std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
-	//scene_manager->Register_Scene("Scene_2", Scene_2);
-	//scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
+	scene_manager->Register_Scene("Scene_2", Scene_2);
+	scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
 
 
 
-
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
+	//CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
+	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_2").get();
 	
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
-	//Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
+	//CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
+	Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
 	
-	m_pPlayer = pPlayer;
-	//m_pPlayer = observer;
+	//m_pPlayer = pPlayer;
+	m_pPlayer = observer;
 
-	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
-	//scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
+	//scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
+	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
 
 	m_pCamera = m_pPlayer->GetCamera();
 	
