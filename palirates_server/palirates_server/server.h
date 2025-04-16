@@ -27,5 +27,7 @@ public:
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
     void BroadcastPacket(const std::string& packet, int senderId);
+    void SendInitialStates(int clientId);
+    void BroadcastAllStates();
     //bool ValidatePosition(float x, float y, float z);
 };

@@ -17,6 +17,29 @@ Server::Server(int port)
     //dbManager.Connect();
 }
 
+void Server::SendInitialStates(int clientId)
+{
+    Scene* targetScene = sceneManager.getScene(clientId);
+    if (!targetScene) return;
+
+    for (const auto& [otherId, scene] : sceneManager.getAllScenes())
+    {
+        if (otherId == clientId) continue;
+
+        const GameCharacter* otherPlayer = scene.getPlayer(otherId);
+        if (!otherPlayer) continue;
+
+        std::string initPacket = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
+            std::to_string(otherPlayer->x) + "," + std::to_string(otherPlayer->y) + "," +
+            std::to_string(otherPlayer->z) + "," + std::to_string(otherPlayer->state);
+
+        send(clients[clientId], initPacket.c_str(), initPacket.length(), 0);
+
+        //logger.log("초기 동기화: 클라이언트 " + std::to_string(clientId) +
+        //    "에게 " + std::to_string(otherPlayer->id) + " 전송");
+    }
+}
+
 void Server::AcceptClients()
 {
     while (true)
@@ -30,6 +53,9 @@ void Server::AcceptClients()
         sceneManager.addScene(clientId);
 
         logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
+
+        SendInitialStates(clientId);
+
         std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
     }
 }
@@ -77,6 +103,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         else if (bytesReceived == 0)
         {
             logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료");
+            std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId);
+            BroadcastPacket(leavePacket, clientId);
             closesocket(clientSocket);
             clients.erase(clientId);
             break;
@@ -107,6 +135,21 @@ void Server::BroadcastPacket(const std::string& packet, int senderId)
     }
 }
 
+void Server::BroadcastAllStates()
+{
+    for (const auto& [clientId, scene] : sceneManager.getAllScenes())
+    {
+        for (const auto& [playerId, player] : scene.getPlayers())
+        {
+            std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
+                std::to_string(player.x) + "," + std::to_string(player.y) + "," +
+                std::to_string(player.z) + "," + std::to_string(player.state);
+
+            BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
+        }
+    }
+}
+
 Server::~Server()
 {
     for (const auto& [id, socket] : clients)
@@ -130,6 +173,7 @@ int main()
 
     while (true)
     {
+        server.BroadcastAllStates();
 		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
@@ -140,3 +184,4 @@ int main()
 //{
 //    return 0;//(x >= -1000 && x <= 1000) && (y >= -1000 && y <= 1000) && (z >= -1000 && z <= 1000);
 //}
+
