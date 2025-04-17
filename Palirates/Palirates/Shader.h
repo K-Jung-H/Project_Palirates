@@ -286,10 +286,23 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
+struct CB_Plane_Frame_INFO
+{
+	float m_fCurrentTime;
+	float m_fElapsedTime;
+};
 
 class Deferred_Plane_Shader : public Deferred_CStandard_Shader
 {
+private:
+	ID3D12Resource* Frame_Info = NULL;
+	CB_Plane_Frame_INFO* m_pcbMappedFrame_Info = NULL;
+
 public:
+	static float Current_Time;
+	static float Elapsed_Time;
+
+	
 	Deferred_Plane_Shader();
 	virtual ~Deferred_Plane_Shader();
 
@@ -301,6 +314,14 @@ public:
 
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+	static void Update(float ElapsedTime);
+
 };
 
 

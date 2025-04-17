@@ -1409,6 +1409,9 @@ D3D12_SHADER_BYTECODE Deferred_CTerrainShader::CreatePixelShader(ID3DBlob** Pixe
 
 //=======================================================================================
 
+float Deferred_Plane_Shader::Current_Time;
+float Deferred_Plane_Shader::Elapsed_Time;
+
 Deferred_Plane_Shader::Deferred_Plane_Shader()
 {
 }
@@ -1478,6 +1481,40 @@ D3D12_SHADER_BYTECODE Deferred_Plane_Shader::CreatePixelShader(ID3DBlob** PixelS
 		return(CShader::CompileShaderFromFile(L"Plane.hlsl", "PS_Plane", "ps_5_1", PixelShaderBlob));
 
 }
+
+void Deferred_Plane_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(CB_Plane_Frame_INFO) + 255) & ~255); //256의 배수
+	Frame_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	Frame_Info->Map(0, NULL, (void**)&m_pcbMappedFrame_Info);
+
+}
+
+
+void Deferred_Plane_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	m_pcbMappedFrame_Info->m_fCurrentTime = Current_Time;
+	m_pcbMappedFrame_Info->m_fElapsedTime = Elapsed_Time;
+	 
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = Frame_Info->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAME_CBV_INDEX, d3dGpuVirtualAddress);
+}
+
+void Deferred_Plane_Shader::ReleaseShaderVariables()
+{
+	if (Frame_Info)
+	{
+		Frame_Info->Unmap(0, NULL);
+		Frame_Info->Release();
+	}
+}
+
+void Deferred_Plane_Shader::Update(float ElapsedTime)
+{
+	Current_Time += ElapsedTime;
+	Elapsed_Time = ElapsedTime;
+}
+
 
 //=======================================================================================
 

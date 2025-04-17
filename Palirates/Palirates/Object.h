@@ -88,13 +88,16 @@ public:
 
 	void UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* commandList);
 	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+	void BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
 
 	void UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+	void BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* commandList, int rootParamIndex, int textureIndex);
+
 
 	void UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex);
-	
+	void BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
 
 	void ReleaseShaderVariables();
 	void ReleaseUploadBuffers();
@@ -718,6 +721,9 @@ private:
 	static CS_Wave_Shader* cs_wave_shader;
 	CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
 
+	UINT desiredTexelSize = 0;
+	UINT Tex_Length = 0;
+	bool bPingPongToggle = false;
 public:
 	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 	virtual ~Wave_Object();

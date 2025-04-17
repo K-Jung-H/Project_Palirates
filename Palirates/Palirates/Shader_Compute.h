@@ -154,15 +154,13 @@ struct Wave_Frame_Info
 	float ElapsedTime;
 
 	XMFLOAT3 boat_dir;
-	float wave_seed;
+	float total_time;
 };
 
 
 class CS_Wave_Shader : CShader
 {
 private:
-	ID3D12RootSignature* Wave_ComputeRootSignature_ptr;
-
 	int									n_Wave_computePipelineStates = 0;
 	ID3D12PipelineState** Wave_computePipelineStates = NULL;
 
@@ -171,6 +169,9 @@ private:
 	Wave_Frame_Info* m_pcbMappedFrame_Info= NULL;
 
 public:
+	ID3D12RootSignature* Wave_ComputeRootSignature_ptr;
+	static float total_time;
+
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState = 0);
 
 	static ID3D12RootSignature* CreateComputeRootSignature(ID3D12Device* pd3dDevice);
@@ -184,7 +185,7 @@ public:
 
 	void OnPrepareDispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
 	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList);
-
+	void Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups);
 protected:
 	UINT							m_cxThreadGroups = 0;
 	UINT							m_cyThreadGroups = 0;

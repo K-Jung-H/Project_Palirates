@@ -594,6 +594,7 @@ void CGameFramework::Build_Scenes()
 	
 	//m_pPlayer = pPlayer;
 	m_pPlayer = observer;
+	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
 
 	//scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
 	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);

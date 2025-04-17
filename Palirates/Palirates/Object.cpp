@@ -126,6 +126,18 @@ void CTexture::UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCo
 	}
 }
 
+void CTexture::BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dGraphicsSrvGpuDescriptorHandles.size()) 
+		return;
+
+	if (m_pd3dGraphicsSrvGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamIndex, m_pd3dGraphicsSrvGpuDescriptorHandles[textureIndex]);
+}
+
+
 void CTexture::UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_pnComputeSrvRootParameterIndices.size() == m_ppd3dTextures.size())
@@ -152,6 +164,19 @@ void CTexture::UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCom
 	}
 }
 
+void CTexture::BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dComputeSrvGpuDescriptorHandles.size()) 
+		return;
+
+	if (m_pd3dComputeSrvGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetComputeRootDescriptorTable(rootParamIndex, m_pd3dComputeSrvGpuDescriptorHandles[textureIndex]);
+}
+
+
+
 void CTexture::UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_pnComputeUavRootParameterIndices.size() == m_ppd3dTextures.size())
@@ -173,6 +198,15 @@ void CTexture::UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCom
 	}
 }
 
+void CTexture::BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dComputeUavGpuDescriptorHandles.size()) 
+		return;
+	if (m_pd3dComputeUavGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetComputeRootDescriptorTable(rootParamIndex, m_pd3dComputeUavGpuDescriptorHandles[textureIndex]);
+}
 
 int CTexture::GetGraphicsSrvRootParameterIndex(int index) const 
 {
@@ -244,7 +278,6 @@ void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsComman
 
 	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, state, &m_ppd3dTextureUploadBuffers[index]);
 }
-
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue)
 {
 	m_pnResourceTypes[index] = resourceType;
@@ -536,8 +569,6 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	material_info.gEmissive_intensity = m_cEmissive.w;
 	material_info.gSpecular_intensity = m_fSpecular;
 
-//	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
-//	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_info, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
@@ -3160,56 +3191,66 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		cs_wave_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
+	Plane_Material = new CMaterial(2);
+	Plane_Material->SetShader(plane_shader);
+
+
+
 	int side_vertex_n = 100;
 	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
-	Plane_Material = new CMaterial(2);
-	Plane_Material->SetShader(plane_shader);
-
 	// Compute optimal texture resolution based on desired texel size
-	float desiredTexelSize = 5.0f; // 1 texel per 5 units
-	int texWidth = static_cast<int>(ceil(nLength / desiredTexelSize));
-	int texHeight = static_cast<int>(ceil(nLength / desiredTexelSize));
+	constexpr int kMaxTextureSize = 15000;
+
+	desiredTexelSize = 10.0f;
+	int tex_Length = static_cast<int>(ceil(nLength / desiredTexelSize));
+
+	if (tex_Length > kMaxTextureSize)
+	{
+		tex_Length = kMaxTextureSize;
+		desiredTexelSize = static_cast<float>(nLength) / tex_Length; 
+	}
+
+	Tex_Length = tex_Length;
+
+
+
 
 	wave_data_texture = new CTexture(
-		3,                 // 3 textures: HeightMap_Read, HeightMap_Write, NormalMap
+		3,                 // 0: HeightMap_A, 1: HeightMap_B, 2: NormalMap, 
 		RESOURCE_TEXTURE2D,
 		0,                 // No samplers
-		3,                 // Graphics SRV RootParameters (HeightMap, NormalMap separately)
+		3,                 // Graphics RootParameters: HeightMap (pinged), NormalMap
 		3,                 // Compute UAV RootParameter
 		3,                 // Compute SRV RootParameter
 		3,                 // Graphics SRV handles
 		3,                 // Compute UAV handles
-		3                  // Compute SRV handle
+		3                  // Compute SRV handles
 	);
 
 	// HeightMap_Read: index 0 (read-only SRV)
-	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, texWidth, texHeight, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr);
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// HeightMap_Write: index 1 (UAV + SRV)
-	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, texWidth, texHeight, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// NormalMap: index 2 (UAV + SRV)
-	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, texWidth, texHeight, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
+	// HeightMap_A: index 0
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 0, 1); // RootParam[1] - SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 0, 2); // RootParam[2] - UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 0, 5); // Graphics RootParam[0] (t#)
 
-	UINT ROOT_INDEX_READ = 1;
-	UINT ROOT_INDEX_WRITE_HEIGHT = 2;
-	UINT ROOT_INDEX_WRITE_NORMAL = 3;
-	// HeightMap_Read (index 0) → SRV (CS용)
-	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 0, ROOT_INDEX_READ);
+	// HeightMap_B: index 1
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 1, 1); // SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 1, 2); // UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 1, 5); // Graphics RootParam[0]
 
-
-	// HeightMap_Write (index 1) → UAV (CS용)
-	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 1, ROOT_INDEX_READ);
-	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 1, ROOT_INDEX_WRITE_HEIGHT);
-	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 1, 5);
-
-
-	// NormalMap (index 2) → UAV (CS용)
-	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 2, 2);
-	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 2, 6);
+	// NormalMap: index 2
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 2, 3); // UAV(u1)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 2, 6); // Graphics RootParam[1]
 
 }
 
@@ -3220,32 +3261,75 @@ Wave_Object::~Wave_Object()
 
 void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	if (!cs_wave_shader)
-		return;
+	if (!cs_wave_shader) return;
 
+	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
+
+	// Time update
+	CS_Wave_Shader::total_time += fTimeElapsed;
+	if (CS_Wave_Shader::total_time >= XM_2PI)
+		CS_Wave_Shader::total_time -= XM_2PI;
+
+	XMFLOAT3 worldBoatPos = { 0.0f, 0.0f, 0.0f };
+
+	Wave_Frame_Info info{};
+	info.boat_pos = XMFLOAT3(worldBoatPos.x / desiredTexelSize, worldBoatPos.z / desiredTexelSize, 0.0f);	
+	info.boat_dir = XMFLOAT3(1.0f, 0.0f, 0.0f);
+	info.total_time = CS_Wave_Shader::total_time;
+	info.ElapsedTime = fTimeElapsed;
+	cs_wave_shader->UpdateShaderVariables(pd3dCommandList, &info);
+
+	const int readIndex = bPingPongToggle ? 1 : 0;
+	const int writeIndex = bPingPongToggle ? 0 : 1;
+	const UINT threadSize = 8;
+	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
+
+	// ======== [Pass 0] Global Wave ========
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	Wave_Frame_Info wave_info{};
-	wave_info.ElapsedTime = fTimeElapsed;
+	// ======= UAV Barrier =========
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
+	}
 
-	cs_wave_shader->UpdateShaderVariables(pd3dCommandList, &wave_info);
-	
-	
-	wave_data_texture->UpdateComputeSrvShaderVariables(pd3dCommandList);
-	wave_data_texture->UpdateComputeUavShaderVariables(pd3dCommandList);
-
-	cs_wave_shader->Dispatch(pd3dCommandList);
-
+	// ======== [Pass 1] Boat Wake ========
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
-	cs_wave_shader->Dispatch(pd3dCommandList);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);    // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);     // UAV
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
+	// ======= UAV Barrier =========
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = wave_data_texture->GetResource(readIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
+	}
+
+	// ======== [Pass 2] Normal Map ========
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
-	cs_wave_shader->Dispatch(pd3dCommandList);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);     // UAV
 
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // NormalMap
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// Ping-Pong toggle
+	bPingPongToggle = !bPingPongToggle;
 }
 
 void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
+
+	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+
 	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
@@ -3256,6 +3340,7 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 			Plane_Material->UpdateShaderVariable(pd3dCommandList);
 
 			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
 			m_pMesh->Render(pd3dCommandList, 0);
 		}
 	}
@@ -3270,6 +3355,7 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
 
 }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)

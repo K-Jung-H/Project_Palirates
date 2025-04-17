@@ -538,7 +538,7 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 }
 
 //=====================================================================
-
+float CS_Wave_Shader::total_time = 0.0f;
 D3D12_SHADER_BYTECODE CS_Wave_Shader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
@@ -693,7 +693,7 @@ void CS_Wave_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dComman
 	::memcpy(&m_pcbMappedFrame_Info->boat_dir, &wave_info->boat_dir, sizeof(XMFLOAT3));
 	::memcpy(&m_pcbMappedFrame_Info->boat_pos, &wave_info->boat_pos, sizeof(XMFLOAT3));
 	::memcpy(&m_pcbMappedFrame_Info->ElapsedTime, &wave_info->ElapsedTime, sizeof(float));
-	::memcpy(&m_pcbMappedFrame_Info->wave_seed, &wave_info->wave_seed, sizeof(float));
+	::memcpy(&m_pcbMappedFrame_Info->total_time, &wave_info->total_time, sizeof(float));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = Frame_Info->GetGPUVirtualAddress();
 	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);
@@ -717,4 +717,9 @@ void CS_Wave_Shader::OnPrepareDispatch(ID3D12GraphicsCommandList* pd3dCommandLis
 void CS_Wave_Shader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	pd3dCommandList->Dispatch(m_cxThreadGroups, m_cyThreadGroups, m_czThreadGroups);
+}
+
+void CS_Wave_Shader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups)
+{
+	pd3dCommandList->Dispatch(cxThreadGroups, cyThreadGroups, czThreadGroups);
 }

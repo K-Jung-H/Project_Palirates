@@ -77,8 +77,8 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
         
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
-  //  float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f);
-  //  output.positionW.y += height  * 100.0f;
+    float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f);
+    output.positionW.y += height * 50.0f;
     
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
     output.position = mul(positionV, gmtxProjection);
@@ -98,18 +98,26 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 0.0f);
-    
+
+    float2 animatedUV1 = input.uv1 + float2(0.0, gfCurrentTime * 0.1f); // x√‡ »Â∏ß
+
     float4 cBaseTexColor = Plane_BaseTexture.Sample(gssWrap, input.uv0);
-    float4 cDetailTexColor = Plane_DetailTexture.Sample(gssWrap, input.uv1);
+    float4 cDetailTexColor = Plane_DetailTexture.Sample(gssWrap, animatedUV1);
+
     
-    //output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     
-    //output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0);
-    
+    output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
+//    output.Albedo_Color = Plane_Normal_Map.Sample(gssWrap, input.uv0); // For Debug
+
     output.world_Position = float4(input.positionW, 1.0f);
-    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
-    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
+    
+    
+    float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0);
+    
+    //output.world_Normal_and_Camera_Distance.xyz = plane_normal;
+    //output.world_Normal_and_Camera_Distance.w = distance(input.positionW, 0.0f);
 
     output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
     

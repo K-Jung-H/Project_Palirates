@@ -1041,6 +1041,7 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
+
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1145,6 +1146,7 @@ void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
+	m_pLights[2].m_bEnable = true;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
@@ -1154,9 +1156,9 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 
 
-	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 #ifdef RENDER_PARTICLE
@@ -1176,20 +1178,20 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	std::string_view name_view = obj_name_1;
 
-	std::shared_ptr<Plane_Object> plane_obj = std::make_shared<Plane_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 10000);
-	plane_obj->Set_Name(name_view);
-	plane_obj->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//std::shared_ptr<Plane_Object> plane_obj = std::make_shared<Plane_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 10000);
+	//plane_obj->Set_Name(name_view);
+	//plane_obj->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
-	plane_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds");
-	plane_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Detail.dds");
-	obj_manager->Add_Object(plane_obj, Object_Type::plane);
+	//plane_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds");
+	//plane_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Detail.dds");
+	//obj_manager->Add_Object(plane_obj, Object_Type::plane);
 
 
 	string obj_name_2 = "wave_1";
 
 	name_view = obj_name_2;
 
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 1000);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 10000);
 	wave_obj->Set_Name(name_view);
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
@@ -1208,7 +1210,8 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	obj_manager->wave_obj->Animate(pd3dCommandList, fTimeElapsed * 100);
+	Deferred_Plane_Shader::Update(fTimeElapsed);
+	obj_manager->wave_obj->Animate(pd3dCommandList, fTimeElapsed);
 	
 	
 	if (m_pLights)
