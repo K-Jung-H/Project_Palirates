@@ -575,29 +575,31 @@ void CGameFramework::Build_Scenes()
 
 
 	//========================================================
-	//std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
-	//scene_manager->Register_Scene("Scene_1", Scene_1);
-	//scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
+	scene_manager->Register_Scene("Scene_1", Scene_1);
+	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
 
 
-	std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
-	scene_manager->Register_Scene("Scene_2", Scene_2);
-	scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<Board_Scene> Game_Board_Scene = std::make_shared<Board_Scene>();
+	scene_manager->Register_Scene("Game_Board", Game_Board_Scene);
+	scene_manager->Build_Scene("Game_Board", m_pd3dDevice, Active_CommandList);
 
 
 
 	//CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_2").get();
+	CScene* test_scene_ptr = scene_manager->Load_Scene("Game_Board").get();
 	
 	//CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
-	Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
-	
 	//m_pPlayer = pPlayer;
+	//scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
+
+
+	Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
 	m_pPlayer = observer;
+	scene_manager->Set_Scene_Player("Game_Board", m_pPlayer);
+	
 	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
 
-	//scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
-	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
 
 	m_pCamera = m_pPlayer->GetCamera();
 	
@@ -703,12 +705,12 @@ void CGameFramework::ProcessInput()
 	
 }
 
-void CGameFramework::Update_Scene()
+void CGameFramework::Animate_Scene()
 {
 	HRESULT hResult;
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
+	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
 	// test 
 	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
@@ -723,20 +725,29 @@ void CGameFramework::Update_Scene()
 	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 	// test 
 
-	//==============================================================
-#ifdef RENDER_PARTICLE
-	scene_manager->Update_Active_Particles(Active_CommandList, fTimeElapsed);
-#endif
 	//===============================================================
 
-	if (multiMode) {
+	if (multiMode)
+	{
 
 	}
-	else {
+	else
+	{
 		m_pPlayer->Animate(fTimeElapsed);
 		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 	}
 }
+
+void CGameFramework::Update_Scene()
+{
+	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList);
+}
+
+void CGameFramework::After_Update_Scene()
+{
+	scene_manager->After_Update_Active_Objects();
+}
+
 
 void CGameFramework::BeginGPUStage(GPU_Stage stage)
 {
@@ -891,7 +902,7 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-		Update_Scene();
+		Animate_Scene();
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
 	// ====================== [2] Compute: After Update ======================
@@ -899,7 +910,7 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-		scene_manager->Copy_Particles_Update_Result(Active_CommandList);
+		Update_Scene();
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
 
@@ -913,7 +924,7 @@ void CGameFramework::FrameAdvance()
 
 	// ====================== [3] UI (CPU-only) ======================
 
-	scene_manager->After_Update_Active_Particles();
+	After_Update_Scene();
 
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();

@@ -104,11 +104,10 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     float4 cBaseTexColor = Plane_BaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = Plane_DetailTexture.Sample(gssWrap, animatedUV1);
 
-    
     output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-    output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+//       output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     
-    output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
+//    output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
 //    output.Albedo_Color = Plane_Normal_Map.Sample(gssWrap, input.uv0); // For Debug
 
     output.world_Position = float4(input.positionW, 1.0f);
@@ -116,8 +115,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     
     float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0);
     
-    //output.world_Normal_and_Camera_Distance.xyz = plane_normal;
-    //output.world_Normal_and_Camera_Distance.w = distance(input.positionW, 0.0f);
+    output.world_Normal_and_Camera_Distance.xyz = plane_normal;
+    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, 0.0f);
 
     output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
     

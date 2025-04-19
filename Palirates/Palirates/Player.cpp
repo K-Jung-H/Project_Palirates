@@ -266,7 +266,8 @@ void CPlayer::OnPrepareAnimate()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
+	if (nCameraMode == THIRD_PERSON_CAMERA) 
+		CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 
@@ -564,7 +565,7 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 
 }
 
-void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
+void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
 {
 	m_xmf3Up = Vector3::Normalize(normal);
 
@@ -610,13 +611,11 @@ Observer::Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dComm
 	Object_type = OBJECT_TPYE_MAIN_PLAYER;
 	n_Animation = 0;
 
-	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
+	m_pCamera = ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	SetPlayerUpdatedContext(pContext);
 	SetCameraUpdatedContext(pContext);
-
-
 
 	SetPosition(XMFLOAT3(0.0f, 50.0f, 0.0f));
 

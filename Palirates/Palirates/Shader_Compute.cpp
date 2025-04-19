@@ -553,7 +553,7 @@ ID3D12RootSignature* CS_Wave_Shader::CreateComputeRootSignature(ID3D12Device* pd
 {
 	ID3D12RootSignature* pd3dComputeRootSignature = NULL;
 
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[3];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[4];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; // Read - HeightMap
 		pd3dDescriptorRanges[0].NumDescriptors = 1;
@@ -572,9 +572,15 @@ ID3D12RootSignature* CS_Wave_Shader::CreateComputeRootSignature(ID3D12Device* pd
 		pd3dDescriptorRanges[2].BaseShaderRegister = 1; //u1: RWTexture2D
 		pd3dDescriptorRanges[2].RegisterSpace = 0;
 		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = 0;
+
+		pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV; // NormalMap
+		pd3dDescriptorRanges[3].NumDescriptors = 1;
+		pd3dDescriptorRanges[3].BaseShaderRegister = 2; //u1: RW Buffer for Normal
+		pd3dDescriptorRanges[3].RegisterSpace = 0;
+		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = 0;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
 	{
 		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		pd3dRootParameters[0].Descriptor.ShaderRegister = 0; //Frame_Info
@@ -595,6 +601,11 @@ ID3D12RootSignature* CS_Wave_Shader::CreateComputeRootSignature(ID3D12Device* pd
 		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2]; //RWTexture2D
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[3]; //RW Buffer
+		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
@@ -643,6 +654,7 @@ ID3D12RootSignature* CS_Wave_Shader::CreateComputeRootSignature(ID3D12Device* pd
 
 	return(pd3dComputeRootSignature);
 }
+
 void CS_Wave_Shader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dComputeRootSignature, int nPipelineState)
 {
 	ID3DBlob* pd3dComputeShaderBlob = NULL;

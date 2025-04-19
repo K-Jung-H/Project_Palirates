@@ -53,8 +53,8 @@ public:
     CScene();
     ~CScene();
 
-	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
-	bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -74,9 +74,10 @@ public:
 	ID3D12RootSignature *Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
-	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	
-	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);	
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void After_Update_Objects();
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
@@ -138,7 +139,30 @@ class Test_Scene : public CScene
 
 };
 
+class Board_Scene : public CScene
+{
+private:
+	std::shared_ptr<Boat_Object> pirate_ship;
+	std::shared_ptr<Wave_Object> wave_plane;
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void After_Update_Objects();
+
+
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+};
+
 class Weapon_Select_Scene : public CScene
 {
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 };

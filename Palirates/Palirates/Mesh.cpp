@@ -818,8 +818,8 @@ PlaneMesh::PlaneMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCo
 	float halfWidth = width * 0.5f;
 	float step = width / (segments - 1);
 
-	XMFLOAT4 color1 = { 1.0f, 0.0f, 0.0f, 1.0f };
-	XMFLOAT4 color2 = { 1.0f, 1.0f, 0.0f, 1.0f };
+	XMFLOAT4 color1 = { 0.0f, 0.3f, 0.8f, 1.0f };
+	XMFLOAT4 color2 = { 0.0f, 0.3f, 0.8f, 1.0f };
 
 	int i = 0;
 	for (int z = 0; z < segments; ++z)

@@ -1070,6 +1070,10 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 }
 
+void CScene::After_Update_Objects()
+{
+
+}
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
@@ -1146,15 +1150,11 @@ void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[2].m_bEnable = true;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
-
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
-
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
 	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
 	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
@@ -1164,41 +1164,12 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-//	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
 	obj_manager = new Object_Manager();
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-
-
-	string obj_name_1 = "plane_1";
-
-	std::string_view name_view = obj_name_1;
-
-	//std::shared_ptr<Plane_Object> plane_obj = std::make_shared<Plane_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 10000);
-	//plane_obj->Set_Name(name_view);
-	//plane_obj->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
-	//plane_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds");
-	//plane_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Detail.dds");
-	//obj_manager->Add_Object(plane_obj, Object_Type::plane);
-
-
-	string obj_name_2 = "wave_1";
-
-	name_view = obj_name_2;
-
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 10000);
-	wave_obj->Set_Name(name_view);
-	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
-
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Base_Texture_0.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
-	obj_manager->Add_Object(wave_obj, Object_Type::plane);
-	obj_manager->wave_obj = wave_obj.get();
 	//=====================================================
 
 	Object_Manager::Reserve_Update();
@@ -1210,10 +1181,6 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 {
 	m_fElapsedTime = fTimeElapsed;
 
-	Deferred_Plane_Shader::Update(fTimeElapsed);
-	obj_manager->wave_obj->Animate(pd3dCommandList, fTimeElapsed);
-	
-	
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -1226,72 +1193,180 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+}
+
+//==========================================================================================
+
+void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	BuildDefaultLightsAndMaterials();
+	m_pLights[2].m_bEnable = true;
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+
+	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
+	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
+	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+
+	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+
+#ifdef RENDER_PARTICLE
+	particle_manager = new Particle_Manager();
+	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	//	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
+	obj_manager = new Object_Manager();
+
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
+
+	string obj_name_1 = "wave_1";
+
+	std::string_view name_view = obj_name_1;
+	name_view = obj_name_1;
+
+	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 2000);
+	wave_plane->Set_Name(name_view);
+	wave_plane->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
+
+	wave_plane->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
+	wave_plane->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
+	obj_manager->Add_Object(wave_plane, Object_Type::plane);
+	obj_manager->wave_obj = wave_plane.get();
+	//=====================================================
+
+	CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/SM_Veh_Boat_Warship_01_Hull_Attachments.bin", NULL);
+
+	pirate_ship = std::make_shared<Boat_Object>();
+	pirate_ship->Set_Child(Ship_Model->m_pModelRootObject);
+//	pirate_ship = .get(;
+
+	pirate_ship->Set_Name("player's pirate_ship");
+	pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+//	pirate_ship->SetLookDirection(1.0f, 1.0f, 1.0f);
+
+	pirate_ship->SetScale({ 5.0f,5.0f ,5.0f }, true);
+	obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
+
+
+	//=====================================================
+
+	Object_Manager::Reserve_Update();
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	if (Ship_Model)
+		delete Ship_Model;
+}
+
+void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	m_fElapsedTime = fTimeElapsed;
+	Deferred_Plane_Shader::Update(fTimeElapsed);
+
+
+	wave_plane->Synchronize_Wave_to_Boat(pirate_ship.get());
+	wave_plane->Animate(pd3dCommandList, fTimeElapsed);
+
+	pirate_ship->Animate(fTimeElapsed);
+
+	if (m_pLights)
+	{
+		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
+		m_pLights[1].m_xmf3Position.y += 10.0f;
+		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+	}
+
+}
+
+void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	wave_plane->Copy_Buffer_Data(pd3dCommandList);
+
+	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
+}
+
+void Board_Scene::After_Update_Objects()
+{
+	wave_plane->Readback_Buffer_Data();
+
+	CScene::After_Update_Objects();
+}
+
+
+void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
 	obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
 }
 
+bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	return(false);
+}
+
+bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case 'Q':
+		{
+			if (test_button)
+				break;
+
+			test_button = true;
+		}	break;
+
+		case 'I':		case 'i':
+		{
+//			pirate_ship->Move(500.0f, true);
+			pirate_ship->MoveForward(20);
+		}
+		break;
+
+		case 'J':		case 'j':
+		{
+			pirate_ship->Yaw(-3.0f);
+			//pirate_ship->RotateInWorldAroundUp(30.0f);
+		}
+		break;
+
+		case 'K':		case 'k':
+		{
+		}
+		break;
+
+		case 'L':		case 'l':
+		{
+			pirate_ship->Yaw(3.0f);
+//			pirate_ship->RotateInWorldAroundUp(-3.0f);
+		}
+		break;
+
+
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	return(false);
+}
+
+
+//==========================================================================================
 
 void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-
-	//	CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, 76); 
-
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-
-	BuildDefaultLightsAndMaterials();
-
-	obj_manager = new Object_Manager();
-
-#ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-#endif
-
-	//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-
-
-	XMFLOAT3 xmf3Scale(20.0f, 10.0f, 20.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-
-	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
-	//	m_pTerrain = new CHeightMapTerrain(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 2);
-	m_pTerrain->SetPosition(XMFLOAT3(0.0f, -100.0f * xmf3Scale.y, 0.0f));
-
-
-	CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Human.bin", NULL);
-
-	string obj_name_1 = "test_obj_name_1";
-	string obj_name_2 = "test_obj_name_2";
-	string obj_name_3 = "test_obj_name_3";
-
-
-
-	//====================================================
-
-	
-
-	//=====================================================
-#ifdef LOAD_SCENE
-	// Load Scene
-
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
-	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
-	obj_manager->Add_Object(test_scene, Object_Type::fixed);
-#endif
-	//=====================================================
-
-	Object_Manager::Reserve_Update();
-
-
-
-	if (pHumanModel)
-		delete pHumanModel;
-
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
 

@@ -61,6 +61,8 @@ public:
 	void Release() { if (--m_nReferences <= 0) delete this; }
 
 	ID3D12Resource* GetResource(int index) const { return m_ppd3dTextures[index]; }
+	void SetResource(ID3D12Resource* resource, int index) { m_ppd3dTextures[index] = resource; }
+
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int index) const { return m_GraphicsRootParameter_Srv_GpuDescriptorHandles[index]; }
 	UINT GetTextureType() const { return m_nTextureType; }
 	UINT GetTextureType(int index) const { return m_pnResourceTypes[index]; }
@@ -573,7 +575,16 @@ public:
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
 
+	void RotateInWorldAroundUp(float fAngle);
+	void RotateInWorld(XMFLOAT3* pxmf3WorldAxis, float fAngle);
+
+	void SetLookDirection(float x, float y, float z);
 	virtual void SetLookDirection(const XMFLOAT3& look);
+
+	void Set_LookDirection_LookAt(float x, float y, float z);
+	void Set_LookDirection_LookAt(const XMFLOAT3& lookDir);
+
+	virtual void AlignWithNormal(XMFLOAT3& newNormal);
 
 	CGameObject *GetParent() { return(m_pParent); }
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent=NULL);
@@ -694,6 +705,34 @@ public:
 	void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
 };
 
+class Boat_Object : public CGameObject
+{
+private:
+	XMFLOAT3 wave_normal_vector{};
+	float wave_height = 0.0f;
+
+	XMFLOAT3 boat_up_vector{};
+	XMFLOAT3 m_xmf3Position{};
+
+	XMFLOAT3 m_xmf3Velocity{};
+	float           			m_fMaxVelocityXZ = 0.0f;
+	float           			m_fFriction = 0.0f;
+
+public:
+	Boat_Object();
+	virtual ~Boat_Object();
+
+	virtual void Move(float fSpeed, bool bUpdateVelocity);
+	virtual void MoveForward(float speed);
+	void Yaw(float angle);
+
+	void UpdateRotationFromWave();
+	void UpdateMovementOnWave(float fTimeElapsed);
+	virtual void Animate(float fTimeElapsed);
+	void Set_Wave_Normal(XMFLOAT3& normal) { wave_normal_vector = normal; }
+	void Set_Wave_Height(float height) { wave_height = height; }
+};
+
 class Plane_Object : public CGameObject
 {
 private:
@@ -720,17 +759,30 @@ class Wave_Object : public Plane_Object
 private:
 	static CS_Wave_Shader* cs_wave_shader;
 	CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+	ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
 
 	UINT desiredTexelSize = 0;
 	UINT Tex_Length = 0;
 	bool bPingPongToggle = false;
+
+
+	XMFLOAT3 World_Boat_Pos = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 World_Boat_Dir = { 0.0f,1.0f, 0.0f };
+	XMFLOAT3 BoatPos_WaveNormal = { 0.0f, 0.0f, 0.0f };
+	float BoatPos_WaveHeight = 0.0f;
 public:
 	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
 	virtual ~Wave_Object();
 
+	void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
+	XMFLOAT3 Readback_Buffer_Data();
+
 	void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
 };
+
 
 
 class CSkyBox : public CGameObject

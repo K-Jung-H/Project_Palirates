@@ -79,7 +79,9 @@ public:
 
     void ProcessInput();
 
+	void Animate_Scene();
 	void Update_Scene();
+	void After_Update_Scene();
 
     void FrameAdvance();
 

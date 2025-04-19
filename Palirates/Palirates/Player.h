@@ -204,7 +204,7 @@ public:
 	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
 
-	void AlignWithNormal(XMFLOAT3 normal);
+	virtual void AlignWithNormal(XMFLOAT3& normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
 	virtual ServerAnimationSyncData MakeSyncData();

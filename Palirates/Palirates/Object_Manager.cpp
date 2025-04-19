@@ -815,6 +815,8 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 		if (!trail_obj_list.size())
 			break;
 
+		if (!trail_shader)
+			break;
 		trail_shader->Setting_Render(pd3dCommandList, 0);
 		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
 		{

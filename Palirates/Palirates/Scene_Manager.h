@@ -35,13 +35,13 @@ public:
     void Set_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
 
     void Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-    void Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
 
-    void Update_Active_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
-    void Copy_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
+    void Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float deltaTime);
+    void Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    void After_Update_Active_Objects();
+
     void Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
 
-    void After_Update_Active_Particles();
 
 
     void Update_UI();
