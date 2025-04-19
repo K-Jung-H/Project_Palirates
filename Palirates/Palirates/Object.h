@@ -20,6 +20,8 @@ class CTerrainShader;
 class CStandardShader;
 
 class Deferred_CTerrainShader;
+class Deferred_Plane_Shader;
+class CS_Wave_Shader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -59,6 +61,8 @@ public:
 	void Release() { if (--m_nReferences <= 0) delete this; }
 
 	ID3D12Resource* GetResource(int index) const { return m_ppd3dTextures[index]; }
+	void SetResource(ID3D12Resource* resource, int index) { m_ppd3dTextures[index] = resource; }
+
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int index) const { return m_GraphicsRootParameter_Srv_GpuDescriptorHandles[index]; }
 	UINT GetTextureType() const { return m_nTextureType; }
 	UINT GetTextureType(int index) const { return m_pnResourceTypes[index]; }
@@ -86,13 +90,16 @@ public:
 
 	void UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* commandList);
 	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+	void BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
 
 	void UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+	void BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* commandList, int rootParamIndex, int textureIndex);
+
 
 	void UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex);
-	
+	void BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
 
 	void ReleaseShaderVariables();
 	void ReleaseUploadBuffers();
@@ -568,7 +575,16 @@ public:
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
 
+	void RotateInWorldAroundUp(float fAngle);
+	void RotateInWorld(XMFLOAT3* pxmf3WorldAxis, float fAngle);
+
+	void SetLookDirection(float x, float y, float z);
 	virtual void SetLookDirection(const XMFLOAT3& look);
+
+	void Set_LookDirection_LookAt(float x, float y, float z);
+	void Set_LookDirection_LookAt(const XMFLOAT3& lookDir);
+
+	virtual void AlignWithNormal(XMFLOAT3& newNormal);
 
 	CGameObject *GetParent() { return(m_pParent); }
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent=NULL);
@@ -689,6 +705,85 @@ public:
 	void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
 };
 
+class Boat_Object : public CGameObject
+{
+private:
+	XMFLOAT3 wave_normal_vector{};
+	float wave_height = 0.0f;
+
+	XMFLOAT3 boat_up_vector{};
+	XMFLOAT3 m_xmf3Position{};
+
+	XMFLOAT3 m_xmf3Velocity{};
+	float           			m_fMaxVelocityXZ = 0.0f;
+	float           			m_fFriction = 0.0f;
+
+public:
+	Boat_Object();
+	virtual ~Boat_Object();
+
+	virtual void Move(float fSpeed, bool bUpdateVelocity);
+	virtual void MoveForward(float speed);
+	void Yaw(float angle);
+
+	void UpdateRotationFromWave();
+	void UpdateMovementOnWave(float fTimeElapsed);
+	virtual void Animate(float fTimeElapsed);
+	void Set_Wave_Normal(XMFLOAT3& normal) { wave_normal_vector = normal; }
+	void Set_Wave_Height(float height) { wave_height = height; }
+};
+
+class Plane_Object : public CGameObject
+{
+private:
+	CTexture* Plane_BaseTexture;
+	CTexture* Plane_DetailTexture;
+
+public:
+	static Deferred_Plane_Shader* plane_shader;
+	CMaterial* Plane_Material;
+
+	Plane_Object() {}
+	Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual ~Plane_Object();
+	
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+	void Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+
+};
+
+class Wave_Object : public Plane_Object
+{
+private:
+	static CS_Wave_Shader* cs_wave_shader;
+	CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+	ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
+
+	UINT desiredTexelSize = 0;
+	UINT Tex_Length = 0;
+	bool bPingPongToggle = false;
+
+
+	XMFLOAT3 World_Boat_Pos = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 World_Boat_Dir = { 0.0f,1.0f, 0.0f };
+	XMFLOAT3 BoatPos_WaveNormal = { 0.0f, 0.0f, 0.0f };
+	float BoatPos_WaveHeight = 0.0f;
+public:
+	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual ~Wave_Object();
+
+	void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
+	XMFLOAT3 Readback_Buffer_Data();
+
+	void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
+};
+
+
 
 class CSkyBox : public CGameObject
 {
@@ -699,32 +794,49 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 };
 
+class Trail_Object : public CGameObject
+{
+private:
+	Trail_Mesh* trail_mesh = NULL;
+	float m_fAccumulatedTime = 0.0f;
+
+	CGameObject* m_pTargetObject = nullptr;
+	bool m_bUseTargetScale = true;
+
+	XMFLOAT3 m_vLocalTop = {};
+	XMFLOAT3 m_vLocalBottom = {};
+
+	// Minimum segment creation interval N/s
+	float m_fSegmentInterval = 0.001f;
+	float m_fSegmentTimer = 0.0f;
+
+public:
+	Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual ~Trail_Object();
+
+	void Set_Trail_Target(CGameObject* target, bool bUseScale = true)
+	{
+		m_pTargetObject = target;
+		m_bUseTargetScale = bUseScale;
+	}
+
+	void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom)
+	{
+		m_vLocalTop = top;
+		m_vLocalBottom = bottom;
+	}
+
+	virtual void Animate(float fTimeElapsed);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+};
+
+
 //==================================================================================
 
-class CAngrybotAnimationController : public CAnimationController
-{
-public:
-	CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
-	~CAngrybotAnimationController();
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject);
-};
-
-class CAngrybotObject : public CGameObject
-{
-public:
-	CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks);
-	virtual ~CAngrybotObject();
-};
 
 //==================================================================================
 
-class CHumanObject : public CGameObject
-{
-public:
-	CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
-	virtual ~CHumanObject();
-};
+
 
 class CMonsterObject : public CGameObject
 {

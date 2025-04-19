@@ -126,6 +126,18 @@ void CTexture::UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCo
 	}
 }
 
+void CTexture::BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dGraphicsSrvGpuDescriptorHandles.size()) 
+		return;
+
+	if (m_pd3dGraphicsSrvGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamIndex, m_pd3dGraphicsSrvGpuDescriptorHandles[textureIndex]);
+}
+
+
 void CTexture::UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_pnComputeSrvRootParameterIndices.size() == m_ppd3dTextures.size())
@@ -152,6 +164,19 @@ void CTexture::UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCom
 	}
 }
 
+void CTexture::BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dComputeSrvGpuDescriptorHandles.size()) 
+		return;
+
+	if (m_pd3dComputeSrvGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetComputeRootDescriptorTable(rootParamIndex, m_pd3dComputeSrvGpuDescriptorHandles[textureIndex]);
+}
+
+
+
 void CTexture::UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_pnComputeUavRootParameterIndices.size() == m_ppd3dTextures.size())
@@ -173,6 +198,15 @@ void CTexture::UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCom
 	}
 }
 
+void CTexture::BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dComputeUavGpuDescriptorHandles.size()) 
+		return;
+	if (m_pd3dComputeUavGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetComputeRootDescriptorTable(rootParamIndex, m_pd3dComputeUavGpuDescriptorHandles[textureIndex]);
+}
 
 int CTexture::GetGraphicsSrvRootParameterIndex(int index) const 
 {
@@ -244,7 +278,6 @@ void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsComman
 
 	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, state, &m_ppd3dTextureUploadBuffers[index]);
 }
-
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue)
 {
 	m_pnResourceTypes[index] = resourceType;
@@ -517,6 +550,10 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
 		Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	//}
 }
 
@@ -532,8 +569,6 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	material_info.gEmissive_intensity = m_cEmissive.w;
 	material_info.gSpecular_intensity = m_fSpecular;
 
-//	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
-//	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_info, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
@@ -1583,11 +1618,8 @@ void CGameObject::SetShader(CShader *pShader)
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-
-
 	if (Material_list.size() > nMaterial)
 		Material_list[nMaterial]->SetShader(pShader);
-
 }
 
 void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
@@ -1652,8 +1684,6 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
 }
 
-
-
 void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
@@ -1675,7 +1705,6 @@ void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
 	previous_position.y = pos.y;
 	previous_position.z = pos.z;
 }
-
 
 void CGameObject::Record_Last_Pos() 
 {
@@ -2046,6 +2075,35 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 	UpdateTransform(NULL);
 }
 
+void CGameObject::RotateInWorldAroundUp(float fAngle)
+{
+	RotateInWorld(&GetUp(), fAngle); 
+}
+
+void CGameObject::RotateInWorld(XMFLOAT3* pxmf3WorldAxis, float fAngle)
+{
+	XMVECTOR vAxis = XMVector3Normalize(XMLoadFloat3(pxmf3WorldAxis));
+	XMMATRIX mtxRotate = XMMatrixRotationAxis(vAxis, XMConvertToRadians(fAngle));
+
+	XMMATRIX mWorld = XMLoadFloat4x4(&m_xmf4x4World);
+	mWorld = XMMatrixMultiply(mWorld, mtxRotate); // 월드 공간에서 회전 적용
+
+	// 부모가 있으면 역변환
+	XMMATRIX mParentInv = XMMatrixIdentity();
+	if (m_pParent)
+	{
+		mParentInv = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
+	}
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, XMMatrixMultiply(mWorld, mParentInv));
+	UpdateTransform(nullptr);
+}
+
+void CGameObject::SetLookDirection(float x, float y, float z)
+{
+	SetLookDirection(XMFLOAT3(x, y, z));
+}
+
 void CGameObject::SetLookDirection(const XMFLOAT3& look)
 {
 	XMVECTOR vLook = XMVector3Normalize(XMLoadFloat3(&look));
@@ -2071,6 +2129,74 @@ void CGameObject::SetLookDirection(const XMFLOAT3& look)
 
 	m_xmf4x4Parent = xmf4x4New;
 	UpdateTransform(NULL);
+}
+
+void CGameObject::Set_LookDirection_LookAt(float x, float y, float z)
+{
+	Set_LookDirection_LookAt(XMFLOAT3(x, y, z));
+}
+
+void CGameObject::Set_LookDirection_LookAt(const XMFLOAT3& lookDir)
+{
+	XMVECTOR vPosition = XMLoadFloat3(&GetPosition());
+	XMVECTOR vLook = XMVector3Normalize(XMLoadFloat3(&lookDir));
+	XMVECTOR vUp = XMVectorSet(0, 1, 0, 0);
+
+	// LH 기준, 현재 위치에서 lookDir 방향으로 바라보는 view matrix
+	XMMATRIX mLook = XMMatrixLookToLH(vPosition, vLook, vUp);
+
+	// view matrix의 역행렬 = world matrix
+	XMMATRIX mWorld = XMMatrixInverse(nullptr, mLook);
+
+	// 기존 스케일 유지
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
+	XMMATRIX mScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+
+	XMMATRIX mFinal = mScale * mWorld;
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, mFinal);
+	UpdateTransform(NULL);
+}
+
+void CGameObject::AlignWithNormal(XMFLOAT3& newNormal)
+{
+	// 새로운 Up 벡터
+	XMFLOAT3 newUp = Vector3::Normalize(newNormal);
+
+	// 기존 Look 유지
+	XMFLOAT3 look = GetLook();
+
+	// look과 up이 완전히 평행하면 → cross product가 0되므로 체크
+	if (abs(Vector3::DotProduct(look, newUp)) > 0.99f)
+	{
+		// fallback: Right 유지, Look 재계산
+		XMFLOAT3 right = GetRight();
+		look = Vector3::CrossProduct(newUp, right, true);
+	}
+
+	// Right 재계산
+	XMFLOAT3 right = Vector3::CrossProduct(newUp, look, true);
+	look = Vector3::CrossProduct(right, newUp, true);
+
+	// 스케일 유지
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
+
+	XMMATRIX mWorld;
+	mWorld.r[0] = XMVectorScale(XMLoadFloat3(&right), scale.x);
+	mWorld.r[1] = XMVectorScale(XMLoadFloat3(&newUp), scale.y);
+	mWorld.r[2] = XMVectorScale(XMLoadFloat3(&look), scale.z);
+	mWorld.r[3] = XMVectorSet(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43, 1.0f);
+
+	// 부모가 있다면 로컬 변환으로 역변환
+	XMMATRIX mLocal = mWorld;
+	if (m_pParent)
+	{
+		XMMATRIX parentInv = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
+		mLocal = mWorld * parentInv;
+	}
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, mLocal);
+	UpdateTransform(nullptr);
 }
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
@@ -3063,6 +3189,469 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 }
 
+Deferred_Plane_Shader* Plane_Object::plane_shader = NULL;
+
+
+Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+{
+	if (plane_shader == nullptr)
+	{
+		plane_shader = new Deferred_Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	int side_vertex_n = 10;
+	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	SetMesh(plane_mesh);	
+
+	Plane_Material = new CMaterial(2);
+
+	Plane_Material->SetShader(plane_shader);
+}
+
+Plane_Object::~Plane_Object()
+{
+}
+
+void Plane_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
+
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
+void Plane_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+	Plane_BaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_BaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_BaseTexture, 0, 3);
+
+	Plane_Material->SetTexture(Plane_BaseTexture, 0);
+}
+
+void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+
+	Plane_DetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_DetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_DetailTexture, 0, 4);
+
+	Plane_Material->SetTexture(Plane_DetailTexture, 1);
+
+}
+
+CS_Wave_Shader* Wave_Object::cs_wave_shader = NULL;
+
+Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+	: Plane_Object()
+{
+	if (plane_shader == nullptr)
+	{
+		plane_shader = new Deferred_Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	if (cs_wave_shader == nullptr)
+	{
+		cs_wave_shader = new CS_Wave_Shader();
+		cs_wave_shader->CreateShader(pd3dDevice);
+		cs_wave_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	Plane_Material = new CMaterial(2);
+	Plane_Material->SetShader(plane_shader);
+
+
+
+	int side_vertex_n = 10;
+	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	SetMesh(plane_mesh);
+
+	// Compute optimal texture resolution based on desired texel size
+	constexpr int kMaxTextureSize = 15000;
+
+	desiredTexelSize = 5.0f;
+	int tex_Length = static_cast<int>(ceil(nLength / desiredTexelSize));
+
+	if (tex_Length > kMaxTextureSize)
+	{
+		tex_Length = kMaxTextureSize;
+		desiredTexelSize = static_cast<float>(nLength) / tex_Length; 
+	}
+
+	Tex_Length = tex_Length;
+
+
+
+
+	wave_data_texture = new CTexture(
+		4,                 // 0: HeightMap_A, 1: HeightMap_B, 2: NormalMap, 
+		RESOURCE_TEXTURE2D,
+		0,                 // No samplers
+		4,                 // Graphics RootParameters: HeightMap (pinged), NormalMap
+		4,                 // Compute UAV RootParameter
+		4,                 // Compute SRV RootParameter
+		4,                 // Graphics SRV handles
+		4,                 // Compute UAV handles
+		4                  // Compute SRV handles
+	);
+
+	// HeightMap_Read: index 0 (read-only SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+
+	// HeightMap_Write: index 1 (UAV + SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+
+	// NormalMap: index 2 (UAV + SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	
+	// Pos_Normal: index 3 (UAV)
+	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 4, sizeof(float), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	Pos_Normal_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
+
+
+	// HeightMap_A: index 0
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 0, 1); // RootParam[1] - SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 0, 2); // RootParam[2] - UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 0, 5); // Graphics RootParam[0] (t#)
+
+	// HeightMap_B: index 1
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 1, 1); // SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 1, 2); // UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 1, 5); // Graphics RootParam[0]
+
+	// NormalMap: index 2
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 2, 3); // UAV(u1)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 2, 6); // Graphics RootParam[1]
+
+	// Pos_Normal: index 2
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 3, 4); // UAV(u2)
+
+}
+
+
+Wave_Object::~Wave_Object()
+{
+}
+
+void Wave_Object::Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 상태를 COPY_DEST로 전환
+	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+
+	pd3dCommandList->CopyBufferRegion(Pos_Normal_ReadBack_buffer, 0, wave_data_texture->GetResource(3), 0, sizeof(UINT) * 4);
+
+	// 상태를 GENERIC_READ로 전환
+	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
+}
+
+XMFLOAT3 Wave_Object::Readback_Buffer_Data()
+{
+	if (!Pos_Normal_ReadBack_buffer)
+		return XMFLOAT3{ 0.0f,0.0f,0.0f };
+
+	float* pReadData = nullptr;
+	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; // 4개의 float (16바이트)
+
+	if (SUCCEEDED(Pos_Normal_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&pReadData))) && pReadData)
+	{
+		BoatPos_WaveNormal = XMFLOAT3(pReadData[0], pReadData[1], pReadData[2]);
+		BoatPos_WaveHeight = pReadData[3];
+		DebugOutput("\n x: " + to_string(BoatPos_WaveNormal.x) + ", y: " + to_string(BoatPos_WaveNormal.y) + ", z: " + to_string(BoatPos_WaveNormal.z) + ", H: " + to_string(BoatPos_WaveHeight));
+
+		D3D12_RANGE writtenRange = { 0, 0 };
+		Pos_Normal_ReadBack_buffer->Unmap(0, nullptr);
+		return BoatPos_WaveNormal;
+
+	}
+	else
+	{
+		DebugOutput(" Failed to map debug readback buffer.\n");
+	}
+
+	return XMFLOAT3{ 0.0f,0.0f,0.0f };
+
+}
+
+void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
+{
+	World_Boat_Pos = boat_ptr->GetPosition();
+	World_Boat_Dir = Vector3::ScalarProduct(boat_ptr->GetLook(), -1.0f, false);
+
+	if (!IsZeroVector(BoatPos_WaveNormal))
+	{
+		BoatPos_WaveNormal = Vector3::Normalize(BoatPos_WaveNormal);
+		boat_ptr->Set_Wave_Normal(BoatPos_WaveNormal);
+		boat_ptr->Set_Wave_Height(BoatPos_WaveHeight);
+	}
+}
+
+void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	if (!cs_wave_shader) return;
+
+	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
+
+	// Time update
+	CS_Wave_Shader::total_time += fTimeElapsed;
+	if (CS_Wave_Shader::total_time >= XM_2PI)
+		CS_Wave_Shader::total_time -= XM_2PI;
+
+	XMFLOAT3 Plane_Position = GetPosition();
+
+	float planeHalfSize = 2000.0f * 0.5f;
+
+	XMFLOAT2 topLeft = {
+		Plane_Position.x - planeHalfSize,
+		Plane_Position.z - planeHalfSize
+	};
+
+	XMFLOAT2 localBoat = {
+		World_Boat_Pos.x - topLeft.x,
+		World_Boat_Pos.z - topLeft.y
+	};
+
+	XMFLOAT2 Boat_Texel = {
+		localBoat.x / desiredTexelSize,
+		localBoat.y / desiredTexelSize
+	};
+	
+	XMFLOAT2 DirXZ = {
+	World_Boat_Dir.x,
+	World_Boat_Dir.z
+	};
+
+	XMVECTOR v = XMVector2Normalize(XMLoadFloat2(&DirXZ));
+	XMFLOAT2 NormDirXZ;
+	XMStoreFloat2(&NormDirXZ, v);
+
+	// 결과 저장
+
+	Wave_Frame_Info info{};
+	info.boat_pos = XMFLOAT3(Boat_Texel.x, Boat_Texel.y, 0.0f);
+	info.boat_dir = XMFLOAT3(NormDirXZ.x, NormDirXZ.y, 0.0f);
+	info.total_time = CS_Wave_Shader::total_time;
+	info.ElapsedTime = fTimeElapsed;
+	cs_wave_shader->UpdateShaderVariables(pd3dCommandList, &info);
+
+	const int readIndex = bPingPongToggle ? 1 : 0;
+	const int writeIndex = bPingPongToggle ? 0 : 1;
+	const UINT threadSize = 8;
+	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
+
+	// ======== [Pass 0] Global Wave ========
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// ======= UAV Barrier =========
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
+	}
+
+	// ======== [Pass 1] Boat Wake ========
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);    // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);     // UAV
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// ======= UAV Barrier =========
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = wave_data_texture->GetResource(readIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
+	}
+
+	// ======== [Pass 2] Normal Map ========
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);     // UAV
+
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // NormalMap
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // Pos_Normal_Data
+
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// Ping-Pong toggle
+	bPingPongToggle = !bPingPongToggle;
+}
+
+void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
+
+	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
+
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
+Boat_Object::Boat_Object() : CGameObject(1)
+{
+	m_fMaxVelocityXZ = 500.0f;
+	m_xmf3Velocity.x = 0.0f;
+	m_xmf3Velocity.y = 0.0f;
+	m_xmf3Velocity.z = 0.0f;
+	m_fFriction = 100.0f;
+}
+
+Boat_Object::~Boat_Object()
+{
+
+}
+
+void Boat_Object::Move(float fSpeed, bool bUpdateVelocity)
+{
+	XMFLOAT3 look = Vector3::Normalize(GetLook()); 
+	XMFLOAT3 shift = Vector3::ScalarProduct(look, fSpeed, false);
+
+	if (bUpdateVelocity)
+	{
+		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, shift);
+	}
+	else
+	{
+		XMFLOAT3 position = GetPosition();
+		position = Vector3::Add(position, shift);
+		SetPosition(position);
+	}
+}
+
+void Boat_Object::MoveForward(float speed)
+{
+	XMFLOAT3 look = Vector3::Normalize(GetLook());
+	XMFLOAT3 shift = Vector3::ScalarProduct(look, speed, false);
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, shift);
+}
+
+void Boat_Object::Yaw(float angle)
+{
+
+	XMFLOAT3 up = Vector3::Normalize(GetUp()); 
+	XMMATRIX mRotate = XMMatrixRotationAxis(XMLoadFloat3(&up), XMConvertToRadians(angle));
+
+
+	m_xmf4x4Parent = Matrix4x4::Multiply(mRotate, m_xmf4x4Parent);
+	UpdateTransform(nullptr);
+}
+
+void Boat_Object::UpdateRotationFromWave()
+{
+	const XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
+	float normalFollowWeight = 0.1f;   // 물결 영향도
+	float restoreToUpWeight = 0.3f;   // Y축 회복력
+
+	if (!IsZeroVector(wave_normal_vector))
+	{
+		XMFLOAT3 waveUp = Vector3::Normalize(wave_normal_vector);
+		boat_up_vector = Lerp(boat_up_vector, waveUp, normalFollowWeight);
+	}
+
+	boat_up_vector = Lerp(boat_up_vector, worldUp, restoreToUpWeight);
+	boat_up_vector = Vector3::Normalize(boat_up_vector);
+
+	AlignWithNormal(boat_up_vector);
+}
+
+void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
+{
+	// --- 속도 제한 ---
+	float velocityFull = Vector3::Length(m_xmf3Velocity);
+	if (velocityFull > m_fMaxVelocityXZ)
+	{
+		float scale = m_fMaxVelocityXZ / velocityFull;
+		m_xmf3Velocity.x *= scale;
+		m_xmf3Velocity.z *= scale;
+	}
+
+	// --- Look 벡터 방향으로 이동 처리 ---
+	XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
+	XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, velocityFull, false);
+
+	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
+	XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
+
+	// --- 부드러운 높이 보정 ---
+	static float smoothedHeight = wave_height;
+	smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
+	newPos.y = smoothedHeight * 50.0f;
+
+	SetPosition(newPos);
+
+	// --- 감속 처리 (속도 크기 감소만)
+	float fDeceleration = m_fFriction * fTimeElapsed;
+	if (fDeceleration > velocityFull) fDeceleration = velocityFull;
+
+	velocityFull -= fDeceleration;
+
+	// 감속된 속도를 Look 방향에 재적용
+	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
+	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+}
+void Boat_Object::Animate(float fTimeElapsed)
+{
+	UpdateRotationFromWave();
+	UpdateMovementOnWave(fTimeElapsed);
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
@@ -3105,48 +3694,71 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CAngrybotAnimationController::CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel) : CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pModel)
+Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // N = length,  N * 32
+	m_fAccumulatedTime = 0.0f;
 }
 
-CAngrybotAnimationController::~CAngrybotAnimationController()
-{
-}
-
-void CAngrybotAnimationController::OnRootMotion(CGameObject* pRootGameObject)
+Trail_Object::~Trail_Object()
 {
 
 }
 
-CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks)
+void Trail_Object::Animate(float fTimeElapsed)
 {
-	CLoadedModelInfo *pAngrybotModel = pModel;
-	if (!pAngrybotModel) 
-		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
+	if (!m_pTargetObject) 
+		return;
 
-	Set_Child(pAngrybotModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = std::make_shared <CAngrybotAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
+	m_fAccumulatedTime += fTimeElapsed;
+	m_fSegmentTimer += fTimeElapsed;
+	if (m_fSegmentTimer < m_fSegmentInterval) 
+		return;
+	m_fSegmentTimer = 0.0f;
+
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_pTargetObject->m_xmf4x4World);
+
+	XMFLOAT3 top, bottom;
+
+	if (m_bUseTargetScale)
+	{
+		// apply parent's scale value
+		XMVECTOR worldTop = XMVector3TransformCoord(XMLoadFloat3(&m_vLocalTop), worldMatrix);
+		XMVECTOR worldBottom = XMVector3TransformCoord(XMLoadFloat3(&m_vLocalBottom), worldMatrix);
+		XMStoreFloat3(&top, worldTop);
+		XMStoreFloat3(&bottom, worldBottom);
+	}
+	else
+	{
+		// not apply parent's scale value
+		XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);
+		XMVECTOR up = XMVector3Normalize(worldMatrix.r[1]);
+		XMVECTOR look = XMVector3Normalize(worldMatrix.r[2]);
+		XMVECTOR trans = worldMatrix.r[3];
+
+		XMMATRIX rotationMatrix = XMMATRIX(right, up, look, XMVectorSet(0, 0, 0, 1));
+
+		XMVECTOR localTopVec = XMVectorSet(m_vLocalTop.x, m_vLocalTop.y, m_vLocalTop.z, 0.0f);
+		XMVECTOR localBottomVec = XMVectorSet(m_vLocalBottom.x, m_vLocalBottom.y, m_vLocalBottom.z, 0.0f);
+
+		XMVECTOR worldTop = XMVectorAdd(trans, XMVector3TransformNormal(localTopVec, rotationMatrix));
+		XMVECTOR worldBottom = XMVectorAdd(trans, XMVector3TransformNormal(localBottomVec, rotationMatrix));
+
+		XMStoreFloat3(&top, worldTop);
+		XMStoreFloat3(&bottom, worldBottom);
+	}
+
+	trail_mesh->AddSegment(top, bottom, m_fAccumulatedTime);
+	trail_mesh->UpdateTrail(m_fAccumulatedTime);
+	trail_mesh->UpdateIndexBuffer();
+	trail_mesh->UpdateVertexBuffer();
 }
 
-CAngrybotObject::~CAngrybotObject()
+void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	trail_mesh->Render(pd3dCommandList, 0);
 }
-
-CHumanObject::CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
-{
-	CLoadedModelInfo* pHumanModel = pModel;
-
-	if (!pHumanModel) 
-		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
-
-	Set_Child(pHumanModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
-}
-
-CHumanObject::~CHumanObject()
-{
-}
-
 
 CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
 	: m_StateMachine(std::make_unique<MonsterStateMachine>(this))
@@ -3179,7 +3791,7 @@ void CMonsterObject::Animate(float fTimeElapsed)
 {
 
 	//SetPosition(25.0f, 1064.0f, 25.0f);
-	OnPrepareRender();
+	OnPrepareAnimate();
 
 	if (m_pSkinnedAnimationController)
 	{

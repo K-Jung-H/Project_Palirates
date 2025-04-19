@@ -591,6 +591,129 @@ void CStandard_Instance_Shader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dC
 
 //===============================================================================
 
+Trail_Shader::Trail_Shader()
+{
+}
+
+Trail_Shader ::~Trail_Shader()
+{
+}
+
+void Trail_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+
+}
+
+D3D12_INPUT_LAYOUT_DESC Trail_Shader::CreateInputLayout(int nPipelineState)
+{
+	UINT nInputElementDescs = 4;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,        1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT,          2, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc = {};
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return d3dInputLayoutDesc;
+}
+
+D3D12_SHADER_BYTECODE Trail_Shader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "Trail_VS", "vs_5_1", VertexShaderBlob));
+	else
+	{
+		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
+		return 		d3dShaderByteCode;
+	}
+
+}
+
+D3D12_SHADER_BYTECODE Trail_Shader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "Trail_PS", "ps_5_1", PixelShaderBlob));
+	else
+	{
+		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
+		return 		d3dShaderByteCode;
+	}
+}
+
+D3D12_RASTERIZER_DESC Trail_Shader::CreateRasterizerState(int nPipelineState)
+{
+	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+	d3dRasterizerDesc.DepthBias = 0;
+	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+	d3dRasterizerDesc.SlopeScaledDepthBias = 0.0f;
+	d3dRasterizerDesc.DepthClipEnable = TRUE;
+	d3dRasterizerDesc.MultisampleEnable = FALSE;
+	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+	d3dRasterizerDesc.ForcedSampleCount = 0;
+	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	return(d3dRasterizerDesc);
+}
+
+D3D12_BLEND_DESC Trail_Shader::CreateBlendState(int nPipelineState)
+{
+	D3D12_BLEND_DESC d3dBlendDesc;
+	::ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
+	d3dBlendDesc.AlphaToCoverageEnable = TRUE;
+	d3dBlendDesc.IndependentBlendEnable = FALSE;
+	d3dBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+	d3dBlendDesc.RenderTarget[0].LogicOpEnable = FALSE;
+
+	d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+
+	d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+
+	d3dBlendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+	d3dBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	return(d3dBlendDesc);
+}
+
+D3D12_DEPTH_STENCIL_DESC Trail_Shader::CreateDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
+	d3dDepthStencilDesc.DepthEnable = TRUE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0x00;
+	d3dDepthStencilDesc.StencilWriteMask = 0x00;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
+
+	return(d3dDepthStencilDesc);
+}
+
+//===============================================================================
 PostProcessBaseShader::PostProcessBaseShader()
 {
 }
@@ -1202,7 +1325,6 @@ void Deferred_CStandard_Instance_Shader::OnPrepareRender(ID3D12GraphicsCommandLi
 }
 
 
-
 Deferred_CTerrainShader::Deferred_CTerrainShader()
 {
 }
@@ -1285,7 +1407,116 @@ D3D12_SHADER_BYTECODE Deferred_CTerrainShader::CreatePixelShader(ID3DBlob** Pixe
 	}
 }
 
+//=======================================================================================
 
+float Deferred_Plane_Shader::Current_Time;
+float Deferred_Plane_Shader::Elapsed_Time;
+
+Deferred_Plane_Shader::Deferred_Plane_Shader()
+{
+}
+
+Deferred_Plane_Shader::~Deferred_Plane_Shader()
+{
+
+}
+
+void Deferred_Plane_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
+{
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0);
+
+}
+
+D3D12_INPUT_LAYOUT_DESC Deferred_Plane_Shader::CreateInputLayout(int nPipelineState)
+{
+	UINT nInputElementDescs = 4;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_RASTERIZER_DESC Deferred_Plane_Shader::CreateRasterizerState(int nPipelineState)
+{
+	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
+	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
+
+	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
+	d3dRasterizerDesc.DepthBias = 0;
+	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+	d3dRasterizerDesc.SlopeScaledDepthBias = 0.0f;
+	d3dRasterizerDesc.DepthClipEnable = TRUE;
+	d3dRasterizerDesc.MultisampleEnable = FALSE;
+	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
+	d3dRasterizerDesc.ForcedSampleCount = 0;
+	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+	return(d3dRasterizerDesc);
+}
+
+D3D12_SHADER_BYTECODE Deferred_Plane_Shader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Plane.hlsl", "VS_Plane", "vs_5_1", VertexShaderBlob));
+
+
+}
+
+D3D12_SHADER_BYTECODE Deferred_Plane_Shader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return(CShader::CompileShaderFromFile(L"Plane.hlsl", "PS_Plane", "ps_5_1", PixelShaderBlob));
+
+}
+
+void Deferred_Plane_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(CB_Plane_Frame_INFO) + 255) & ~255); //256의 배수
+	Frame_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	Frame_Info->Map(0, NULL, (void**)&m_pcbMappedFrame_Info);
+
+}
+
+
+void Deferred_Plane_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	m_pcbMappedFrame_Info->m_fCurrentTime = Current_Time;
+	m_pcbMappedFrame_Info->m_fElapsedTime = Elapsed_Time;
+	 
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = Frame_Info->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAME_CBV_INDEX, d3dGpuVirtualAddress);
+}
+
+void Deferred_Plane_Shader::ReleaseShaderVariables()
+{
+	if (Frame_Info)
+	{
+		Frame_Info->Unmap(0, NULL);
+		Frame_Info->Release();
+	}
+}
+
+void Deferred_Plane_Shader::Update(float ElapsedTime)
+{
+	Current_Time += ElapsedTime;
+	Elapsed_Time = ElapsedTime;
+}
+
+
+//=======================================================================================
 
 Deferred_CSkyBoxShader::Deferred_CSkyBoxShader()
 {
@@ -1426,3 +1657,6 @@ void Deferred_CSkinnedAnimationStandardShader::OnPrepareRender(ID3D12GraphicsCom
 		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
 }
+
+//========================================================================================
+

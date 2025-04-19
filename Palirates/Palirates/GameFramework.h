@@ -48,11 +48,6 @@ struct CB_FRAMEWORK_INFO
 {
 	float m_fCurrentTime;      
 	float m_fElapsedTime;         
-
-	float m_fSecondsPerFirework;    
-	int m_nFlareParticlesToEmit;     
-	int m_nMaxFlareType2Particles;   
-	XMFLOAT3 m_xmf3Gravity;          
 };
 
 class CGameFramework
@@ -84,6 +79,7 @@ public:
 
     void ProcessInput();
 
+	void Animate_Scene();
 	void Update_Scene();
 	void After_Update_Scene();
 
@@ -91,21 +87,15 @@ public:
 
 	void PrepareStage(GPU_Stage stage);
 
-	//void SafeSyncStage(GPU_Stage stage);
-	//void WaitForGpuComplete(GPU_Stage stage);
-	//HRESULT SignalFence(GPU_Stage stage);
-
 	void BeginGPUStage(GPU_Stage stage);
 	void EndGPUStage(GPU_Stage stage, bool wait = true);
+
 	HRESULT SignalFence(GPU_Stage stage, bool shouldAdvanceFence);
 	void WaitForGpuComplete(GPU_Stage stage);
 	void SafeSyncStage(GPU_Stage stage);
+	
 	UINT64 GetFenceValue(GPU_Stage stage, UINT bufferIndex) const;
 
-	//UINT64& GetFenceValue(GPU_Stage stage, UINT bufferIndex);
-	//UINT64 SignalFence(GPU_Stage stage);
-	//void WaitForGpuStageComplete(GPU_Stage stage);
-	//void FlushGPUStage(GPU_Stage stage);
 
 	void MoveToNextFrame();
 
@@ -202,11 +192,10 @@ protected:
 	CGameTimer					m_GameTimer;
 
 public:
-	PostProcessBaseShader* MRT_shader = NULL;
 	Scene_Manager* scene_manager = NULL;
+	Post_Effect_Manager* post_effect_manager = NULL;
 
-	Post_ComputeShader* post_shader = NULL;
-	CTextureToFullScreenShader* fullscreen_shader = NULL;
+	PostProcessBaseShader* MRT_shader = NULL;
 
 
 	CPlayer						*m_pPlayer = NULL;

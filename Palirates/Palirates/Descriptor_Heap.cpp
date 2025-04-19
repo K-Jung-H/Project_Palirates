@@ -141,7 +141,23 @@ void CDescriptor_Heap::CreateGraphicsShaderResourceViews(ID3D12Device* pd3dDevic
     pTexture->SetGraphicsSrvRootParameter(0, nRootParameterStartIndex, 0, nTextures);
 }
 
+void CDescriptor_Heap::CreateGraphicsShaderResourceView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex)
+{
+    CDescriptor_Heap* instance = Get_Instance();
 
+    ID3D12Resource* pResource = texture->GetResource(textureIndex);
+    D3D12_SHADER_RESOURCE_VIEW_DESC desc = texture->GetShaderResourceViewDesc(textureIndex);
+
+    device->CreateShaderResourceView(pResource, &desc, instance->SrvCPUDescriptorNextHandle);
+
+    texture->SetGraphicsSrvGpuDescriptorHandle(textureIndex, instance->SrvGPUDescriptorNextHandle);
+
+    instance->SrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+    instance->SrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+
+    // 이 경우 하나의 root parameter 슬롯에 하나만 바인딩
+    texture->SetGraphicsSrvRootParameter(textureIndex, rootParameterIndex, textureIndex, 1);
+}
 
 // Creates a single shader resource view
 // Creates SRVs and binds to the root signature. [Root Signature Binding: X]
@@ -211,6 +227,23 @@ void CDescriptor_Heap::CreateComputeShaderResourceViews(ID3D12Device* pd3dDevice
         instance->SrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
         instance->SrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
     }
+}
+
+void CDescriptor_Heap::CreateComputeShaderResourceView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex)
+{
+    CDescriptor_Heap* instance = Get_Instance();
+
+    ID3D12Resource* pResource = texture->GetResource(textureIndex);
+    D3D12_SHADER_RESOURCE_VIEW_DESC desc = texture->GetShaderResourceViewDesc(textureIndex);
+
+    device->CreateShaderResourceView(pResource, &desc, instance->SrvCPUDescriptorNextHandle);
+
+    texture->SetComputeSrvGpuDescriptorHandle(textureIndex, instance->SrvGPUDescriptorNextHandle);
+
+    instance->SrvCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+    instance->SrvGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+
+    texture->SetComputeSrvRootParameter(textureIndex, rootParameterIndex, textureIndex, 1);
 }
 
 
@@ -288,6 +321,24 @@ void CDescriptor_Heap::CreateComputeUnorderedAccessView(ID3D12Device* pd3dDevice
         }
     }
 }
+
+void CDescriptor_Heap::CreateComputeUnorderedAccessView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex)
+{
+    CDescriptor_Heap* instance = Get_Instance();
+
+    ID3D12Resource* pResource = texture->GetResource(textureIndex);
+    D3D12_UNORDERED_ACCESS_VIEW_DESC desc = texture->GetUnorderedAccessViewDesc(textureIndex);
+
+    device->CreateUnorderedAccessView(pResource, nullptr, &desc, instance->UavCPUDescriptorNextHandle);
+
+    texture->SetComputeUavGpuDescriptorHandle(textureIndex, instance->UavGPUDescriptorNextHandle);
+
+    instance->UavCPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+    instance->UavGPUDescriptorNextHandle.ptr += ::gnCbvSrvUavDescriptorIncrementSize;
+
+    texture->SetComputeUavRootParameter(textureIndex, rootParameterIndex, textureIndex, 1);
+}
+
 
 void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT resourceIndex, ID3D12Resource* pCounterResource, UINT nRootParameterIndex)
 {

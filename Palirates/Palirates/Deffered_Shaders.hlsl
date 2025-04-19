@@ -100,7 +100,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     
     //================================================================
 
-    return cColor;
+    return Light_Color;
     
     }
 
@@ -148,6 +148,8 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_FullScreen(uint nVertexID : SV_VertexID)
 
 float4 PS_FullScreen(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
-    float4 colorTexture = Screen_Texture.Sample(gssWrap, input.uv);
-    return colorTexture;
+    float3 colorTexture = Screen_Texture.Sample(gssWrap, input.uv);
+    return float4(colorTexture, 1.0f);
+    
+
 }
