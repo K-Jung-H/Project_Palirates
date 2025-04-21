@@ -1,6 +1,8 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN     
+#define WIN32_LEAN_AND_MEAN  
+#define NOMINMAX
+
 #include <windows.h>
 
 #include <stdlib.h>
@@ -21,8 +23,9 @@
 #include <cwchar>  
 #include <cstring> 
 #include <cstdio>
-#include <unordered_set>
 
+#include <algorithm>
+#include <unordered_set>
 #include <unordered_map>
 #include <map>
 #include <array>

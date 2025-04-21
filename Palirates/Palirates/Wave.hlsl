@@ -1,11 +1,35 @@
-cbuffer Frame_Info : register(b0)
-{
-    float3 boat_pos;
-    float ElapsedTime;
+//cbuffer Frame_Info : register(b0)
+//{
+//    float3 boat_pos;
+//    float ElapsedTime;
 
-    float3 boat_dir;
-    float TotalTime;
+//    float3 boat_dir;
+//    float TotalTime;
+//};
+
+cbuffer WaveParams : register(b0)
+{
+     float g_WaveSpeed; // 파도 진행 속도
+    float g_HeightDamping; // 파형의 감쇠율 (lerp)
+    float g_WaveMin; // 파형 최소값
+    float g_WaveMax; // 파형 최대값
+    float g_BaseSpacing; // 주기 기본값 (layer 기반 spacing에 사용)
+    float g_BaseSharpness; // 파형 날카로움 (tri → peak)
+    float g_BandSize; // 단층 구분 높이 (y축 기준)
+    float g_AngleOffsetPerBand; // 각 층별 진행 방향 차이 (단위: rad)
+
+    float g_WakeMaxDist; // 보트 wake 영향 거리
+    float g_WakeMaxAngle; // 퍼짐 각도 (rad)
+    float g_WakeDepthStrength; // 깊이 강도 (파임 정도)
+    float g_WakeDecay; // 중심부 감쇠율 (높을수록 중심 뾰족)
+
+    float2 g_BoatPos; // 보트 위치
+    float2 g_BoatDir; // 보트 진행 방향 (정규화)
+
+    float g_TotalTime; // 전역 시간 (파형 움직임)
+    float _padding; // 16바이트 정렬용
 };
+
 
 Texture2D<float> HeightMap_Read : register(t0);
 RWTexture2D<float> HeightMap_Write : register(u0);
@@ -17,40 +41,40 @@ RWStructuredBuffer <float4>Write_Pos_Normal : register(u2);
 [numthreads(8, 8, 1)]
 void CS_Global_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 {
-    // === 기본 파라미터 ===
-    float waveMin = 0.0;
-    float waveMax = 1.0;
-    float baseSpacing = 0.01;
-    float baseSharpness = 0.9;
-    float baseSpeed = 0.5;
-    float dampingFactor = 0.02;
-
     float2 uv = DTid.xy;
     float prev = HeightMap_Read[uv];
 
-    // === 단층 계산 ===
-    float bandSize = 32.0;
-    float band = floor(uv.y / bandSize);
+    // === Band blending (per y layer) ===
+    float bandF = uv.y / g_BandSize;
+    float band = floor(bandF);
+    float t = frac(bandF);
+    float s = t * t * (3.0 - 2.0 * t); // smoothstep
 
-    // === 각 단층마다 진행 방향 변경 (약간 회전) ===
-    float baseAngle = 0.0;
-    float angleOffsetPerBand = 5.1; // 라디안 단위 (ex: 0.1 ~ 5.7도)
-    float angle = baseAngle + band * angleOffsetPerBand;
-    float2 dir = float2(cos(angle), sin(angle)); // 진행 방향
+    // === Interpolated angle ===
+    float angle0 = band * g_AngleOffsetPerBand;
+    float angle1 = (band + 1.0) * g_AngleOffsetPerBand;
+    float angle = lerp(angle0, angle1, s);
+    float2 dir = float2(cos(angle), sin(angle));
 
-    // === 각 층별 속도/형태 변화 ===
-    float bandOffset = band * 0.7;
-    float spacing = baseSpacing + band * 0.003;
-    float sharpness = saturate(baseSharpness - band * 0.02);
+    // === Interpolated attributes ===
+    float spacing0 = g_BaseSpacing + band * 0.003;
+    float spacing1 = g_BaseSpacing + (band + 1.0) * 0.003;
+    float spacing = lerp(spacing0, spacing1, s);
 
-    // === 파형 생성 ===
-    float x = frac(dot(uv, dir) * spacing + TotalTime * baseSpeed + bandOffset);
+    float sharpness0 = saturate(g_BaseSharpness - band * 0.02);
+    float sharpness1 = saturate(g_BaseSharpness - (band + 1.0) * 0.02);
+    float sharpness = lerp(sharpness0, sharpness1, s);
+
+    float bandOffset = lerp(band * 0.7, (band + 1.0) * 0.7, s);
+
+    // === Wave generation ===
+    float x = frac(dot(uv, dir) * spacing + g_TotalTime * g_WaveSpeed + bandOffset);
     float tri = abs(x * 2.0 - 1.0);
     float shaped = pow(tri, sharpness);
     float wave01 = 1.0 - shaped;
 
-    float wave = lerp(waveMin, waveMax, wave01);
-    float result = lerp(prev, wave, dampingFactor);
+    float wave = lerp(g_WaveMin, g_WaveMax, wave01);
+    float result = lerp(prev, wave, g_HeightDamping);
 
     HeightMap_Write[uv] = result;
 }
@@ -60,18 +84,12 @@ void CS_Global_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 [numthreads(8, 8, 1)]
 void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 {
-    // ===== 파라미터 정의 (나중에 CBV로 분리 가능) =====
-    float maxDist = 150.0; // 웨이크 길이
-    float maxAngle = radians(30.0); // 좌우로 퍼지는 각도 (켈빈 패턴)
-    float depthStrength = 1.0; // 전체 깊이 세기
-    float decay = 5.0; // 좌우 감쇠율 (클수록 중심 뾰족)
-
     float2 coord = DTid.xy;
-    float2 dir = normalize(boat_dir.xy);
-    float2 toPix = coord - boat_pos.xy;
+    float2 dir = normalize(g_BoatDir);
+    float2 toPix = coord - g_BoatPos;
 
     float forwardDist = dot(toPix, dir);
-    if (forwardDist < 0 || forwardDist > maxDist)
+    if (forwardDist < 0.0 || forwardDist > g_WakeMaxDist)
     {
         HeightMap_Write[coord] = HeightMap_Read[coord];
         return;
@@ -81,21 +99,20 @@ void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
     float sideDist = length(lateral);
     float angle = atan2(sideDist, forwardDist);
 
-    if (angle > maxAngle)
+    if (angle > g_WakeMaxAngle)
     {
         HeightMap_Write[coord] = HeightMap_Read[coord];
         return;
     }
 
-    float angleRatio = angle / maxAngle; // 중심축으로부터 좌우 거리 (비율)
-    float sideWeight = pow(1.0 - angleRatio, decay); // 중심일수록 값 큼
-
-    float forwardWeight = 1.0 - (forwardDist / maxDist); // 보트 머리 기준 거리
+    float angleRatio = angle / g_WakeMaxAngle;
+    float sideWeight = pow(1.0 - angleRatio, g_WakeDecay);
+    float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
 
     float depth = sideWeight * forwardWeight;
 
     float base = HeightMap_Read[coord];
-    float result = saturate(base - depth * depthStrength);
+    float result = saturate(base - depth * g_WakeDepthStrength);
 
     HeightMap_Write[coord] = result;
 }
@@ -126,7 +143,7 @@ void CS_Wave_Normal(uint3 DTid : SV_DispatchThreadID)
 
     NormalMap_Write[DTid.xy] = float4(normal * 0.5 + 0.5, 1.0); 
     
-    int2 boatCoord = int2(round(boat_pos.xy)); 
+    int2 boatCoord = int2(round(g_BoatPos.xy)); 
     
     float base = HeightMap_Read[DTid.xy];
     HeightMap_Write[DTid.xy] = base;

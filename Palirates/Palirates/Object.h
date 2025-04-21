@@ -718,6 +718,10 @@ private:
 	float           			m_fMaxVelocityXZ = 0.0f;
 	float           			m_fFriction = 0.0f;
 
+	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);  
+	float m_fRotationSpeed = 0.0f;                           
+	float m_fRotationDecay = 5.0f; 
+
 public:
 	Boat_Object();
 	virtual ~Boat_Object();
@@ -728,20 +732,29 @@ public:
 
 	void UpdateRotationFromWave();
 	void UpdateMovementOnWave(float fTimeElapsed);
-	virtual void Animate(float fTimeElapsed);
 	void Set_Wave_Normal(XMFLOAT3& normal) { wave_normal_vector = normal; }
 	void Set_Wave_Height(float height) { wave_height = height; }
+
+	void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
+	void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
+	void Add_Rotate(float angleDelta);
+	
+	virtual void Animate(float fTimeElapsed);
+
+	XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
+	float Get_RotationSpeed() { return m_fRotationSpeed; }
+
 };
 
 class Plane_Object : public CGameObject
 {
 private:
-	CTexture* Plane_BaseTexture;
-	CTexture* Plane_DetailTexture;
+	CTexture* Plane_BaseTexture = NULL;
+	CTexture* Plane_DetailTexture = NULL;
 
 public:
 	static Deferred_Plane_Shader* plane_shader;
-	CMaterial* Plane_Material;
+	CMaterial* Plane_Material = NULL;
 
 	Plane_Object() {}
 	Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -763,15 +776,19 @@ private:
 
 	UINT desiredTexelSize = 0;
 	UINT Tex_Length = 0;
+	float Side_Length = 0.0f;
 	bool bPingPongToggle = false;
 
 
 	XMFLOAT3 World_Boat_Pos = { 0.0f, 0.0f, 0.0f };
 	XMFLOAT3 World_Boat_Dir = { 0.0f,1.0f, 0.0f };
+	float World_Boat_Velocity = 0.0f;
+
 	XMFLOAT3 BoatPos_WaveNormal = { 0.0f, 0.0f, 0.0f };
 	float BoatPos_WaveHeight = 0.0f;
+
 public:
-	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 10);
 	virtual ~Wave_Object();
 
 	void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -781,6 +798,8 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
+
+
 };
 
 

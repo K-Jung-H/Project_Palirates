@@ -3270,7 +3270,7 @@ void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 CS_Wave_Shader* Wave_Object::cs_wave_shader = NULL;
 
-Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n)
 	: Plane_Object()
 {
 	if (plane_shader == nullptr)
@@ -3286,21 +3286,18 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		cs_wave_shader = new CS_Wave_Shader();
 		cs_wave_shader->CreateShader(pd3dDevice);
 		cs_wave_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 	}
 
 	Plane_Material = new CMaterial(2);
 	Plane_Material->SetShader(plane_shader);
 
-
-
-	int side_vertex_n = 10;
+	Side_Length = nLength;
+	constexpr int kMaxTextureSize = 15000;
+	desiredTexelSize = 5.0f;
 	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
-	// Compute optimal texture resolution based on desired texel size
-	constexpr int kMaxTextureSize = 15000;
-
-	desiredTexelSize = 5.0f;
 	int tex_Length = static_cast<int>(ceil(nLength / desiredTexelSize));
 
 	if (tex_Length > kMaxTextureSize)
@@ -3407,6 +3404,18 @@ void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 {
 	World_Boat_Pos = boat_ptr->GetPosition();
 	World_Boat_Dir = Vector3::ScalarProduct(boat_ptr->GetLook(), -1.0f, false);
+	
+	XMFLOAT3 boat_velocity = boat_ptr->Get_Velocity();
+	float boat_rotation_speed = boat_ptr->Get_RotationSpeed(); 
+
+	float speed = XMVectorGetX(XMVector3Length(XMLoadFloat3(&boat_velocity)));
+
+	float absRotation = fabsf(boat_rotation_speed);
+	float rotationFactor = 1.0f - (absRotation / 90.0f); 
+	rotationFactor = std::clamp(rotationFactor, 0.5f, 1.0f);
+
+	World_Boat_Velocity = speed * rotationFactor;
+
 
 	if (!IsZeroVector(BoatPos_WaveNormal))
 	{
@@ -3418,7 +3427,8 @@ void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 
 void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	if (!cs_wave_shader) return;
+	if (!cs_wave_shader) 
+		return;
 
 	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
 
@@ -3429,40 +3439,23 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	XMFLOAT3 Plane_Position = GetPosition();
 
-	float planeHalfSize = 2000.0f * 0.5f;
+	float planeHalfSize = Side_Length * 0.5f;
 
-	XMFLOAT2 topLeft = {
-		Plane_Position.x - planeHalfSize,
-		Plane_Position.z - planeHalfSize
+	XMFLOAT2 boatTexel = {
+		(World_Boat_Pos.x - (Plane_Position.x - planeHalfSize)) / desiredTexelSize,
+		(World_Boat_Pos.z - (Plane_Position.z - planeHalfSize)) / desiredTexelSize
 	};
 
-	XMFLOAT2 localBoat = {
-		World_Boat_Pos.x - topLeft.x,
-		World_Boat_Pos.z - topLeft.y
-	};
+	XMFLOAT2 dirXZ = { World_Boat_Dir.x, World_Boat_Dir.z };
+	XMVECTOR v = XMVector2Normalize(XMLoadFloat2(&dirXZ));
+	XMFLOAT2 normDirXZ;
+	XMStoreFloat2(&normDirXZ, v);
 
-	XMFLOAT2 Boat_Texel = {
-		localBoat.x / desiredTexelSize,
-		localBoat.y / desiredTexelSize
-	};
-	
-	XMFLOAT2 DirXZ = {
-	World_Boat_Dir.x,
-	World_Boat_Dir.z
-	};
-
-	XMVECTOR v = XMVector2Normalize(XMLoadFloat2(&DirXZ));
-	XMFLOAT2 NormDirXZ;
-	XMStoreFloat2(&NormDirXZ, v);
-
-	// 결과 저장
-
-	Wave_Frame_Info info{};
-	info.boat_pos = XMFLOAT3(Boat_Texel.x, Boat_Texel.y, 0.0f);
-	info.boat_dir = XMFLOAT3(NormDirXZ.x, NormDirXZ.y, 0.0f);
-	info.total_time = CS_Wave_Shader::total_time;
-	info.ElapsedTime = fTimeElapsed;
-	cs_wave_shader->UpdateShaderVariables(pd3dCommandList, &info);
+	cs_wave_shader->update_wave_info->g_BoatPos = XMFLOAT2(boatTexel.x, boatTexel.y);
+	cs_wave_shader->update_wave_info->g_BoatDir = XMFLOAT2(normDirXZ.x, normDirXZ.y);
+	cs_wave_shader->update_wave_info->g_TotalTime = CS_Wave_Shader::total_time;
+	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
+	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
 	const int readIndex = bPingPongToggle ? 1 : 0;
 	const int writeIndex = bPingPongToggle ? 0 : 1;
@@ -3583,13 +3576,18 @@ void Boat_Object::MoveForward(float speed)
 
 void Boat_Object::Yaw(float angle)
 {
-
 	XMFLOAT3 up = Vector3::Normalize(GetUp()); 
 	XMMATRIX mRotate = XMMatrixRotationAxis(XMLoadFloat3(&up), XMConvertToRadians(angle));
 
 
 	m_xmf4x4Parent = Matrix4x4::Multiply(mRotate, m_xmf4x4Parent);
 	UpdateTransform(nullptr);
+}
+
+void Boat_Object::Add_Rotate(float angleDelta) 
+{
+	m_fRotationSpeed += angleDelta; 
+	std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f);
 }
 
 void Boat_Object::UpdateRotationFromWave()
@@ -3650,6 +3648,9 @@ void Boat_Object::Animate(float fTimeElapsed)
 {
 	UpdateRotationFromWave();
 	UpdateMovementOnWave(fTimeElapsed);
+	CGameObject::Rotate(&boat_up_vector, m_fRotationSpeed * fTimeElapsed);
+
+	 m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

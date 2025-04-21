@@ -1216,9 +1216,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	//	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
-
 
 	obj_manager = new Object_Manager();
 
@@ -1230,7 +1229,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	std::string_view name_view = obj_name_1;
 	name_view = obj_name_1;
 
-	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 2000);
+	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 1000);
 	wave_plane->Set_Name(name_view);
 	wave_plane->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
@@ -1244,11 +1243,11 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	pirate_ship = std::make_shared<Boat_Object>();
 	pirate_ship->Set_Child(Ship_Model->m_pModelRootObject);
-//	pirate_ship = .get(;
+
 
 	pirate_ship->Set_Name("player's pirate_ship");
 	pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
-//	pirate_ship->SetLookDirection(1.0f, 1.0f, 1.0f);
+
 
 	pirate_ship->SetScale({ 5.0f,5.0f ,5.0f }, true);
 	obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
@@ -1259,6 +1258,27 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Object_Manager::Reserve_Update();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	{
+		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.02f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.0f;                            // Minimum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMax = 1.0f;                            // Maximum wave height
+		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
+		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
+		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
+		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
+
+		// === Boat Wake Parameters ===
+		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 150.0f;                          // Maximum distance the wake affects
+		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
+		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 1.0f;                            // Strength of depth indentation
+		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
+
+		// === Time ===
+		CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
+		CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
+	}
 
 	if (Ship_Model)
 		delete Ship_Model;
@@ -1336,8 +1356,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'J':		case 'j':
 		{
-			pirate_ship->Yaw(-3.0f);
-			//pirate_ship->RotateInWorldAroundUp(30.0f);
+			pirate_ship->Add_Rotate(-10.0f);
 		}
 		break;
 
@@ -1348,8 +1367,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'L':		case 'l':
 		{
-			pirate_ship->Yaw(3.0f);
-//			pirate_ship->RotateInWorldAroundUp(-3.0f);
+			pirate_ship->Add_Rotate(10.0f);
 		}
 		break;
 
