@@ -267,6 +267,62 @@ class CSkinnedMesh : public CStandardMesh
 {
 public:
 	CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	//CSkinnedMesh(const CSkinnedMesh& other)
+	//	: CStandardMesh(other) // 부모 클래스 복사
+	//{
+	//	m_nBonesPerVertex = other.m_nBonesPerVertex;
+	//	m_nSkinningBones = other.m_nSkinningBones;
+
+	//	// Bone Indices 복사
+	//	if (other.m_pxmn4BoneIndices)
+	//	{
+	//		m_pxmn4BoneIndices = new XMINT4[m_nVertices];
+	//		std::copy(other.m_pxmn4BoneIndices, other.m_pxmn4BoneIndices + m_nVertices, m_pxmn4BoneIndices);
+	//	}
+
+	//	// Bone Weights 복사
+	//	if (other.m_pxmf4BoneWeights)
+	//	{
+	//		m_pxmf4BoneWeights = new XMFLOAT4[m_nVertices];
+	//		std::copy(other.m_pxmf4BoneWeights, other.m_pxmf4BoneWeights + m_nVertices, m_pxmf4BoneWeights);
+	//	}
+
+	//	// Skinning Bone Names 복사
+	//	if (other.m_ppstrSkinningBoneNames)
+	//	{
+	//		m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
+	//		for (int i = 0; i < m_nSkinningBones; ++i)
+	//		{
+	//			strcpy_s(m_ppstrSkinningBoneNames[i], 64, other.m_ppstrSkinningBoneNames[i]);
+	//		}
+	//	}
+
+	//	// Skinning Bone Frame Caches 복사 (얕은 복사 OK, 포인터만 복사)
+	//	m_ppSkinningBoneFrameCaches = other.m_ppSkinningBoneFrameCaches;
+
+	//	// Bind Pose Offsets 복사
+	//	if (other.m_pxmf4x4BindPoseBoneOffsets)
+	//	{
+	//		m_pxmf4x4BindPoseBoneOffsets = new XMFLOAT4X4[m_nSkinningBones];
+	//		std::copy(other.m_pxmf4x4BindPoseBoneOffsets, other.m_pxmf4x4BindPoseBoneOffsets + m_nSkinningBones, m_pxmf4x4BindPoseBoneOffsets);
+	//	}
+
+	//	// Skinning Bone Transforms 복사
+	//	if (other.m_pcbxmf4x4MappedSkinningBoneTransforms)
+	//	{
+	//		m_pcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4[m_nSkinningBones];
+	//		std::copy(other.m_pcbxmf4x4MappedSkinningBoneTransforms, other.m_pcbxmf4x4MappedSkinningBoneTransforms + m_nSkinningBones, m_pcbxmf4x4MappedSkinningBoneTransforms);
+	//	}
+
+	//	// cb 버퍼 및 GPU 리소스는 별도로 CreateShaderVariables 등에서 생성하도록 함
+	//	m_pd3dBoneIndexBuffer = nullptr;
+	//	m_pd3dBoneIndexUploadBuffer = nullptr;
+	//	m_pd3dBoneWeightBuffer = nullptr;
+	//	m_pd3dBoneWeightUploadBuffer = nullptr;
+	//	m_pd3dcbBindPoseBoneOffsets = nullptr;
+	//	m_pd3dcbSkinningBoneTransforms = nullptr;
+	//	m_pcbxmf4x4MappedBindPoseBoneOffsets = nullptr;
+	//}
 	virtual ~CSkinnedMesh();
 
 protected:

@@ -506,6 +506,7 @@ void Object_Manager::Delete_Object(std::shared_ptr<CGameObject > obj_ptr)
 		
 	}
 }
+#include <future> 
 
 void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 {
@@ -513,6 +514,15 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 	case Object_Type::skinned:
 	{
+		/*std::vector<std::future<void>> futures;
+		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
+		{
+			futures.emplace_back(std::async(std::launch::async, [=]() {
+				obj_ptr->Animate(fTimeElapsed);
+				}));
+		}
+		for (auto& f : futures) f.get();*/
+
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 			if (obj_ptr->Get_Active())
 				obj_ptr->Animate(fTimeElapsed);

@@ -254,6 +254,15 @@ namespace Vector3
 		return(m_xmf3Normal);
 	}
 
+	inline XMFLOAT3 Scale(const XMFLOAT3& v, float s)
+	{
+		XMVECTOR vv = XMLoadFloat3(&v);
+		XMVECTOR vs = XMVectorScale(vv, s);
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, vs);
+		return result;
+	}
+
 	inline float Length(XMFLOAT3& xmf3Vector)
 	{
 		XMFLOAT3 xmf3Result;

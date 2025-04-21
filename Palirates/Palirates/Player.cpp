@@ -69,6 +69,12 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
 
+		if (Vector3::Length(xmf3Shift) > 0.0f)
+		{
+			xmf3Shift = Vector3::Normalize(xmf3Shift);
+			xmf3Shift = Vector3::Scale(xmf3Shift, fDistance);
+		}
+
 		Move(xmf3Shift, bUpdateVelocity);
 	}
 }
@@ -310,7 +316,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Captain_v12.bin", NULL);
 	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
 	Set_Child(pAngrybotModel->m_pModelRootObject);
-
+	RootBoneIndex = pAngrybotModel->RootBoneIndex;
 	n_Animation = 12;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
