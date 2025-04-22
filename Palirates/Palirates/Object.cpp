@@ -494,6 +494,47 @@ CMaterial::CMaterial(const CMaterial& other)
 	}
 }
 
+std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
+{
+	auto clone = std::make_shared<CMaterial>(this->m_nTextures);
+
+	// 색상, 파라미터 값들은 복사
+	clone->m_cAlbedo = this->m_cAlbedo;
+	clone->m_cEmissive = this->m_cEmissive;
+	clone->m_fRoughness = this->m_fRoughness;
+	clone->m_fMetallic = this->m_fMetallic;
+	clone->m_fSpecular = this->m_fSpecular;
+	clone->m_xmf4SpecularColor = this->m_xmf4SpecularColor;
+	clone->m_fGlossiness = this->m_fGlossiness;
+	clone->m_fGlossyReflection = this->m_fGlossyReflection;
+	clone->m_pShader = this->m_pShader;
+	clone->m_nType = this->m_nType;
+
+	if (this->m_ppstrTextureNames)
+	{
+		clone->m_ppstrTextureNames = new _TCHAR[this->m_nTextures][64];
+		for (int i = 0; i < this->m_nTextures; ++i)
+		{
+			std::memcpy(clone->m_ppstrTextureNames[i], this->m_ppstrTextureNames[i], sizeof(_TCHAR) * 64);
+		}
+	}
+
+	// 텍스처 포인터는 공유 (AddRef 필요할 수도 있음)
+	if (this->m_ppTextures)
+	{
+		clone->m_ppTextures = new CTexture * [this->m_nTextures];
+		for (int i = 0; i < this->m_nTextures; ++i)
+		{
+			clone->m_ppTextures[i] = this->m_ppTextures[i];
+			if (clone->m_ppTextures[i]) clone->m_ppTextures[i]->AddRef();
+		}
+	}
+
+	return clone;
+}
+
+
+
 void CMaterial::SetShader(CShader* pShader)
 {
 	if (pShader)
@@ -1517,6 +1558,83 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 	return *this;
 }
 
+std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
+{
+	std::shared_ptr<CGameObject> clone = std::make_shared<CGameObject>();
+
+	clone->m_xmf4x4Parent = this->m_xmf4x4Parent;
+	clone->m_xmf4x4World = this->m_xmf4x4World;
+	clone->m_xmf3RotationAxis = this->m_xmf3RotationAxis;
+	clone->m_fRotationSpeed = this->m_fRotationSpeed;
+	clone->Active = this->Active;
+	std::memcpy(clone->m_pstrFrameName, this->m_pstrFrameName, sizeof(this->m_pstrFrameName));
+
+	if (this->m_pMesh)
+		clone->m_pMesh = new CMesh(*this->m_pMesh);
+
+	for (const auto& material : this->Material_list)
+	{
+		if (material)
+			clone->Material_list.push_back(std::make_shared<CMaterial>(*material));
+		else
+			clone->Material_list.push_back(nullptr);
+	}
+
+	if (this->m_pSkinnedAnimationController)
+		clone->m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*this->m_pSkinnedAnimationController);
+
+	if (withHierarchy && this->m_pChild)
+		clone->m_pChild = this->m_pChild->Clone(true);
+
+	if (withHierarchy && this->m_pSibling)
+		clone->m_pSibling = this->m_pSibling->Clone(true);
+
+	return clone;
+}
+
+std::shared_ptr<CGameObject> CGameObject::Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy)
+{
+	std::shared_ptr<CGameObject> instance = std::make_shared<CGameObject>();
+
+	// Copy basic transform and state properties
+	instance->Set_Name(modelRoot->m_pstrFrameName);
+	instance->m_xmf4x4Parent = modelRoot->m_xmf4x4Parent;
+	instance->m_xmf4x4World = modelRoot->m_xmf4x4World;
+	instance->m_xmf3RotationAxis = modelRoot->m_xmf3RotationAxis;
+	instance->m_fRotationSpeed = modelRoot->m_fRotationSpeed;
+	instance->Active = modelRoot->Active;
+
+	// Share resource references (not deep copy)
+	instance->m_pMesh = modelRoot->m_pMesh;
+	instance->m_pSkinnedAnimationController = modelRoot->m_pSkinnedAnimationController;
+
+	// Clone materials: share textures but copy values like color, roughness, etc.
+	instance->Material_list.clear();
+	for (const auto& mat : modelRoot->Material_list)
+	{
+		if (mat)
+			instance->Material_list.push_back(mat->CloneWithSharedTextures()); // Custom shallow clone
+		else
+			instance->Material_list.push_back(nullptr);
+	}
+
+	// Clone hierarchy recursively if required
+	if (withHierarchy && modelRoot->m_pChild)
+	{
+		instance->m_pChild = Make_Instance(modelRoot->m_pChild, true);
+		if (instance->m_pChild)
+			instance->m_pChild->m_pParent = instance.get(); // Set proper parent linkage
+	}
+
+	if (withHierarchy && modelRoot->m_pSibling)
+	{
+		instance->m_pSibling = Make_Instance(modelRoot->m_pSibling, true);
+		if (instance->m_pSibling)
+			instance->m_pSibling->m_pParent = instance->m_pParent; // Sibling shares the same parent
+	}
+
+	return instance;
+}
 
 
 std::shared_ptr<CGameObject> CGameObject::Get_Child()
@@ -1998,7 +2116,6 @@ XMFLOAT3 CGameObject::Get_Root_WorldPosition()
 {
 	return Get_Root_Object()->GetPosition();
 }
-
 
 XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
 {
@@ -3189,6 +3306,9 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 }
 
+
+
+
 Deferred_Plane_Shader* Plane_Object::plane_shader = NULL;
 
 
@@ -3294,7 +3414,7 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
-	desiredTexelSize = 5.0f;
+	desiredTexelSize = 20.0f;
 	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
@@ -3355,7 +3475,6 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 3, 4); // UAV(u2)
 
 }
-
 
 Wave_Object::~Wave_Object()
 {
@@ -3587,7 +3706,7 @@ void Boat_Object::Yaw(float angle)
 void Boat_Object::Add_Rotate(float angleDelta) 
 {
 	m_fRotationSpeed += angleDelta; 
-	std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f);
+	m_fRotationSpeed = std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f); 
 }
 
 void Boat_Object::UpdateRotationFromWave()
@@ -3644,6 +3763,7 @@ void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
 	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
 	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
 }
+
 void Boat_Object::Animate(float fTimeElapsed)
 {
 	UpdateRotationFromWave();
@@ -3651,6 +3771,15 @@ void Boat_Object::Animate(float fTimeElapsed)
 	CGameObject::Rotate(&boat_up_vector, m_fRotationSpeed * fTimeElapsed);
 
 	 m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+}
+
+bool Boat_Object::GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos)
+{
+	auto it = m_AttachedMarkerFrames.find(name);
+	if (it == m_AttachedMarkerFrames.end() || !it->second) return false;
+
+	outWorldPos = it->second->GetPosition(); 
+	return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

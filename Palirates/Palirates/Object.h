@@ -187,6 +187,7 @@ public:
 	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
 
+	::shared_ptr<CMaterial> CloneWithSharedTextures() const;
 public:
 
 	XMFLOAT4 m_cAlbedo = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -497,7 +498,15 @@ public:
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");
 
 	CGameObject(const CGameObject& other);
-	CGameObject& operator=(const CGameObject& other);
+	CGameObject& operator=(const CGameObject& other);	
+	
+	
+	// Deep Copy
+	std::shared_ptr<CGameObject> Clone(bool withHierarchy = true); 
+
+	// Deep Copy Hierarchy & Shallow Copy Resource
+	static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);
+	
 
     virtual ~CGameObject();
 
@@ -708,6 +717,8 @@ public:
 class Boat_Object : public CGameObject
 {
 private:
+	std::unordered_map<std::string, CGameObject*> m_AttachedMarkerFrames;
+
 	XMFLOAT3 wave_normal_vector{};
 	float wave_height = 0.0f;
 
@@ -718,9 +729,7 @@ private:
 	float           			m_fMaxVelocityXZ = 0.0f;
 	float           			m_fFriction = 0.0f;
 
-	XMFLOAT3 m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);  
-	float m_fRotationSpeed = 0.0f;                           
-	float m_fRotationDecay = 5.0f; 
+
 
 public:
 	Boat_Object();
@@ -744,6 +753,9 @@ public:
 	XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
 	float Get_RotationSpeed() { return m_fRotationSpeed; }
 
+	void RegisterMarker(const std::string& name, CGameObject* node) { m_AttachedMarkerFrames[name] = node; }
+
+	bool GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos);
 };
 
 class Plane_Object : public CGameObject

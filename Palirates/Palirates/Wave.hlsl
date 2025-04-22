@@ -70,7 +70,7 @@ void CS_Global_Wave_Height(uint3 DTid : SV_DispatchThreadID)
     // === Wave generation ===
     float x = frac(dot(uv, dir) * spacing + g_TotalTime * g_WaveSpeed + bandOffset);
     float tri = abs(x * 2.0 - 1.0);
-    float shaped = pow(tri, sharpness);
+    float shaped = pow(abs(tri), sharpness);
     float wave01 = 1.0 - shaped;
 
     float wave = lerp(g_WaveMin, g_WaveMax, wave01);
@@ -106,7 +106,7 @@ void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
     }
 
     float angleRatio = angle / g_WakeMaxAngle;
-    float sideWeight = pow(1.0 - angleRatio, g_WakeDecay);
+    float sideWeight = pow(abs(1.0 - angleRatio), g_WakeDecay);
     float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
 
     float depth = sideWeight * forwardWeight;

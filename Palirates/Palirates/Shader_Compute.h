@@ -134,9 +134,9 @@ private:
 
 	std::vector<ReservedEffect> m_ActiveEffects;
 
-	CTextureToFullScreenShader* fullscreen_shader = NULL;
 
 public:
+	CTextureToFullScreenShader* fullscreen_shader = NULL;
 	Post_Effect_Manager(ID3D12Device* device);
 
 	void Clear_Reserved_Effect();                    

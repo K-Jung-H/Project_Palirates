@@ -108,7 +108,7 @@ public:
 	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 
-	void Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
+	std::shared_ptr<ParticleObject>  Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
 
 	void Clear_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);

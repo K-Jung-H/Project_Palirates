@@ -677,7 +677,7 @@ void CS_Wave_Shader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12
 
 void CS_Wave_Shader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
 {
-	n_Wave_computePipelineStates = 1;
+	n_Wave_computePipelineStates = 3;
 	Wave_computePipelineStates = new ID3D12PipelineState * [n_Wave_computePipelineStates];
 
 	if (Wave_ComputeRootSignature_ptr == NULL)
