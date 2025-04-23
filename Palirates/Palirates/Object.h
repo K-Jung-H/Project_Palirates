@@ -739,7 +739,7 @@ public:
 	virtual void MoveForward(float speed);
 	void Yaw(float angle);
 
-	void UpdateRotationFromWave();
+	void UpdateRotationFromWave(float fTimeElapsed);
 	void UpdateMovementOnWave(float fTimeElapsed);
 	void Set_Wave_Normal(XMFLOAT3& normal) { wave_normal_vector = normal; }
 	void Set_Wave_Height(float height) { wave_height = height; }
@@ -800,7 +800,7 @@ private:
 	float BoatPos_WaveHeight = 0.0f;
 
 public:
-	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 10);
+	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100);
 	virtual ~Wave_Object();
 
 	void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
