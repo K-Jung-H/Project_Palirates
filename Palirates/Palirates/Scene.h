@@ -144,8 +144,11 @@ class Board_Scene : public CScene
 private:
 	std::shared_ptr<Boat_Object> pirate_ship;
 	std::shared_ptr<Wave_Object> wave_plane;
-	std::shared_ptr<ParticleObject> water_particle;
+	std::shared_ptr<ParticleObject> water_particle_1;
+	std::shared_ptr<ParticleObject> water_particle_2;
 
+	string camera_position = "";
+	bool focus_button = false;
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -153,6 +156,7 @@ public:
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
 
+	void SetCameraTarget(std::string_view target);
 
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 

@@ -1219,7 +1219,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)
 {
-	if (!m_pAnimationTracks || !m_pAnimationSets) return;
+	if (!m_pAnimationTracks || !m_pAnimationSets) 
+		return;
 
 	// 본 초기화
 	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
@@ -3521,6 +3522,7 @@ XMFLOAT3 Wave_Object::Readback_Buffer_Data()
 
 void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 {
+	//World_Boat_Pos = boat_ptr->FindFrame("Bottom_Head")->GetPosition(); // 큰 차이 없음
 	World_Boat_Pos = boat_ptr->GetPosition();
 	World_Boat_Dir = Vector3::ScalarProduct(boat_ptr->GetLook(), -1.0f, false);
 	
@@ -3709,11 +3711,15 @@ void Boat_Object::Add_Rotate(float angleDelta)
 	m_fRotationSpeed = std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f); 
 }
 
-void Boat_Object::UpdateRotationFromWave()
+void Boat_Object::UpdateRotationFromWave(float fTimeElapsed)
 {
 	const XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	float normalFollowWeight = 0.1f;   // 물결 영향도
-	float restoreToUpWeight = 0.3f;   // Y축 회복력
+
+	float normalFollowSpeed = 0.3f;    
+	float restoreUpSpeed = 1.0f;       
+
+	float normalFollowWeight = 1.0f - expf(-normalFollowSpeed * fTimeElapsed);
+	float restoreToUpWeight = 1.0f - expf(-restoreUpSpeed * fTimeElapsed);
 
 	if (!IsZeroVector(wave_normal_vector))
 	{
@@ -3749,7 +3755,7 @@ void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
 	// --- 부드러운 높이 보정 ---
 	static float smoothedHeight = wave_height;
 	smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
-	newPos.y = smoothedHeight * 50.0f;
+	newPos.y = smoothedHeight * 30.0f;
 
 	SetPosition(newPos);
 
@@ -3766,7 +3772,7 @@ void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
 
 void Boat_Object::Animate(float fTimeElapsed)
 {
-	UpdateRotationFromWave();
+	UpdateRotationFromWave(fTimeElapsed);
 	UpdateMovementOnWave(fTimeElapsed);
 	CGameObject::Rotate(&boat_up_vector, m_fRotationSpeed * fTimeElapsed);
 

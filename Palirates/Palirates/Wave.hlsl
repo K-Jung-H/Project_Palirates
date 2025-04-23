@@ -112,7 +112,7 @@ void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
     float depth = sideWeight * forwardWeight;
 
     float base = HeightMap_Read[coord];
-    float result = saturate(base - depth * g_WakeDepthStrength);
+    float result = saturate(base - depth * g_WakeDepthStrength * 1.2f);
 
     HeightMap_Write[coord] = result;
 }

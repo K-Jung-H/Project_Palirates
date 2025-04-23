@@ -1306,6 +1306,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pirate_ship->RegisterMarker("Sailor_3", pirate_ship->FindFrame("Sailor_Pos_3"));
 		pirate_ship->RegisterMarker("Sailor_4", pirate_ship->FindFrame("Sailor_Pos_4"));
 
+		pirate_ship->RegisterMarker("Head", pirate_ship->FindFrame("Bottom_Head"));
+		pirate_ship->RegisterMarker("Tail", pirate_ship->FindFrame("Bottom_Tail"));
+
+
 		
 		if (Ship_Model)
 			delete Ship_Model;
@@ -1333,8 +1337,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
 	
-	water_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
-
+	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
+	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
 	//=====================================================
 
 
@@ -1344,9 +1348,9 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	{
 		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
-		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.02f;                           // Damping factor for height interpolation
-		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.0f;                            // Minimum wave height
-		CS_Wave_Shader::update_wave_info->g_WaveMax = 1.0f;                            // Maximum wave height
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.15f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.45f;                            // Minimum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.55f;                            // Maximum wave height
 		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
 		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
 		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
@@ -1355,17 +1359,13 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		// === Boat Wake Parameters ===
 		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 50.0f;                          // Maximum distance the wake affects
 		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
-		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 1.0f;                            // Strength of depth indentation
+		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
 		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
 
 		// === Time ===
 		CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
 		CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
 	}
-
-
-
-
 
 }
 
@@ -1380,6 +1380,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	pirate_ship->Animate(fTimeElapsed);
 
+
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -1387,8 +1388,17 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
-	water_particle->Set_Center(pirate_ship->GetPosition());
-	water_particle->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
+	XMFLOAT3 bottom_head_particle_pos;
+	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
+
+	water_particle_1->Set_Center(bottom_head_particle_pos);
+	water_particle_1->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
+
+	XMFLOAT3 bottom_tail_particle_pos;
+	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
+
+	water_particle_2->Set_Center(bottom_tail_particle_pos);
+	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 }
 
 void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1396,6 +1406,13 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	wave_plane->Copy_Buffer_Data(pd3dCommandList);
 
 	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
+	if (focus_button)
+	{
+		XMFLOAT3 new_camera_pos;
+		pirate_ship->UpdateTransform(NULL);
+		pirate_ship->GetMarkerWorldPosition(camera_position, new_camera_pos);
+		m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+	}
 }
 
 void Board_Scene::After_Update_Objects()
@@ -1403,6 +1420,19 @@ void Board_Scene::After_Update_Objects()
 	wave_plane->Readback_Buffer_Data();
 
 	CScene::After_Update_Objects();
+}
+
+void Board_Scene::SetCameraTarget(std::string_view target)
+{
+	if (camera_position != target)
+	{
+		camera_position = target;
+		focus_button = true;
+	}
+	else
+	{
+		focus_button = false;
+	}
 }
 
 
@@ -1453,52 +1483,29 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		break;
 
 		case '1':
-		{
-			XMFLOAT3 new_camera_pos;
-			pirate_ship->GetMarkerWorldPosition("Captain", new_camera_pos);
-			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
-		}
+			SetCameraTarget("Captain");
 		break;
 
 		case '2':
-		{
-			XMFLOAT3 new_camera_pos;
-			pirate_ship->GetMarkerWorldPosition("Sailor_0", new_camera_pos);
-			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
-		}
+			SetCameraTarget("Sailor_0");
 		break;
 
 		case '3':
-		{
-			XMFLOAT3 new_camera_pos;
-			pirate_ship->GetMarkerWorldPosition("Sailor_1", new_camera_pos);
-			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
-		}
+			SetCameraTarget("Sailor_1");
 		break;
 
 		case '4':
-		{
-			XMFLOAT3 new_camera_pos;
-			pirate_ship->GetMarkerWorldPosition("Sailor_2", new_camera_pos);
-			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
-		}
-		break;
+			SetCameraTarget("Sailor_2");
+			break;
 
 		case '5':
-		{
-			XMFLOAT3 new_camera_pos;
-			pirate_ship->GetMarkerWorldPosition("Sailor_3", new_camera_pos);
-			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
-		}
-		break;
+			SetCameraTarget("Sailor_3");
+			break;
 
 		case '6':
-		{
-			XMFLOAT3 new_camera_pos;
-			pirate_ship->GetMarkerWorldPosition("Sailor_4", new_camera_pos);
-			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
-		}
+			SetCameraTarget("Sailor_4");
 		break;
+
 		default:
 			break;
 		}
