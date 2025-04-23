@@ -77,7 +77,9 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
         
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
-    float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f);
+    float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f).x;
+
+    height -= 0.5f;
     output.positionW.y += height * 50.0f;
     
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
@@ -113,7 +115,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     output.world_Position = float4(input.positionW, 1.0f);
     
     
-    float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0);
+    float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0).xyz;
+
     
     output.world_Normal_and_Camera_Distance.xyz = plane_normal;
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, 0.0f);

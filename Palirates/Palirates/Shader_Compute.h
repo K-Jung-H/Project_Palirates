@@ -134,9 +134,9 @@ private:
 
 	std::vector<ReservedEffect> m_ActiveEffects;
 
-	CTextureToFullScreenShader* fullscreen_shader = NULL;
 
 public:
+	CTextureToFullScreenShader* fullscreen_shader = NULL;
 	Post_Effect_Manager(ID3D12Device* device);
 
 	void Clear_Reserved_Effect();                    
@@ -148,15 +148,40 @@ public:
 //========================================================================
 
 
-struct Wave_Frame_Info 
+//struct Wave_Frame_Info 
+//{
+//	XMFLOAT3 boat_pos;
+//	float ElapsedTime;
+//
+//	XMFLOAT3 boat_dir;
+//	float total_time;
+//};
+
+struct alignas(16) WaveParams
 {
-	XMFLOAT3 boat_pos;
-	float ElapsedTime;
+	// === Global Wave Parameters ===
+	float g_WaveSpeed;            // Wave propagation speed
+	float g_HeightDamping;        // Heightmap smoothing factor
+	float g_WaveMin;              // Minimum wave height
+	float g_WaveMax;              // Maximum wave height
 
-	XMFLOAT3 boat_dir;
-	float total_time;
+	float g_BaseSpacing;          // Base wave spacing (for tiling)
+	float g_BaseSharpness;        // Sharpness of wave crest
+	float g_BandSize;             // Band height (for layer blending)
+	float g_AngleOffsetPerBand;   // Angle difference per band (in radians)
+
+	// === Boat Wake Parameters ===
+	float g_WakeMaxDist;          // Max wake distance (from boat front)
+	float g_WakeMaxAngle;         // Spread angle (Kelvin wake style, in radians)
+	float g_WakeDepthStrength;    // Wake indentation strength
+	float g_WakeDecay;            // Lateral decay (higher = sharper center)
+
+	XMFLOAT2 g_BoatPos;           // Boat position (x, z)
+	XMFLOAT2 g_BoatDir;           // Boat direction (normalized)
+
+	float g_TotalTime;            // Global time (for wave animation)
+	float _padding;               // Padding for 16-byte alignment
 };
-
 
 class CS_Wave_Shader : CShader
 {
@@ -166,11 +191,12 @@ private:
 
 
 	ID3D12Resource* Frame_Info = NULL;
-	Wave_Frame_Info* m_pcbMappedFrame_Info= NULL;
+	WaveParams* m_pcbMappedFrame_Info = NULL;
 
 public:
 	ID3D12RootSignature* Wave_ComputeRootSignature_ptr;
 	static float total_time;
+	static WaveParams* update_wave_info;
 
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState = 0);
 
@@ -180,7 +206,9 @@ public:
 	virtual void CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups = 1, UINT cyThreadGroups = 1, UINT czThreadGroups = 1, int nPipelineState = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, Wave_Frame_Info* wave_info);
+	//virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, Wave_Frame_Info* wave_info);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
 	virtual void ReleaseShaderVariables();
 
 	void OnPrepareDispatch(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);

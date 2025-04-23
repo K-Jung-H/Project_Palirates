@@ -586,14 +586,12 @@ void CGameFramework::Build_Scenes()
 
 
 
-	//CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Game_Board").get();
-	
+	//CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();	
 	//CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
 	//m_pPlayer = pPlayer;
 	//scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
 
-
+	CScene* test_scene_ptr = scene_manager->Load_Scene("Game_Board").get();
 	Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
 	m_pPlayer = observer;
 	scene_manager->Set_Scene_Player("Game_Board", m_pPlayer);
@@ -964,10 +962,16 @@ void CGameFramework::FrameAdvance()
 	{
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
+
+		//Debuging G-Buffer
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(0);
+		//post_effect_manager->fullscreen_shader->OnPrepareRender(Active_CommandList);
+		//post_effect_manager->fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, Albedo_G_Buffer_SRV_handle);
+		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
 		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
 		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
 		
 		// Apply reserved effects

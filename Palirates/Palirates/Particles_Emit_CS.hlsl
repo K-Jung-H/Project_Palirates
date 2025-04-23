@@ -89,9 +89,25 @@ void Emit_Spark(inout Particle_Info p, uint index)
     p.Position = center;
     float3 dir = RandomSpreadDirection(index, Main_Direction, 2.0f);
     p.Velocity = normalize(dir) * Init_Velocity_Value;
-    p.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    p.Color = float3(1.0f, 0.0f, 0.0f);
 
 }
+
+void Emit_Water_Splash(inout Particle_Info p, uint index)
+{
+    float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
+    p.Position = center;
+
+    float3 baseDir = normalize(Main_Direction);
+    float3 right = normalize(cross(float3(0, 1, 0), baseDir));    
+    float side = (index % 2 == 0) ? -1.0f : 1.0f;
+    float3 liftedBaseDir = normalize(baseDir + float3(0, 0.5f, 0));
+    float3 spreadDir = normalize(liftedBaseDir + right * side * 0.5f);
+    float3 finalDir = RandomSpreadDirection(index, spreadDir, 0.2f);
+    p.Velocity = normalize(finalDir) * Init_Velocity_Value;
+    p.Color = float3(0.6f, 0.8f, 1.0f);
+}
+
 
 
 #define THREAD_COUNT 64
@@ -118,6 +134,22 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Snow(p, index);
     else if (p.Type == 1)
         Emit_Spark(p, index);
+    else if (p.Type == 2)
+    {
+        float seed = frac(sin(index * 91.91f) * 12345.6789f);
+        float startDelay = seed * 0.1f;
 
-    ParticleBuffer_Emit[index] = p;
+        if (ElapsedTime >= startDelay)
+        {
+            p.Active = 1;
+            p.Lifetime = 0.0f;
+            Emit_Water_Splash(p, index);
+        }
+        else
+        {
+            return; 
+        }
+    }
+
+        ParticleBuffer_Emit[index] = p;
 }

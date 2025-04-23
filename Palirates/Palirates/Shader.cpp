@@ -82,13 +82,23 @@ D3D12_SHADER_BYTECODE CShader::CompileShaderFromFile(WCHAR *pszFileName, LPCSTR 
 		char* pErrorString = (char*)pd3dErrorBlob->GetBufferPointer();
 		DebugOutput(pErrorString);
 		DebugOutput("----------------------------------------\n");
+		pd3dErrorBlob->Release();
 	}
 
-	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
-	d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
+	D3D12_SHADER_BYTECODE d3dShaderByteCode = {};
 
-	return(d3dShaderByteCode);
+	if (SUCCEEDED(hResult) && ppd3dShaderBlob && *ppd3dShaderBlob)
+	{
+		d3dShaderByteCode.BytecodeLength = (*ppd3dShaderBlob)->GetBufferSize();
+		d3dShaderByteCode.pShaderBytecode = (*ppd3dShaderBlob)->GetBufferPointer();
+	}
+	else
+	{
+		DebugOutput("[Shader Compilation] Failed to compile shader!\n");
+		*ppd3dShaderBlob = nullptr; 
+	}
+
+	return d3dShaderByteCode;
 }
 
 #define _WITH_WFOPEN

@@ -19,7 +19,7 @@
 #define DIRECTIONAL_LIGHT				3
 
 class Particle_Manager;
-
+class ParticleObject;
 
 
 struct LIGHT
@@ -144,6 +144,7 @@ class Board_Scene : public CScene
 private:
 	std::shared_ptr<Boat_Object> pirate_ship;
 	std::shared_ptr<Wave_Object> wave_plane;
+	std::shared_ptr<ParticleObject> water_particle;
 
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

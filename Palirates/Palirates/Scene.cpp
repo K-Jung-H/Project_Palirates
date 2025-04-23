@@ -1200,6 +1200,7 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
+	m_pLights[1].m_bEnable = false;
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 
@@ -1216,52 +1217,156 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	//	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
-
 
 	obj_manager = new Object_Manager();
 
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 
-	string obj_name_1 = "wave_1";
 
-	std::string_view name_view = obj_name_1;
-	name_view = obj_name_1;
 
-	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 2000);
-	wave_plane->Set_Name(name_view);
+	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000);
+	wave_plane->Set_Name("wave_1");
 	wave_plane->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
 	wave_plane->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
 	wave_plane->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
 	obj_manager->Add_Object(wave_plane, Object_Type::plane);
 	obj_manager->wave_obj = wave_plane.get();
-	//=====================================================
-
-	CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/SM_Veh_Boat_Warship_01_Hull_Attachments.bin", NULL);
-
-	pirate_ship = std::make_shared<Boat_Object>();
-	pirate_ship->Set_Child(Ship_Model->m_pModelRootObject);
-//	pirate_ship = .get(;
-
-	pirate_ship->Set_Name("player's pirate_ship");
-	pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
-//	pirate_ship->SetLookDirection(1.0f, 1.0f, 1.0f);
-
-	pirate_ship->SetScale({ 5.0f,5.0f ,5.0f }, true);
-	obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
-
 
 	//=====================================================
+	{
+		CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
+		std::shared_ptr<CGameObject> test_Island_0 = CGameObject::Make_Instance(Test_Island_Model->m_pModelRootObject, true);
+		test_Island_0->Set_Name("Island_0");
+		test_Island_0->SetScale({ 2.0f, 3.0f ,2.0f }, true);
+
+		std::shared_ptr<CGameObject> test_Island_1 = CGameObject::Make_Instance(test_Island_0, true);
+		test_Island_1->Set_Name("Island_1");
+
+		std::shared_ptr<CGameObject> test_Island_2 = CGameObject::Make_Instance(test_Island_1, true);
+		test_Island_1->Set_Name("Island_2");
+
+		std::shared_ptr<CGameObject> test_Island_3 = CGameObject::Make_Instance(test_Island_2, true);
+		test_Island_1->Set_Name("Island_3");
+
+		std::shared_ptr<CGameObject> test_Island_4 = CGameObject::Make_Instance(test_Island_3, true);
+		test_Island_1->Set_Name("Island_4");
+
+		std::shared_ptr<CGameObject> test_Island_5 = CGameObject::Make_Instance(test_Island_4, true);
+		test_Island_1->Set_Name("Island_5");
+
+		std::shared_ptr<CGameObject> test_Island_6 = CGameObject::Make_Instance(test_Island_5, true);
+		test_Island_1->Set_Name("Island_6");
+
+
+		test_Island_0->SetPosition(-1200.0f, 40.0f, -1200.0f);
+		test_Island_1->SetPosition(-1200.0f, 40.0f, 0.0f);
+		test_Island_2->SetPosition(-1200.0f, 40.0f, 1200.0f);
+		test_Island_3->SetPosition(0.0f, 40.0f, 1200.0f);
+		test_Island_4->SetPosition(1200.0f, 40.0f, 1200.0f);
+		test_Island_5->SetPosition(1200.0f, 40.0f, 0.0f);
+		test_Island_6->SetPosition(1200.0f, 40.0f, -1200.0f);
+
+
+		obj_manager->Add_Object(test_Island_0, Object_Type::fixed);
+		obj_manager->Add_Object(test_Island_1, Object_Type::fixed);
+		obj_manager->Add_Object(test_Island_2, Object_Type::fixed);
+		obj_manager->Add_Object(test_Island_3, Object_Type::fixed);
+		obj_manager->Add_Object(test_Island_4, Object_Type::fixed);
+		obj_manager->Add_Object(test_Island_5, Object_Type::fixed);
+		obj_manager->Add_Object(test_Island_6, Object_Type::fixed);
+
+		//if (Test_Island_Model)
+		//	delete Test_Island_Model;
+	}
+	//=====================================================
+	{
+		CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/SM_Veh_Boat_Warship_01_Hull_Attachments.bin", NULL);
+
+		pirate_ship = std::make_shared<Boat_Object>();
+		pirate_ship->Set_Child(Ship_Model->m_pModelRootObject);
+
+
+		pirate_ship->Set_Name("player's pirate_ship");
+		pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+
+
+		pirate_ship->SetScale({ 2.0f, 2.0f, 2.0f }, true);
+		obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
+		pirate_ship->Obj_Info();
+
+
+		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_Pos"));
+		pirate_ship->RegisterMarker("Sailor_0", pirate_ship->FindFrame("Sailor_Pos_0"));
+		pirate_ship->RegisterMarker("Sailor_1", pirate_ship->FindFrame("Sailor_Pos_1"));
+		pirate_ship->RegisterMarker("Sailor_2", pirate_ship->FindFrame("Sailor_Pos_2"));
+		pirate_ship->RegisterMarker("Sailor_3", pirate_ship->FindFrame("Sailor_Pos_3"));
+		pirate_ship->RegisterMarker("Sailor_4", pirate_ship->FindFrame("Sailor_Pos_4"));
+
+		
+		if (Ship_Model)
+			delete Ship_Model;
+
+	}
+	//=====================================================
+
+	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
+	Particle_Format water_splashes_info;
+	{
+		water_splashes_info.shader_type = Particle_Type::spread;
+		water_splashes_info.particle_type = 2;
+		water_splashes_info.max_particles = 300;
+
+		water_splashes_info.center = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);
+
+		water_splashes_info.MaxLifetime = 0.3f;
+
+		water_splashes_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		water_splashes_info.init_velocity_value = 100.0f;
+		water_splashes_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+
+		water_splashes_info.size = XMFLOAT2(10.0f, 10.0f);
+		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
+	}
+	
+	water_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
+
+	//=====================================================
+
 
 	Object_Manager::Reserve_Update();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	if (Ship_Model)
-		delete Ship_Model;
+	{
+		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.02f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.0f;                            // Minimum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMax = 1.0f;                            // Maximum wave height
+		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
+		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
+		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
+		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
+
+		// === Boat Wake Parameters ===
+		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 50.0f;                          // Maximum distance the wake affects
+		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
+		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 1.0f;                            // Strength of depth indentation
+		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
+
+		// === Time ===
+		CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
+		CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
+	}
+
+
+
+
+
 }
 
 void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -1282,6 +1387,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
+	water_particle->Set_Center(pirate_ship->GetPosition());
+	water_particle->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 }
 
 void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1329,31 +1436,69 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'I':		case 'i':
 		{
-//			pirate_ship->Move(500.0f, true);
 			pirate_ship->MoveForward(20);
 		}
 		break;
 
 		case 'J':		case 'j':
 		{
-			pirate_ship->Yaw(-3.0f);
-			//pirate_ship->RotateInWorldAroundUp(30.0f);
-		}
-		break;
-
-		case 'K':		case 'k':
-		{
+			pirate_ship->Add_Rotate(-10.0f);
 		}
 		break;
 
 		case 'L':		case 'l':
 		{
-			pirate_ship->Yaw(3.0f);
-//			pirate_ship->RotateInWorldAroundUp(-3.0f);
+			pirate_ship->Add_Rotate(10.0f);
 		}
 		break;
 
+		case '1':
+		{
+			XMFLOAT3 new_camera_pos;
+			pirate_ship->GetMarkerWorldPosition("Captain", new_camera_pos);
+			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+		}
+		break;
 
+		case '2':
+		{
+			XMFLOAT3 new_camera_pos;
+			pirate_ship->GetMarkerWorldPosition("Sailor_0", new_camera_pos);
+			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+		}
+		break;
+
+		case '3':
+		{
+			XMFLOAT3 new_camera_pos;
+			pirate_ship->GetMarkerWorldPosition("Sailor_1", new_camera_pos);
+			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+		}
+		break;
+
+		case '4':
+		{
+			XMFLOAT3 new_camera_pos;
+			pirate_ship->GetMarkerWorldPosition("Sailor_2", new_camera_pos);
+			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+		}
+		break;
+
+		case '5':
+		{
+			XMFLOAT3 new_camera_pos;
+			pirate_ship->GetMarkerWorldPosition("Sailor_3", new_camera_pos);
+			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+		}
+		break;
+
+		case '6':
+		{
+			XMFLOAT3 new_camera_pos;
+			pirate_ship->GetMarkerWorldPosition("Sailor_4", new_camera_pos);
+			m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+		}
+		break;
 		default:
 			break;
 		}

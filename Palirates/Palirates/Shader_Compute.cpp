@@ -539,6 +539,8 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 
 //=====================================================================
 float CS_Wave_Shader::total_time = 0.0f;
+WaveParams* CS_Wave_Shader::update_wave_info = NULL;
+
 D3D12_SHADER_BYTECODE CS_Wave_Shader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
@@ -675,7 +677,7 @@ void CS_Wave_Shader::CreateComputePipelineState(ID3D12Device* pd3dDevice, ID3D12
 
 void CS_Wave_Shader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
 {
-	n_Wave_computePipelineStates = 1;
+	n_Wave_computePipelineStates = 3;
 	Wave_computePipelineStates = new ID3D12PipelineState * [n_Wave_computePipelineStates];
 
 	if (Wave_ComputeRootSignature_ptr == NULL)
@@ -689,23 +691,52 @@ void CS_Wave_Shader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups,
 	m_cxThreadGroups = cxThreadGroups;
 	m_cyThreadGroups = cyThreadGroups;
 	m_czThreadGroups = czThreadGroups;
-}
 
+	update_wave_info = new WaveParams();
+}
 
 void CS_Wave_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(Wave_Frame_Info) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(WaveParams) + 255) & ~255); //256의 배수
+
 	Frame_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	Frame_Info->Map(0, NULL, (void**)&m_pcbMappedFrame_Info);
+
+
+	// === Global Wave Parameters ===
+	update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
+	update_wave_info->g_HeightDamping = 0.02f;                           // Damping factor for height interpolation
+	update_wave_info->g_WaveMin = 0.0f;                            // Minimum wave height
+	update_wave_info->g_WaveMax = 1.0f;                            // Maximum wave height
+	update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
+	update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
+	update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
+	update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
+
+	// === Boat Wake Parameters ===
+	update_wave_info->g_WakeMaxDist = 150.0f;                          // Maximum distance the wake affects
+	update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
+	update_wave_info->g_WakeDepthStrength = 1.0f;                            // Strength of depth indentation
+	update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
+
+	// === Boat Position and Direction ===
+	XMFLOAT3 boatPos = { 0.0f, 0.0f, 0.0f };                                    // World position of the boat
+	XMFLOAT3 boatDir = { 0.0f, 1.0f, 0.0f };                                    // Normalized direction of the boat
+
+	update_wave_info->g_BoatPos = XMFLOAT2(boatPos.x, boatPos.z);             // Use XZ only for 2D projection
+	update_wave_info->g_BoatDir = XMFLOAT2(boatDir.x, boatDir.z);             // Use XZ direction for wake
+
+	// === Time ===
+	update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
+	update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
 }
 
-void CS_Wave_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, Wave_Frame_Info* wave_info)
+void CS_Wave_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	::memcpy(&m_pcbMappedFrame_Info->boat_dir, &wave_info->boat_dir, sizeof(XMFLOAT3));
-	::memcpy(&m_pcbMappedFrame_Info->boat_pos, &wave_info->boat_pos, sizeof(XMFLOAT3));
-	::memcpy(&m_pcbMappedFrame_Info->ElapsedTime, &wave_info->ElapsedTime, sizeof(float));
-	::memcpy(&m_pcbMappedFrame_Info->total_time, &wave_info->total_time, sizeof(float));
+	update_wave_info->g_WakeMaxDist = std::min(update_wave_info->g_WakeMaxDist, 150.0f);
+
+	::memcpy(m_pcbMappedFrame_Info, update_wave_info, sizeof(WaveParams));
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = Frame_Info->GetGPUVirtualAddress();
 	pd3dCommandList->SetComputeRootConstantBufferView(0, d3dGpuVirtualAddress);

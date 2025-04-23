@@ -465,12 +465,12 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 {
 	string name = obj_ptr->Get_Mesh_Name();
 
-	if (name == "SM_Env_Beach_02" ||
-		name == "SM_Env_Beach_03" ||
-		name == "SM_Env_Beach_04" ||
-		name == "SM_Env_Beach_06" ||
-		name == "SM_Env_Flat_Sand_02")
-		name = "None";
+	//if (name == "SM_Env_Beach_02" ||
+	//	name == "SM_Env_Beach_03" ||
+	//	name == "SM_Env_Beach_04" ||
+	//	name == "SM_Env_Beach_06" ||
+	//	name == "SM_Env_Flat_Sand_02")
+	//	name = "None";
 
 	if (name != "None") 
 	{
@@ -664,8 +664,8 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 void Object_Manager::Check_Culling_All(CCamera* pCamera)
 {
 	/// 타일맵 컬링하기
-	if (terrain_ptr != NULL)	
-		terrain_ptr->Check_Culling(pCamera);
+	//if (terrain_ptr != NULL)	
+	//	terrain_ptr->Check_Culling(pCamera);
 
 	Check_Culling(pCamera, Object_Type::skinned);
 	Check_Culling(pCamera, Object_Type::non_skinned);
@@ -756,42 +756,31 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 			Synchronize_Active_Objects_and_Tile();
 		}
 
+		if (instance_shader)
+			instance_shader->Setting_Render(pd3dCommandList, 0);
+
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
-
-			int Material_N = instance_info.fixed_obj_list[0]->Material_list.size();
-			if (Material_N > 0)
+			for(std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
 			{
-				// 재료(Material) 처리
-				for (int i = 0; i < Material_N; ++i)
-				{					
-					CMaterial* pMaterial = instance_info.fixed_obj_list[0]->Material_list[i].get();
-					if (pMaterial)
+				for(std::shared_ptr<CMaterial> obj_material : obj_ptr->Material_list)
+				{
+					if (obj_material)
 					{
-						if (instance_shader)
-						{
-							// PSO 순회 및 렌더링
-							int pipelineStateNum = instance_shader->Get_Num_PipelineState();
-							for (int j = 0; j < pipelineStateNum; ++j)
-							{
-								// PSO 설정
-								instance_shader->Setting_Render(pd3dCommandList, 0);
-
-								// 재료(Material) 셰이더 변수 업데이트
-								pMaterial->UpdateShaderVariable(pd3dCommandList);
-							}
-						}
-						else
-						{
-							// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
-							pMaterial->UpdateShaderVariable(pd3dCommandList);
-						}
-
+						// 재료(Material) 셰이더 변수 업데이트
+						// 현재 의미 없음, 결국 메테리얼 하나의 정보를 기반으로 인스턴싱
+						// -> 한번만 동작해야 함 
+						// -> 하나의 머테리얼을 모두에게 적용하게 됨
+						// -> 각각 다른머테리얼을 하려면, 인스턴싱을 하면 안됨 or 인스턴싱 넘버 기반으로 셰이더에서 처리하기
+						// 아니면 인스턴싱 정보에 재질 ID 전달 및 ID 기반 조명 렌더링
+						obj_material->UpdateShaderVariable(pd3dCommandList);
+							
 						// 메쉬 렌더링
 						if (instance_info.obj_mesh)
 							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 					}
 				}
+				break;
 			}
 		}
 	}
