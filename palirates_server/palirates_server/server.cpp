@@ -17,29 +17,6 @@ Server::Server(int port)
     //dbManager.Connect();
 }
 
-void Server::SendInitialStates(int clientId)
-{
-    Scene* targetScene = sceneManager.getScene(clientId);
-    if (!targetScene) return;
-
-    for (const auto& [otherId, scene] : sceneManager.getAllScenes())
-    {
-        if (otherId == clientId) continue;
-
-        const GameCharacter* otherPlayer = scene.getPlayer(otherId);
-        if (!otherPlayer) continue;
-
-        std::string initPacket = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
-            std::to_string(otherPlayer->x) + "," + std::to_string(otherPlayer->y) + "," +
-            std::to_string(otherPlayer->z) + "," + std::to_string(otherPlayer->state);
-
-        send(clients[clientId], initPacket.c_str(), initPacket.length(), 0);
-
-        //logger.log("초기 동기화: 클라이언트 " + std::to_string(clientId) +
-        //    "에게 " + std::to_string(otherPlayer->id) + " 전송");
-    }
-}
-
 void Server::AcceptClients()
 {
     while (true)
@@ -55,6 +32,7 @@ void Server::AcceptClients()
         logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
 
         SendInitialStates(clientId);
+        NotifyExistingPlayersAboutNew(clientId);
 
         std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
     }
@@ -149,6 +127,53 @@ void Server::BroadcastAllStates()
         }
     }
 }
+
+void Server::SendInitialStates(int clientId)
+{
+    Scene* myScene = sceneManager.getScene(clientId);
+    if (!myScene) return;
+
+    for (const auto& [otherId, scene] : sceneManager.getAllScenes())
+    {
+        if (otherId == clientId) continue;
+
+        const GameCharacter* character = scene.getPlayer(otherId);
+        if (!character) continue;
+
+        std::string packet = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
+            std::to_string(character->x) + "," +
+            std::to_string(character->y) + "," +
+            std::to_string(character->z) + "," +
+            std::to_string(character->state);
+
+        send(clients[clientId], packet.c_str(), packet.length(), 0);
+    }
+}
+
+
+void Server::NotifyExistingPlayersAboutNew(int newClientId)
+{
+    Scene* scene = sceneManager.getScene(newClientId);
+    if (!scene) return;
+
+    const GameCharacter* character = scene->getPlayer(newClientId);
+    if (!character) return;
+
+    std::string packet = "PLAYER_UPDATE," + std::to_string(newClientId) + "," +
+        std::to_string(character->x) + "," +
+        std::to_string(character->y) + "," +
+        std::to_string(character->z) + "," +
+        std::to_string(character->state);
+
+    for (const auto& [clientId, sock] : clients)
+    {
+        if (clientId == newClientId) continue;  // 자기 자신 제외
+        send(sock, packet.c_str(), packet.length(), 0);
+    }
+
+    logger.Log("기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
+}
+
 
 Server::~Server()
 {

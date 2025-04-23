@@ -29,5 +29,6 @@ public:
     void BroadcastPacket(const std::string& packet, int senderId);
     void SendInitialStates(int clientId);
     void BroadcastAllStates();
+    void NotifyExistingPlayersAboutNew(int clientId);
     //bool ValidatePosition(float x, float y, float z);
 };
