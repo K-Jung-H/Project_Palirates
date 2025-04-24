@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Object_Manager.h"
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
@@ -14,6 +13,7 @@ BoundingBox_Shader::BoundingBox_Shader()
 BoundingBox_Shader::~BoundingBox_Shader()
 {
 }
+
 void BoundingBox_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	m_ngraphicsPipelineStates = 1;
@@ -126,7 +126,6 @@ OBB_Drawer::OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 		obb_shader = new BoundingBox_Shader();
 		obb_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		obb_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
 	}
 }
 
@@ -389,7 +388,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 		XMFLOAT4X4 world_matrix = obj_ptr->m_xmf4x4World;
 		XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(XMLoadFloat4x4(&world_matrix)));
 
-		Mapped_Instance_info[visible_count++] = { world_matrix, true };
+		Mapped_Instance_info[visible_count++] = { world_matrix };
 	}
 
 	rendering_num = visible_count; 
@@ -753,7 +752,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 		if (terrain_ptr)
 		{
 			terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
-			Synchronize_Active_Objects_and_Tile();
+//			Synchronize_Active_Objects_and_Tile();
 		}
 
 		if (instance_shader)
@@ -779,6 +778,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 						if (instance_info.obj_mesh)
 							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 					}
+					break;
 				}
 				break;
 			}
@@ -845,7 +845,6 @@ void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, 
 }
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);

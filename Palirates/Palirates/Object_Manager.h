@@ -15,7 +15,6 @@ struct Instance_Info;
 struct Instance_Info
 {
 	XMFLOAT4X4 world_4x4transform;
-	UINT active;
 };
 
 struct BoundingBox_Instance_Info

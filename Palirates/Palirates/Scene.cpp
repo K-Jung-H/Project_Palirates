@@ -719,7 +719,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 #ifdef LOAD_SCENE
 	// Load Scene
 
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("test_scene");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
@@ -1132,10 +1132,6 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
 
-
-	//obj_manager->Animate_Objects(Object_Type::skinned, m_fElapsedTime);
-	//obj_manager->Animate_Objects(Object_Type::player, m_fElapsedTime);
-
 }
 
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -1148,13 +1144,6 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr->Render_Objects(pd3dCommandList, pCamera);
-
-#ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
-#endif
-
-
-
 }
 
 void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1174,6 +1163,10 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	{
 		particle_manager->Render_All(pd3dCommandList, pCamera);
 	}
+#endif
+
+#ifdef RENDER_OBB
+	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
@@ -1297,6 +1290,10 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	obj_manager = new Object_Manager();
 
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
 	//=====================================================
 
 	CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
@@ -1412,10 +1409,13 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	obj_manager = new Object_Manager();
 
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
-
-
 
 	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000);
 	wave_plane->Set_Name("wave_1");
