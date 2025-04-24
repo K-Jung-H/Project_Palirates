@@ -33,8 +33,6 @@ struct Particle_Format
 
 	XMFLOAT3 color{};
 	XMFLOAT2 size{};
-
-
 };
 
 struct Render_Instance

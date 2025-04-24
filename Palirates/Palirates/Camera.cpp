@@ -203,6 +203,66 @@ bool CCamera::IsInFrustum(const XMFLOAT3& position)
 	return m_xmFrustum.Intersects(xmPoint);
 }
 
+void CCamera::SetLookDirection(XMFLOAT3& look)
+{
+	m_xmf3Look = Vector3::Normalize(look);
+
+	// Use world up vector (0,1,0) to maintain horizon stability
+	XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	// Recalculate right and up to ensure orthonormal basis
+	m_xmf3Right = Vector3::Normalize(Vector3::CrossProduct(worldUp, m_xmf3Look));
+	m_xmf3Up = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Look, m_xmf3Right));
+}
+
+void CCamera::SetMouseButtonHeld(bool held)
+{
+	m_bMouseButtonHeld = held;
+	if (!held) 
+		m_fMouseHoldTime = 0.0f;
+}
+
+void CCamera::UpdateMouseHold(float fElapsedTime)
+{
+	if (m_bMouseButtonHeld)
+	{
+		m_fMouseHoldTime += fElapsedTime;
+		m_bControlRotating = (m_fMouseHoldTime >= 0.1f); 
+	}
+	else
+	{
+		m_bControlRotating = false;
+	}
+}
+
+void CCamera::EnableFocusTracking(bool enable, const XMFLOAT3& target)
+{
+	m_bFocusTrackingEnabled = enable;
+	if (enable)
+	{
+		m_xmf3FocusTarget = target;
+	}
+}
+
+void CCamera::UpdateFocusTracking(XMFLOAT3& new_camera_pos)
+{
+	SetPosition(new_camera_pos);
+
+	if (!IsFocusTrackingEnabled()) 
+		return;
+
+	if (IsControlRotating())
+	{
+		XMFLOAT3 lookDir = GetLookVector();
+		XMFLOAT3 newFocus = Vector3::Add(new_camera_pos, Vector3::ScalarProduct(lookDir, CAMERA_FOCUS_DISTANCE, false));
+		SetFocusTarget(newFocus);
+	}
+
+	XMFLOAT3 toFocus = Vector3::Normalize(Vector3::Subtract(GetFocusTarget(), new_camera_pos));
+	SetLookDirection(toFocus);
+	RegenerateViewMatrix();
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CSpaceShipCamera
 

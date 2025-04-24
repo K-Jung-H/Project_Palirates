@@ -62,7 +62,7 @@ public:
 	
 	virtual void ReleaseShaderVariables();
 
-	void BuildDefaultLightsAndMaterials();
+	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void ReleaseObjects();
 
@@ -139,6 +139,15 @@ class Test_Scene : public CScene
 
 };
 
+class Character_Select_Scene : public CScene
+{
+	virtual void BuildDefaultLightsAndMaterials();
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+};
+
 class Board_Scene : public CScene
 {
 private:
@@ -150,6 +159,8 @@ private:
 	string camera_position = "";
 	bool focus_button = false;
 public:
+	virtual void BuildDefaultLightsAndMaterials();
+
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
