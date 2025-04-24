@@ -721,14 +721,14 @@ private:
 
 	XMFLOAT3 wave_normal_vector{};
 	float wave_height = 0.0f;
+	float smoothedHeight = 0.0f;
 
 	XMFLOAT3 boat_up_vector{};
 	XMFLOAT3 m_xmf3Position{};
-
 	XMFLOAT3 m_xmf3Velocity{};
+
 	float           			m_fMaxVelocityXZ = 0.0f;
 	float           			m_fFriction = 0.0f;
-
 
 
 public:

@@ -103,7 +103,7 @@ void Emit_Water_Splash(inout Particle_Info p, uint index)
     float side = (index % 2 == 0) ? -1.0f : 1.0f;
     float3 liftedBaseDir = normalize(baseDir + float3(0, 0.5f, 0));
     float3 spreadDir = normalize(liftedBaseDir + right * side * 0.5f);
-    float3 finalDir = RandomSpreadDirection(index, spreadDir, 0.2f);
+    float3 finalDir = RandomSpreadDirection(index, spreadDir, 0.5f);
     p.Velocity = normalize(finalDir) * Init_Velocity_Value;
     p.Color = float3(0.6f, 0.8f, 1.0f);
 }

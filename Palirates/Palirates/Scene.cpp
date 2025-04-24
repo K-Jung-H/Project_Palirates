@@ -1399,6 +1399,14 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	water_particle_2->Set_Center(bottom_tail_particle_pos);
 	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
+
+
+	if (m_pPlayer && m_pPlayer->GetCamera())
+	{
+		auto* camera = m_pPlayer->GetCamera();
+
+		camera->UpdateMouseHold(fTimeElapsed);
+	}
 }
 
 void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1406,13 +1414,19 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	wave_plane->Copy_Buffer_Data(pd3dCommandList);
 
 	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
+
 	if (focus_button)
 	{
+		CCamera* player_camera = m_pPlayer->GetCamera();
+
 		XMFLOAT3 new_camera_pos;
 		pirate_ship->UpdateTransform(NULL);
 		pirate_ship->GetMarkerWorldPosition(camera_position, new_camera_pos);
-		m_pPlayer->GetCamera()->SetPosition(new_camera_pos);
+
+		player_camera->UpdateFocusTracking(new_camera_pos);
 	}
+
+
 }
 
 void Board_Scene::After_Update_Objects()
@@ -1424,13 +1438,30 @@ void Board_Scene::After_Update_Objects()
 
 void Board_Scene::SetCameraTarget(std::string_view target)
 {
+	CCamera* camera_ptr = m_pPlayer->GetCamera();
+	if (!camera_ptr)
+		return;
+
 	if (camera_position != target)
 	{
 		camera_position = target;
 		focus_button = true;
+
+		XMFLOAT3 camera_pos = camera_ptr->GetPosition();
+		XMFLOAT3 lookDir = camera_ptr->GetLookVector();
+
+		XMFLOAT3 newFocus = Vector3::Add(camera_pos, Vector3::ScalarProduct(lookDir, CAMERA_FOCUS_DISTANCE, false));
+		m_pPlayer->GetCamera()->EnableFocusTracking(true, newFocus);
+
 	}
 	else
 	{
+		camera_ptr->EnableFocusTracking(false, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		XMFLOAT3 lookDir = XMFLOAT3(0.0f, 0.0f, 1.0f); 
+		camera_ptr->SetLookDirection(lookDir);
+		camera_ptr->RegenerateViewMatrix();
+
+		camera_position = "";
 		focus_button = false;
 	}
 }

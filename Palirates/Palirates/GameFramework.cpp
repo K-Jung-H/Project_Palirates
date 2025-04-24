@@ -652,6 +652,14 @@ void CGameFramework::ProcessInput()
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
 			dwDirection |= DIR_DOWN;      
 
+		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
+
+		if (m_pPlayer && m_pPlayer->GetCamera())
+		{
+			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
+		}
+
+
 		if (multiMode) {
 			auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
 			auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
@@ -691,6 +699,7 @@ void CGameFramework::ProcessInput()
 				if (cxDelta || cyDelta)
 				{
 					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+
 						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
 					else
 						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);

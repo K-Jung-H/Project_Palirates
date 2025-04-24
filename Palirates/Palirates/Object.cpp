@@ -3504,7 +3504,6 @@ XMFLOAT3 Wave_Object::Readback_Buffer_Data()
 	{
 		BoatPos_WaveNormal = XMFLOAT3(pReadData[0], pReadData[1], pReadData[2]);
 		BoatPos_WaveHeight = pReadData[3];
-		DebugOutput("\n x: " + to_string(BoatPos_WaveNormal.x) + ", y: " + to_string(BoatPos_WaveNormal.y) + ", z: " + to_string(BoatPos_WaveNormal.z) + ", H: " + to_string(BoatPos_WaveHeight));
 
 		D3D12_RANGE writtenRange = { 0, 0 };
 		Pos_Normal_ReadBack_buffer->Unmap(0, nullptr);
@@ -3753,7 +3752,7 @@ void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
 	XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
 
 	// --- 부드러운 높이 보정 ---
-	static float smoothedHeight = wave_height;
+
 	smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
 	newPos.y = smoothedHeight * 30.0f;
 
