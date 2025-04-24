@@ -192,6 +192,7 @@ protected:
 	CGameTimer					m_GameTimer;
 
 public:
+	UINT scene_index = 0;
 	Scene_Manager* scene_manager = NULL;
 	Post_Effect_Manager* post_effect_manager = NULL;
 

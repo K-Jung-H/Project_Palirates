@@ -355,10 +355,33 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 
 				case VK_SPACE:
-					//scene_manager->Load_Scene("Scene_2");
-					//Object_Manager::Reserve_Update();
 					break;
 
+				case VK_TAB:
+				{
+					scene_index = (scene_index + 1) % 3;
+
+					switch (scene_index)
+					{
+					case 0:
+						scene_manager->Set_Active_Scene("Character_Select");
+						break;
+					case 1:
+						scene_manager->Set_Active_Scene("Game_Board");
+						break;
+					case 2:
+						scene_manager->Set_Active_Scene("In_Stage");
+						break;
+					default:
+						break;
+					}
+
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+					break;
+				}
+				break;
 				case VK_RETURN:
 					break;
 				case VK_F1:
@@ -560,8 +583,6 @@ void CGameFramework::Build_Scenes()
 
 
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
-
-
 	
 	scene_manager->Set_Shader(MRT_shader);
 
@@ -575,27 +596,28 @@ void CGameFramework::Build_Scenes()
 
 
 	//========================================================
-	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
-	scene_manager->Register_Scene("Scene_1", Scene_1);
-	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
+	scene_manager->Register_Scene("In_Stage", in_stage_scene);
+	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
+	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
+	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 
-
-	std::shared_ptr<Board_Scene> Game_Board_Scene = std::make_shared<Board_Scene>();
-	scene_manager->Register_Scene("Game_Board", Game_Board_Scene);
+	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
+	scene_manager->Register_Scene("Game_Board", game_board_scene);
 	scene_manager->Build_Scene("Game_Board", m_pd3dDevice, Active_CommandList);
+	Observer* game_board_observer = new Observer(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	scene_manager->Set_Scene_Player("Game_Board", game_board_observer);
 
 
+	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
+	scene_manager->Register_Scene("Character_Select", character_select_scene);
+	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
+	Observer* select_scene_observer = new Observer(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
+	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 
-	//CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();	
-	//CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
-	//m_pPlayer = pPlayer;
-	//scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
 
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Game_Board").get();
-	Observer* observer = new Observer(m_pd3dDevice, Active_CommandList, test_scene_ptr->Get_MRT_GraphicsRootSignature());
-	m_pPlayer = observer;
-	scene_manager->Set_Scene_Player("Game_Board", m_pPlayer);
-	
+	scene_manager->Set_Active_Scene("Character_Select");
+	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
 
 

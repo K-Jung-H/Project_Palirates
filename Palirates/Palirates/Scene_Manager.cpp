@@ -44,9 +44,7 @@ std::shared_ptr<CScene> Scene_Manager::Load_Scene(std::string_view sceneName)
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
     {
-        // Activate existing scene
-        activeScene = it->second;  
-        return activeScene;
+        return it->second;
     }
 
     DebugOutput("[Scene_Manager] ERROR: Scene '" + std::string(sceneName) + "' not found.");
@@ -95,6 +93,16 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player
 
     DebugOutput("[Scene_Manager] ERROR:  Can't find " + std::string(sceneName));
     return false;
+}
+
+CPlayer* Scene_Manager::Get_Active_Scene_Player()
+{
+    if (activeScene)
+        return activeScene->m_pPlayer;
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
+    return NULL;
+
 }
 
 void Scene_Manager::Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)

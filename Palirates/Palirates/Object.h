@@ -724,7 +724,6 @@ private:
 	float smoothedHeight = 0.0f;
 
 	XMFLOAT3 boat_up_vector{};
-	XMFLOAT3 m_xmf3Position{};
 	XMFLOAT3 m_xmf3Velocity{};
 
 	float           			m_fMaxVelocityXZ = 0.0f;

@@ -31,6 +31,7 @@ public:
     CScene* Get_Active_Scene_Ptr() { return activeScene.get(); }
 
     bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player_ptr);
+    CPlayer* Get_Active_Scene_Player();
 
     void Set_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
 

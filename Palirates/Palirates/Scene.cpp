@@ -558,7 +558,50 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
+	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+
+	Particle_Format test_snow_info;
+	{
+		test_snow_info.shader_type = Particle_Type::spread;
+		test_snow_info.particle_type = 0;
+		test_snow_info.max_particles = 1000;
+
+		test_snow_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
+		test_snow_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
+
+		test_snow_info.MaxLifetime = 3.0f;
+
+		test_snow_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		test_snow_info.init_velocity_value = 0.0f;
+		test_snow_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
+
+		test_snow_info.size = XMFLOAT2(10.0f, 10.0f);
+		test_snow_info.color = XMFLOAT3(0.5f, 0.5f, 1.0f);
+	}
+
+	Particle_Format test_spark_info;
+	{
+		test_spark_info.shader_type = Particle_Type::spread;
+		test_spark_info.particle_type = 1;
+		test_spark_info.max_particles = 30;
+
+		test_spark_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
+		test_spark_info.area_xyz = XMFLOAT3(100.0f, 100.0f, 100.0f);
+
+		test_spark_info.MaxLifetime = 1.0f;
+
+		test_spark_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		test_spark_info.init_velocity_value = 100.0f;
+		test_spark_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+
+		test_spark_info.size = XMFLOAT2(10.0f, 10.0f);
+		test_spark_info.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
+	}
+
+	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_spark_info);
+	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 #endif
 
 
@@ -1196,6 +1239,153 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 }
 
 //==========================================================================================
+
+void Character_Select_Scene::BuildDefaultLightsAndMaterials()
+{
+	m_nLights = 3;
+	m_pLights = new LIGHT[m_nLights];
+	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
+
+	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = POINT_LIGHT;
+	m_pLights[0].m_fRange = 300.0f;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.3f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+
+	m_pLights[1].m_bEnable = false;
+	m_pLights[1].m_nType = SPOT_LIGHT;
+	m_pLights[1].m_fRange = 500.0f;
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 100.0f, 0.0f);
+	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+	m_pLights[1].m_fFalloff = 8.0f;
+	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
+	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+
+
+	m_pLights[1].m_bEnable = false;
+	m_pLights[1].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+}
+
+void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	BuildDefaultLightsAndMaterials();
+
+	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
+	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
+	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+
+#ifdef RENDER_PARTICLE
+	particle_manager = new Particle_Manager();
+	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
+	obj_manager = new Object_Manager();
+
+	//=====================================================
+
+	CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
+	std::shared_ptr<CGameObject> test_Island = CGameObject::Make_Instance(Test_Island_Model->m_pModelRootObject, true);
+	test_Island->Set_Name("Island");
+	test_Island->SetScale({ 2.0f, 3.0f ,2.0f }, true);
+	test_Island->SetPosition(0.0f, 0.0f, 0.0f);
+
+	obj_manager->Add_Object(test_Island, Object_Type::fixed);
+
+	//=====================================================
+	Object_Manager::Reserve_Update();
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+}
+
+void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	m_fElapsedTime = fTimeElapsed;
+}
+
+void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+}
+
+//==========================================================================================
+
+void Board_Scene::BuildDefaultLightsAndMaterials()
+{
+	m_nLights = 5;
+	m_pLights = new LIGHT[m_nLights];
+	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
+
+	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = POINT_LIGHT;
+	m_pLights[0].m_fRange = 300.0f;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+
+	m_pLights[1].m_bEnable = true;
+	m_pLights[1].m_nType = SPOT_LIGHT;
+	m_pLights[1].m_fRange = 500.0f;
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
+	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+	m_pLights[1].m_fFalloff = 8.0f;
+	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
+	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+
+
+	m_pLights[2].m_bEnable = false;
+	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+	m_pLights[3].m_bEnable = false;
+	m_pLights[3].m_nType = SPOT_LIGHT;
+	m_pLights[3].m_fRange = 600.0f;
+	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
+	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
+	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
+	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
+	m_pLights[3].m_fFalloff = 8.0f;
+	m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
+	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
+
+	m_pLights[4].m_bEnable = false;
+	m_pLights[4].m_nType = POINT_LIGHT;
+	m_pLights[4].m_fRange = 200.0f;
+	m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+	m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
+	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
+	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+}
+
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
