@@ -1,13 +1,12 @@
 //-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
-
+#pragma once
 #include "stdafx.h"
 #include "GameFramework.h"
-#include <iostream>
-#include <sstream>
-#include <iomanip>
+#include "Object_Manager.h"
 
+std::unordered_map<int, RemotePlayer> remotePlayers;
 
 CGameFramework::CGameFramework()
 {
@@ -44,6 +43,8 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 
 	isRunning = false;
+
+	object_manager = std::make_shared<Object_Manager>();
 }
 
 CGameFramework::~CGameFramework()
@@ -1059,163 +1060,6 @@ void CGameFramework::FrameAdvance()
 }
 
 
-//void CGameFramework::FrameAdvance()
-//{
-//	m_GameTimer.Tick(100.0f);
-//	ProcessInput();
-//
-//	auto t_start = std::chrono::high_resolution_clock::now();
-//
-//	// [1] Animate Scene
-//	auto t0 = std::chrono::high_resolution_clock::now();
-//	BeginGPUStage(GPU_Stage::Compute);
-//	PrepareStage(GPU_Stage::Compute);
-//	Animate_Scene();
-//	EndGPUStage(GPU_Stage::Compute, true);
-//	auto t1 = std::chrono::high_resolution_clock::now();
-//
-//	// [2] Update Scene
-//	BeginGPUStage(GPU_Stage::Compute);
-//	PrepareStage(GPU_Stage::Compute);
-//	Update_Scene();
-//	EndGPUStage(GPU_Stage::Compute, true);
-//	auto t2 = std::chrono::high_resolution_clock::now();
-//
-//	// [3] Particle Clear
-//	BeginGPUStage(GPU_Stage::Compute);
-//	PrepareStage(GPU_Stage::Compute);
-//	scene_manager->Clear_Particles_Update_Result(Active_CommandList);
-//	EndGPUStage(GPU_Stage::Compute, true);
-//	auto t3 = std::chrono::high_resolution_clock::now();
-//
-//	// [4] After Update
-//	After_Update_Scene();
-//#ifdef WRITE_TEXT_UI
-//	scene_manager->Update_UI();
-//#endif
-//	auto t4 = std::chrono::high_resolution_clock::now();
-//
-//	// [5] Render
-//	BeginGPUStage(GPU_Stage::Render);
-//	PrepareStage(GPU_Stage::Render);
-//	{
-//		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-//		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-//
-//		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
-//
-//		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//		UpdateShaderVariables();
-//		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//
-//		if (m_pPlayer)
-//			m_pPlayer->Render(Active_CommandList, m_pCamera);
-//
-//		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-//			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-//
-//
-//		// Merge G-Buffers
-//		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-//
-//		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
-//		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//	}
-//	EndGPUStage(GPU_Stage::Render);
-//	auto t5 = std::chrono::high_resolution_clock::now();
-//
-//	// [6] Post Process
-//	BeginGPUStage(GPU_Stage::Post);
-//	PrepareStage(GPU_Stage::Post);
-//	{
-//		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-//
-//
-//		//Debuging G-Buffer
-//		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(0);
-//		//post_effect_manager->fullscreen_shader->OnPrepareRender(Active_CommandList);
-//		//post_effect_manager->fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, Albedo_G_Buffer_SRV_handle);
-//		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
-//
-//		// Reserve Effects
-//		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
-//		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
-//		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
-//
-//		// Apply reserved effects
-//		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
-//		post_effect_manager->Clear_Reserved_Effect();
-//
-//
-//		// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
-//
-//		// Use previously stored depth buffer values
-//		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-//		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &dsvHandle);
-//
-//
-//		// Rendering Transparent object
-//		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//		UpdateShaderVariables();
-//		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//
-//
-//		// Record moving Object's Last Pos to use motion blur
-//		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-//		m_pPlayer->Record_Last_Pos();
-//
-//#ifndef WRITE_TEXT_UI
-//		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-//			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-//#endif
-//	}
-//	EndGPUStage(GPU_Stage::Post);
-//	auto t6 = std::chrono::high_resolution_clock::now();
-//
-//	// [7] Text UI
-//#ifdef WRITE_TEXT_UI
-//	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
-//#endif
-//	auto t7 = std::chrono::high_resolution_clock::now();
-//
-//	// [8] Present
-//	m_pdxgiSwapChain->Present(1, 0);
-//	MoveToNextFrame();
-//	auto t8 = std::chrono::high_resolution_clock::now();
-//
-//	// 프레임 타임 측정 로그
-//	float ms_anim = std::chrono::duration<float, std::milli>(t1 - t0).count();
-//	float ms_update = std::chrono::duration<float, std::milli>(t2 - t1).count();
-//	float ms_particle = std::chrono::duration<float, std::milli>(t3 - t2).count();
-//	float ms_afterUpdate = std::chrono::duration<float, std::milli>(t4 - t3).count();
-//	float ms_render = std::chrono::duration<float, std::milli>(t5 - t4).count();
-//	float ms_post = std::chrono::duration<float, std::milli>(t6 - t5).count();
-//	float ms_ui = std::chrono::duration<float, std::milli>(t7 - t6).count();
-//	float ms_present = std::chrono::duration<float, std::milli>(t8 - t7).count();
-//	float ms_total = std::chrono::duration<float, std::milli>(t8 - t_start).count();
-//
-//	wchar_t log[512];
-//	swprintf_s(log, 512,
-//		L"\n[Frame Breakdown]\n"
-//		L"Animate Scene     : %.3f ms\n"
-//		L"Update Scene      : %.3f ms\n"
-//		L"Clear Particles   : %.3f ms\n"
-//		L"After Update      : %.3f ms\n"
-//		L"Render Phase      : %.3f ms\n"
-//		L"Post Process      : %.3f ms\n"
-//		L"UI                : %.3f ms\n"
-//		L"Present           : %.3f ms\n"
-//		L"TOTAL Frame Time  : %.3f ms\n\n",
-//		ms_anim, ms_update, ms_particle, ms_afterUpdate,
-//		ms_render, ms_post, ms_ui, ms_present, ms_total);
-//
-//	OutputDebugStringW(log);
-//
-//	// FPS 표시
-//	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
-//	SetWindowText(m_hWnd, m_pszFrameRate);
-//}
-
 
 
 //==============서버================
@@ -1346,6 +1190,65 @@ void CGameFramework::NetworkLoop()
 			buffer[bytesReceived] = '\0'; 
 			std::string receivedData(buffer);
 			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
+			if (receivedData.starts_with("PLAYER_UPDATE"))
+			{
+				int id = 0;
+				float x = 0, y = 0, z = 0;
+				int state = 0;
+
+				if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+					&id, &x, &y, &z, &state) == 5)
+				{
+
+					if (id != ClientNum)
+					{
+						if (remotePlayers.find(id) == remotePlayers.end()) {
+							RemotePlayer new_player;
+							new_player.id = id;
+							new_player.position = { x, y, z };
+							new_player.state = state;
+
+							auto player = std::make_shared<CTerrainPlayer>();
+							player->SetPosition(DirectX::XMFLOAT3(x, y, z));
+							player->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(player));
+							object_manager->Add_Object(player, Object_Type::player);
+
+							new_player.player_obj = player;
+							remotePlayers[id] = new_player;
+						}
+						else
+						{
+							auto& p = remotePlayers[id];
+							p.position = { x, y, z };
+							p.state = state;
+							if (p.player_obj)
+							{
+								p.player_obj->SetPosition(DirectX::XMFLOAT3(x, y, z));
+								p.player_obj->GetStateMachine()->SetState(static_cast<State>(state));
+							}
+						}
+					}
+				}
+			}
+			else if (receivedData.starts_with("PLAYER_LEAVE"))
+			{
+				int id = 0;
+				if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &id) == 1)
+				{
+					if (remotePlayers.find(id) != remotePlayers.end())
+					{
+						if (remotePlayers[id].player_obj) 
+						{
+							object_manager->Delete_Object(remotePlayers[id].player_obj);
+						}
+						remotePlayers.erase(id);
+					}
+				}
+			}
+		}
+		else if (bytesReceived == SOCKET_ERROR)
+		{
+			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
 		}
 		else if (bytesReceived == 0)
 		{

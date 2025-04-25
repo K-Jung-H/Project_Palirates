@@ -31,6 +31,16 @@
 #include <array>
 #include <random>
 
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include <mutex>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#pragma comment(lib, "ws2_32.lib")
+
 using namespace std;
 
 #include <d2d1_3.h>

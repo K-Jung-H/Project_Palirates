@@ -1,18 +1,12 @@
 #pragma once
 
-
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
 #include "UI_Manager.h"
 #include "Scene_Manager.h"
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <string>
-#include <thread>
-#include <mutex>
+#include "Object.h"
 
-#pragma comment(lib, "ws2_32.lib")
 
 enum class GPU_Stage
 {
@@ -49,6 +43,18 @@ struct CB_FRAMEWORK_INFO
 	float m_fCurrentTime;      
 	float m_fElapsedTime;         
 };
+
+struct RemotePlayer
+{
+	int id = 0;
+	DirectX::XMFLOAT3 position = { 0.f, 0.f, 0.f };
+	int state = 0;
+	std::shared_ptr<CTerrainPlayer> player_obj = nullptr;
+
+	RemotePlayer() = default;
+};
+
+extern std::unordered_map<int, RemotePlayer> remotePlayers;
 
 class CGameFramework
 {
@@ -112,6 +118,7 @@ public:
 	void Disconnect();
 
 	Scene_Manager sceneManager;
+	std::shared_ptr<Object_Manager> object_manager;
 	//=================서버=================
 
 private:
@@ -215,6 +222,7 @@ public:
 	int ClientNum{ 0 };
 	ServerSyncManager syncManager;
 	ServerSyncManager& GetSyncManager() { return syncManager; }
+
 	//=================서버=================
 
 #ifdef WRITE_TEXT_UI
