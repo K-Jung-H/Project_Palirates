@@ -1,13 +1,12 @@
 //-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
-
+#pragma once
 #include "stdafx.h"
 #include "GameFramework.h"
-#include <iostream>
-#include <sstream>
-#include <iomanip>
+#include "Object_Manager.h"
 
+std::unordered_map<int, RemotePlayer> remotePlayers;
 
 CGameFramework::CGameFramework()
 {
@@ -44,6 +43,8 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 
 	isRunning = false;
+
+	object_manager = std::make_shared<Object_Manager>();
 }
 
 CGameFramework::~CGameFramework()
@@ -1189,6 +1190,65 @@ void CGameFramework::NetworkLoop()
 			buffer[bytesReceived] = '\0'; 
 			std::string receivedData(buffer);
 			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
+			if (receivedData.starts_with("PLAYER_UPDATE"))
+			{
+				int id = 0;
+				float x = 0, y = 0, z = 0;
+				int state = 0;
+
+				if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+					&id, &x, &y, &z, &state) == 5)
+				{
+
+					if (id != ClientNum)
+					{
+						if (remotePlayers.find(id) == remotePlayers.end()) {
+							RemotePlayer new_player;
+							new_player.id = id;
+							new_player.position = { x, y, z };
+							new_player.state = state;
+
+							auto player = std::make_shared<CTerrainPlayer>();
+							player->SetPosition(DirectX::XMFLOAT3(x, y, z));
+							player->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(player));
+							object_manager->Add_Object(player, Object_Type::player);
+
+							new_player.player_obj = player;
+							remotePlayers[id] = new_player;
+						}
+						else
+						{
+							auto& p = remotePlayers[id];
+							p.position = { x, y, z };
+							p.state = state;
+							if (p.player_obj)
+							{
+								p.player_obj->SetPosition(DirectX::XMFLOAT3(x, y, z));
+								p.player_obj->GetStateMachine()->SetState(static_cast<State>(state));
+							}
+						}
+					}
+				}
+			}
+			else if (receivedData.starts_with("PLAYER_LEAVE"))
+			{
+				int id = 0;
+				if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &id) == 1)
+				{
+					if (remotePlayers.find(id) != remotePlayers.end())
+					{
+						if (remotePlayers[id].player_obj) 
+						{
+							object_manager->Delete_Object(remotePlayers[id].player_obj);
+						}
+						remotePlayers.erase(id);
+					}
+				}
+			}
+		}
+		else if (bytesReceived == SOCKET_ERROR)
+		{
+			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
 		}
 		else if (bytesReceived == 0)
 		{

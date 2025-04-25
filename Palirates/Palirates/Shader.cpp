@@ -292,7 +292,6 @@ void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nP
 {
 	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
-
 }
 
 void CShader::Setting_Render(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState)

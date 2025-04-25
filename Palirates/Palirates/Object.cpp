@@ -533,8 +533,6 @@ std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 	return clone;
 }
 
-
-
 void CMaterial::SetShader(CShader* pShader)
 {
 	if (pShader)
@@ -1410,8 +1408,6 @@ void CLoadedModelInfo::PrepareSkinning()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
-
 CGameObject::CGameObject(const std::string_view& name) 
 {
 	Set_Name(name);
@@ -2363,6 +2359,25 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 	return(nStrLength);
 }
 
+std::unordered_map<std::string, std::shared_ptr<CMesh>> CGameObject::MeshCache;
+
+std::shared_ptr<CMesh> CGameObject::LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+	auto it = MeshCache.find(meshPath);
+	if (it != MeshCache.end())
+		return it->second;
+
+	auto mesh = std::make_shared<CStandardMesh>(device, cmdList);
+	mesh->LoadMeshFrom_OtherFile(device, cmdList, meshPath.c_str()); 
+	MeshCache[meshPath] = mesh;
+	return mesh;
+}
+
+void CGameObject::ClearMeshCache()
+{
+	MeshCache.clear();
+}
+
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
@@ -2493,7 +2508,6 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 }
 
-
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes)
 {
 	char pstrToken[64] = { '\0' };
@@ -2608,22 +2622,16 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
-			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
-
 			::ReadStringFromFile(pInFile, pstrToken);
 			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken); 
+				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken);
 
-				char pstrFileName[128] = { '\0' };
-				strncpy(pstrFileName, fileName.c_str(), sizeof(pstrFileName) - 1);
-				pstrFileName[sizeof(pstrFileName) - 1] = '\0';
-
-				pMesh->LoadMeshFrom_OtherFile(pd3dDevice, pd3dCommandList, pstrFileName);
+				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
+				if (sharedMesh)
+					pGameObject->SetMesh(sharedMesh.get());
 			}
-			pGameObject->SetMesh(pMesh);
-
 		}
 		else if (!strcmp(pstrToken, "<Materials>:"))
 		{

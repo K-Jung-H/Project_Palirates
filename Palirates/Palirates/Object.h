@@ -473,25 +473,23 @@ private:
 
 	XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 public:
-	CGameObject* m_pParent = NULL; 
-
 	char							m_pstrFrameName[64];
+	int Object_type = 0;
+
+	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+	int n_Animation = 0;
 
 	CMesh* m_pMesh = NULL;
-	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
-
 	std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
+
+	CGameObject* m_pParent = NULL; 
 	XMFLOAT4X4				m_xmf4x4Parent{};
 	XMFLOAT4X4				m_xmf4x4World{};
 
 	XMFLOAT3 m_xmf3RotationAxis;
 	float m_fRotationSpeed;
 
-	int n_Animation = 0;
-
-
-	int Object_type = 0;
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -638,18 +636,23 @@ public:
 	std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
 	void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
 
-	public:
+public:
 	// Using CHeightMapTerrain
 	virtual int Get_Tile(float x, float z) { return -1; };
 	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
 	virtual void Check_Culling(CCamera* pCamera) {};
 
+public:
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 
-
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
+
+public:
+		static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
+		static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+		static void ClearMeshCache();
 };
 
 //==================================================================================

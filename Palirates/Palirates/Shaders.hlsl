@@ -458,24 +458,9 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
     return (output);
 }
 
-
-// OBB don't need DefferedRendering
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
+float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
 {
-    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    
-    return (output);
-}
-
-
-//float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
-//{
-//    float4 cColor = input.color;
+    float4 cColor = input.color;
         
-//    return (cColor);
-//}
+    return (cColor);
+}

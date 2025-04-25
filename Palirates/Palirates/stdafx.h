@@ -31,6 +31,16 @@
 #include <array>
 #include <random>
 
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include <mutex>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#pragma comment(lib, "ws2_32.lib")
+
 using namespace std;
 
 #include <d2d1_3.h>
@@ -112,11 +122,6 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 2
 #define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 3
 
-//#define ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX 11
-//#define ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX 12
-#define PARAMETER_TEST 3
-
-
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
@@ -127,8 +132,8 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define WRITE_TEXT_UI
-//#define RENDER_OBB
-//#define LOAD_SCENE
+#define LOAD_SCENE
+#define RENDER_OBB
 #define RENDER_PARTICLE
 
 
