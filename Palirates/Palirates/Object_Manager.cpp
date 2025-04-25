@@ -541,7 +541,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	break;
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
 				/*std::wostringstream oss;
@@ -627,7 +627,7 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 	case Object_Type::player:
 	{
 		bool Is_Visible = false;
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 		{
 			Is_Visible = obj_ptr->IsVisible(pCamera);
 			obj_ptr->Set_Active(Is_Visible);
@@ -646,8 +646,8 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 void Object_Manager::Check_Culling_All(CCamera* pCamera)
 {
 	/// 타일맵 컬링하기
-	if (terrain_ptr != NULL)	
-		terrain_ptr->Check_Culling(pCamera);
+	//if (terrain_ptr != NULL)	
+	//	terrain_ptr->Check_Culling(pCamera);
 
 	Check_Culling(pCamera, Object_Type::skinned);
 	Check_Culling(pCamera, Object_Type::non_skinned);
@@ -781,7 +781,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 		{
 			if (obj_ptr->Get_Active())
 			{
@@ -812,7 +812,7 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 {
 
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
-//	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
 
@@ -869,6 +869,10 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 		return &non_skinned_object_list;
 		break;
 
+	case Object_Type::player:
+		return &player_list;
+		break;
+
 	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
@@ -893,11 +897,6 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 		::PostQuitMessage(0);
 		break;
 	}
-}
-
-std::vector<std::shared_ptr<CTerrainPlayer>>* Object_Manager::Get_Player_List()
-{
-	return &player_list;
 }
 
 void Object_Manager::Clear_Object_List(Object_Type type)
