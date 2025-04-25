@@ -6,6 +6,12 @@ cbuffer Frame_Info : register(b0)
 {
     float gfCurrentTime; 
     float gfElapsedTime; 
+
+    float gfSecondsPerFirework; 
+    int gnFlareParticlesToEmit; 
+    int gnMaxFlareType2Particles; 
+    float3 gf3Gravity; 
+
 };
 
 struct Material_Info
@@ -352,9 +358,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
     
-    //output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-    output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-
+    output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);

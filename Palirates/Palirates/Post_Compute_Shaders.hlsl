@@ -229,6 +229,10 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
 
         int2 sampleCoord = int2(sampleUV);
         sampleCoord = clamp(sampleCoord, int2(0, 0), int2(texSize - 1));
+
+        //float sampleMask = gtxtVelocity_Mask_Obj_Id[sampleCoord].z;
+        //if (sampleMask < 0.5f) // 샘플링 마스킹
+        //    continue; 
         
         float3 sampleColor = gtxtInput[sampleCoord].rgb;
         accum += sampleColor;

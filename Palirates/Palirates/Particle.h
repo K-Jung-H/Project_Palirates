@@ -33,6 +33,8 @@ struct Particle_Format
 
 	XMFLOAT3 color{};
 	XMFLOAT2 size{};
+
+
 };
 
 struct Render_Instance
@@ -62,6 +64,14 @@ struct Particle_Info
 };
 
 //==============================================================================
+
+
+enum P_BufferType
+{
+	BUFFER_COUNTER = 0,
+	BUFFER_READBACK = 1,
+	BUFFER_COUNTER_RESET = 2
+};
 
 class Particle
 {
@@ -105,6 +115,7 @@ public:
 	// 버퍼 생성 및 해제
 	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
 
+	ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 
@@ -117,6 +128,7 @@ public:
 
 	void Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList);
+
 	void Copy_DebugBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 
 
@@ -124,6 +136,7 @@ public:
 	{
 		Copy_CounterBuffer_Particle_Info(pd3dCommandList);
 		Copy_CounterBuffer_Render_Instance(pd3dCommandList);
+		Copy_DebugBuffer(pd3dCommandList);
 	}
 
 	UINT Readback_CounterBuffer_Particle_Info_List();
@@ -134,6 +147,7 @@ public:
 	{
 		Readback_CounterBuffer_Particle_Info_List();
 		Readback_CounterBuffer_Render_Instance();
+		Readback_DebugBuffer();
 
 	}
 

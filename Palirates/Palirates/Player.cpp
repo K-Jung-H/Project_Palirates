@@ -272,18 +272,7 @@ void CPlayer::OnPrepareAnimate()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA) 
-		CGameObject::Render(pd3dCommandList, pCamera);
-}
-
-
-void CPlayer::SetLookDirection(const XMFLOAT3& look)
-{
-	CGameObject::SetLookDirection(look);
-	m_xmf3Look = GetLook();
-	m_xmf3Right = GetRight();
-	m_xmf3Up = GetUp();
-
+	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 
@@ -371,10 +360,9 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetCameraUpdatedContext(pContext);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	if (pTerrain != NULL)
-		SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
-	
+	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
+
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 
@@ -498,6 +486,7 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
 }
 
+
 void CTerrainPlayer::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
@@ -535,6 +524,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	
 }
+
 
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
@@ -581,7 +571,7 @@ void CTerrainPlayer::Update(float fTimeElapsed)
 
 }
 
-void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
+void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
 {
 	m_xmf3Up = Vector3::Normalize(normal);
 
@@ -611,112 +601,6 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 	GetStateMachine()->SetState(syncData.currentState);
 	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
 	for (int i = 0; i < n_Animation; i++) {
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
-	}
-	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
-}
-
-
-//==================================================================
-
-
-Observer::Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
-	: CPlayer()
-{
-	Object_type = OBJECT_TPYE_MAIN_PLAYER;
-	n_Animation = 0;
-
-	m_pCamera = ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-	SetPlayerUpdatedContext(pContext);
-	SetCameraUpdatedContext(pContext);
-
-	SetPosition(XMFLOAT3(0.0f, 50.0f, 0.0f));
-
-}
-
-Observer::~Observer()
-{
-}
-
-CCamera* Observer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
-{
-	DWORD nCurrentCameraMode = (m_pCamera) ? m_pCamera->GetMode() : 0x00;
-	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
-	switch (nNewCameraMode)
-	{
-	case FIRST_PERSON_CAMERA:
-		SetFriction(250.0f);
-		SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
-		SetMaxVelocityXZ(300.0f);
-		SetMaxVelocityY(400.0f);
-		m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
-		m_pCamera->SetTimeLag(0.0f);
-		m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));
-		m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
-		m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
-		m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
-		break;
-
-	default:
-		ChangeCamera(FIRST_PERSON_CAMERA, fTimeElapsed);		
-		return(m_pCamera);
-
-	}
-	m_pCamera->SetPosition(Vector3::Add(m_xmf3Position, m_pCamera->GetOffset()));
-	Update(fTimeElapsed);
-
-	return(m_pCamera);
-}
-
-void Observer::OnPlayerUpdateCallback(float fTimeElapsed)
-{
-}
-
-void Observer::OnCameraUpdateCallback(float fTimeElapsed)
-{
-
-}
-
-void Observer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
-{
-	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
-}
-
-void Observer::Animate(float fTimeElapsed)
-{
-	OnPrepareAnimate();
-	CGameObject::Animate(fTimeElapsed);
-}
-
-void Observer::Update(float fTimeElapsed)
-{
-	CPlayer::Update(fTimeElapsed);
-}
-
-
-ServerAnimationSyncData Observer::MakeSyncData()
-{
-	ServerAnimationSyncData data = CGameObject::MakeSyncData();
-	data.currentState = GetStateMachine()->Get_State();
-	for (int i = 0; i < n_Animation; i++) 
-	{
-		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
-		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
-	}
-
-	return data;
-}
-
-void Observer::ApplySyncData(const ServerAnimationSyncData& syncData)
-{
-	CGameObject::ApplySyncData(syncData);
-	SetPosition(syncData.position);
-	GetStateMachine()->SetState(syncData.currentState);
-	for (int i = 0; i < n_Animation; i++) 
-	{
 		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
 		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
 	}

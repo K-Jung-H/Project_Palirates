@@ -123,6 +123,8 @@ public:
 	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) {}
 };
 
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CHeightMapImage
@@ -207,33 +209,6 @@ class CSkyBoxMesh : public CMesh
 public:
 	CSkyBoxMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, float fWidth = 20.0f, float fHeight = 20.0f, float fDepth = 20.0f);
 	virtual ~CSkyBoxMesh();
-};
-
-class PlaneMesh : public CMesh
-{
-public:
-	PlaneMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float width, int segments);
-	virtual ~PlaneMesh();
-
-	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
-	virtual void ReleaseUploadBuffers() override;
-
-protected:
-	XMFLOAT4* m_pxmf4Colors = nullptr;
-	XMFLOAT2* m_pxmf2TextureCoords0 = nullptr;
-	XMFLOAT2* m_pxmf2TextureCoords1 = nullptr;
-
-	ID3D12Resource* m_pd3dColorBuffer = nullptr;
-	ID3D12Resource* m_pd3dColorUploadBuffer = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dColorBufferView = {};
-
-	ID3D12Resource* m_pd3dTextureCoord0Buffer = nullptr;
-	ID3D12Resource* m_pd3dTextureCoord0UploadBuffer = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord0BufferView = {};
-
-	ID3D12Resource* m_pd3dTextureCoord1Buffer = nullptr;
-	ID3D12Resource* m_pd3dTextureCoord1UploadBuffer = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord1BufferView = {};
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -394,54 +369,3 @@ public:
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 };
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-struct TrailVertexSide
-{
-	float side;      // +1.0 for top, -1.0 for bottom
-	float time;      // creation time
-	float centerY;   // Y position of the segment's center
-	float offsetY;   // distance from centerY (used to shrink height)
-	float ratio;     // 0.0 = oldest, 1.0 = newest (used for fading)
-};
-
-class Trail_Mesh : public CStandardMesh
-{
-public:
-	Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments);
-	virtual ~Trail_Mesh();
-
-	void AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float fTime);
-	
-	void UpdateTrail(float currentTime);
-	void UpdateSegmentRatios();
-
-	void UpdateIndexBuffer();
-	void UpdateVertexBuffer();
-	void ResetTrail();
-
-	void SetSegmentThreshold(float fThreshold);
-	void SetTrailLifespan(float fSeconds);
-
-	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = nullptr) override;
-
-protected:
-	int m_nMaxTrailSegments = 0;
-	int m_nCurrentIndex = 0;
-	int m_nActiveSegments = 0;
-
-	float m_fSegmentThreshold = 1.0f;
-	float m_fTrailLifespan = 2.0f;
-
-	XMFLOAT3 m_vLastTop = {};
-	XMFLOAT3 m_vLastBottom = {};
-
-	TrailVertexSide* m_pTrailSideData = nullptr;
-	ID3D12Resource* m_pd3dTrailSideBuffer = nullptr;
-	ID3D12Resource* m_pd3dTrailSideUploadBuffer = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dTrailSideBufferView = {};
-};
-

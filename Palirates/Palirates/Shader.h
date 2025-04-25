@@ -141,26 +141,6 @@ public:
 
 };
 
-
-class Trail_Shader : public CStandardShader
-{
-public:
-	Trail_Shader();
-	virtual ~Trail_Shader();
-
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-
-	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
-	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
-	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
-
-};
-
-
 //===========================================================================================================
 
 class PostProcessBaseShader : public CStandardShader
@@ -286,44 +266,6 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
-struct CB_Plane_Frame_INFO
-{
-	float m_fCurrentTime;
-	float m_fElapsedTime;
-};
-
-class Deferred_Plane_Shader : public Deferred_CStandard_Shader
-{
-private:
-	ID3D12Resource* Frame_Info = NULL;
-	CB_Plane_Frame_INFO* m_pcbMappedFrame_Info = NULL;
-
-public:
-	static float Current_Time;
-	static float Elapsed_Time;
-
-	
-	Deferred_Plane_Shader();
-	virtual ~Deferred_Plane_Shader();
-
-	virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice) { return NULL; }
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
-	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-
-
-	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void ReleaseShaderVariables();
-
-	static void Update(float ElapsedTime);
-
-};
-
 
 class Deferred_CSkyBoxShader : public Deferred_CStandard_Shader
 {
@@ -355,5 +297,3 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 };
-
-//============================================================================
