@@ -62,7 +62,8 @@ protected:
 	float moveX{ 0.0f };
 	float moveZ{ 0.0f };
 
-	//=================¼­¹ö=================
+	bool MultiMode{ false };
+	//=================Â¼Â­Â¹Ã¶=================
 	int id;  
 	int state;
 
@@ -83,7 +84,14 @@ public:
 	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
-	void SetPosition(const XMFLOAT3& xmf3Position) { Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); }
+	void SetPosition(const XMFLOAT3& xmf3Position) 
+	{ 
+		Move(XMFLOAT3(
+			xmf3Position.x - m_xmf3Position.x, 
+			xmf3Position.y - m_xmf3Position.y, 
+			xmf3Position.z - m_xmf3Position.z), 
+			false); 
+	}
 
 	void SetScale(XMFLOAT3& xmf3Scale) { m_xmf3Scale = xmf3Scale; }
 
@@ -94,11 +102,14 @@ public:
 
 	CCamera *GetCamera() { return(m_pCamera); }
 	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
+	void DelCamera() { m_pCamera = nullptr; }
 
 	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
 	void Rotate(float x, float y, float z);
+
+	virtual void SetLookDirection(const XMFLOAT3& look);
 
 //	virtual void Animate(float fTimeElapsed);
 
@@ -119,15 +130,21 @@ public:
 	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
-	virtual void OnPrepareRender();
+	virtual void OnPrepareAnimate();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
+	
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData) {};
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
 	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
+	void SetStateMachine(std::unique_ptr<StateMachine> it) {
+		m_StateMachine = std::move(it);
+	}
+	void DelStateMachine() { m_StateMachine.reset(); }
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
 
@@ -136,11 +153,11 @@ public:
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
 
-	std::vector<float> prevWeights;
-	std::vector<float> targetWeights;
+	void MultiModeOn() { MultiMode = true; }
+	void MultiModeOff() { MultiMode = false; }
+	bool CheckMultiMode() { return MultiMode; }
 
-
-	//=================¼­¹ö=================
+	//=================Â¼Â­Â¹Ã¶=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
 		: id(playerId), state(startState)
 	{
@@ -187,7 +204,30 @@ public:
 	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
 
-	void AlignWithNormal(XMFLOAT3 normal);
+	virtual void AlignWithNormal(XMFLOAT3& normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
+
+	virtual ServerAnimationSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 };
 
+class Observer : public CPlayer
+{
+public:
+	Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	virtual ~Observer();
+
+public:
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+
+	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
+	virtual void OnCameraUpdateCallback(float fTimeElapsed);
+
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+
+	virtual void Animate(float fTimeElapsed);
+	virtual void Update(float fTimeElapsed);
+
+	virtual ServerAnimationSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+};

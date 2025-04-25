@@ -18,33 +18,11 @@ UINT gnDsvDescriptorIncrementSize = 0;
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_pos
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_normal & camera_distance
 	DXGI_FORMAT_R8G8B8A8_UNORM, // Material_Light_Info
-
-
+	DXGI_FORMAT_R16G16B16A16_FLOAT,   // x,y : Velocity , z: Blur Mask, w: Object ID == Outline color
 };
 
  DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-
-void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
-{
-	HRESULT hResult = pd3dCommandQueue->Signal(pd3dFence, nFenceValue);
-
-	if (pd3dFence->GetCompletedValue() < nFenceValue)
-	{
-		hResult = pd3dFence->SetEventOnCompletion(nFenceValue, hFenceEvent);
-		::WaitForSingleObject(hFenceEvent, INFINITE);
-	}
-}
-
-void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent)
-{
-	pd3dCommandList->Close();
-
-	ID3D12CommandList* ppd3dCommandLists[] = { pd3dCommandList };
-	pd3dCommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-	::WaitForGpuComplete(pd3dCommandQueue, pd3dFence, nFenceValue, hFenceEvent);
-}
 
 void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
 {
@@ -182,14 +160,73 @@ ID3D12Resource* CreateTextureResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	return(pd3dBuffer);
 }
 
-ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
+ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
 {
-	return(CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nBytes, D3D12_RESOURCE_DIMENSION_BUFFER, nBytes, 1, 1, 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer));
+	return(CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nBytes, D3D12_RESOURCE_DIMENSION_BUFFER, nBytes, 1, 1, 1, d3dResourceFlags, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer));
 }
 
-ID3D12Resource* CreateStructuredBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nStride, UINT nElements, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, ID3D12Resource** ppd3dUploadBuffer)
+ID3D12Resource* Create_Control_Buffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize, UINT initialValue)
 {
-	return CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nStride * nElements, D3D12_RESOURCE_DIMENSION_BUFFER, nStride * nElements, 1, 1, 1, D3D12_RESOURCE_FLAG_NONE, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer);
+	D3D12_RESOURCE_DESC desc = {};
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Width = byteSize;
+	desc.Height = 1;
+	desc.DepthOrArraySize = 1;
+	desc.MipLevels = 1;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.SampleDesc.Count = 1;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	D3D12_RESOURCE_STATES resourceState = {};
+
+	switch (type)
+	{
+	case BUFFER_COUNTER:
+		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		resourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		break;
+
+	case BUFFER_READBACK:
+		heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+		break;
+
+	case BUFFER_COUNTER_RESET:
+		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		break;
+	}
+
+	ID3D12Resource* pBuffer = nullptr;
+	HRESULT hr = pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		resourceState,
+		nullptr,
+		IID_PPV_ARGS(&pBuffer)
+	);
+
+	if (FAILED(hr))
+	{
+		OutputDebugString(L"[Particle] Failed to create buffer\n");
+		return nullptr;
+	}
+
+	// 초기값 설정 (BUFFER_COUNTER_RESET 전용)
+	if (type == BUFFER_COUNTER_RESET)
+	{
+		UINT8* mappedPtr = nullptr;
+		pBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedPtr));
+		memcpy(mappedPtr, &initialValue, sizeof(UINT));
+		pBuffer->Unmap(0, nullptr);
+	}
+
+	return pBuffer;
 }
 
 
@@ -283,6 +320,16 @@ ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12Graphics
 	d3dTextureResourceDesc.Flags = d3dResourceFlags;
 
 	HRESULT hResult = pd3dDevice->CreateCommittedResource(&d3dHeapPropertiesDesc, D3D12_HEAP_FLAG_NONE, &d3dTextureResourceDesc, d3dResourceStates, pd3dClearValue, __uuidof(ID3D12Resource), (void**)&pd3dTexture);
+	
+	if (FAILED(hResult))
+	{
+		OutputDebugString(L"[ERROR] CreateCommittedResource failed!\n");
+
+		wchar_t msg[512];
+		swprintf_s(msg, L"Format=%d, Width=%d, Height=%d, ArraySize=%d, Mip=%d\n",
+			(int)dxgiFormat, nWidth, nHeight, nElements, nMipLevels);
+		OutputDebugString(msg);
+	}
 
 	return(pd3dTexture);
 }
@@ -372,7 +419,23 @@ void DebugOutput(const std::string& message1, const std::wstring& message2)
 	OutputDebugString(combinedMessage.c_str());
 }
 
+void DebugPrintMatrix(const XMMATRIX& m)
+{
+	OutputDebugStringA("\n");
+	char buffer[128];
+	for (int i = 0; i < 4; ++i)
+	{
+		sprintf_s(buffer, sizeof(buffer),
+			"| % .4f % .4f % .4f % .4f |\n",
+			m.r[i].m128_f32[0],
+			m.r[i].m128_f32[1],
+			m.r[i].m128_f32[2],
+			m.r[i].m128_f32[3]);
 
+		OutputDebugStringA(buffer);
+	}
+	OutputDebugStringA("\n");
+}
 
 // 파일 이름만 추출하여 char[64]에 반환하는 함수
 void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t bufferSize)
@@ -397,4 +460,23 @@ XMFLOAT4 Get_Random_Color(float w)
 	float B = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
 
 	return XMFLOAT4{ R,G,B,w };
+}
+
+std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area)
+{
+	XMFLOAT3 min_point = 
+	{
+		center.x - area.x,
+		center.y - area.y,
+		center.z - area.z
+	};
+
+	XMFLOAT3 max_point =
+	{
+		center.x + area.x,
+		center.y + area.y,
+		center.z + area.z
+	};
+
+	return { min_point, max_point };
 }

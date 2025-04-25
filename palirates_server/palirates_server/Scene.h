@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <iostream>
 #include "GameCharacter.h"
+#include "Player.h"
 
 class Scene
 {
@@ -35,5 +36,6 @@ public:
     }
 
     void printScene();
-
+    Player* getPlayerById(int id);
+    std::unordered_map<int, Player*> playerMap;
 };
