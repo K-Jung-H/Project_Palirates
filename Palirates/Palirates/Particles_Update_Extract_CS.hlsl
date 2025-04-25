@@ -77,14 +77,28 @@ void Update_Spark(inout Particle_Info p, uint index)
     p.Rotate_Value += spinSpeed * ElapsedTime;
 }
 
+void Update_Water_Splash(inout Particle_Info p, uint index)
+{
+    float spinSpeed = 4.0f;
+
+    p.Acceleration = float3(0.0f, -9.8f, 0.0f);
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Position += p.Velocity * ElapsedTime;
+    p.Rotate_Value += spinSpeed * ElapsedTime;
+}
+
 void Extract_Instance(in Particle_Info p)
 {
     Render_Instance inst;
     inst.Position = p.Position;
     inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
-    inst.Color = float4(p.Color, 1.0f);
 
-    InterlockedAdd(debug_buffer[3], 1); // 렌더 개수 카운트
+    float normalizedLife = saturate(p.Lifetime / p.MaxLifetime); // 0.0 ~ 1.0
+    float alpha = 1.0f - normalizedLife; 
+
+    inst.Color = float4(p.Color, alpha); 
+
+    InterlockedAdd(debug_buffer[3], 1); 
     RenderInstanceBuffer.Append(inst);
 }
 
@@ -118,9 +132,11 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Snow(p, index);
         else if (p.Type == 1)
             Update_Spark(p, index);
+        else if (p.Type == 2)
+            Update_Water_Splash(p, index);
 
         // 인스턴스 추출
-        Extract_Instance(p);
+            Extract_Instance(p);
     }
 
     ParticleBuffer_Update[index] = p;

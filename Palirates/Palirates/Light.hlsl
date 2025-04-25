@@ -76,19 +76,23 @@ float4 DirectionalLight(int Light_ID, float3 vNormal, float3 vToCamera, Material
 
 float4 PointLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamera, Material material)
 {
+    float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f); // Ensure initialization
+
     float3 vToLight = gLights[Light_ID].m_vPosition - vPosition;
     float fDistance = length(vToLight);
     if (fDistance <= gLights[Light_ID].m_fRange)
     {
         vToLight /= fDistance;
         float fAttenuation = 1.0f / dot(gLights[Light_ID].m_vAttenuation, float3(1.0f, fDistance, fDistance * fDistance));
-        return ComputeDiffuseSpecular(vToLight, vNormal, vToCamera, material, Light_ID) * fAttenuation;
+        result = ComputeDiffuseSpecular(vToLight, vNormal, vToCamera, material, Light_ID) * fAttenuation;
     }
-    return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    return result;
 }
 
 float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamera, Material material)
 {
+    float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f); // Ensure initialization
+
     float3 vToLight = gLights[Light_ID].m_vPosition - vPosition;
     float fDistance = length(vToLight);
     
@@ -98,9 +102,9 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
         float fAttenuation = 1.0f / dot(gLights[Light_ID].m_vAttenuation, float3(1.0f, fDistance, fDistance * fDistance));
         float fSpotFactor = pow(max(dot(-vToLight, gLights[Light_ID].m_vDirection), 0.0f), gLights[Light_ID].m_fFalloff);
 
-        return ComputeDiffuseSpecular(vToLight, vNormal, vToCamera, material, Light_ID) * fAttenuation * fSpotFactor;
+        result = ComputeDiffuseSpecular(vToLight, vNormal, vToCamera, material, Light_ID) * fAttenuation * fSpotFactor;
     }
-    return float4(0.0f, 0.0f, 0.0f, 0.0f);
+    return result;
 }
 
 float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, Material material)

@@ -303,25 +303,25 @@ void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, nullptr, m_nMaxParticles, sizeof(Render_Instance), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	particle_buffer_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 2, nullptr, 4, sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
-
-	Particle_Info_List_counterBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER);
-	Particle_Info_List_readbackBuffer = CreateBuffer(pd3dDevice, BUFFER_READBACK);
 	
-	Render_Instance_counterBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER);
-	Render_Instance_readbackBuffer = CreateBuffer(pd3dDevice, BUFFER_READBACK);
+	Particle_Info_List_counterBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER);
+	Particle_Info_List_readbackBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK);
+	
+	Render_Instance_counterBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER);
+	Render_Instance_readbackBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK);
 
-	Debug_ReadBack_buffer = CreateBuffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
+	Debug_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
 
 
-	CounterResetBuffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), 0);
-	Debug_Reset_Buffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT) * 4, 0);
+	CounterResetBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), 0);
+	Debug_Reset_Buffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT) * 4, 0);
 
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, Render_Instance_counterBuffer, 2);
 	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, nullptr, 3);
 
 	{
-		ID3D12Resource* Init_Buffer = CreateBuffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), m_nMaxParticles);
+		ID3D12Resource* Init_Buffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), m_nMaxParticles);
 
 		SynchronizeResourceTransition(pd3dCommandList, Particle_Info_List_counterBuffer, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_DEST);
 
@@ -357,70 +357,6 @@ D3D12_VERTEX_BUFFER_VIEW Particle::Update_Render_Instance_VBV()
 
 void Particle::ReleaseBuffers()
 {
-}
-
-ID3D12Resource* Particle::CreateBuffer(ID3D12Device* pd3dDevice, P_BufferType type, UINT byteSize, UINT initialValue)
-{
-	D3D12_RESOURCE_DESC desc = {};
-	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	desc.Width = byteSize;
-	desc.Height = 1;
-	desc.DepthOrArraySize = 1;
-	desc.MipLevels = 1;
-	desc.Format = DXGI_FORMAT_UNKNOWN;
-	desc.SampleDesc.Count = 1;
-	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-
-	D3D12_HEAP_PROPERTIES heapProps = {};
-	D3D12_RESOURCE_STATES resourceState = {};
-
-	switch (type)
-	{
-	case BUFFER_COUNTER:
-		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		resourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-		break;
-
-	case BUFFER_READBACK:
-		heapProps.Type = D3D12_HEAP_TYPE_READBACK;
-		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
-		break;
-
-	case BUFFER_COUNTER_RESET:
-		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
-		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-		resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-		break;
-	}
-
-	ID3D12Resource* pBuffer = nullptr;
-	HRESULT hr = pd3dDevice->CreateCommittedResource(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&desc,
-		resourceState,
-		nullptr,
-		IID_PPV_ARGS(&pBuffer)
-	);
-
-	if (FAILED(hr))
-	{
-		OutputDebugString(L"[Particle] Failed to create buffer\n");
-		return nullptr;
-	}
-
-	// 초기값 설정 (BUFFER_COUNTER_RESET 전용)
-	if (type == BUFFER_COUNTER_RESET)
-	{
-		UINT8* mappedPtr = nullptr;
-		pBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedPtr));
-		memcpy(mappedPtr, &initialValue, sizeof(UINT));
-		pBuffer->Unmap(0, nullptr);
-	}
-
-	return pBuffer;
 }
 
 Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
@@ -532,18 +468,18 @@ UINT Particle::Readback_DebugBuffer()
 
 	if (SUCCEEDED(Debug_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&debugData))) && debugData)
 	{
-		UINT emit_cs_called = debugData[0]; // Emit에서 InterlockedAdd된 값
-		UINT emitCount = debugData[1]; // Emit 조건 최대값 (예: Max_Particle)
-		UINT killCount = debugData[2]; // Kill 처리된 파티클 수
-		UINT renderCount = debugData[3]; // 실제 RenderInstanceBuffer에 Append된 수
+		//UINT emit_cs_called = debugData[0]; // Emit에서 InterlockedAdd된 값
+		//UINT emitCount = debugData[1]; // Emit 조건 최대값 (예: Max_Particle)
+		//UINT killCount = debugData[2]; // Kill 처리된 파티클 수
+		//UINT renderCount = debugData[3]; // 실제 RenderInstanceBuffer에 Append된 수
 
-		DebugOutput("\n[GPU Debug Info]\n");
-		DebugOutput("------------------------------\n");
-		DebugOutput(" Emit_CS_Called				 : " + to_string(emit_cs_called) + "\n");
-		DebugOutput(" EmitCount	 : " + to_string(emitCount) + "\n");
-		DebugOutput(" KillCount				 : " + to_string(killCount) + "\n");
-		DebugOutput(" RenderCount		     : " + to_string(renderCount) + "\n");
-		DebugOutput("------------------------------\n");
+		//DebugOutput("\n[GPU Debug Info]\n");
+		//DebugOutput("------------------------------\n");
+		//DebugOutput(" Emit_CS_Called				 : " + to_string(emit_cs_called) + "\n");
+		//DebugOutput(" EmitCount	 : " + to_string(emitCount) + "\n");
+		//DebugOutput(" KillCount				 : " + to_string(killCount) + "\n");
+		//DebugOutput(" RenderCount		     : " + to_string(renderCount) + "\n");
+		//DebugOutput("------------------------------\n");
 
 		Debug_ReadBack_buffer->Unmap(0, nullptr);
 
@@ -659,8 +595,6 @@ void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* p
 
 void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	area_xyz = XMFLOAT3{ 100.0f,100.0f,100.0f};
-	center = XMFLOAT3{ 100.0f,100.0f ,100.0f };
 }
 
 

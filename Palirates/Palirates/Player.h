@@ -204,10 +204,30 @@ public:
 	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
 
-	void AlignWithNormal(XMFLOAT3 normal);
+	virtual void AlignWithNormal(XMFLOAT3& normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 };
 
+class Observer : public CPlayer
+{
+public:
+	Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	virtual ~Observer();
+
+public:
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+
+	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
+	virtual void OnCameraUpdateCallback(float fTimeElapsed);
+
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+
+	virtual void Animate(float fTimeElapsed);
+	virtual void Update(float fTimeElapsed);
+
+	virtual ServerAnimationSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+};

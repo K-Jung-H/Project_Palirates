@@ -165,6 +165,70 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	return(CreateTextureResource(pd3dDevice, pd3dCommandList, pData, nBytes, D3D12_RESOURCE_DIMENSION_BUFFER, nBytes, 1, 1, 1, d3dResourceFlags, DXGI_FORMAT_UNKNOWN, d3dHeapType, d3dResourceStates, ppd3dUploadBuffer));
 }
 
+ID3D12Resource* Create_Control_Buffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize, UINT initialValue)
+{
+	D3D12_RESOURCE_DESC desc = {};
+	desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	desc.Width = byteSize;
+	desc.Height = 1;
+	desc.DepthOrArraySize = 1;
+	desc.MipLevels = 1;
+	desc.Format = DXGI_FORMAT_UNKNOWN;
+	desc.SampleDesc.Count = 1;
+	desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	D3D12_RESOURCE_STATES resourceState = {};
+
+	switch (type)
+	{
+	case BUFFER_COUNTER:
+		heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+		desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		resourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+		break;
+
+	case BUFFER_READBACK:
+		heapProps.Type = D3D12_HEAP_TYPE_READBACK;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+		break;
+
+	case BUFFER_COUNTER_RESET:
+		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+		desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+		resourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
+		break;
+	}
+
+	ID3D12Resource* pBuffer = nullptr;
+	HRESULT hr = pd3dDevice->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&desc,
+		resourceState,
+		nullptr,
+		IID_PPV_ARGS(&pBuffer)
+	);
+
+	if (FAILED(hr))
+	{
+		OutputDebugString(L"[Particle] Failed to create buffer\n");
+		return nullptr;
+	}
+
+	// 초기값 설정 (BUFFER_COUNTER_RESET 전용)
+	if (type == BUFFER_COUNTER_RESET)
+	{
+		UINT8* mappedPtr = nullptr;
+		pBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedPtr));
+		memcpy(mappedPtr, &initialValue, sizeof(UINT));
+		pBuffer->Unmap(0, nullptr);
+	}
+
+	return pBuffer;
+}
+
 ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates)
 {
 	ID3D12Resource* pd3dTexture = NULL;

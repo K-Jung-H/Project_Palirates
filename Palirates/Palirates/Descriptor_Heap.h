@@ -77,6 +77,9 @@ public:
     static D3D12_GPU_DESCRIPTOR_HANDLE CreateConstantBufferView(ID3D12Device* pd3dDevice, D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress, UINT nStride);
 	
     static void CreateGraphicsShaderResourceViews(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nDescriptorHeapIndex, UINT nRootParameterStartIndex);
+
+    static void CreateGraphicsShaderResourceView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex);
+
     static D3D12_GPU_DESCRIPTOR_HANDLE CreateShaderResourceView(ID3D12Device* pd3dDevice, ID3D12Resource* pd3dResource, DXGI_FORMAT dxgiSrvFormat);
 
     //    Uitility
@@ -95,8 +98,14 @@ public:
     // 지정 범위의 Compute SRV 생성, CTexture에 GPU 핸들 등록
     static void CreateComputeShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nTextureIndex, UINT nHandleIndex, UINT nDescriptorHeapIndex, UINT nDescriptors);
 
+    // 단일 Compute SRV 생성, CTexture에 GPU 핸들 등록
+    static void CreateComputeShaderResourceView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex);
+
     // 지정 범위의 Compute UAV 생성, CTexture에 GPU 핸들 등록
     static void CreateComputeUnorderedAccessView(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT nTextureIndex, UINT nHandleIndex, UINT nDescriptorHeapIndex, UINT nDescriptors);
+
+    // 단일 Compute UAV 생성, CTexture에 GPU 핸들 등록
+    static void CreateComputeUnorderedAccessView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex);
 
     //  구조체 버퍼 단일 UAV 뷰생성 및 카운터 버퍼 연결
     static void CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT resourceIndex, ID3D12Resource* pCounterResource, UINT nRootParameterIndex);
