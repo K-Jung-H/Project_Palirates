@@ -7,8 +7,6 @@
 #include "GameFramework.h"
 #include <iostream>
 #include <sstream>
-#include <io.h>
-#include <fcntl.h>
 
 #define MAX_LOADSTRING 100
 
@@ -27,21 +25,15 @@ INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
 void CreateConsole()
 {
 	AllocConsole();
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
-	std::locale::global(std::locale("ko_KR.UTF-8"));
-
-	_setmode(_fileno(stdout), _O_U8TEXT);
-	_setmode(_fileno(stderr), _O_U8TEXT);
-
 	FILE* fp;
 	freopen_s(&fp, "CONOUT$", "w", stdout);
 	freopen_s(&fp, "CONIN$", "r", stdin);
 	freopen_s(&fp, "CONERR$", "w", stderr);
-	std::wcout << L"[INFO] 콘솔 창 활성화 - 네트워크 상태 확인 가능" << std::endl;
+	std::cout << "[INFO] 콘솔 창 활성화 - 네트워크 상태 확인 가능" << std::endl;
 }
 
-#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "1.242.69.251"
 #define SERVER_PORT 9000
 
 
@@ -56,7 +48,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 	CreateConsole();
 
-
+	gGameFramework.ConnectToServer(SERVER_IP, SERVER_PORT);
 
 	::LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	::LoadString(hInstance, IDC_PALIRATES, szWindowClass, MAX_LOADSTRING);
@@ -121,9 +113,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	if (!hMainWnd) return(FALSE);
 
 	gGameFramework.OnCreate(hInstance, hMainWnd);
-
-	gGameFramework.ConnectToServer(SERVER_IP, SERVER_PORT);
-
 
 	::ShowWindow(hMainWnd, nCmdShow);
 	::UpdateWindow(hMainWnd);

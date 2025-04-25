@@ -113,48 +113,100 @@ void CTexture::UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* pd3dC
 	}
 	else
 	{
-		pd3dCommandList->SetGraphicsRootDescriptorTable(m_pnGraphicsSrvRootParameterIndices[0],
-			m_GraphicsRootParameter_Srv_GpuDescriptorHandles[0]);
+		pd3dCommandList->SetGraphicsRootDescriptorTable(m_pnGraphicsSrvRootParameterIndices[0], m_GraphicsRootParameter_Srv_GpuDescriptorHandles[0]);
 	}
 }
 
 void CTexture::UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex)
 {
-	if (m_pnGraphicsSrvRootParameterIndices[paramIndex] != -1 &&
-		m_GraphicsRootParameter_Srv_GpuDescriptorHandles[textureIndex].ptr != 0)
+	if (m_pnGraphicsSrvRootParameterIndices[paramIndex] != -1 && m_GraphicsRootParameter_Srv_GpuDescriptorHandles[textureIndex].ptr != 0)
 	{
 		pd3dCommandList->SetGraphicsRootDescriptorTable(m_pnGraphicsSrvRootParameterIndices[paramIndex],
 			m_GraphicsRootParameter_Srv_GpuDescriptorHandles[textureIndex]);
 	}
 }
 
-void CTexture::UpdateComputeShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+void CTexture::BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
 {
-	for (int i = 0; i < m_pnComputeSrvRootParameterIndices.size(); ++i)
-		UpdateComputeSrvShaderVariable(pd3dCommandList, i);
-	for (int i = 0; i < m_pnComputeUavRootParameterIndices.size(); ++i)
-		UpdateComputeUavShaderVariable(pd3dCommandList, i);
+	if (textureIndex >= m_pd3dGraphicsSrvGpuDescriptorHandles.size()) 
+		return;
+
+	if (m_pd3dGraphicsSrvGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetGraphicsRootDescriptorTable(rootParamIndex, m_pd3dGraphicsSrvGpuDescriptorHandles[textureIndex]);
 }
 
-void CTexture::UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int index)
+
+void CTexture::UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (m_pnComputeSrvRootParameterIndices[index] != -1 && m_pd3dComputeSrvRootParameterGpuDescriptorHandles[index].ptr != 0)
+	if (m_pnComputeSrvRootParameterIndices.size() == m_ppd3dTextures.size())
 	{
-		pd3dCommandList->SetComputeRootDescriptorTable(m_pnComputeSrvRootParameterIndices[index],
-			m_pd3dComputeSrvRootParameterGpuDescriptorHandles[index]);
+		for (int i = 0; i < m_pnComputeSrvRootParameterIndices.size(); ++i)
+			UpdateComputeSrvShaderVariable(pd3dCommandList, i, i);
+	}
+	else if (!m_pnComputeSrvRootParameterIndices.empty())
+	{
+		pd3dCommandList->SetComputeRootDescriptorTable(
+			m_pnComputeSrvRootParameterIndices[0],
+			m_pd3dComputeSrvRootParameterGpuDescriptorHandles[0]);
 	}
 }
 
-void CTexture::UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int index)
+void CTexture::UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex)
 {
-	if (m_pnComputeUavRootParameterIndices[index] != -1 && m_pd3dComputeUavRootParameterGpuDescriptorHandles[index].ptr != 0)
+	if (m_pnComputeSrvRootParameterIndices[paramIndex] != -1 &&
+		m_pd3dComputeSrvRootParameterGpuDescriptorHandles[textureIndex].ptr != 0)
 	{
-		pd3dCommandList->SetComputeRootDescriptorTable(m_pnComputeUavRootParameterIndices[index],
-			m_pd3dComputeUavRootParameterGpuDescriptorHandles[index]);
+		pd3dCommandList->SetComputeRootDescriptorTable(
+			m_pnComputeSrvRootParameterIndices[paramIndex],
+			m_pd3dComputeSrvRootParameterGpuDescriptorHandles[textureIndex]);
 	}
 }
 
+void CTexture::BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dComputeSrvGpuDescriptorHandles.size()) 
+		return;
 
+	if (m_pd3dComputeSrvGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetComputeRootDescriptorTable(rootParamIndex, m_pd3dComputeSrvGpuDescriptorHandles[textureIndex]);
+}
+
+
+
+void CTexture::UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pnComputeUavRootParameterIndices.size() == m_ppd3dTextures.size())
+	{
+		for (int i = 0; i < m_pnComputeUavRootParameterIndices.size(); ++i)
+			UpdateComputeUavShaderVariable(pd3dCommandList, i, i);
+	}
+	else if (!m_pnComputeUavRootParameterIndices.empty())
+	{
+		pd3dCommandList->SetComputeRootDescriptorTable(m_pnComputeUavRootParameterIndices[0], m_pd3dComputeUavRootParameterGpuDescriptorHandles[0]);
+	}
+}
+
+void CTexture::UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex)
+{
+	if (m_pnComputeUavRootParameterIndices[paramIndex] != -1 && m_pd3dComputeUavRootParameterGpuDescriptorHandles[textureIndex].ptr != 0)
+	{
+		pd3dCommandList->SetComputeRootDescriptorTable( m_pnComputeUavRootParameterIndices[paramIndex], m_pd3dComputeUavRootParameterGpuDescriptorHandles[textureIndex]);
+	}
+}
+
+void CTexture::BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex)
+{
+	if (textureIndex >= m_pd3dComputeUavGpuDescriptorHandles.size()) 
+		return;
+	if (m_pd3dComputeUavGpuDescriptorHandles[textureIndex].ptr == 0) 
+		return;
+
+	pd3dCommandList->SetComputeRootDescriptorTable(rootParamIndex, m_pd3dComputeUavGpuDescriptorHandles[textureIndex]);
+}
 
 int CTexture::GetGraphicsSrvRootParameterIndex(int index) const 
 {
@@ -204,32 +256,32 @@ void CTexture::LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* comma
 	m_pdxgiBufferFormats[index] = format;
 	m_pnBufferElements[index] = elements;
 
-	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ, &m_ppd3dTextureUploadBuffers[index]);
+	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_ppd3dTextureUploadBuffers[index]);
 }
 
-void CTexture::CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index) 
+void CTexture::CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state)
 {
 	m_pnResourceTypes[index] = RESOURCE_BUFFER;
 	m_pdxgiBufferFormats[index] = format;
 	m_pnBufferElements[index] = elements;
 	m_pnBufferStrides[index] = stride;
 
-	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, state, &m_ppd3dTextureUploadBuffers[index]);
+	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, D3D12_RESOURCE_FLAG_NONE, state, &m_ppd3dTextureUploadBuffers[index]);
 }
 
-void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index)
+void CTexture::CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state)
 {
 	m_pnResourceTypes[index] = RESOURCE_STRUCTURED_BUFFER;
 	m_pdxgiBufferFormats[index] = DXGI_FORMAT_UNKNOWN;
 	m_pnBufferElements[index] = elements;
 	m_pnBufferStrides[index] = stride;
 
-	m_ppd3dTextures[index] = CreateStructuredBufferResource(device, commandList, data, stride, elements, heapType, state, &m_ppd3dTextureUploadBuffers[index]);
+	m_ppd3dTextures[index] = CreateBufferResource(device, commandList, data, elements * stride, heapType, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, state, &m_ppd3dTextureUploadBuffers[index]);
 }
-
 ID3D12Resource* CTexture::CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue)
 {
 	m_pnResourceTypes[index] = resourceType;
+	m_pdxgiBufferFormats[index] = format;
 	m_ppd3dTextures[index] = CreateTexture2DResource(device, commandList, width, height, elements, mips, format, flags, state, clearValue);
 	return m_ppd3dTextures[index];
 }
@@ -247,6 +299,11 @@ DXGI_FORMAT CTexture::GetBufferFormat(int index) const
 int CTexture::GetBufferElements(int index) const
 {
 	return m_pnBufferElements[index];
+}
+
+int CTexture::GetBufferStrides(int index) const
+{
+	return m_pnBufferStrides[index];
 }
 
 D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
@@ -309,7 +366,6 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC CTexture::GetUnorderedAccessViewDesc(int index)
 {
 	ID3D12Resource* resource = GetResource(index);
 	auto desc = resource->GetDesc();
-
 	D3D12_UNORDERED_ACCESS_VIEW_DESC uav{};
 
 	int type = GetTextureType(index);
@@ -344,6 +400,7 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC CTexture::GetUnorderedAccessViewDesc(int index)
 		uav.Buffer.FirstElement = 0;
 		uav.Buffer.NumElements = m_pnBufferElements[index];
 		uav.Buffer.StructureByteStride = m_pnBufferStrides[index];
+
 		uav.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 		break;
 	}
@@ -437,6 +494,47 @@ CMaterial::CMaterial(const CMaterial& other)
 	}
 }
 
+std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
+{
+	auto clone = std::make_shared<CMaterial>(this->m_nTextures);
+
+	// 색상, 파라미터 값들은 복사
+	clone->m_cAlbedo = this->m_cAlbedo;
+	clone->m_cEmissive = this->m_cEmissive;
+	clone->m_fRoughness = this->m_fRoughness;
+	clone->m_fMetallic = this->m_fMetallic;
+	clone->m_fSpecular = this->m_fSpecular;
+	clone->m_xmf4SpecularColor = this->m_xmf4SpecularColor;
+	clone->m_fGlossiness = this->m_fGlossiness;
+	clone->m_fGlossyReflection = this->m_fGlossyReflection;
+	clone->m_pShader = this->m_pShader;
+	clone->m_nType = this->m_nType;
+
+	if (this->m_ppstrTextureNames)
+	{
+		clone->m_ppstrTextureNames = new _TCHAR[this->m_nTextures][64];
+		for (int i = 0; i < this->m_nTextures; ++i)
+		{
+			std::memcpy(clone->m_ppstrTextureNames[i], this->m_ppstrTextureNames[i], sizeof(_TCHAR) * 64);
+		}
+	}
+
+	// 텍스처 포인터는 공유 (AddRef 필요할 수도 있음)
+	if (this->m_ppTextures)
+	{
+		clone->m_ppTextures = new CTexture * [this->m_nTextures];
+		for (int i = 0; i < this->m_nTextures; ++i)
+		{
+			clone->m_ppTextures[i] = this->m_ppTextures[i];
+			if (clone->m_ppTextures[i]) clone->m_ppTextures[i]->AddRef();
+		}
+	}
+
+	return clone;
+}
+
+
+
 void CMaterial::SetShader(CShader* pShader)
 {
 	if (pShader)
@@ -493,6 +591,10 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
 		Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	//}
 }
 
@@ -508,9 +610,9 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	material_info.gEmissive_intensity = m_cEmissive.w;
 	material_info.gSpecular_intensity = m_fSpecular;
 
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 12, &material_info, 16);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 28);
 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_info, 16); // 16~23
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
@@ -560,7 +662,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 			if (*ppTexture) (*ppTexture)->AddRef();
 
 //			CScene::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
-			CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
+			CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
 
 		}
 		else
@@ -825,14 +927,15 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 	{
 	case ANIMATION_TYPE_LOOP:
 	{
-		if (m_fPosition < 0.0f) 
+		if (m_fPosition < 0.0f)
 			m_fPosition = 0.0f;
 		else
 		{
 			m_fPosition = fTrackPosition + fTrackElapsedTime;
 			if (m_fPosition > fAnimationLength)
 			{
-				m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+				//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+				m_fPosition = 0;
 				return(fAnimationLength);
 			}
 		}
@@ -846,13 +949,15 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 		if (m_fPosition < 0.0f)
 			m_fPosition = 0.0f;
 		else {
-			if (m_fPosition > fAnimationLength) {
-				m_fPosition = fAnimationLength;
-				//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
-				m_bFinished = true;
-				break;
+			if (!m_bFinished) {
+				m_fPosition = fTrackPosition + fTrackElapsedTime;
+				if (m_fPosition > fAnimationLength) {
+					m_fPosition = fAnimationLength;
+					//m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+					m_bFinished = true;
+					return(fAnimationLength);
+				}
 			}
-			m_fPosition = fTrackPosition + fTrackElapsedTime;
 		}
 		break;
 	case ANIMATION_TYPE_PINGPONG:
@@ -880,13 +985,13 @@ CAnimationController::CAnimationController(ID3D12Device *pd3dDevice, ID3D12Graph
 	for (int i = 0; i < m_nSkinnedMeshes; i++) 
 		m_ppSkinnedMeshes[i] = pModel->m_ppSkinnedMeshes[i];
 
-	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes];
-	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes];
+	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource*[m_nSkinnedMeshes]();
+	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4*[m_nSkinnedMeshes]();
 
 	UINT ncbElementBytes = (((sizeof(XMFLOAT4X4) * SKINNED_ANIMATION_BONES) + 255) & ~255); 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 	{
-		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+		m_ppd3dcbSkinningBoneTransforms[i] = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 		m_ppd3dcbSkinningBoneTransforms[i]->Map(0, NULL, (void **)&m_ppcbxmf4x4MappedSkinningBoneTransforms[i]);
 	}
 }
@@ -896,14 +1001,18 @@ CAnimationController::~CAnimationController()
 	if (m_pAnimationTracks) 
 		delete[] m_pAnimationTracks;
 
-	for (int i = 0; i < m_nSkinnedMeshes; i++)
-	{
-		m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
-		m_ppd3dcbSkinningBoneTransforms[i]->Release();
-	}
-	
-	if (m_ppd3dcbSkinningBoneTransforms) 
+	if (m_ppd3dcbSkinningBoneTransforms) {
+		for (int i = 0; i < m_nSkinnedMeshes; i++)
+		{
+			if (m_ppd3dcbSkinningBoneTransforms[i]) {
+				m_ppd3dcbSkinningBoneTransforms[i]->Unmap(0, NULL);
+	//			m_ppd3dcbSkinningBoneTransforms[i]->Release();
+				m_ppd3dcbSkinningBoneTransforms[i] = NULL;
+			}
+		}
 		delete[] m_ppd3dcbSkinningBoneTransforms;
+		m_ppd3dcbSkinningBoneTransforms = NULL;
+	}
 	
 	if (m_ppcbxmf4x4MappedSkinningBoneTransforms) 
 		delete[] m_ppcbxmf4x4MappedSkinningBoneTransforms;
@@ -1017,18 +1126,20 @@ XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	XMStoreFloat4x4(&result, finalMatrix);
 	return result;
 }
-
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
 
 	if (m_pAnimationTracks)
 	{
+		// Bone 정보 초기화
+		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
+		// 활성화된 트랙의 전체 가중치 크기 -> 가중치 정규화에 사용
 		float totalWeight = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
@@ -1046,21 +1157,44 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
+				// 각 bone 마다 변환행렬 업데이트
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
-					
-					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; 
-					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); 
+
+					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
+					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
 
 					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
-					if (boneName == "Hips")
-					{
-						blendedTransform._41 = 0.0f;
-						blendedTransform._42 = 0.8762761f;
-						blendedTransform._43 = 0.0f;
+					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+						if (boneName == "Hips")
+						{
+							if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+							}
+							//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
+							//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+							//}
+							blendedTransform._41 = 0.0f;
+							//blendedTransform._42 = 0.8762761f;
+							blendedTransform._43 = 0.0f;
+
+						}
+					}
+					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+						if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3) {
+							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+							/*std::wostringstream oss;
+							oss << L"XMFLOAT3: (" << HipsPosition.x << L", " << HipsPosition.y << L", " << HipsPosition.z << L")\n";
+							OutputDebugStringW(oss.str().c_str());*/
+
+							blendedTransform._41 = 0.0f;
+							//blendedTransform._42 = 0.0f;
+							blendedTransform._43 = 0.0f;
+						}
+
 					}
 
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
@@ -1070,12 +1204,84 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 			}
 		}
 
+		// 4. Transform 업데이트
+		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)이므로, 
+		// 자식 객체에 부모 객체의 변환 정보를 상속하면서 뼈 객체마다 업데이트 된 m_xmf4x4Parent가 반영되어, 각 뼈의 정보 반영
+		// == 각 뼈들의 변환 행렬 정보 업데이트
 		pRootGameObject->UpdateTransform(NULL);
 
 
+		// 5. 추가 애니메이션 처리
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
+}
+
+void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)
+{
+	if (!m_pAnimationTracks || !m_pAnimationSets) 
+		return;
+
+	// 본 초기화
+	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+	{
+		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
+	}
+
+	float totalWeight = 0.0f;
+	for (int k = 0; k < m_nAnimationTracks; k++)
+	{
+		if (m_pAnimationTracks[k].m_bEnable)
+		{
+			totalWeight += m_pAnimationTracks[k].m_fWeight;
+		}
+	}
+
+	for (int k = 0; k < m_nAnimationTracks; k++)
+	{
+		if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
+		{
+			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+			float fPosition = m_pAnimationTracks[k].m_fPosition; 
+
+			for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+			{
+				XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
+				XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
+
+				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
+
+				const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+					if (boneName == "Hips")
+					{
+						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+						}
+						//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
+						//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+						//}
+						blendedTransform._41 = 0.0f;
+						//blendedTransform._42 = 0.8762761f;
+						blendedTransform._43 = 0.0f;
+
+					}
+				}
+
+				m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
+			}
+			m_pAnimationTracks[k].HandleCallback();
+		}
+	}
+
+	// 트랜스폼 적용
+	pRootGameObject->UpdateTransform(nullptr);
+}
+
+void CAnimationController::ServerAdvanceTime(const ServerAnimationSyncData& syncData)
+{
+
 }
 
 bool IsUpperBodyBone(const std::string& boneName)
@@ -1238,11 +1444,9 @@ CGameObject::~CGameObject()
 	Material_list.clear();
 	Material_list.shrink_to_fit();
 
-
-	if (m_pSkinnedAnimationController)
-	{
-		delete m_pSkinnedAnimationController;
-		m_pSkinnedAnimationController = nullptr; 
+	int k = m_pSkinnedAnimationController.use_count();
+	if (k == 1) {
+		m_pSkinnedAnimationController.reset();
 	}
 
 	DebugOutput("\nDelete GameObject: ", m_pstrFrameName);
@@ -1284,7 +1488,7 @@ CGameObject::CGameObject(const CGameObject& other)
 	
 
 	if (other.m_pSkinnedAnimationController != nullptr)	
-		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController); 
+		m_pSkinnedAnimationController = std::make_shared <CAnimationController>(*other.m_pSkinnedAnimationController);
 	
 }
 
@@ -1348,13 +1552,90 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 	if (other.m_pSkinnedAnimationController != nullptr)
 	{
 		if (m_pSkinnedAnimationController != nullptr) 
-			delete m_pSkinnedAnimationController;  
-		m_pSkinnedAnimationController = new CAnimationController(*other.m_pSkinnedAnimationController);  
+			m_pSkinnedAnimationController.reset();  
+		m_pSkinnedAnimationController = std::make_shared <CAnimationController>(*other.m_pSkinnedAnimationController);
 	}
 
 	return *this;
 }
 
+std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
+{
+	std::shared_ptr<CGameObject> clone = std::make_shared<CGameObject>();
+
+	clone->m_xmf4x4Parent = this->m_xmf4x4Parent;
+	clone->m_xmf4x4World = this->m_xmf4x4World;
+	clone->m_xmf3RotationAxis = this->m_xmf3RotationAxis;
+	clone->m_fRotationSpeed = this->m_fRotationSpeed;
+	clone->Active = this->Active;
+	std::memcpy(clone->m_pstrFrameName, this->m_pstrFrameName, sizeof(this->m_pstrFrameName));
+
+	if (this->m_pMesh)
+		clone->m_pMesh = new CMesh(*this->m_pMesh);
+
+	for (const auto& material : this->Material_list)
+	{
+		if (material)
+			clone->Material_list.push_back(std::make_shared<CMaterial>(*material));
+		else
+			clone->Material_list.push_back(nullptr);
+	}
+
+	if (this->m_pSkinnedAnimationController)
+		clone->m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*this->m_pSkinnedAnimationController);
+
+	if (withHierarchy && this->m_pChild)
+		clone->m_pChild = this->m_pChild->Clone(true);
+
+	if (withHierarchy && this->m_pSibling)
+		clone->m_pSibling = this->m_pSibling->Clone(true);
+
+	return clone;
+}
+
+std::shared_ptr<CGameObject> CGameObject::Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy)
+{
+	std::shared_ptr<CGameObject> instance = std::make_shared<CGameObject>();
+
+	// Copy basic transform and state properties
+	instance->Set_Name(modelRoot->m_pstrFrameName);
+	instance->m_xmf4x4Parent = modelRoot->m_xmf4x4Parent;
+	instance->m_xmf4x4World = modelRoot->m_xmf4x4World;
+	instance->m_xmf3RotationAxis = modelRoot->m_xmf3RotationAxis;
+	instance->m_fRotationSpeed = modelRoot->m_fRotationSpeed;
+	instance->Active = modelRoot->Active;
+
+	// Share resource references (not deep copy)
+	instance->m_pMesh = modelRoot->m_pMesh;
+	instance->m_pSkinnedAnimationController = modelRoot->m_pSkinnedAnimationController;
+
+	// Clone materials: share textures but copy values like color, roughness, etc.
+	instance->Material_list.clear();
+	for (const auto& mat : modelRoot->Material_list)
+	{
+		if (mat)
+			instance->Material_list.push_back(mat->CloneWithSharedTextures()); // Custom shallow clone
+		else
+			instance->Material_list.push_back(nullptr);
+	}
+
+	// Clone hierarchy recursively if required
+	if (withHierarchy && modelRoot->m_pChild)
+	{
+		instance->m_pChild = Make_Instance(modelRoot->m_pChild, true);
+		if (instance->m_pChild)
+			instance->m_pChild->m_pParent = instance.get(); // Set proper parent linkage
+	}
+
+	if (withHierarchy && modelRoot->m_pSibling)
+	{
+		instance->m_pSibling = Make_Instance(modelRoot->m_pSibling, true);
+		if (instance->m_pSibling)
+			instance->m_pSibling->m_pParent = instance->m_pParent; // Sibling shares the same parent
+	}
+
+	return instance;
+}
 
 
 std::shared_ptr<CGameObject> CGameObject::Get_Child()
@@ -1456,11 +1737,8 @@ void CGameObject::SetShader(CShader *pShader)
 
 void CGameObject::SetShader(int nMaterial, CShader *pShader)
 {
-
-
 	if (Material_list.size() > nMaterial)
 		Material_list[nMaterial]->SetShader(pShader);
-
 }
 
 void CGameObject::SetMaterial(int nMaterial, CMaterial *pMaterial)
@@ -1527,7 +1805,7 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 
 void CGameObject::Animate(float fTimeElapsed)
 {
-	OnPrepareRender();
+	OnPrepareAnimate();
 
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -1538,6 +1816,37 @@ void CGameObject::Animate(float fTimeElapsed)
 
 	if (m_pChild) 
 		m_pChild->Animate(fTimeElapsed);
+}
+
+void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
+{
+	previous_position.x = pos.x;
+	previous_position.y = pos.y;
+	previous_position.z = pos.z;
+}
+
+void CGameObject::Record_Last_Pos() 
+{
+	//CGameObject* root_obj_ptr = Get_Root_Object();
+	//XMFLOAT3 world_pos = root_obj_ptr->GetPosition();
+
+	//root_obj_ptr->previous_position.x = world_pos.x;
+	//root_obj_ptr->previous_position.y = world_pos.y;
+	//root_obj_ptr->previous_position.z = world_pos.z;
+	if (m_pMesh)
+	{
+		XMFLOAT3 world_pos = GetPosition();
+
+		previous_position.x = world_pos.x;
+		previous_position.y = world_pos.y;
+		previous_position.z = world_pos.z;
+	}
+
+	if (m_pSibling)
+		m_pSibling->Record_Last_Pos();
+
+	if (m_pChild)
+		m_pChild->Record_Last_Pos();
 }
 
 bool CGameObject::IsVisible(CCamera* pCamera)
@@ -1623,7 +1932,17 @@ void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandLis
 {
 	XMFLOAT4X4 xmf4x4World;
 	XMStoreFloat4x4(&xmf4x4World, XMMatrixTranspose(XMLoadFloat4x4(pxmf4x4World)));
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 16, &xmf4x4World, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 16, &xmf4x4World, 0);   // 0~15
+
+	//===============================================================================
+	XMFLOAT3 now_position = GetPosition();
+	XMFLOAT3 velocity = 	{ 
+		now_position.x - previous_position.x,
+		now_position.y - previous_position.y,
+		now_position.z - previous_position.z
+	};
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &velocity, 24);      // 24~26
+
 }
 
 void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList, CMaterial *pMaterial)
@@ -1784,21 +2103,26 @@ XMFLOAT3 CGameObject::Get_World_Position()
 	return XMFLOAT3(obj_pos.x + parent_pos.x, obj_pos.y + parent_pos.y, obj_pos.z + parent_pos.z);
 }
 
-XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
+CGameObject* CGameObject::Get_Root_Object()
 {
-	XMFLOAT3 worldPosition = GetPosition(); // 현재 오브젝트의 월드 위치
-	XMFLOAT3 rootPosition = { 0.0f, 0.0f, 0.0f };
-
-	// 루트 오브젝트까지 탐색
 	CGameObject* root = this;
-	while (root->m_pParent != NULL)
+	while (root->m_pParent != nullptr)
 	{
 		root = root->m_pParent;
 	}
+	return root;
+}
 
-	rootPosition = root->GetPosition(); // 루트의 로컬 위치(초기 위치)
+XMFLOAT3 CGameObject::Get_Root_WorldPosition()
+{
+	return Get_Root_Object()->GetPosition();
+}
 
-	// 현재 위치에서 루트 위치를 뺀 값이 "루트 프레임 기준 이동량"
+XMFLOAT3 CGameObject::Get_Root_Obj_Displacement()
+{
+	XMFLOAT3 worldPosition = GetPosition();
+	XMFLOAT3 rootPosition = Get_Root_WorldPosition();
+
 	return XMFLOAT3(
 		worldPosition.x - rootPosition.x,
 		worldPosition.y - rootPosition.y,
@@ -1869,6 +2193,129 @@ void CGameObject::Rotate(XMFLOAT4 *pxmf4Quaternion)
 	UpdateTransform(NULL);
 }
 
+void CGameObject::RotateInWorldAroundUp(float fAngle)
+{
+	RotateInWorld(&GetUp(), fAngle); 
+}
+
+void CGameObject::RotateInWorld(XMFLOAT3* pxmf3WorldAxis, float fAngle)
+{
+	XMVECTOR vAxis = XMVector3Normalize(XMLoadFloat3(pxmf3WorldAxis));
+	XMMATRIX mtxRotate = XMMatrixRotationAxis(vAxis, XMConvertToRadians(fAngle));
+
+	XMMATRIX mWorld = XMLoadFloat4x4(&m_xmf4x4World);
+	mWorld = XMMatrixMultiply(mWorld, mtxRotate); // 월드 공간에서 회전 적용
+
+	// 부모가 있으면 역변환
+	XMMATRIX mParentInv = XMMatrixIdentity();
+	if (m_pParent)
+	{
+		mParentInv = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
+	}
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, XMMatrixMultiply(mWorld, mParentInv));
+	UpdateTransform(nullptr);
+}
+
+void CGameObject::SetLookDirection(float x, float y, float z)
+{
+	SetLookDirection(XMFLOAT3(x, y, z));
+}
+
+void CGameObject::SetLookDirection(const XMFLOAT3& look)
+{
+	XMVECTOR vLook = XMVector3Normalize(XMLoadFloat3(&look));
+	XMVECTOR vUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR vRight = XMVector3Normalize(XMVector3Cross(vUp, vLook));
+	vUp = XMVector3Normalize(XMVector3Cross(vLook, vRight));
+
+	// 기존 스케일, 위치 정보 추출
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent); // 따로 함수가 없으면 m_xmf4x4Parent에서 직접 계산
+	XMFLOAT3 position = GetPosition();
+
+	// 스케일 반영된 회전 벡터
+	XMVECTOR vScaledRight = XMVectorScale(vRight, scale.x);
+	XMVECTOR vScaledUp = XMVectorScale(vUp, scale.y);
+	XMVECTOR vScaledLook = XMVectorScale(vLook, scale.z);
+
+	// 회전만 적용한 새 행렬 만들기
+	XMFLOAT4X4 xmf4x4New;
+	xmf4x4New._11 = XMVectorGetX(vScaledRight); xmf4x4New._12 = XMVectorGetY(vScaledRight); xmf4x4New._13 = XMVectorGetZ(vScaledRight); xmf4x4New._14 = 0.0f;
+	xmf4x4New._21 = XMVectorGetX(vScaledUp);    xmf4x4New._22 = XMVectorGetY(vScaledUp);    xmf4x4New._23 = XMVectorGetZ(vScaledUp);    xmf4x4New._24 = 0.0f;
+	xmf4x4New._31 = XMVectorGetX(vScaledLook);  xmf4x4New._32 = XMVectorGetY(vScaledLook);  xmf4x4New._33 = XMVectorGetZ(vScaledLook);  xmf4x4New._34 = 0.0f;
+	xmf4x4New._41 = position.x;                 xmf4x4New._42 = position.y;                 xmf4x4New._43 = position.z;                 xmf4x4New._44 = 1.0f;
+
+	m_xmf4x4Parent = xmf4x4New;
+	UpdateTransform(NULL);
+}
+
+void CGameObject::Set_LookDirection_LookAt(float x, float y, float z)
+{
+	Set_LookDirection_LookAt(XMFLOAT3(x, y, z));
+}
+
+void CGameObject::Set_LookDirection_LookAt(const XMFLOAT3& lookDir)
+{
+	XMVECTOR vPosition = XMLoadFloat3(&GetPosition());
+	XMVECTOR vLook = XMVector3Normalize(XMLoadFloat3(&lookDir));
+	XMVECTOR vUp = XMVectorSet(0, 1, 0, 0);
+
+	// LH 기준, 현재 위치에서 lookDir 방향으로 바라보는 view matrix
+	XMMATRIX mLook = XMMatrixLookToLH(vPosition, vLook, vUp);
+
+	// view matrix의 역행렬 = world matrix
+	XMMATRIX mWorld = XMMatrixInverse(nullptr, mLook);
+
+	// 기존 스케일 유지
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
+	XMMATRIX mScale = XMMatrixScaling(scale.x, scale.y, scale.z);
+
+	XMMATRIX mFinal = mScale * mWorld;
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, mFinal);
+	UpdateTransform(NULL);
+}
+
+void CGameObject::AlignWithNormal(XMFLOAT3& newNormal)
+{
+	// 새로운 Up 벡터
+	XMFLOAT3 newUp = Vector3::Normalize(newNormal);
+
+	// 기존 Look 유지
+	XMFLOAT3 look = GetLook();
+
+	// look과 up이 완전히 평행하면 → cross product가 0되므로 체크
+	if (abs(Vector3::DotProduct(look, newUp)) > 0.99f)
+	{
+		// fallback: Right 유지, Look 재계산
+		XMFLOAT3 right = GetRight();
+		look = Vector3::CrossProduct(newUp, right, true);
+	}
+
+	// Right 재계산
+	XMFLOAT3 right = Vector3::CrossProduct(newUp, look, true);
+	look = Vector3::CrossProduct(right, newUp, true);
+
+	// 스케일 유지
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
+
+	XMMATRIX mWorld;
+	mWorld.r[0] = XMVectorScale(XMLoadFloat3(&right), scale.x);
+	mWorld.r[1] = XMVectorScale(XMLoadFloat3(&newUp), scale.y);
+	mWorld.r[2] = XMVectorScale(XMLoadFloat3(&look), scale.z);
+	mWorld.r[3] = XMVectorSet(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43, 1.0f);
+
+	// 부모가 있다면 로컬 변환으로 역변환
+	XMMATRIX mLocal = mWorld;
+	if (m_pParent)
+	{
+		XMMATRIX parentInv = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
+		mLocal = mWorld * parentInv;
+	}
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, mLocal);
+	UpdateTransform(nullptr);
+}
 
 CTexture *CGameObject::FindReplicatedTexture(_TCHAR *pstrTextureName)
 {
@@ -2452,6 +2899,23 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 	m_pMesh->Set_BoundingBox(ptr); 
 }
 
+ServerAnimationSyncData CGameObject::MakeSyncData()
+{
+	ServerAnimationSyncData data;
+	data.position = GetPosition();
+	data.lookVector = GetLook();
+	data.currentState = State::Idle;
+
+	return data;
+}
+
+void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
+{
+	
+	SetLookDirection(syncData.lookVector);
+	SetPosition(syncData.position);
+}
+
 
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
@@ -2470,13 +2934,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-//		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 		pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
 
-//		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
 
@@ -2485,16 +2946,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
-		
-		//CScene::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
-		//CScene::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 
-		CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
-		CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
-		//pTerrainBaseTexture->SetGraphicsSrvRootParameter(0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX, 0, 1);
-		//pTerrainDetailTexture->SetGraphicsSrvRootParameter(0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX, 0, 1);
+
 
 		pTerrainMaterial = new CMaterial(2);
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
@@ -2850,6 +3307,486 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 }
 
+
+
+
+Deferred_Plane_Shader* Plane_Object::plane_shader = NULL;
+
+
+Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+{
+	if (plane_shader == nullptr)
+	{
+		plane_shader = new Deferred_Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	int side_vertex_n = 10;
+	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	SetMesh(plane_mesh);	
+
+	Plane_Material = new CMaterial(2);
+
+	Plane_Material->SetShader(plane_shader);
+}
+
+Plane_Object::~Plane_Object()
+{
+}
+
+void Plane_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
+
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
+void Plane_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+	Plane_BaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_BaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_BaseTexture, 0, 3);
+
+	Plane_Material->SetTexture(Plane_BaseTexture, 0);
+}
+
+void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+
+	Plane_DetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_DetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_DetailTexture, 0, 4);
+
+	Plane_Material->SetTexture(Plane_DetailTexture, 1);
+
+}
+
+CS_Wave_Shader* Wave_Object::cs_wave_shader = NULL;
+
+Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n)
+	: Plane_Object()
+{
+	if (plane_shader == nullptr)
+	{
+		plane_shader = new Deferred_Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	if (cs_wave_shader == nullptr)
+	{
+		cs_wave_shader = new CS_Wave_Shader();
+		cs_wave_shader->CreateShader(pd3dDevice);
+		cs_wave_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	}
+
+	Plane_Material = new CMaterial(2);
+	Plane_Material->SetShader(plane_shader);
+
+	Side_Length = nLength;
+	constexpr int kMaxTextureSize = 15000;
+	desiredTexelSize = 20.0f;
+	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	SetMesh(plane_mesh);
+
+	int tex_Length = static_cast<int>(ceil(nLength / desiredTexelSize));
+
+	if (tex_Length > kMaxTextureSize)
+	{
+		tex_Length = kMaxTextureSize;
+		desiredTexelSize = static_cast<float>(nLength) / tex_Length; 
+	}
+
+	Tex_Length = tex_Length;
+
+
+
+
+	wave_data_texture = new CTexture(
+		4,                 // 0: HeightMap_A, 1: HeightMap_B, 2: NormalMap, 
+		RESOURCE_TEXTURE2D,
+		0,                 // No samplers
+		4,                 // Graphics RootParameters: HeightMap (pinged), NormalMap
+		4,                 // Compute UAV RootParameter
+		4,                 // Compute SRV RootParameter
+		4,                 // Graphics SRV handles
+		4,                 // Compute UAV handles
+		4                  // Compute SRV handles
+	);
+
+	// HeightMap_Read: index 0 (read-only SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+
+	// HeightMap_Write: index 1 (UAV + SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+
+	// NormalMap: index 2 (UAV + SRV)
+	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	
+	// Pos_Normal: index 3 (UAV)
+	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 4, sizeof(float), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	Pos_Normal_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
+
+
+	// HeightMap_A: index 0
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 0, 1); // RootParam[1] - SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 0, 2); // RootParam[2] - UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 0, 5); // Graphics RootParam[0] (t#)
+
+	// HeightMap_B: index 1
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 1, 1); // SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 1, 2); // UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 1, 5); // Graphics RootParam[0]
+
+	// NormalMap: index 2
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 2, 3); // UAV(u1)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 2, 6); // Graphics RootParam[1]
+
+	// Pos_Normal: index 2
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 3, 4); // UAV(u2)
+
+}
+
+Wave_Object::~Wave_Object()
+{
+}
+
+void Wave_Object::Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	// 상태를 COPY_DEST로 전환
+	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+
+	pd3dCommandList->CopyBufferRegion(Pos_Normal_ReadBack_buffer, 0, wave_data_texture->GetResource(3), 0, sizeof(UINT) * 4);
+
+	// 상태를 GENERIC_READ로 전환
+	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
+}
+
+XMFLOAT3 Wave_Object::Readback_Buffer_Data()
+{
+	if (!Pos_Normal_ReadBack_buffer)
+		return XMFLOAT3{ 0.0f,0.0f,0.0f };
+
+	float* pReadData = nullptr;
+	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; // 4개의 float (16바이트)
+
+	if (SUCCEEDED(Pos_Normal_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&pReadData))) && pReadData)
+	{
+		BoatPos_WaveNormal = XMFLOAT3(pReadData[0], pReadData[1], pReadData[2]);
+		BoatPos_WaveHeight = pReadData[3];
+
+		D3D12_RANGE writtenRange = { 0, 0 };
+		Pos_Normal_ReadBack_buffer->Unmap(0, nullptr);
+		return BoatPos_WaveNormal;
+
+	}
+	else
+	{
+		DebugOutput(" Failed to map debug readback buffer.\n");
+	}
+
+	return XMFLOAT3{ 0.0f,0.0f,0.0f };
+
+}
+
+void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
+{
+	//World_Boat_Pos = boat_ptr->FindFrame("Bottom_Head")->GetPosition(); // 큰 차이 없음
+	World_Boat_Pos = boat_ptr->GetPosition();
+	World_Boat_Dir = Vector3::ScalarProduct(boat_ptr->GetLook(), -1.0f, false);
+	
+	XMFLOAT3 boat_velocity = boat_ptr->Get_Velocity();
+	float boat_rotation_speed = boat_ptr->Get_RotationSpeed(); 
+
+	float speed = XMVectorGetX(XMVector3Length(XMLoadFloat3(&boat_velocity)));
+
+	float absRotation = fabsf(boat_rotation_speed);
+	float rotationFactor = 1.0f - (absRotation / 90.0f); 
+	rotationFactor = std::clamp(rotationFactor, 0.5f, 1.0f);
+
+	World_Boat_Velocity = speed * rotationFactor;
+
+
+	if (!IsZeroVector(BoatPos_WaveNormal))
+	{
+		BoatPos_WaveNormal = Vector3::Normalize(BoatPos_WaveNormal);
+		boat_ptr->Set_Wave_Normal(BoatPos_WaveNormal);
+		boat_ptr->Set_Wave_Height(BoatPos_WaveHeight);
+	}
+}
+
+void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	if (!cs_wave_shader) 
+		return;
+
+	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
+
+	// Time update
+	CS_Wave_Shader::total_time += fTimeElapsed;
+	if (CS_Wave_Shader::total_time >= XM_2PI)
+		CS_Wave_Shader::total_time -= XM_2PI;
+
+	XMFLOAT3 Plane_Position = GetPosition();
+
+	float planeHalfSize = Side_Length * 0.5f;
+
+	XMFLOAT2 boatTexel = {
+		(World_Boat_Pos.x - (Plane_Position.x - planeHalfSize)) / desiredTexelSize,
+		(World_Boat_Pos.z - (Plane_Position.z - planeHalfSize)) / desiredTexelSize
+	};
+
+	XMFLOAT2 dirXZ = { World_Boat_Dir.x, World_Boat_Dir.z };
+	XMVECTOR v = XMVector2Normalize(XMLoadFloat2(&dirXZ));
+	XMFLOAT2 normDirXZ;
+	XMStoreFloat2(&normDirXZ, v);
+
+	cs_wave_shader->update_wave_info->g_BoatPos = XMFLOAT2(boatTexel.x, boatTexel.y);
+	cs_wave_shader->update_wave_info->g_BoatDir = XMFLOAT2(normDirXZ.x, normDirXZ.y);
+	cs_wave_shader->update_wave_info->g_TotalTime = CS_Wave_Shader::total_time;
+	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
+	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
+
+	const int readIndex = bPingPongToggle ? 1 : 0;
+	const int writeIndex = bPingPongToggle ? 0 : 1;
+	const UINT threadSize = 8;
+	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
+
+	// ======== [Pass 0] Global Wave ========
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// ======= UAV Barrier =========
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
+	}
+
+	// ======== [Pass 1] Boat Wake ========
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);    // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);     // UAV
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// ======= UAV Barrier =========
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = wave_data_texture->GetResource(readIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
+	}
+
+	// ======== [Pass 2] Normal Map ========
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);     // UAV
+
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // NormalMap
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // Pos_Normal_Data
+
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// Ping-Pong toggle
+	bPingPongToggle = !bPingPongToggle;
+}
+
+void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
+
+	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
+
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
+			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
+Boat_Object::Boat_Object() : CGameObject(1)
+{
+	m_fMaxVelocityXZ = 500.0f;
+	m_xmf3Velocity.x = 0.0f;
+	m_xmf3Velocity.y = 0.0f;
+	m_xmf3Velocity.z = 0.0f;
+	m_fFriction = 100.0f;
+}
+
+Boat_Object::~Boat_Object()
+{
+
+}
+
+void Boat_Object::Move(float fSpeed, bool bUpdateVelocity)
+{
+	XMFLOAT3 look = Vector3::Normalize(GetLook()); 
+	XMFLOAT3 shift = Vector3::ScalarProduct(look, fSpeed, false);
+
+	if (bUpdateVelocity)
+	{
+		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, shift);
+	}
+	else
+	{
+		XMFLOAT3 position = GetPosition();
+		position = Vector3::Add(position, shift);
+		SetPosition(position);
+	}
+}
+
+void Boat_Object::MoveForward(float speed)
+{
+	XMFLOAT3 look = Vector3::Normalize(GetLook());
+	XMFLOAT3 shift = Vector3::ScalarProduct(look, speed, false);
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, shift);
+}
+
+void Boat_Object::Yaw(float angle)
+{
+	XMFLOAT3 up = Vector3::Normalize(GetUp()); 
+	XMMATRIX mRotate = XMMatrixRotationAxis(XMLoadFloat3(&up), XMConvertToRadians(angle));
+
+
+	m_xmf4x4Parent = Matrix4x4::Multiply(mRotate, m_xmf4x4Parent);
+	UpdateTransform(nullptr);
+}
+
+void Boat_Object::Add_Rotate(float angleDelta) 
+{
+	m_fRotationSpeed += angleDelta; 
+	m_fRotationSpeed = std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f); 
+}
+
+void Boat_Object::UpdateRotationFromWave(float fTimeElapsed)
+{
+	const XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	float normalFollowSpeed = 0.3f;    
+	float restoreUpSpeed = 1.0f;       
+
+	float normalFollowWeight = 1.0f - expf(-normalFollowSpeed * fTimeElapsed);
+	float restoreToUpWeight = 1.0f - expf(-restoreUpSpeed * fTimeElapsed);
+
+	if (!IsZeroVector(wave_normal_vector))
+	{
+		XMFLOAT3 waveUp = Vector3::Normalize(wave_normal_vector);
+		boat_up_vector = Lerp(boat_up_vector, waveUp, normalFollowWeight);
+	}
+
+	boat_up_vector = Lerp(boat_up_vector, worldUp, restoreToUpWeight);
+	boat_up_vector = Vector3::Normalize(boat_up_vector);
+
+	AlignWithNormal(boat_up_vector);
+}
+
+void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
+{
+	// --- 속도 제한 ---
+	float velocityFull = Vector3::Length(m_xmf3Velocity);
+	if (velocityFull > m_fMaxVelocityXZ)
+	{
+		float scale = m_fMaxVelocityXZ / velocityFull;
+		m_xmf3Velocity.x *= scale;
+		m_xmf3Velocity.z *= scale;
+	}
+
+	// --- Look 벡터 방향으로 이동 처리 ---
+	XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
+	XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, velocityFull, false);
+
+	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
+	XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
+
+	// --- 부드러운 높이 보정 ---
+
+	smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
+	newPos.y = smoothedHeight * 30.0f;
+
+	SetPosition(newPos);
+
+	// --- 감속 처리 (속도 크기 감소만)
+	float fDeceleration = m_fFriction * fTimeElapsed;
+	if (fDeceleration > velocityFull) fDeceleration = velocityFull;
+
+	velocityFull -= fDeceleration;
+
+	// 감속된 속도를 Look 방향에 재적용
+	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
+	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+}
+
+void Boat_Object::Animate(float fTimeElapsed)
+{
+	UpdateRotationFromWave(fTimeElapsed);
+	UpdateMovementOnWave(fTimeElapsed);
+	CGameObject::Rotate(&boat_up_vector, m_fRotationSpeed * fTimeElapsed);
+
+	 m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+}
+
+bool Boat_Object::GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos)
+{
+	auto it = m_AttachedMarkerFrames.find(name);
+	if (it == m_AttachedMarkerFrames.end() || !it->second) return false;
+
+	outWorldPos = it->second->GetPosition(); 
+	return true;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature) : CGameObject(1)
@@ -2869,7 +3806,7 @@ CSkyBox::CSkyBox(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dComman
 	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	//CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
-	CDescriptor_Heap::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
 	
 	CMaterial *pSkyBoxMaterial = new CMaterial(1);
 	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
@@ -2892,44 +3829,240 @@ void CSkyBox::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-CAngrybotAnimationController::CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel) : CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pModel)
+Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // N = length,  N * 32
+	m_fAccumulatedTime = 0.0f;
 }
 
-CAngrybotAnimationController::~CAngrybotAnimationController()
-{
-}
-
-void CAngrybotAnimationController::OnRootMotion(CGameObject* pRootGameObject)
+Trail_Object::~Trail_Object()
 {
 
 }
 
-CAngrybotObject::CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks)
+void Trail_Object::Animate(float fTimeElapsed)
 {
-	CLoadedModelInfo *pAngrybotModel = pModel;
-	if (!pAngrybotModel) 
-		pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Player.bin", NULL);
+	if (!m_pTargetObject) 
+		return;
 
-	Set_Child(pAngrybotModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = new CAngrybotAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pAngrybotModel);
+	m_fAccumulatedTime += fTimeElapsed;
+	m_fSegmentTimer += fTimeElapsed;
+	if (m_fSegmentTimer < m_fSegmentInterval) 
+		return;
+	m_fSegmentTimer = 0.0f;
+
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_pTargetObject->m_xmf4x4World);
+
+	XMFLOAT3 top, bottom;
+
+	if (m_bUseTargetScale)
+	{
+		// apply parent's scale value
+		XMVECTOR worldTop = XMVector3TransformCoord(XMLoadFloat3(&m_vLocalTop), worldMatrix);
+		XMVECTOR worldBottom = XMVector3TransformCoord(XMLoadFloat3(&m_vLocalBottom), worldMatrix);
+		XMStoreFloat3(&top, worldTop);
+		XMStoreFloat3(&bottom, worldBottom);
+	}
+	else
+	{
+		// not apply parent's scale value
+		XMVECTOR right = XMVector3Normalize(worldMatrix.r[0]);
+		XMVECTOR up = XMVector3Normalize(worldMatrix.r[1]);
+		XMVECTOR look = XMVector3Normalize(worldMatrix.r[2]);
+		XMVECTOR trans = worldMatrix.r[3];
+
+		XMMATRIX rotationMatrix = XMMATRIX(right, up, look, XMVectorSet(0, 0, 0, 1));
+
+		XMVECTOR localTopVec = XMVectorSet(m_vLocalTop.x, m_vLocalTop.y, m_vLocalTop.z, 0.0f);
+		XMVECTOR localBottomVec = XMVectorSet(m_vLocalBottom.x, m_vLocalBottom.y, m_vLocalBottom.z, 0.0f);
+
+		XMVECTOR worldTop = XMVectorAdd(trans, XMVector3TransformNormal(localTopVec, rotationMatrix));
+		XMVECTOR worldBottom = XMVectorAdd(trans, XMVector3TransformNormal(localBottomVec, rotationMatrix));
+
+		XMStoreFloat3(&top, worldTop);
+		XMStoreFloat3(&bottom, worldBottom);
+	}
+
+	trail_mesh->AddSegment(top, bottom, m_fAccumulatedTime);
+	trail_mesh->UpdateTrail(m_fAccumulatedTime);
+	trail_mesh->UpdateIndexBuffer();
+	trail_mesh->UpdateVertexBuffer();
 }
 
-CAngrybotObject::~CAngrybotObject()
+void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	trail_mesh->Render(pd3dCommandList, 0);
 }
 
-CHumanObject::CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
+CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
+	: m_StateMachine(std::make_unique<MonsterStateMachine>(this))
 {
+	Object_type = OBJECT_TPYE_MONSTER;
 	CLoadedModelInfo* pHumanModel = pModel;
+	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
 
-	if (!pHumanModel) 
-		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Human.bin", NULL);
+	if (!pHumanModel) {
+		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+	}
+	n_Animation = nAnimationTracks;
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
 
 	Set_Child(pHumanModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = new CAnimationController(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
 }
 
-CHumanObject::~CHumanObject()
+CMonsterObject::~CMonsterObject()
 {
 }
+
+void CMonsterObject::Animate(float fTimeElapsed)
+{
+
+	//SetPosition(25.0f, 1064.0f, 25.0f);
+	OnPrepareAnimate();
+
+	if (m_pSkinnedAnimationController)
+	{
+		/*if (Anime_test_FallingLoop)
+			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
+		else
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
+		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+	}
+
+	/*if (On_Ground)
+	{
+		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
+		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
+		AlignWithNormal(world_normal);
+	}*/
+
+	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
+	if (sibling_ptr != nullptr)
+		sibling_ptr->Animate(fTimeElapsed);
+
+	shared_ptr<CGameObject> child_ptr = Get_Child();
+	if (child_ptr != nullptr)
+		child_ptr->Animate(fTimeElapsed);
+
+	/*CAnimationController* animController = GetSkinnedAnimationController();
+	for (int i = 0; i < 5; i++)
+	{
+		if (test_num == 1 && i == 0) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else if (test_num == 2 && i == 1) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else if (test_num == 3 && i == 4) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else
+			animController->SetTrackWeight(i, 0.0f);
+	}*/
+	//CGameObject::Animate(fTimeElapsed);
+	GetStateMachine()->update(fTimeElapsed);
+	//m_StateMachine->update(fTimeElapsed);
+}
+
+void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
+	CGameObject::Render(pd3dCommandList, pCamera);
+	//GetStateMachine()->update(0.01f);
+}
+
+//CMultiPlayerObject::CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
+//	: m_StateMachine(std::make_unique<MultiPlayerStateMachine>(this))
+//{
+//	Object_type = OBJECT_TPYE_PLAYER;
+//	CLoadedModelInfo* pHumanModel = pModel;
+//	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
+//
+//	if (!pHumanModel) {
+//		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+//		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+//	}
+//	n_Animation = nAnimationTracks;
+//	prevWeights.resize(n_Animation, 0.0f);
+//	targetWeights.resize(n_Animation, 0.0f);
+//
+//	Set_Child(pHumanModel->m_pModelRootObject);
+//	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+//	for (int i = 0; i < n_Animation; ++i) {
+//		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+//		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+//	}
+//
+//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
+//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
+//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
+//
+//	SetScale(10.0f, 10.0f, 10.0f);
+//}
+//
+//CMultiPlayerObject::~CMultiPlayerObject()
+//{
+//}
+//
+//void CMultiPlayerObject::Animate(float fTimeElapsed)
+//{
+//
+//	//SetPosition(25.0f, 1064.0f, 25.0f);
+//	OnPrepareRender();
+//
+//	if (m_pSkinnedAnimationController)
+//	{
+//		/*if (Anime_test_FallingLoop)
+//			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
+//		else
+//			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
+//		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+//	}
+//
+//	/*if (On_Ground)
+//	{
+//		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
+//		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+//		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
+//		AlignWithNormal(world_normal);
+//	}*/
+//
+//	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
+//	if (sibling_ptr != nullptr)
+//		sibling_ptr->Animate(fTimeElapsed);
+//
+//	shared_ptr<CGameObject> child_ptr = Get_Child();
+//	if (child_ptr != nullptr)
+//		child_ptr->Animate(fTimeElapsed);
+//
+//	/*CAnimationController* animController = GetSkinnedAnimationController();
+//	for (int i = 0; i < 5; i++)
+//	{
+//		if (test_num == 1 && i == 0) {
+//			animController->SetTrackWeight(i, 1.0f);
+//		}
+//		else if (test_num == 2 && i == 1) {
+//			animController->SetTrackWeight(i, 1.0f);
+//		}
+//		else if (test_num == 3 && i == 4) {
+//			animController->SetTrackWeight(i, 1.0f);
+//		}
+//		else
+//			animController->SetTrackWeight(i, 0.0f);
+//	}*/
+//	//CGameObject::Animate(fTimeElapsed);
+//	GetStateMachine()->update(fTimeElapsed);
+//	//m_StateMachine->update(fTimeElapsed);
+//}
+//
+//void CMultiPlayerObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
+//	CGameObject::Render(pd3dCommandList, pCamera);
+//	//GetStateMachine()->update(0.01f);
+//}

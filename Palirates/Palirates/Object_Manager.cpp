@@ -16,8 +16,8 @@ BoundingBox_Shader::~BoundingBox_Shader()
 }
 void BoundingBox_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	m_nPipelineStates = 1;
-	m_ppd3dPipelineStates = new ID3D12PipelineState * [m_nPipelineStates];
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
 }
@@ -144,7 +144,7 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D1
 	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
-	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
@@ -351,7 +351,7 @@ void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dD
 	UINT bufferSize = sizeof(Instance_Info) * instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
-	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
@@ -403,6 +403,8 @@ void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
 
 
 std::shared_ptr<CShader> Object_Manager::instance_shader = NULL;
+std::shared_ptr<CShader> Object_Manager::trail_shader = NULL;
+
 bool Object_Manager::do_instance_update = false;
 
 
@@ -415,7 +417,7 @@ Object_Manager::~Object_Manager()
 
 }
 
-void Object_Manager::Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Type type)
+void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Type type)
 {
 	switch (type)
 	{
@@ -431,6 +433,27 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Ty
 	{		
 		Add_Object_To_Unordered_Map(obj_ptr, fixed_obj_info_map);
 	}	break;
+	case Object_Type::player:
+	{
+		if (obj_ptr->m_pSkinnedAnimationController != NULL)
+			player_list.push_back(std::dynamic_pointer_cast<CTerrainPlayer>(obj_ptr));
+	}
+	break;
+	
+	case Object_Type::trail:
+	{
+		if (obj_ptr != NULL)
+			trail_obj_list.push_back(obj_ptr);
+	}
+	break;
+
+	case Object_Type::plane:
+	{
+		if (obj_ptr != NULL)
+			plane_obj_list.push_back(obj_ptr);
+	}
+	break;
+
 	case Object_Type::etc:
 		break;
 	default:
@@ -442,12 +465,12 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 {
 	string name = obj_ptr->Get_Mesh_Name();
 
-	if (name == "SM_Env_Beach_02" ||
-		name == "SM_Env_Beach_03" ||
-		name == "SM_Env_Beach_04" ||
-		name == "SM_Env_Beach_06" ||
-		name == "SM_Env_Flat_Sand_02")
-		name = "None";
+	//if (name == "SM_Env_Beach_02" ||
+	//	name == "SM_Env_Beach_03" ||
+	//	name == "SM_Env_Beach_04" ||
+	//	name == "SM_Env_Beach_06" ||
+	//	name == "SM_Env_Flat_Sand_02")
+	//	name = "None";
 
 	if (name != "None") 
 	{
@@ -523,6 +546,26 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			}
 	}
 	break;
+	case Object_Type::player:
+	{
+		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+			if (obj_ptr->Get_Active()) {
+				obj_ptr->Animate(fTimeElapsed);
+				/*std::wostringstream oss;
+				oss << obj_ptr->GetSkinnedAnimationController()->m_pAnimationTracks[0].m_fSpeed << '\n';
+				OutputDebugStringW(oss.str().c_str());*/
+			}
+	}
+	break;
+
+	case Object_Type::trail:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
+		{
+			obj_ptr->Animate(fTimeElapsed);
+		}
+	}
+	break;
 
 	case Object_Type::fixed:
 	case Object_Type::etc:
@@ -539,8 +582,10 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 
 void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 {
-	Animate_Objects(Object_Type::skinned, fTimeElapsed);
-	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
+//	Animate_Objects(Object_Type::skinned, fTimeElapsed);
+//	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
+	Animate_Objects(Object_Type::player, fTimeElapsed);
+	Animate_Objects(Object_Type::trail, fTimeElapsed);
 
 }
 
@@ -562,6 +607,7 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		else
 			info.Update_Instance_Data(pd3dDevice, pd3dCommandList);
 	}
+
 }
 
 void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
@@ -596,6 +642,17 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 			Synchronize_Active_Objects_and_Tile();
 	} break;
 
+	case Object_Type::player:
+	{
+		bool Is_Visible = false;
+		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		{
+			Is_Visible = obj_ptr->IsVisible(pCamera);
+			obj_ptr->Set_Active(Is_Visible);
+
+		}
+	} break;
+
 	case Object_Type::etc:
 		break;
 	}
@@ -607,8 +664,8 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 void Object_Manager::Check_Culling_All(CCamera* pCamera)
 {
 	/// 타일맵 컬링하기
-	if (terrain_ptr != NULL)	
-		terrain_ptr->Check_Culling(pCamera);
+	//if (terrain_ptr != NULL)	
+	//	terrain_ptr->Check_Culling(pCamera);
 
 	Check_Culling(pCamera, Object_Type::skinned);
 	Check_Culling(pCamera, Object_Type::non_skinned);
@@ -699,43 +756,73 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 			Synchronize_Active_Objects_and_Tile();
 		}
 
+		if (instance_shader)
+			instance_shader->Setting_Render(pd3dCommandList, 0);
+
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
-
-			int Material_N = instance_info.fixed_obj_list[0]->Material_list.size();
-			if (Material_N > 0)
+			for(std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
 			{
-				// 재료(Material) 처리
-				for (int i = 0; i < Material_N; ++i)
-				{					
-					CMaterial* pMaterial = instance_info.fixed_obj_list[0]->Material_list[i].get();
-					if (pMaterial)
+				for(std::shared_ptr<CMaterial> obj_material : obj_ptr->Material_list)
+				{
+					if (obj_material)
 					{
-						if (instance_shader)
-						{
-							// PSO 순회 및 렌더링
-							int pipelineStateNum = instance_shader->Get_Num_PipelineState();
-							for (int j = 0; j < pipelineStateNum; ++j)
-							{
-								// PSO 설정
-								instance_shader->Setting_Render(pd3dCommandList, 0);
-
-								// 재료(Material) 셰이더 변수 업데이트
-								pMaterial->UpdateShaderVariable(pd3dCommandList);
-							}
-						}
-						else
-						{
-							// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
-							pMaterial->UpdateShaderVariable(pd3dCommandList);
-						}
-
+						// 재료(Material) 셰이더 변수 업데이트
+						// 현재 의미 없음, 결국 메테리얼 하나의 정보를 기반으로 인스턴싱
+						// -> 한번만 동작해야 함 
+						// -> 하나의 머테리얼을 모두에게 적용하게 됨
+						// -> 각각 다른머테리얼을 하려면, 인스턴싱을 하면 안됨 or 인스턴싱 넘버 기반으로 셰이더에서 처리하기
+						// 아니면 인스턴싱 정보에 재질 ID 전달 및 ID 기반 조명 렌더링
+						obj_material->UpdateShaderVariable(pd3dCommandList);
+							
 						// 메쉬 렌더링
 						if (instance_info.obj_mesh)
 							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 					}
 				}
+				break;
 			}
+		}
+	}
+	break;
+
+	case Object_Type::player:
+	{
+		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		{
+			if (obj_ptr->Get_Active())
+			{
+				obj_ptr->UpdateTransform(NULL);
+				obj_ptr->Render(pd3dCommandList, pCamera);
+			}
+		}
+	}
+	break;
+
+	case Object_Type::trail:
+	{
+		if (!trail_obj_list.size())
+			break;
+
+		if (!trail_shader)
+			break;
+		trail_shader->Setting_Render(pd3dCommandList, 0);
+		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
+		{
+			obj_ptr->Render(pd3dCommandList, pCamera);
+		}
+
+	}
+	break;
+
+	case Object_Type::plane:
+	{
+		if (!plane_obj_list.size())
+			break;
+
+		for (std::shared_ptr<CGameObject>& obj_ptr : plane_obj_list)
+		{
+			obj_ptr->Render(pd3dCommandList, pCamera);
 		}
 	}
 	break;
@@ -759,10 +846,55 @@ void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, 
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 
-//	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
-//	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
+}
 
+void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
+}
+
+
+void Object_Manager::Post_Update(Object_Type type)
+{
+	switch (type)
+	{
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Record_Last_Pos();
+	}
+	break;
+
+	case Object_Type::non_skinned:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Record_Last_Pos();
+	}
+	break;
+
+	case Object_Type::fixed:
+	case Object_Type::etc:
+	default:
+	{
+		DebugOutput("Object_Manager::Last_Update() - Using_Wrong_Type");
+		::PostQuitMessage(0);
+	}
+	break;
+
+	}
+
+}
+
+void Object_Manager::Post_Update_All()
+{
+	Post_Update(Object_Type::skinned);
+	Post_Update(Object_Type::non_skinned);
 }
 
 std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Object_Type type)
@@ -776,7 +908,7 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 	case Object_Type::non_skinned:
 		return &non_skinned_object_list;
 		break;
-	
+
 	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
@@ -803,6 +935,10 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
+std::vector<std::shared_ptr<CTerrainPlayer>>* Object_Manager::Get_Player_List()
+{
+	return &player_list;
+}
 
 void Object_Manager::Clear_Object_List(Object_Type type)
 {

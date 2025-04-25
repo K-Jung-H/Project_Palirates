@@ -6,6 +6,7 @@
 
 #include "Mesh.h"
 #include "Camera.h"
+#include "Object_StateMachine.h"
 
 #define DIR_FORWARD					0x01
 #define DIR_BACKWARD				0x02
@@ -19,140 +20,30 @@ class CTerrainShader;
 class CStandardShader;
 
 class Deferred_CTerrainShader;
+class Deferred_Plane_Shader;
+class CS_Wave_Shader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 #define RESOURCE_TEXTURE1D			0x01
 #define RESOURCE_TEXTURE2D			0x02
-#define RESOURCE_TEXTURE2D_ARRAY	0x03	//[]
+#define RESOURCE_TEXTURE2D_ARRAY	0x03	
 #define RESOURCE_TEXTURE2DARRAY		0x04
 #define RESOURCE_TEXTURE_CUBE		0x05
 #define RESOURCE_BUFFER				0x06
 #define RESOURCE_STRUCTURED_BUFFER 0x07
 
-//class CTexture
-//{
-//public:
-//	CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers, int nGraphicsSrvRootParameters, int nComputeUavRootParameters, int nComputeSrvRootParameters, int nGraphicsSrvGpuHandles, int nComputeUavGpuHandles, int nComputeSrvGpuHandles);
-//	virtual ~CTexture();
-//
-//private:
-//	int								m_nReferences = 0;
-//
-//	char m_pstrTextureName[64] = { 0 };
-//
-//	UINT							m_nTextureType;
-//	UINT* m_pnResourceTypes = NULL;
-//
-//	int								m_nTextures = 0;
-//	ID3D12Resource** m_ppd3dTextures = NULL;
-//	ID3D12Resource** m_ppd3dTextureUploadBuffers;
-//
-//
-//	DXGI_FORMAT* m_pdxgiBufferFormats = NULL;
-//	int* m_pnBufferElements = NULL;
-//	int* m_pnBufferStrides = NULL;
-//
-//	//===============================================
-//
-//	int								m_nGraphicsSrvGpuHandles = 0;
-//	D3D12_GPU_DESCRIPTOR_HANDLE* m_pd3dGraphicsSrvGpuDescriptorHandles = NULL;
-//	int								m_nComputeUavGpuHandles = 0;
-//	D3D12_GPU_DESCRIPTOR_HANDLE* m_pd3dComputeUavGpuDescriptorHandles = NULL;
-//	int								m_nComputeSrvGpuHandles = 0;
-//	D3D12_GPU_DESCRIPTOR_HANDLE* m_pd3dComputeSrvGpuDescriptorHandles = NULL;
-//
-//
-//	int								m_nGraphicsSrvRootParameters = 0; //Number of Graphics Root Parameters
-//	int* m_pnGraphicsSrvRootParameterDescriptors = NULL; //Number of Descriptors Per Graphics Root Parameter
-//	int* m_pnGraphicsSrvRootParameterIndices = NULL;	//Graphics Root Parameters Index of Root Signature
-//	D3D12_GPU_DESCRIPTOR_HANDLE* GraphicsRootParameter_Srv_GpuDescriptorHandles = NULL; //Start SRV Descriptor for Graphics Root Parameters
-//
-//
-//	int								m_nComputeUavRootParameters = 0;
-//	int* m_pnComputeUavRootParameterIndices = NULL;
-//	int* m_pnComputeUavRootParameteDescriptors = 0;
-//	D3D12_GPU_DESCRIPTOR_HANDLE* m_pd3dComputeUavRootParameterGpuDescriptorHandles = NULL;
-//
-//	int								m_nComputeSrvRootParameters = 0;
-//	int* m_pnComputeSrvRootParameterIndices = NULL;
-//	int* m_pnComputeSrvRootParameterDescriptors = 0;
-//	D3D12_GPU_DESCRIPTOR_HANDLE* m_pd3dComputeSrvRootParameterGpuDescriptorHandles = NULL;
-//
-//	//===============================================
-//
-//	int								m_nSamplers = 0;
-//	D3D12_GPU_DESCRIPTOR_HANDLE* m_pd3dSamplerGpuDescriptorHandles = NULL;
-//
-//public:
-//	void AddRef() { m_nReferences++; }
-//	void Release() { if (--m_nReferences <= 0) delete this; }
-//
-//	void SetSampler(int nIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dSamplerGpuDescriptorHandle);
-//	//===============================================
-//				
-//	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nParameterIndex, int nTextureIndex);
-//	void UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-//				
-//	void UpdateComputeShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-//	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nIndex);
-//	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int nIndex);
-//
-//	void ReleaseShaderVariables();
-//
-//	//===============================================
-//
-//	void SetGraphicsSrvGpuDescriptorHandle(int nHandleIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dSrvGpuDescriptorHandle);
-//	void SetComputeUavGpuDescriptorHandle(int nHandleIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dUavGpuDescriptorHandle);
-//	void SetComputeSrvGpuDescriptorHandle(int nHandleIndex, D3D12_GPU_DESCRIPTOR_HANDLE d3dSrvGpuDescriptorHandle);
-//
-//	D3D12_GPU_DESCRIPTOR_HANDLE GetGraphicsSrvGpuDescriptorHandle(int nHandleIndex) { return(m_pd3dGraphicsSrvGpuDescriptorHandles[nHandleIndex]); }
-//	D3D12_GPU_DESCRIPTOR_HANDLE GetComputeUavGpuDescriptorHandle(int nHandleIndex) { return(m_pd3dComputeUavGpuDescriptorHandles[nHandleIndex]); }
-//	D3D12_GPU_DESCRIPTOR_HANDLE GetComputeSrvGpuDescriptorHandle(int nHandleIndex) { return(m_pd3dComputeSrvGpuDescriptorHandles[nHandleIndex]); }
-//
-//	int GetGraphicsSrvRootParameters() { return(m_nGraphicsSrvRootParameters); }
-//	int GetComputeSrvRootParameters() { return(m_nComputeSrvRootParameters); }
-//	int GetComputeUavRootParameters() { return(m_nComputeUavRootParameters); }
-//
-//	void SetGraphicsSrvRootParameter(int nIndex, int nRootParameterIndex, int nGpuHandleIndex, int nSrvDescriptors);
-//	void SetComputeSrvRootParameter(int nIndex, int nRootParameterIndex, int nGpuHandleIndex, int nSrvDescriptors);
-//	void SetComputeUavRootParameter(int nIndex, int nRootParameterIndex, int nGpuHandleIndex, int nUavDescriptors);
-//
-//	int GetGraphicsSrvRootParameterIndex(int nIndex) { return(m_pnGraphicsSrvRootParameterIndices[nIndex]); }
-//	int GetComputeSrvRootParameterIndex(int nIndex) { return(m_pnComputeSrvRootParameterIndices[nIndex]); }
-//	int GetComputeUavRootParameterIndex(int nIndex) { return(m_pnComputeUavRootParameterIndices[nIndex]); }
-//
-//	//===============================================
-//
-//	void LoadTextureFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, UINT nResourceType, UINT nIndex);
-//	void LoadBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, UINT nIndex);
-//
-//	void CreateBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, DXGI_FORMAT ndxgiFormat, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
-//	void CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nElements, UINT nStride, D3D12_HEAP_TYPE d3dHeapType, D3D12_RESOURCE_STATES d3dResourceStates, UINT nIndex);
-//
-//	ID3D12Resource* CreateTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nIndex, UINT nResourceType, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
-//
-//	void SetRootParameterIndex(int nIndex, UINT nRootParameterIndex);
-//
-//	int GetTextures() { return(m_nTextures); }
-//
-//	ID3D12Resource* GetResource(int nIndex) { return(m_ppd3dTextures[nIndex]); }
-//	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int nIndex) { return(GraphicsRootParameter_Srv_GpuDescriptorHandles[nIndex]); }
-//
-//	UINT GetTextureType() { return(m_nTextureType); }
-//	UINT GetTextureType(int nIndex) { return(m_pnResourceTypes[nIndex]); }
-//	DXGI_FORMAT GetBufferFormat(int nIndex) { return(m_pdxgiBufferFormats[nIndex]); }
-//	int GetBufferElements(int nIndex) { return(m_pnBufferElements[nIndex]); }
-//
-//	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int nIndex);
-//	D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int nIndex);
-//
-//	void ReleaseUploadBuffers();
-//};
+struct ServerAnimationSyncData
+{
+	XMFLOAT3 position;         
+	XMFLOAT3 lookVector;      
+	State currentState;         
+	std::vector<float> Weights;    
+	std::vector<float> trackPositions;
+};
 
-using namespace DirectX;
-
-class CTexture {
+class CTexture 
+{
 public:
 	CTexture(int nTextures, UINT nTextureType,
 		int nSamplers,
@@ -169,19 +60,18 @@ public:
 	void AddRef() { ++m_nReferences; }
 	void Release() { if (--m_nReferences <= 0) delete this; }
 
-	// 텍스처 정보
 	ID3D12Resource* GetResource(int index) const { return m_ppd3dTextures[index]; }
+	void SetResource(ID3D12Resource* resource, int index) { m_ppd3dTextures[index] = resource; }
+
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int index) const { return m_GraphicsRootParameter_Srv_GpuDescriptorHandles[index]; }
 	UINT GetTextureType() const { return m_nTextureType; }
 	UINT GetTextureType(int index) const { return m_pnResourceTypes[index]; }
 
-	// 개수 반환
 	int GetTextures() const { return static_cast<int>(m_ppd3dTextures.size()); }
 	int GetGraphicsSrvRootParameters() const { return static_cast<int>(m_pnGraphicsSrvRootParameterIndices.size()); }
 	int GetComputeSrvRootParameters() const { return static_cast<int>(m_pnComputeSrvRootParameterIndices.size()); }
 	int GetComputeUavRootParameters() const { return static_cast<int>(m_pnComputeUavRootParameterIndices.size()); }
 
-	// Descriptor Handle 접근
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGraphicsSrvGpuDescriptorHandle(int index) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE GetComputeUavGpuDescriptorHandle(int index) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE GetComputeSrvGpuDescriptorHandle(int index) const;
@@ -198,11 +88,18 @@ public:
 	int GetComputeSrvRootParameterIndex(int index) const;
 	int GetComputeUavRootParameterIndex(int index) const;
 
-	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
 	void UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* commandList);
-	void UpdateComputeShaderVariables(ID3D12GraphicsCommandList* commandList);
-	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int index);
-	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* commandList, int index);
+	void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+	void BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
+
+	void UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+	void BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* commandList, int rootParamIndex, int textureIndex);
+
+
+	void UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex);
+	void BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
 
 	void ReleaseShaderVariables();
 	void ReleaseUploadBuffers();
@@ -212,8 +109,8 @@ public:
 	void LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, wchar_t* filename, UINT resourceType, UINT index);
 	void LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index);
 
-	void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index);
-	void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state, UINT index);
+	void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
+	void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
 
 	ID3D12Resource* CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue);
 
@@ -221,6 +118,8 @@ public:
 
 	DXGI_FORMAT GetBufferFormat(int index) const;
 	int GetBufferElements(int index) const;
+	int GetBufferStrides(int index) const;
+
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
 	D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);
@@ -288,10 +187,8 @@ public:
 	CMaterial(const CMaterial& other);
 	virtual ~CMaterial();
 
+	::shared_ptr<CMaterial> CloneWithSharedTextures() const;
 public:
-	// 거칠기 (0 = 매끄러움, 1 = 거침)
-	// 금속성 (0 = 비금속, 1 = 금속)
-	// 반사 계수 (Specular Intensity)
 
 	XMFLOAT4 m_cAlbedo = { 0.0f, 0.0f, 0.0f, 1.0f };
 	XMFLOAT4 m_cEmissive = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -435,7 +332,13 @@ public:
 class CAnimationTrack
 {
 public:
-	CAnimationTrack() { }
+	CAnimationTrack() { 
+		std::random_device rd;
+		std::mt19937 gen(rd()); 
+		std::uniform_real_distribution<float> dist(0.0f, 3.0f);
+
+		m_fPosition = dist(gen);
+	}
 	~CAnimationTrack();
 
 public:
@@ -488,30 +391,32 @@ public:
 	void PrepareSkinning();
 };
 
-class CAnimationController 
+
+class CAnimationController
 {
 public:
-	CAnimationController(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, int nAnimationTracks, CLoadedModelInfo *pModel);
+	CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
 	~CAnimationController();
 
 public:
-    float 							m_fTime = 0.0f;
+	float 							m_fTime = 0.0f;
 
-    int 							m_nAnimationTracks = 0;
-    CAnimationTrack 				*m_pAnimationTracks = NULL;
+	int 							m_nAnimationTracks = 0;
+	CAnimationTrack* m_pAnimationTracks = NULL;
 
-	CAnimationSets					*m_pAnimationSets = NULL;
+	CAnimationSets* m_pAnimationSets = NULL;
 
 	int 							m_nSkinnedMeshes = 0;
-	CSkinnedMesh					**m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+	CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
 
-	ID3D12Resource					**m_ppd3dcbSkinningBoneTransforms = NULL; //[SkinnedMeshes]
-	XMFLOAT4X4						**m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
+	ID3D12Resource** m_ppd3dcbSkinningBoneTransforms = NULL; //[SkinnedMeshes]
+	//Microsoft::WRL::ComPtr<ID3D12Resource> m_ppd3dcbSkinningBoneTransforms = NULL;
+	XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
 
 public:
 	void Bone_Info();
 
-	void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
 
@@ -521,11 +426,14 @@ public:
 	void SetTrackWeight(int nAnimationTrack, float fWeight);
 
 	void SetCallbackKeys(int nAnimationTrack, int nCallbackKeys);
-	void SetCallbackKey(int nAnimationTrack, int nKeyIndex, float fTime, void *pData);
-	void SetAnimationCallbackHandler(int nAnimationTrack, CAnimationCallbackHandler *pCallbackHandler);
+	void SetCallbackKey(int nAnimationTrack, int nKeyIndex, float fTime, void* pData);
+	void SetAnimationCallbackHandler(int nAnimationTrack, CAnimationCallbackHandler* pCallbackHandler);
 
-	void AdvanceTime(float fElapsedTime, CGameObject *pRootGameObject);
-	void AdvanceTime2(float fElapsedTime, CGameObject *pRootGameObject);
+	void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
+	void AdvanceTime2(float fElapsedTime, CGameObject* pRootGameObject);
+
+	void ApplyCurrentAnimationPose(CGameObject* pRootGameObject);
+	void ServerAdvanceTime(const ServerAnimationSyncData& syncData);
 
 public:
 	bool							m_bRootMotion = false;
@@ -536,29 +444,41 @@ public:
 
 	void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
 
-	virtual void OnRootMotion(CGameObject* pRootGameObject) { }
-	virtual void OnAnimationIK(CGameObject* pRootGameObject) { }
+	virtual void OnRootMotion(CGameObject* pRootGameObject) {}
+	virtual void OnAnimationIK(CGameObject* pRootGameObject) {}
+
+	XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 m_xmf3PrevHipsPosition{ 0.0f, 0.0f, 0.0f };
 };
 
+
 //==================================================================================
+#define OBJECT_TPYE_MAIN_PLAYER		0x01
+#define OBJECT_TPYE_PLAYER		0x02
+#define OBJECT_TPYE_MONSTER		0x04
+//#define OBJECT_TPYE_PLAYER		0x08
+//#define OBJECT_TPYE_PLAYER		0x10
+//#define OBJECT_TPYE_PLAYER		0x20
+//#define OBJECT_TPYE_PLAYER		0x40
 
 class CHeightMapTerrain;
 
 class CGameObject
 {
 private:
-	std::shared_ptr<CGameObject> m_pChild = nullptr;     // 자식 노드
-	std::shared_ptr<CGameObject> m_pSibling = nullptr;   // 형제 노드
+	std::shared_ptr<CGameObject> m_pChild = nullptr;    
+	std::shared_ptr<CGameObject> m_pSibling = nullptr;  
 
 	bool Active = true;
 
+	XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 public:
-	CGameObject* m_pParent = NULL; // 부모 ptr은 shared_ptr X, 순환 참조 발생 방지
+	CGameObject* m_pParent = NULL; 
 
 	char							m_pstrFrameName[64];
 
 	CMesh* m_pMesh = NULL;
-	CAnimationController* m_pSkinnedAnimationController = NULL;
+	std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
 	std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
@@ -570,12 +490,23 @@ public:
 
 	int n_Animation = 0;
 
+
+	int Object_type = 0;
+
 public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");
 
 	CGameObject(const CGameObject& other);
-	CGameObject& operator=(const CGameObject& other);
+	CGameObject& operator=(const CGameObject& other);	
+	
+	
+	// Deep Copy
+	std::shared_ptr<CGameObject> Clone(bool withHierarchy = true); 
+
+	// Deep Copy Hierarchy & Shallow Copy Resource
+	static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);
+	
 
     virtual ~CGameObject();
 
@@ -597,16 +528,20 @@ public:
 	void Obj_Info(int depth=0);
 	void Set_Name(std::string_view name);
 
+	char Get_Name() { return *m_pstrFrameName; }
+
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 
-	virtual void OnPrepareAnimate() { }
+	virtual void OnPrepareAnimate() {}
 	virtual void Animate(float fTimeElapsed);
 
 	virtual bool IsVisible(CCamera* pCamera);
-	virtual void OnPrepareRender() { }
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
 
 	virtual void OnLateUpdate() { }
+
+	virtual void Set_Last_Pos(XMFLOAT3 pos);
+	virtual void Record_Last_Pos();
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -624,6 +559,9 @@ public:
 
 	XMFLOAT3 GetToParentPosition();
 	XMFLOAT3 Get_World_Position();
+
+	CGameObject* Get_Root_Object();
+	XMFLOAT3 Get_Root_WorldPosition();
 	XMFLOAT3 Get_Root_Obj_Displacement();
 
 	void Move(XMFLOAT3 xmf3Offset);
@@ -645,6 +583,17 @@ public:
 	void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
 	void Rotate(XMFLOAT3 *pxmf3Axis, float fAngle);
 	void Rotate(XMFLOAT4 *pxmf4Quaternion);
+
+	void RotateInWorldAroundUp(float fAngle);
+	void RotateInWorld(XMFLOAT3* pxmf3WorldAxis, float fAngle);
+
+	void SetLookDirection(float x, float y, float z);
+	virtual void SetLookDirection(const XMFLOAT3& look);
+
+	void Set_LookDirection_LookAt(float x, float y, float z);
+	void Set_LookDirection_LookAt(const XMFLOAT3& lookDir);
+
+	virtual void AlignWithNormal(XMFLOAT3& newNormal);
 
 	CGameObject *GetParent() { return(m_pParent); }
 	void UpdateTransform(XMFLOAT4X4 *pxmf4x4Parent=NULL);
@@ -686,7 +635,8 @@ public:
 	virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
 
 
-	CAnimationController* GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+	std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+	void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
 
 	public:
 	// Using CHeightMapTerrain
@@ -694,6 +644,12 @@ public:
 	virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
 	virtual void Check_Culling(CCamera* pCamera) {};
 
+	virtual ServerAnimationSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+
+
+	std::vector<float> prevWeights;
+	std::vector<float> targetWeights;
 };
 
 //==================================================================================
@@ -758,6 +714,106 @@ public:
 	void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
 };
 
+class Boat_Object : public CGameObject
+{
+private:
+	std::unordered_map<std::string, CGameObject*> m_AttachedMarkerFrames;
+
+	XMFLOAT3 wave_normal_vector{};
+	float wave_height = 0.0f;
+	float smoothedHeight = 0.0f;
+
+	XMFLOAT3 boat_up_vector{};
+	XMFLOAT3 m_xmf3Velocity{};
+
+	float           			m_fMaxVelocityXZ = 0.0f;
+	float           			m_fFriction = 0.0f;
+
+
+public:
+	Boat_Object();
+	virtual ~Boat_Object();
+
+	virtual void Move(float fSpeed, bool bUpdateVelocity);
+	virtual void MoveForward(float speed);
+	void Yaw(float angle);
+
+	void UpdateRotationFromWave(float fTimeElapsed);
+	void UpdateMovementOnWave(float fTimeElapsed);
+	void Set_Wave_Normal(XMFLOAT3& normal) { wave_normal_vector = normal; }
+	void Set_Wave_Height(float height) { wave_height = height; }
+
+	void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
+	void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
+	void Add_Rotate(float angleDelta);
+	
+	virtual void Animate(float fTimeElapsed);
+
+	XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
+	float Get_RotationSpeed() { return m_fRotationSpeed; }
+
+	void RegisterMarker(const std::string& name, CGameObject* node) { m_AttachedMarkerFrames[name] = node; }
+
+	bool GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos);
+};
+
+class Plane_Object : public CGameObject
+{
+private:
+	CTexture* Plane_BaseTexture = NULL;
+	CTexture* Plane_DetailTexture = NULL;
+
+public:
+	static Deferred_Plane_Shader* plane_shader;
+	CMaterial* Plane_Material = NULL;
+
+	Plane_Object() {}
+	Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual ~Plane_Object();
+	
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+	void Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+
+};
+
+class Wave_Object : public Plane_Object
+{
+private:
+	static CS_Wave_Shader* cs_wave_shader;
+	CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+	ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
+
+	UINT desiredTexelSize = 0;
+	UINT Tex_Length = 0;
+	float Side_Length = 0.0f;
+	bool bPingPongToggle = false;
+
+
+	XMFLOAT3 World_Boat_Pos = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 World_Boat_Dir = { 0.0f,1.0f, 0.0f };
+	float World_Boat_Velocity = 0.0f;
+
+	XMFLOAT3 BoatPos_WaveNormal = { 0.0f, 0.0f, 0.0f };
+	float BoatPos_WaveHeight = 0.0f;
+
+public:
+	Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100);
+	virtual ~Wave_Object();
+
+	void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
+	XMFLOAT3 Readback_Buffer_Data();
+
+	void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
+
+
+};
+
+
 
 class CSkyBox : public CGameObject
 {
@@ -768,30 +824,82 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 };
 
+class Trail_Object : public CGameObject
+{
+private:
+	Trail_Mesh* trail_mesh = NULL;
+	float m_fAccumulatedTime = 0.0f;
+
+	CGameObject* m_pTargetObject = nullptr;
+	bool m_bUseTargetScale = true;
+
+	XMFLOAT3 m_vLocalTop = {};
+	XMFLOAT3 m_vLocalBottom = {};
+
+	// Minimum segment creation interval N/s
+	float m_fSegmentInterval = 0.001f;
+	float m_fSegmentTimer = 0.0f;
+
+public:
+	Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual ~Trail_Object();
+
+	void Set_Trail_Target(CGameObject* target, bool bUseScale = true)
+	{
+		m_pTargetObject = target;
+		m_bUseTargetScale = bUseScale;
+	}
+
+	void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom)
+	{
+		m_vLocalTop = top;
+		m_vLocalBottom = bottom;
+	}
+
+	virtual void Animate(float fTimeElapsed);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+};
+
+
 //==================================================================================
 
-class CAngrybotAnimationController : public CAnimationController
-{
-public:
-	CAngrybotAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
-	~CAngrybotAnimationController();
-
-	virtual void OnRootMotion(CGameObject* pRootGameObject);
-};
-
-class CAngrybotObject : public CGameObject
-{
-public:
-	CAngrybotObject(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CLoadedModelInfo *pModel, int nAnimationTracks);
-	virtual ~CAngrybotObject();
-};
 
 //==================================================================================
 
-class CHumanObject : public CGameObject
+
+
+class CMonsterObject : public CGameObject
 {
 public:
-	CHumanObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
-	virtual ~CHumanObject();
+	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	virtual ~CMonsterObject();
+	virtual void Animate(float fTimeElapsed);
+	std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
+	int test_num{ 0 };
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+private:
+	std::unique_ptr<MonsterStateMachine> m_StateMachine;
 };
 
+//class CMultiPlayerObject : public CGameObject
+//{
+//public:
+//	CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+//	virtual ~CMultiPlayerObject();
+//	virtual void Animate(float fTimeElapsed);
+//	std::unique_ptr<MultiPlayerStateMachine>& GetStateMachine() { return m_StateMachine; }
+//	int test_num{ 0 };
+//	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+//
+//	float moveX{ 0.0f };
+//	float moveZ{ 0.0f };
+//
+//	void SetMoveX(float x) { moveX = x; }
+//	void SetMoveZ(float x) { moveZ = x; }
+//	float GetMoveX() { return moveX; }
+//	float GetMoveZ() { return moveZ; }
+//	float stateElapsedTime{ 0.0f };
+//	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
+//private:
+//	std::unique_ptr<MultiPlayerStateMachine> m_StateMachine;
+//};

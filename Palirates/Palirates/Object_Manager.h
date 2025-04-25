@@ -1,5 +1,6 @@
 #pragma once
 #include "Object.h"
+#include "Player.h"
 #include "Shader.h"
 
 
@@ -102,6 +103,9 @@ enum class Object_Type
 	skinned,
 	non_skinned,
 	fixed,
+	player,
+	trail,
+	plane,
 	etc
 };
 
@@ -114,6 +118,10 @@ private:
 	// 움직이는 객체들
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
+
+	std::vector<std::shared_ptr<CTerrainPlayer>> player_list;
+
+
 
 private:
 	// 고정된 사물 객체
@@ -128,6 +136,16 @@ private:
 
 
 public:
+	//test 
+	Wave_Object* wave_obj = NULL;
+	std::vector<std::shared_ptr<CGameObject>> plane_obj_list;
+
+	
+
+	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
+	static std::shared_ptr<CShader> trail_shader;
+
+
 	void Classify_Objects_By_Tile();
 
 	static std::shared_ptr<CShader> instance_shader;
@@ -137,7 +155,7 @@ public:
 	Object_Manager();
 	~Object_Manager();
 
-	void Add_Object(std::shared_ptr<CGameObject > obj_ptr, Object_Type type);
+	void Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Type type);
 	void Delete_Object(std::shared_ptr<CGameObject > obj_ptr);
 	void Set_Terrain_Object(std::shared_ptr<CHeightMapTerrain > obj_ptr) { terrain_ptr = obj_ptr; }
 
@@ -151,12 +169,20 @@ public:
 
 	
 	void Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
-	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+
+
+	void Post_Update(Object_Type type);
+	void Post_Update_All();
 
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
 	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
 
+	std::vector<std::shared_ptr<CTerrainPlayer>>* Get_Player_List();
 
 	void Clear_Object_List_All();
 	void Clear_Object_List(Object_Type type);

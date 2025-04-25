@@ -7,12 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-
-
-void ClearConsole()
-{
-	system("cls"); // 콘솔 화면 클리어
-}
+#include "Object_Manager.h"
 
 CGameFramework::CGameFramework()
 {
@@ -49,6 +44,8 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 
 	isRunning = false;
+
+	object_manager = std::make_shared<Object_Manager>();
 }
 
 CGameFramework::~CGameFramework()
@@ -69,15 +66,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 70, 0);
-	//CDescriptor_Heap::CreateCbvSrvDescriptorHeaps(m_pd3dDevice, 0, 70);
-	
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 50);
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
-
+	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
-
-
 	Build_Scenes();
 
 	return(true);
@@ -364,10 +357,33 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 
 				case VK_SPACE:
-					scene_manager->Load_Scene("Scene_2");
-					Object_Manager::Reserve_Update();
 					break;
 
+				case VK_TAB:
+				{
+					scene_index = (scene_index + 1) % 3;
+
+					switch (scene_index)
+					{
+					case 0:
+						scene_manager->Set_Active_Scene("Character_Select");
+						break;
+					case 1:
+						scene_manager->Set_Active_Scene("Game_Board");
+						break;
+					case 2:
+						scene_manager->Set_Active_Scene("In_Stage");
+						break;
+					default:
+						break;
+					}
+
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+					break;
+				}
+				break;
 				case VK_RETURN:
 					break;
 				case VK_F1:
@@ -413,6 +429,64 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			if (wParam == 'U') {
+				ServerAnimationSyncData data;
+				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+				data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
+				data.currentState = State::Dive;
+				for (int i = 0; i < m_pPlayer->n_Animation; i++) {
+					if (i == TRACK_DIVEROLL_FORWARD)
+						data.trackPositions.push_back(0.5f);
+					else data.trackPositions.push_back(0.0f);
+					if (i == TRACK_DIVEROLL_FORWARD)
+						data.Weights.push_back(1.0f);
+					else data.Weights.push_back(0.0f);
+				}
+
+				GetSyncManager().AddPlayerSyncData(ClientNum, data);
+				m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+			}
+			if (nMessageID == WM_KEYDOWN && wParam == 'T') {
+				//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+				//if (obj_list && obj_list->size() < 7) {
+					if (!Active_CommandList) {
+						OutputDebugString(L"Active_CommandList is nullptr!\n");
+						return 0;
+					}
+
+					HRESULT hr = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+					if (FAILED(hr)) {
+						OutputDebugString(L"CommandList Reset Failed!\n");
+						return 0;
+					}
+
+					//CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->GetGraphicsRootSignature(), "Model/First_Mate_v12.bin", NULL);
+					string player_name = "test_palyer" + std::to_string(nPlayer);
+
+
+					std::string_view name_view = player_name;
+
+					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
+					humanObject_7->Set_Name(player_name);
+					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
+					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
+					nPlayer++;
+
+					string message2 = "Player list :";
+					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+					for (auto& obj : *player_list) {
+						string name = obj->m_pstrFrameName;
+						message2 += name + ", ";
+					}
+					message2 += "\n";
+					DebugOutput(message2);
+
+					Active_CommandList->Close();
+					ID3D12CommandList* ppCommandLists[] = { Active_CommandList };
+					p_CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+				//}
+			}
 			break;
 	}
 	return(0);
@@ -422,7 +496,7 @@ void CGameFramework::OnDestroy()
 {
 	Release_Scenes();
 
-	delete PostProcessing_shader;
+	delete MRT_shader;
 
 	::CloseHandle(m_hFenceEvent);
 
@@ -469,7 +543,7 @@ void CGameFramework::OnDestroy()
 void CGameFramework::CreateShaderVariables()
 {
 	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
-	FrameworkInfo = ::CreateBufferResource(m_pd3dDevice, Active_CommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	FrameworkInfo = ::CreateBufferResource(m_pd3dDevice, Active_CommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	FrameworkInfo->Map(0, NULL, (void**)&MappedFrameworkInfo);
 
 }
@@ -479,15 +553,8 @@ void CGameFramework::UpdateShaderVariables()
 	MappedFrameworkInfo->m_fCurrentTime = m_GameTimer.GetTotalTime();
 	MappedFrameworkInfo->m_fElapsedTime = m_GameTimer.GetTimeElapsed();
 
-
-	MappedFrameworkInfo->m_fSecondsPerFirework = 1.0f;
-	MappedFrameworkInfo->m_nFlareParticlesToEmit = 10;
-	MappedFrameworkInfo->m_xmf3Gravity = XMFLOAT3(0.0f, -9.8f, 0.0f);
-	MappedFrameworkInfo->m_nMaxFlareType2Particles = 10;
-
 	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = FrameworkInfo->GetGPUVirtualAddress();
 	Active_CommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_FRAME_CBV_INDEX, d3dGpuVirtualAddress);
-
 }
 
 void CGameFramework::ReleaseShaderVariables()
@@ -502,62 +569,65 @@ void CGameFramework::ReleaseShaderVariables()
 
 void CGameFramework::Build_Scenes()
 {
-	Active_CommandAllocator = Render_CommandAllocator;
-	Active_CommandList = Render_CommandList;
-
-	Active_CommandAllocator->Reset();
-	Active_CommandList->Reset(Active_CommandAllocator, NULL);
+	BeginGPUStage(GPU_Stage::Render);
 
 	CreateShaderVariables();
 
 	//==========================================
 	// Multi - Render Target Shader
-	PostProcessing_shader = new CTextureToFullScreenShader();
-	PostProcessing_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
+	MRT_shader = new G_BufferMerger_Shader();
+	MRT_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	d3dRtvCPUDescriptorHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
 
-	PostProcessing_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
+	MRT_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvCPUDescriptorHandle); 
 
 
-//	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CScene::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
-
-
 	
-	scene_manager->Set_Shader(PostProcessing_shader);
-	//==========================================
+	scene_manager->Set_Shader(MRT_shader);
+
+	Post_ComputeShader::CreateComputeRootSignature(m_pd3dDevice);
+	
+	for (UINT i = 0; i < N_SwapChainBuffers; ++i)
+	{
+		Post_ComputeShader::CreateBackBufferSRV(m_pd3dDevice, ptr_SwapChainBackBuffer_List[i], i, DXGI_FORMAT_R8G8B8A8_UNORM);
+	}
 
 
 
 	//========================================================
-	std::shared_ptr<CScene> Scene_1 = std::make_shared<CScene>();
-	scene_manager->Register_Scene("Scene_1", Scene_1);
-	scene_manager->Build_Scene("Scene_1", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
+	scene_manager->Register_Scene("In_Stage", in_stage_scene);
+	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
+	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
+	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 
-	//std::shared_ptr<Test_Scene> Scene_2 = std::make_shared<Test_Scene>();
-	//scene_manager->Register_Scene("Scene_2", Scene_2);
-	//scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
+	scene_manager->Register_Scene("Game_Board", game_board_scene);
+	scene_manager->Build_Scene("Game_Board", m_pd3dDevice, Active_CommandList);
+	Observer* game_board_observer = new Observer(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	scene_manager->Set_Scene_Player("Game_Board", game_board_observer);
 
 
-	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
+	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
+	scene_manager->Register_Scene("Character_Select", character_select_scene);
+	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
+	Observer* select_scene_observer = new Observer(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
+	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 
-	m_pPlayer = pPlayer;
-	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
-//	scene_manager->Set_Scene_Player("Scene_2", m_pPlayer);
+
+	scene_manager->Set_Active_Scene("Character_Select");
+	m_pPlayer = scene_manager->Get_Active_Scene_Player();
+	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
+
 
 	m_pCamera = m_pPlayer->GetCamera();
-
+	
 	//========================================================
 
-	Active_CommandList->Close();
-	ID3D12CommandList *ppd3dCommandLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, ppd3dCommandLists);
-
-//	WaitForGpuComplete();
-	SignalFence(GPU_Stage::Render);
+	EndGPUStage(GPU_Stage::Render);
 	WaitForGpuComplete(GPU_Stage::Render);
 
 	scene_manager->ReleaseUploadBuffers();
@@ -594,19 +664,34 @@ void CGameFramework::ProcessInput()
 		DWORD dwDirection = 0;
 
 		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;   // 방향키 위 또는 W
+			dwDirection |= DIR_FORWARD;   
 		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;  // 방향키 아래 또는 S
+			dwDirection |= DIR_BACKWARD;  
 		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;      // 방향키 왼쪽 또는 A
+			dwDirection |= DIR_LEFT;    
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;     // 방향키 오른쪽 또는 D
+			dwDirection |= DIR_RIGHT;   
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;        // Page Up 또는 Q
+			dwDirection |= DIR_UP;       
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;      // Page Down 또는 E
+			dwDirection |= DIR_DOWN;      
 
-		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
+
+		if (m_pPlayer && m_pPlayer->GetCamera())
+		{
+			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
+		}
+
+
+		if (multiMode) {
+			auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+			auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+			player->GetStateMachine()->handleEvent(pKeysBuffer);
+		}
+		else {
+			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		}
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -621,70 +706,140 @@ void CGameFramework::ProcessInput()
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
-			if (cxDelta || cyDelta)
-			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+			if (multiMode) {
+				auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+				auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						player->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						player->Rotate(cyDelta, cxDelta, 0.0f);
+				}
+				if (dwDirection)
+					player->Move(dwDirection, 1 * 12.25f, true);
 			}
-			if (dwDirection) 
-				m_pPlayer->Move(dwDirection, 10* 12.25f, true);
+			else {
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+
+						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				}
+				if (dwDirection)
+					m_pPlayer->Move(dwDirection, 1 * 12.25f, true);
+			}
 		}
 	}
-	m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-	m_pPlayer->GetStateMachine()->update(m_GameTimer.GetTimeElapsed());
+	
 }
 
-void CGameFramework::Update_Scene()
+void CGameFramework::Animate_Scene()
 {
 	HRESULT hResult;
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
+	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
-	//==============================================================
+	// test 
+	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
+	//data.position.x += 10.0f;
 
-	scene_manager->Update_Active_Particles(m_pd3dDevice, Active_CommandList, fTimeElapsed);
+	//GetSyncManager().AddPlayerSyncData(ClientNum, data);
+	////m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+
+	//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+
+	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+	// test 
 
 	//===============================================================
 
-	m_pPlayer->Animate(fTimeElapsed);
+	if (multiMode)
+	{
 
+	}
+	else
+	{
+		m_pPlayer->Animate(fTimeElapsed);
+		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+	}
 }
 
-//void CGameFramework::WaitForGpuComplete()
-//{
-//	const UINT64 nFenceValue = ++m_nFenceValues[SwapChainBuffer_Index];
-//	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, nFenceValue);
-//
-//	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
-//	{
-//		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-//		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-//	}
-//}
-
-
-//
-//void CGameFramework::MoveToNextFrame()
-//{
-//	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
-//
-//	UINT64 nFenceValue = ++m_nFenceValues[SwapChainBuffer_Index];
-//	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, nFenceValue);
-//
-//	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
-//	{
-//		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
-//		::WaitForSingleObject(m_hFenceEvent, INFINITE);
-//	}
-//}
-
-void CGameFramework::SafeSyncStage(GPU_Stage stage)
+void CGameFramework::Update_Scene()
 {
-	SignalFence(stage);
-	WaitForGpuComplete(stage);
+	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList);
+}
+
+void CGameFramework::After_Update_Scene()
+{
+	scene_manager->After_Update_Active_Objects();
+}
+
+
+void CGameFramework::BeginGPUStage(GPU_Stage stage)
+{
+	SafeSyncStage(stage); // Ensure previous work is completed
+
+	switch (stage)
+	{
+	case GPU_Stage::Compute:
+		Active_CommandAllocator = Compute_CommandAllocator;
+		Active_CommandList = Compute_CommandList;
+		break;
+	case GPU_Stage::Render:
+		Active_CommandAllocator = Render_CommandAllocator;
+		Active_CommandList = Render_CommandList;
+		break;
+	case GPU_Stage::Post:
+		Active_CommandAllocator = Post_CommandAllocator;
+		Active_CommandList = Post_CommandList;
+		break;
+	}
+
+	Active_CommandAllocator->Reset();
+	Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+}
+
+void CGameFramework::EndGPUStage(GPU_Stage stage, bool wait )
+{
+	Active_CommandList->Close();
+	ID3D12CommandList* cmdLists[] = { Active_CommandList };
+	p_CommandQueue->ExecuteCommandLists(1, cmdLists);
+
+	SignalFence(stage, true);
+
+	if (wait)
+		WaitForGpuComplete(stage);
+}
+
+HRESULT CGameFramework::SignalFence(GPU_Stage stage, bool shouldAdvanceFence)
+{
+	UINT bufferIndex = SwapChainBuffer_Index;
+	UINT64* fenceValue = nullptr;
+
+	switch (stage)
+	{
+	case GPU_Stage::Compute:
+		fenceValue = &m_ComputeFenceValues[bufferIndex];
+		break;
+	case GPU_Stage::Render:
+		fenceValue = &m_RenderFenceValues[bufferIndex];
+		break;
+	case GPU_Stage::Post:
+		fenceValue = &m_PostFenceValues[bufferIndex];
+		break;
+	default:
+		return E_FAIL;
+	}
+
+	if (shouldAdvanceFence)
+		++(*fenceValue);
+
+	return p_CommandQueue->Signal(m_pd3dFence, *fenceValue);
 }
 
 void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
@@ -703,10 +858,11 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	case GPU_Stage::Post:
 		fenceValue = m_PostFenceValues[bufferIndex];
 		break;
+	default:
+		return;
 	}
 
-	if (fenceValue == 0) 
-		return;
+	if (fenceValue == 0) return;
 
 	if (m_pd3dFence->GetCompletedValue() < fenceValue)
 	{
@@ -715,142 +871,177 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	}
 }
 
-HRESULT CGameFramework::SignalFence(GPU_Stage stage)
+void CGameFramework::SafeSyncStage(GPU_Stage stage)
 {
-	UINT bufferIndex = SwapChainBuffer_Index;
-	HRESULT hResult = 0;
+	SignalFence(stage, false); // Signal only to current value without fence increase
+	WaitForGpuComplete(stage);
+}
+
+UINT64 CGameFramework::GetFenceValue(GPU_Stage stage, UINT bufferIndex) const
+{
 	switch (stage)
 	{
-	case GPU_Stage::Compute:
-		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_ComputeFenceValues[bufferIndex]);
-		break;
-	case GPU_Stage::Render:
-		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_RenderFenceValues[bufferIndex]);
-		break;
-	case GPU_Stage::Post:
-		hResult = p_CommandQueue->Signal(m_pd3dFence, ++m_PostFenceValues[bufferIndex]);
-		break;
+	case GPU_Stage::Compute: 
+		return m_ComputeFenceValues[bufferIndex];
+
+	case GPU_Stage::Render:  
+		return m_RenderFenceValues[bufferIndex];
+
+	case GPU_Stage::Post:    
+		return m_PostFenceValues[bufferIndex];
+
+	default: 
+		return 0;
 	}
-	return hResult;
 }
+
 
 void CGameFramework::MoveToNextFrame()
 {
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	// Present 이후, 보통 Render 스테이지의 마지막 Fence로 처리
-	UINT64 nFenceValue = ++m_RenderFenceValues[SwapChainBuffer_Index];
-	HRESULT hResult = SignalFence(GPU_Stage::Render);
+	// Present 후, 다음 프레임을 위한 Render Fence 증가 및 signal
+	UINT64& renderFence = m_RenderFenceValues[SwapChainBuffer_Index];
+	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, ++renderFence);
 
-	if (m_pd3dFence->GetCompletedValue() < nFenceValue)
+	if (m_pd3dFence->GetCompletedValue() < renderFence)
 	{
-		hResult = m_pd3dFence->SetEventOnCompletion(nFenceValue, m_hFenceEvent);
+		m_pd3dFence->SetEventOnCompletion(renderFence, m_hFenceEvent);
 		WaitForSingleObject(m_hFenceEvent, INFINITE);
+	}
+}
+
+void CGameFramework::PrepareStage(GPU_Stage stage)
+{
+	CDescriptor_Heap::SetDescriptorHeaps(Active_CommandList, 1);
+
+	if (stage == GPU_Stage::Render || stage == GPU_Stage::Post)
+	{
+		if (m_pCamera)
+			m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
 	}
 }
 
 //#define _WITH_PLAYER_TOP
 
-void CGameFramework::Clear_RenderTarget(XMFLOAT3 background_color)
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	d3dRtvCPUDescriptorHandle.ptr += (SwapChainBuffer_Index * ::gnRtvDescriptorIncrementSize);
-
-	float pfClearColor[4] = { background_color.x, background_color.y, background_color.z, 1.0f };
-	Active_CommandList->ClearRenderTargetView(d3dRtvCPUDescriptorHandle, pfClearColor, 0, NULL);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, NULL);
-
-	Active_CommandList->OMSetRenderTargets(1, &d3dRtvCPUDescriptorHandle, TRUE, &d3dDsvCPUDescriptorHandle);
-}
-
 void CGameFramework::FrameAdvance()
 {
-	HRESULT hResult;
-
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
 
-	// ====================== [1] Compute Phase ======================
-	Active_CommandAllocator = Compute_CommandAllocator;
-	Active_CommandList = Compute_CommandList;
+	// ====================== [1] Compute: Update Scene ======================
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
+	{
+		Animate_Scene();
+	}
+	EndGPUStage(GPU_Stage::Compute, true);
+	// ====================== [2] Compute: After Update ======================
 
-	SafeSyncStage(GPU_Stage::Compute);
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
+	{
+		Update_Scene();
+	}
+	EndGPUStage(GPU_Stage::Compute, true);
 
-	Update_Scene();
 
-	hResult = Active_CommandList->Close();
-	ID3D12CommandList* computeCmdLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, computeCmdLists);
-	SignalFence(GPU_Stage::Compute); // 개별 호출도 가능, 반복 sync 시 유용
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
+	{
+		scene_manager->Clear_Particles_Update_Result(Active_CommandList);
+	}
+	EndGPUStage(GPU_Stage::Compute, true);
 
-	// ====================== [2] UI (CPU-only) ======================
+	// ====================== [3] UI (CPU-only) ======================
+
+	After_Update_Scene();
+
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
 
-	// ====================== [3] Render Phase ======================
-	Active_CommandAllocator = Render_CommandAllocator;
-	Active_CommandList = Render_CommandList;
+	// ====================== [4] Render Phase ======================
+	BeginGPUStage(GPU_Stage::Render);
+	PrepareStage(GPU_Stage::Render);
+	{
+		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-	SafeSyncStage(GPU_Stage::Render);
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dDsvCPUDescriptorHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	Active_CommandList->ClearDepthStencilView(d3dDsvCPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		UpdateShaderVariables();
+		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		if (m_pPlayer) 
+			m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-	scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
-	scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-	UpdateShaderVariables();
+		
+		// Merge G-Buffers
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-	scene_manager->Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
+		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+	}
+	EndGPUStage(GPU_Stage::Render);
 
-	if (m_pPlayer)
-		m_pPlayer->Render(Active_CommandList, m_pCamera);
+	// ====================== [5] Post Process Phase - Screen Effects ======================
+	BeginGPUStage(GPU_Stage::Post);
+	PrepareStage(GPU_Stage::Post);
+	{
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-	Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
-	scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
-	scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-	scene_manager->Post_Render_Scene(m_pd3dDevice, Active_CommandList);
+		//Debuging G-Buffer
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(0);
+		//post_effect_manager->fullscreen_shader->OnPrepareRender(Active_CommandList);
+		//post_effect_manager->fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, Albedo_G_Buffer_SRV_handle);
+		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
+
+		// Reserve Effects
+		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
+		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		
+		// Apply reserved effects
+		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
+		post_effect_manager->Clear_Reserved_Effect();
+
+
+		// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
+
+		// Use previously stored depth buffer values
+		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, &dsvHandle);
+
+
+		// Rendering Transparent object
+		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		UpdateShaderVariables();
+		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+
+
+		// Record moving Object's Last Pos to use motion blur
+		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		m_pPlayer->Record_Last_Pos();
 
 #ifndef WRITE_TEXT_UI
-	SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 #endif
+	}
+	EndGPUStage(GPU_Stage::Post);
 
-	hResult = Active_CommandList->Close();
-	ID3D12CommandList* renderCmdLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, renderCmdLists);
-	SignalFence(GPU_Stage::Render);
-
-	// ====================== [4] Post Phase ======================
-	Active_CommandAllocator = Post_CommandAllocator;
-	Active_CommandList = Post_CommandList;
-
-	SafeSyncStage(GPU_Stage::Post);
-	hResult = Active_CommandAllocator->Reset();
-	hResult = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-
-	scene_manager->Finalize_Frame_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
-	hResult = Active_CommandList->Close();
-	ID3D12CommandList* postCmdLists[] = { Active_CommandList };
-	p_CommandQueue->ExecuteCommandLists(1, postCmdLists);
-	SignalFence(GPU_Stage::Post);
-
+	// ====================== [6] Text UI Rendering ======================
 #ifdef WRITE_TEXT_UI
 	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
 #endif
 
-	// ====================== [5] Present ======================
+	// ====================== [7] Present ======================
 #ifdef _WITH_PRESENT_PARAMETERS
 	DXGI_PRESENT_PARAMETERS dxgiPresentParameters = {};
 	m_pdxgiSwapChain->Present1(1, 0, &dxgiPresentParameters);
@@ -862,15 +1053,13 @@ void CGameFramework::FrameAdvance()
 #endif
 #endif
 
-	// ====================== [6] Swap & FPS ======================
-
-	SendPacket();
-
+	// ====================== [8] Frame Sync ======================
 	MoveToNextFrame();
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 }
+
 
 
 
@@ -918,24 +1107,12 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 void CGameFramework::SendPacket()
 {
-	std::cout << "[DEBUG] SendPacket() 실행" << std::endl;
-
 	std::lock_guard<std::mutex> lock(networkMutex);
 
-	if (!serverSocket)
-	{
-		std::cout << "[DEBUG] serverSocket이 유효하지 않음" << std::endl;
-		return;
-	}
+	if (!serverSocket) return;
 
 	CPlayer* player = GetPlayer();
-	std::cout << "[DEBUG] GetPlayer() 반환 주소: " << player << std::endl;
-
-	if (!player)
-	{
-		std::cout << "[DEBUG] player 객체가 null입니다!" << std::endl;
-		return;
-	}
+	if (!player) return;
 
 	DirectX::XMFLOAT3 pos = player->GetPosition();
 	int state = player->GetState();
@@ -948,16 +1125,14 @@ void CGameFramework::SendPacket()
 
 	std::string packet = packetStream.str();
 
-	std::cout << "[DEBUG] 전송할 패킷 내용: " << packet << std::endl;
-
 	int bytesSent = send(serverSocket, packet.c_str(), packet.size(), 0);
 	if (bytesSent == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] send 실패: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] send() 실패: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
-		std::cout << "[INFO] " << bytesSent << "바이트 전송 완료 (" << packet << ")" << std::endl;
+		std::cout << "[INFO] 서버로 패킷 전송 완료: " << packet << std::endl;
 	}
 }
 
@@ -1003,12 +1178,8 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
-	std::cout << "[INFO] 네트워크 스레드 시작" << std::endl;
-
 	while (isRunning)
 	{
-		std::cout << "[DEBUG] 네트워크 루프 반복 중..." << std::endl;
-
 		SendPacket();
 		std::this_thread::sleep_for(std::chrono::milliseconds(33));
 
@@ -1017,11 +1188,59 @@ void CGameFramework::NetworkLoop()
 
 		if (bytesReceived > 0)
 		{
-			buffer[bytesReceived] = '\0';
+			buffer[bytesReceived] = '\0'; 
 			std::string receivedData(buffer);
 			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
+			if (receivedData.starts_with("PLAYER_UPDATE")) {
+				int id = 0;
+				float x = 0, y = 0, z = 0;
+				int state = 0;
 
-			PrintClientStatus();
+				if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+					&id, &x, &y, &z, &state) == 5) {
+
+					if (id != ClientNum) {
+						if (remotePlayers.find(id) == remotePlayers.end()) {
+							RemotePlayer new_player;
+							new_player.id = id;
+							new_player.position = { x, y, z };
+							new_player.state = state;
+
+							auto player = std::make_shared<CTerrainPlayer>();
+							player->SetPosition(DirectX::XMFLOAT3(x, y, z));
+							player->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(player));
+							object_manager->Add_Object(player, Object_Type::player);
+
+							new_player.player_obj = player;
+							remotePlayers[id] = new_player;
+						}
+						else {
+							auto& p = remotePlayers[id];
+							p.position = { x, y, z };
+							p.state = state;
+							if (p.player_obj) {
+								p.player_obj->SetPosition(DirectX::XMFLOAT3(x, y, z));
+								p.player_obj->GetStateMachine()->SetState(static_cast<State>(state));
+							}
+						}
+					}
+				}
+			}
+			else if (receivedData.starts_with("PLAYER_LEAVE")) {
+				int id = 0;
+				if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &id) == 1) {
+					if (remotePlayers.find(id) != remotePlayers.end()) {
+						if (remotePlayers[id].player_obj) {
+							object_manager->Delete_Object(remotePlayers[id].player_obj);
+						}
+						remotePlayers.erase(id);
+					}
+				}
+			}
+		}
+		else if (bytesReceived == SOCKET_ERROR)
+		{
+			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
 		}
 		else if (bytesReceived == 0)
 		{
@@ -1032,32 +1251,6 @@ void CGameFramework::NetworkLoop()
 		else
 		{
 			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
-		}
-	}
-}
-
-void CGameFramework::PrintClientStatus()
-{
-	ClearConsole();
-
-	int totalClients = scene_manager->GetClientCount();
-	//std::cout << "[현재 서버 접속 인원] : " << totalClients << "명" << std::endl;
-
-	CPlayer* myPlayer = GetPlayer();
-	if (myPlayer)
-	{
-		DirectX::XMFLOAT3 pos = myPlayer->GetPosition();
-		std::wcout << L"[내 위치] - (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
-	}
-
-	const auto& players = scene_manager->GetAllPlayers();
-
-	for (const auto& [id, player] : players)
-	{
-		if (player != myPlayer)
-		{
-			DirectX::XMFLOAT3 pos = player->GetPosition();
-			std::wcout << L"[클라이언트 " << id << " 위치] - (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
 		}
 	}
 }

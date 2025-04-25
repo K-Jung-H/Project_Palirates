@@ -11,6 +11,8 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <unordered_map>
+#include "Object.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -21,18 +23,46 @@ enum class GPU_Stage
 	Post
 };
 
+class ServerSyncManager
+{
+public:
+	void AddPlayerSyncData(int playerId, const ServerAnimationSyncData& data)
+	{
+		syncDataMap[playerId] = data;
+	}
 
+	ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
+		return syncDataMap.at(clientNum); 
+	}
+
+	std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
+	{
+		return syncDataMap;
+	}
+
+	void ClearAll() { syncDataMap.clear(); }
+
+private:
+	std::unordered_map<int, ServerAnimationSyncData> syncDataMap;
+};
 
 struct CB_FRAMEWORK_INFO
 {
 	float m_fCurrentTime;      
 	float m_fElapsedTime;         
-
-	float m_fSecondsPerFirework;    
-	int m_nFlareParticlesToEmit;     
-	int m_nMaxFlareType2Particles;   
-	XMFLOAT3 m_xmf3Gravity;          
 };
+
+struct RemotePlayer
+{
+	int id = 0;
+	DirectX::XMFLOAT3 position = { 0.f, 0.f, 0.f };
+	int state = 0;
+	std::shared_ptr<CTerrainPlayer> player_obj = nullptr;
+
+	RemotePlayer() = default;
+};
+
+extern std::unordered_map<int, RemotePlayer> remotePlayers;
 
 class CGameFramework
 {
@@ -63,32 +93,41 @@ public:
 
     void ProcessInput();
 
+	void Animate_Scene();
 	void Update_Scene();
+	void After_Update_Scene();
+
     void FrameAdvance();
 
-//	void WaitForGpuComplete();
-	void SafeSyncStage(GPU_Stage stage);
+	void PrepareStage(GPU_Stage stage);
+
+	void BeginGPUStage(GPU_Stage stage);
+	void EndGPUStage(GPU_Stage stage, bool wait = true);
+
+	HRESULT SignalFence(GPU_Stage stage, bool shouldAdvanceFence);
 	void WaitForGpuComplete(GPU_Stage stage);
-	HRESULT SignalFence(GPU_Stage stage);
+	void SafeSyncStage(GPU_Stage stage);
+	
+	UINT64 GetFenceValue(GPU_Stage stage, UINT bufferIndex) const;
+
 
 	void MoveToNextFrame();
-	void Clear_RenderTarget(XMFLOAT3 background_color);
 
 
 	void OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-	//=================º≠πˆ=================
+	//=================ÏÑúÎ≤Ñ=================
 	void ConnectToServer(const std::string& ip, int port);
 	void SendPacket();
 	std::string ReceiveData();
 	void NetworkLoop();
 	void Disconnect();
-	void PrintClientStatus();
 
 	Scene_Manager sceneManager;
-	//=================º≠πˆ=================
+	std::shared_ptr<Object_Manager> object_manager;
+	//=================ÏÑúÎ≤Ñ=================
 
 private:
 	HINSTANCE					m_hInstance;
@@ -134,7 +173,7 @@ private:
 	ID3D12CommandAllocator* Post_CommandAllocator = nullptr;
 	ID3D12GraphicsCommandList* Post_CommandList = nullptr;
 
-	// ªÁøÎ«“ ƒø∏‡µÂ «“¥Á¿⁄, ≈•∑Œ ø¨∞·«œø© ªÁøÎ
+	// ÏÇ¨Ïö©Ìï† Ïª§Î©òÎìú Ìï†ÎãπÏûê, ÌÅêÎ°ú Ïó∞Í≤∞ÌïòÏó¨ ÏÇ¨Ïö©
 	ID3D12CommandAllocator* Active_CommandAllocator = NULL;
 	ID3D12GraphicsCommandList* Active_CommandList = NULL;
 	//=======================================================
@@ -150,13 +189,13 @@ private:
 
 	//=======================================================
 
-	//=================º≠πˆ=================
+	//=================ÏÑúÎ≤Ñ=================
 	SOCKET serverSocket;
 	sockaddr_in serverAddr;
 	std::thread networkThread;
 	std::mutex networkMutex;
 	bool isRunning;
-	//=================º≠πˆ=================
+	//=================ÏÑúÎ≤Ñ=================
 
 #if defined(_DEBUG)
 	ID3D12Debug					*m_pd3dDebugController;
@@ -168,9 +207,11 @@ protected:
 	CGameTimer					m_GameTimer;
 
 public:
-	CPostProcessingShader* PostProcessing_shader = NULL;
+	UINT scene_index = 0;
 	Scene_Manager* scene_manager = NULL;
+	Post_Effect_Manager* post_effect_manager = NULL;
 
+	PostProcessBaseShader* MRT_shader = NULL;
 
 
 	CPlayer						*m_pPlayer = NULL;
@@ -178,15 +219,19 @@ public:
 
 
 
-
 	POINT						m_ptOldCursorPos;
 	_TCHAR						m_pszFrameRate[70];
 
-	//=================º≠πˆ=================
-
+	//=================ÏÑúÎ≤Ñ=================
 	Scene_Manager& GetSceneManager() { return *scene_manager; } 
-	CPlayer* GetPlayer() { return m_pPlayer; } 
-	//=================º≠πˆ=================
+	CPlayer* GetPlayer() { return m_pPlayer; }
+	bool multiMode{ false };
+	int nPlayer{ 0 };
+	int ClientNum{ 0 };
+	ServerSyncManager syncManager;
+	ServerSyncManager& GetSyncManager() { return syncManager; }
+
+	//=================ÏÑúÎ≤Ñ=================
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Renderer* text_ui_renderer = NULL;
