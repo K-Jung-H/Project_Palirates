@@ -17,4 +17,14 @@ public:
         y = newY;
         z = newZ;
     }
+
+	void setState(int newState)
+	{
+		state = newState;
+	}
+
+	void printInfo()
+	{
+		std::cout << "Player ID: " << id << ", Position: (" << x << ", " << y << ", " << z << "), State: " << state << std::endl;
+	}
 };

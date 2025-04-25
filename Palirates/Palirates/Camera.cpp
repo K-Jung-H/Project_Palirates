@@ -112,21 +112,21 @@ void CCamera::RegenerateViewMatrix()
 void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbCamera->Map(0, NULL, (void **)&m_pcbMappedCamera);
 
-	//==========================================================================
+	//=================================================================================
 
-	UINT ncbElementBytes_2 = ((sizeof(VS_CB_POST_CAMERA_INFO) + 255) & ~255); //256의 배수
-	post_Camera_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes_2, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	ncbElementBytes = ((sizeof(VS_CB_PREV_CAMERA_INFO) + 255) & ~255); //256의 배수
+	m_pd3dcb_Prev_Camera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	post_Camera_Info->Map(0, NULL, (void**)&Mapped_post_Camera_Info);
+	m_pd3dcb_Prev_Camera->Map(0, NULL, (void**)&m_pcbMapped_Prev_Camera);
 
 
 }
 
-void CCamera::Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+void CCamera::Update_Render_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	XMFLOAT4X4 xmf4x4View;
 	XMStoreFloat4x4(&xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4View)));
@@ -135,17 +135,36 @@ void CCamera::Update_PreRender_ShaderVariables(ID3D12GraphicsCommandList *pd3dCo
 	XMFLOAT4X4 xmf4x4Projection;
 	XMStoreFloat4x4(&xmf4x4Projection, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4Projection)));
 	::memcpy(&m_pcbMappedCamera->m_xmf4x4Projection, &xmf4x4Projection, sizeof(XMFLOAT4X4));
-
 	::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress = m_pd3dcbCamera->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress);
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress_1 = m_pd3dcbCamera->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress_1);
 }
 
-void CCamera::Update_PostRender_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+
+void CCamera::Update_Last_Frame_Info(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	XMMATRIX xmPrevView = XMLoadFloat4x4(&m_xmf4x4_Prev_View);
+	XMMATRIX xmPrevProj = XMLoadFloat4x4(&m_xmf4x4_Prev_Projection);
+	XMMATRIX xmPrevViewProj = XMMatrixTranspose(xmPrevView * xmPrevProj);
+
+	XMFLOAT4X4 xmf4x4PrevViewProj;
+	XMStoreFloat4x4(&xmf4x4PrevViewProj, xmPrevViewProj);
+
+	memcpy(&m_pcbMapped_Prev_Camera->m_xmf4x4PrevViewProj, &xmf4x4PrevViewProj, sizeof(XMFLOAT4X4));
+
+
+
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress_2 = m_pd3dcb_Prev_Camera->GetGPUVirtualAddress();
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_PREV_CAMERA_CBV_INDEX, d3dGpuVirtualAddress_2);
+
+	m_xmf4x4_Prev_View = m_xmf4x4View;
+	m_xmf4x4_Prev_Projection = m_xmf4x4Projection;
+}
+
+
+void CCamera::Update_Deffered_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {	
-
-
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &m_xmf3Position, 0);
 }
 
@@ -158,11 +177,6 @@ void CCamera::ReleaseShaderVariables()
 		m_pd3dcbCamera->Release();
 	}
 
-	if (post_Camera_Info)
-	{
-		post_Camera_Info->Unmap(0, NULL);
-		post_Camera_Info->Release();
-	}
 }
 
 void CCamera::SetViewportsAndScissorRects(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -187,6 +201,66 @@ bool CCamera::IsInFrustum(const XMFLOAT3& position)
 {
 	XMVECTOR xmPoint = XMLoadFloat3(&position);
 	return m_xmFrustum.Intersects(xmPoint);
+}
+
+void CCamera::SetLookDirection(XMFLOAT3& look)
+{
+	m_xmf3Look = Vector3::Normalize(look);
+
+	// Use world up vector (0,1,0) to maintain horizon stability
+	XMFLOAT3 worldUp = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	// Recalculate right and up to ensure orthonormal basis
+	m_xmf3Right = Vector3::Normalize(Vector3::CrossProduct(worldUp, m_xmf3Look));
+	m_xmf3Up = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Look, m_xmf3Right));
+}
+
+void CCamera::SetMouseButtonHeld(bool held)
+{
+	m_bMouseButtonHeld = held;
+	if (!held) 
+		m_fMouseHoldTime = 0.0f;
+}
+
+void CCamera::UpdateMouseHold(float fElapsedTime)
+{
+	if (m_bMouseButtonHeld)
+	{
+		m_fMouseHoldTime += fElapsedTime;
+		m_bControlRotating = (m_fMouseHoldTime >= 0.1f); 
+	}
+	else
+	{
+		m_bControlRotating = false;
+	}
+}
+
+void CCamera::EnableFocusTracking(bool enable, const XMFLOAT3& target)
+{
+	m_bFocusTrackingEnabled = enable;
+	if (enable)
+	{
+		m_xmf3FocusTarget = target;
+	}
+}
+
+void CCamera::UpdateFocusTracking(XMFLOAT3& new_camera_pos)
+{
+	SetPosition(new_camera_pos);
+
+	if (!IsFocusTrackingEnabled()) 
+		return;
+
+	if (IsControlRotating())
+	{
+		XMFLOAT3 lookDir = GetLookVector();
+		XMFLOAT3 newFocus = Vector3::Add(new_camera_pos, Vector3::ScalarProduct(lookDir, CAMERA_FOCUS_DISTANCE, false));
+		SetFocusTarget(newFocus);
+	}
+
+	XMFLOAT3 toFocus = Vector3::Normalize(Vector3::Subtract(GetFocusTarget(), new_camera_pos));
+	SetLookDirection(toFocus);
+	RegenerateViewMatrix();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

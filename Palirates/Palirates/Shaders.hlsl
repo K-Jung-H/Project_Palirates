@@ -1,14 +1,11 @@
+#define FRAME_BUFFER_WIDTH 840.0f
+#define FRAME_BUFFER_HEIGHT 480.0f
+
 
 cbuffer Frame_Info : register(b0)
 {
     float gfCurrentTime; 
     float gfElapsedTime; 
-
-    float gfSecondsPerFirework; 
-    int gnFlareParticlesToEmit; 
-    int gnMaxFlareType2Particles; 
-    float3 gf3Gravity; 
-
 };
 
 struct Material_Info
@@ -23,10 +20,10 @@ struct Material_Info
 
 cbuffer cbGameObjectInfo : register(b1)
 {
-    matrix gmtxGameObject : packoffset(c0);
-    Material_Info material_info : packoffset(c4);
-    uint gnTexturesMask : packoffset(c7);
-
+    matrix gmtxGameObject : packoffset(c0); // 16개 (c0 ~ c3)
+    Material_Info material_info : packoffset(c4); // 8개 (c4 ~ c5)
+    float3 gObjectVelocity : packoffset(c6); // 3개 (c6.xyz)
+    uint gnTexturesMask : packoffset(c6.w); // 1개 (c6.w)
 };
 
 cbuffer cbCameraInfo : register(b2)
@@ -34,6 +31,11 @@ cbuffer cbCameraInfo : register(b2)
 	matrix					gmtxView : packoffset(c0);
 	matrix					gmtxProjection : packoffset(c4);
 	float3					gvCameraPosition : packoffset(c8);
+};
+
+cbuffer cb_Prev_CameraInfo : register(b3)
+{
+    matrix gmtx_Prev_ViewProj : packoffset(c0);
 };
 
 
@@ -69,6 +71,7 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
     float4 world_Position : SV_TARGET1;
     float4 world_Normal_and_Camera_Distance : SV_TARGET2;
     float4 Material_Light_Info : SV_TARGET3;
+    float4 Velocity_Mask_Obj_Id : SV_TARGET4;
 
 };
 
@@ -82,33 +85,60 @@ struct VS_STANDARD_INPUT
 	float3 bitangent : BITANGENT;
 };
 
+
 struct VS_STANDARD_OUTPUT
 {
-	float4 position : SV_POSITION;
-	float3 positionW : POSITION;
-	float3 normalW : NORMAL;
-	float3 tangentW : TANGENT;
-	float3 bitangentW : BITANGENT;
-	float2 uv : TEXCOORD;
-    float vDepth : vDEPTH;
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+    float3 tangentW : TANGENT;
+    float3 bitangentW : BITANGENT;
+    float2 uv : TEXCOORD;
+
+    float2 velocity : TEXCOORD1; // Velocity for Motion_Vector
 };
 
 //===========================================================
 
 VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
-	VS_STANDARD_OUTPUT output;
+    VS_STANDARD_OUTPUT output;
 
-	output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
-    
+    // 월드 공간 위치
+    float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.positionW = worldPos.xyz;
+
+    // 현재 클립 위치 (카메라 이동 포함)
+    float4 clipCurr = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = clipCurr;
+    float2 currNDC = clipCurr.xy / clipCurr.w;
+
+    // 이전 프레임 카메라에서 본 위치 (같은 worldPos)
+    float4 clipPrevCam = mul(worldPos, gmtx_Prev_ViewProj);
+    float2 prevNDCCam = clipPrevCam.xy / clipPrevCam.w;
+
+    float2 camVelocity = currNDC - prevNDCCam;
+
+    // 객체 속도 → 방향 벡터 (w = 0)
+    float4 velocityClip = mul(mul(float4(gObjectVelocity, 0.0f), gmtxView), gmtxProjection);
+    float2 objVelocity = velocityClip.xy / clipCurr.w;
+
+    // 블렌딩 가중치 (속도 큰 쪽 중심)
+    float lenCam = length(camVelocity);
+    float lenObj = length(objVelocity);
+    float weight = lenObj / (lenObj + lenCam + 1e-5);
+
+    float2 blendedVelocity = lerp(camVelocity, objVelocity, weight);
+
+    output.velocity = blendedVelocity;
+
+    // 기타 속성
     output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
-    output.vDepth = positionV.z;
-	output.uv = input.uv;
-	return(output);
+    output.uv = input.uv;
+
+    return output;
 }
 
 //===========================================================
@@ -120,7 +150,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
+    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -159,6 +189,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
     output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+    output.Velocity_Mask_Obj_Id = float4(input.velocity, 0.0f, 0.0f);
+
+
 
     return (output);
 
@@ -178,31 +211,33 @@ struct VS_STANDARD_INPUT_INSTANCE
     float4x4 instance_worldMatrix : WORLDMATRIX;
 };
 
-struct VS_STANDARD_OUTPUT_INSTANCE
-{
-    float4 position : SV_POSITION;
-    float3 positionW : POSITION;
-    float3 normalW : NORMAL;
-    float3 tangentW : TANGENT;
-    float3 bitangentW : BITANGENT;
-    float2 uv : TEXCOORD;
-
-};
-
 VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 {
     VS_STANDARD_OUTPUT output;
-    output.positionW = mul(float4(input.position, 1.0f), input.instance_worldMatrix).xyz;
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
+
+    float4 worldPos = mul(float4(input.position, 1.0f), input.instance_worldMatrix);
+    output.positionW = worldPos.xyz;
+
+    float4 currClip = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = currClip;
+
+    float2 currUV = currClip.xy / currClip.w * 0.5f + 0.5f;
+
+    float4 prevClip = mul(worldPos, gmtx_Prev_ViewProj);
+    float2 prevUV = prevClip.xy / prevClip.w * 0.5f + 0.5f;
+
+    float2 camVelocityUV = currUV - prevUV;
+    float2 camVelocityPx = camVelocityUV * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
+    
+    // 고정된 객체는 카메라의 이동 반대 방향으로 블러링되야 자연스러움
+    output.velocity = -camVelocityPx; 
     
     output.normalW = mul(input.normal, (float3x3) input.instance_worldMatrix);
     output.tangentW = mul(input.tangent, (float3x3) input.instance_worldMatrix);
     output.bitangentW = mul(input.bitangent, (float3x3) input.instance_worldMatrix);
-    output.vDepth = positionV.z;
     output.uv = input.uv;
-		
-    return (output);
+
+    return output;
 }
 
 //==================================================================
@@ -210,12 +245,12 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
 #define MAX_VERTEX_INFLUENCES			4
 #define SKINNED_ANIMATION_BONES			256
 
-cbuffer cbBoneOffsets : register(b3)
+cbuffer cbBoneOffsets : register(b4)
 {
 	float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
 };
 
-cbuffer cbBoneTransforms : register(b4)
+cbuffer cbBoneTransforms : register(b5)
 {
 	float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
 };
@@ -231,27 +266,43 @@ struct VS_SKINNED_STANDARD_INPUT
 	float4 weights : BONEWEIGHT;
 };
 
+
+// 픽셀 좌표계 기반
+
 VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 {
     VS_STANDARD_OUTPUT output;
 
+    // 스키닝 적용
     float4x4 mtxVertexToBoneWorld = (float4x4) 0.0f;
     for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
     {
-        mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+        mtxVertexToBoneWorld += input.weights[i] *
+            mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
     }
-    output.positionW = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld).xyz;
+
+    float4 worldPos = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
+    output.positionW = worldPos.xyz;
+
+    // 클립 공간 위치 계산
+    float4 clipCurr = mul(mul(worldPos, gmtxView), gmtxProjection);
+    output.position = clipCurr;
+
+    // 객체 이동에 의한 velocity (뷰-투영 후 클립 → NDC → 픽셀)
+    float4 velocityClip = mul(mul(float4(gObjectVelocity, 0.0f), gmtxView), gmtxProjection);
+    float2 objVelocityNDC = velocityClip.xy / clipCurr.w;
+    float2 objVelocityPx = objVelocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
+    
+    output.velocity = objVelocityPx;
+
     output.normalW = mul(input.normal, (float3x3) mtxVertexToBoneWorld).xyz;
     output.tangentW = mul(input.tangent, (float3x3) mtxVertexToBoneWorld).xyz;
     output.bitangentW = mul(input.bitangent, (float3x3) mtxVertexToBoneWorld).xyz;
-
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
-    output.vDepth = positionV.z;
     output.uv = input.uv;
 
-    return (output);
+    return output;
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -273,7 +324,6 @@ struct VS_TERRAIN_OUTPUT
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
     
-    float vDepth : vDEPTH;
 };
 
 VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
@@ -286,7 +336,6 @@ VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 	output.uv0 = input.uv0;
 	output.uv1 = input.uv1;
     
-    output.vDepth = positionV.z;
 	return(output);
 }
 
@@ -298,11 +347,14 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 0.0f);
     
     float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
     
-    output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    //output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
@@ -326,8 +378,6 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
 
-    output.vDepth = positionV.z;
-
     return (output);
 }
 
@@ -338,7 +388,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
+    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 10.0f);
+    
     output.Albedo_Color = input.color;
     
     output.world_Position = float4(input.positionW, 1.0f);
@@ -416,7 +467,8 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
+    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    
     return (output);
 }
 
