@@ -423,54 +423,6 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 
 void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	//Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
-	//Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
-
-	//===================================================================
-
-	//Particle_Format test_snow_info;
-	//{
-	//	test_snow_info.shader_type = Particle_Type::spread;
-	//	test_snow_info.particle_type = 0;
-	//	test_snow_info.max_particles = 1000;
-
-	//	test_snow_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-	//	test_snow_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-
-	//	test_snow_info.MaxLifetime = 3.0f;
-
-	//	test_snow_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	//	test_snow_info.init_velocity_value = 0.0f;
-	//	test_snow_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-	//	test_snow_info.size = XMFLOAT2(10.0f, 10.0f);
-	//	test_snow_info.color = XMFLOAT3(0.5f, 0.5f, 1.0f);
-	//}
-
-	//Particle_Format test_spark_info;
-	//{
-	//	test_spark_info.shader_type = Particle_Type::spread;
-	//	test_spark_info.particle_type = 1;
-	//	test_spark_info.max_particles = 30;
-
-	//	test_spark_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
-	//	test_spark_info.area_xyz = XMFLOAT3(100.0f, 100.0f, 100.0f);
-
-	//	test_spark_info.MaxLifetime = 1.0f;
-
-	//	test_spark_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-	//	test_spark_info.init_velocity_value = 100.0f;
-	//	test_spark_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
-
-	//	test_spark_info.size = XMFLOAT2(10.0f, 10.0f);
-	//	test_spark_info.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
-	//}
-
-	//===================================================================
-	//Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_spark_info);
-	//Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
-
-	//===================================================================
 }
 
 std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)

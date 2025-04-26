@@ -356,6 +356,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 
 				case VK_SPACE:
+					multiMode = true;
 					break;
 
 				case VK_TAB:

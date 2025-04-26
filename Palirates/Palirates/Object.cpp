@@ -446,13 +446,6 @@ CMaterial::~CMaterial()
 CMaterial::CMaterial(const CMaterial& other)
 {
 	m_cAlbedo = other.m_cAlbedo;
-	m_cEmissive = other.m_cEmissive;
-
-	m_fRoughness = other.m_fRoughness;
-	m_fMetallic = other.m_fMetallic;
-	m_fSpecular = other.m_fSpecular;
-
-	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
 	m_fGlossiness = other.m_fGlossiness;
 	m_fGlossyReflection = other.m_fGlossyReflection;
 
@@ -460,6 +453,7 @@ CMaterial::CMaterial(const CMaterial& other)
 	m_pShader = other.m_pShader;
 	m_nType = other.m_nType;
 	m_nTextures = other.m_nTextures;
+	m_Material_ID = other.m_Material_ID;
 
 	if (other.m_ppstrTextureNames != nullptr) 
 	{
@@ -500,15 +494,11 @@ std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 
 	// 색상, 파라미터 값들은 복사
 	clone->m_cAlbedo = this->m_cAlbedo;
-	clone->m_cEmissive = this->m_cEmissive;
-	clone->m_fRoughness = this->m_fRoughness;
-	clone->m_fMetallic = this->m_fMetallic;
-	clone->m_fSpecular = this->m_fSpecular;
-	clone->m_xmf4SpecularColor = this->m_xmf4SpecularColor;
 	clone->m_fGlossiness = this->m_fGlossiness;
 	clone->m_fGlossyReflection = this->m_fGlossyReflection;
 	clone->m_pShader = this->m_pShader;
 	clone->m_nType = this->m_nType;
+	clone->m_Material_ID = this->m_Material_ID;
 
 	if (this->m_ppstrTextureNames)
 	{
@@ -598,18 +588,11 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 {
+	Material_GPU_Packet material_packet{};
+	material_packet.gAlbedoColor = m_cAlbedo;
+	material_packet.light_material_ID = m_Material_ID;
 
-
-	Material_Info material_info;
-	material_info.gAlbedoColor = m_cAlbedo;
-
-	material_info.gRoughness = m_fRoughness;
-	material_info.gMetallic = m_fMetallic;
-	material_info.gEmissive_intensity = m_cEmissive.w;
-	material_info.gSpecular_intensity = m_fSpecular;
-
-
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_info, 16); // 16~23
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
 
 	for (int i = 0; i < m_nTextures; i++)
@@ -680,8 +663,132 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+//==========================================================
+
+UINT Light_Material_Manager::index = 0;
+std::vector<Light_Material_Info> Light_Material_Manager::light_material_list;
+bool Light_Material_Manager::reserved_update = false;
+CTexture* Light_Material_Manager::material_info_buffer = NULL;
+
+// Initialize the material manager
+void Light_Material_Manager::Initialize()
+{
+	index = 0;
+	light_material_list.clear();
+	
+}
+
+// Add a new material and return its ID
+UINT Light_Material_Manager::Add_Material(const Light_Material_Info& material)
+{
+	light_material_list.push_back(material);
+
+	reserved_update = true;
+	return index++;
+}
+
+// Update an existing material
+void Light_Material_Manager::Update_Material_Info(UINT idx, const Light_Material_Info& material)
+{
+	if (idx >= light_material_list.size())
+	{
+		throw std::out_of_range("Light_Material_Manager::UpdateMaterial - Index out of range");
+	}
+	light_material_list[idx] = material;
+	reserved_update = true;
+}
+
+void Light_Material_Manager::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (material_info_buffer)
+	{
+		delete material_info_buffer;
+		material_info_buffer = nullptr;
+	}
+
+	material_info_buffer = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 1, 0, 0, 1, 0, 0);
+
+	UINT stride = sizeof(Light_Material_Info);
+	UINT count = static_cast<UINT>(light_material_list.size());
+
+	material_info_buffer->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, light_material_list.data(), count, stride,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, material_info_buffer, 0, ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX);
+
+	reserved_update = false;
+}
+
+void Light_Material_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!reserved_update) 
+		return;
+	
+	if(material_info_buffer)
+		delete material_info_buffer;
+
+	CreateStructuredBuffer(pd3dDevice, pd3dCommandList);
+
+	reserved_update = false;
+}
+
+void Light_Material_Manager::UpdateGraphicsShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (material_info_buffer)
+	{
+			material_info_buffer->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+	}
+}
+
+// Get material info by ID
+const Light_Material_Info& Light_Material_Manager::Get_Material(UINT idx)
+{
+	if (idx >= light_material_list.size())
+	{
+		throw std::out_of_range("Light_Material_Manager::GetMaterial - Index out of range");
+	}
+	return light_material_list[idx];
+}
+
+// Get total number of materials
+size_t Light_Material_Manager::Get_Material_Count()
+{
+	return light_material_list.size();
+}
+
+// Release all materials
+void Light_Material_Manager::Release()
+{
+	if (material_info_buffer)
+	{
+		delete material_info_buffer;
+		material_info_buffer = nullptr;
+	}
+
+
+	light_material_list.clear();
+	index = 0;
+}
+
+// Find a similar material and return its ID, otherwise return -1
+int Light_Material_Manager::Find_Similar_Material(const Light_Material_Info& material, float tolerance)
+{
+	for (int i = 0; i < static_cast<int>(light_material_list.size()); ++i)
+	{
+		const Light_Material_Info& existing = light_material_list[i];
+
+		if (fabs(existing.gRoughness - material.gRoughness) < tolerance 
+			&& fabs(existing.gMetallic - material.gMetallic) < tolerance 
+			&& Compare_XMFLOAT4(existing.gSpecular, material.gSpecular, tolerance) 
+			&& Compare_XMFLOAT4(existing.gEmissive, material.gEmissive, tolerance))
+		{
+			return i; // Found similar material
+		}
+	}
+	return -1; // No similar material found
+}
+//==========================================================
+
 
 void CRootMotionCallbackHandler::HandleCallback(void* pCallbackData, float fTrackPosition)
 {
@@ -2384,13 +2491,14 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	// delete old Material & Resize material
+	// Clear old materials
 	Material_list.clear();
-
 	int materialCount = ReadIntegerFromFile(pInFile);
-	Material_list.reserve(materialCount);  // Reserve memory
+	Material_list.reserve(materialCount);
 
 	std::shared_ptr<CMaterial> pMaterial = nullptr;
+	std::vector<Light_Material_Info> tempLightInfos; 
+	tempLightInfos.resize(materialCount);
 
 	for (;;)
 	{
@@ -2399,10 +2507,8 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		if (!strcmp(pstrToken, "<Material>:"))
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
-
-			// add & define new Material 
 			pMaterial = std::make_shared<CMaterial>(7);
-						
+
 			if (!pShader)
 			{
 				UINT nMeshType = GetMeshType();
@@ -2415,11 +2521,11 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 
-			// Resize to nMaterial
 			if (nMaterial >= Material_list.size())
 				Material_list.resize(nMaterial + 1);
 
 			Material_list[nMaterial] = pMaterial;
+			tempLightInfos[nMaterial] = Light_Material_Info{};
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -2427,85 +2533,93 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_cEmissive), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gEmissive), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gSpecular), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fSpecular), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gSpecular.w), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Smoothness>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fRoughness), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gRoughness), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Metallic>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gMetallic), sizeof(float), 1, pInFile);
 		}
-		else if (!strcmp(pstrToken, "<Glossiness>:"))
+		else if (!strcmp(pstrToken, "<Glossiness>:")) // Not Use
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
+			float dummy = 0.0f;
+			nReads = (UINT)::fread(&dummy, sizeof(float), 1, pInFile);
 		}
-		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
+		else if (!strcmp(pstrToken, "<GlossyReflection>:")) // Not Use
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossyReflection), sizeof(float), 1, pInFile);
+			float dummy = 0.0f;
+			nReads = (UINT)::fread(&dummy, sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
-				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
+				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
 				pParent, pInFile, pShader);
 		}
-		//else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
-		//{
-		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX,
-		//		pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]),
-		//		pParent, pInFile, pShader);
-		//}
-		//else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
-		//{
-		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX,
-		//		pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]),
-		//		pParent, pInFile, pShader);
-		//}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
+			// 재질 등록
+			for (int i = 0; i < Material_list.size(); ++i)
+			{
+				auto& material = Material_list[i];
+				if (material)
+				{
+					const Light_Material_Info& info = tempLightInfos[i];
+					int similarID = Light_Material_Manager::Find_Similar_Material(info);
+
+					if (similarID >= 0)
+					{
+						material->m_Material_ID = static_cast<UINT>(similarID);
+					}
+					else
+					{
+						material->m_Material_ID = Light_Material_Manager::Add_Material(info);
+					}
+				}
+			}
 			break;
 		}
 	}
-
 }
 
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes)
@@ -3421,6 +3535,12 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	Plane_Material = new CMaterial(2);
 	Plane_Material->SetShader(plane_shader);
 
+	Light_Material_Info temp;
+	temp.gSpecular = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
+	temp.gEmissive = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
+	UINT ID = Light_Material_Manager::Add_Material(temp);
+	Plane_Material->m_Material_ID = ID;
+		
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
 	desiredTexelSize = 20.0f;
@@ -3643,12 +3763,12 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 
+
 		if (Plane_Material && Plane_Material->m_pShader)
 		{
-			Plane_Material->UpdateShaderVariable(pd3dCommandList);
-
 			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
 			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
 			m_pMesh->Render(pd3dCommandList, 0);
 		}
 	}

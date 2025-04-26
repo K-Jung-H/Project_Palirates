@@ -11,14 +11,14 @@ cbuffer Frame_Info : register(b0)
     float gfElapsedTime;
 };
 
+
 struct Material_Info
 {
     float4 gAlbedoColor;
-
-    float gRoughness;
-    float gMetallic;
-    float gSpecular_intensity;
-    float gEmissive_intensity;
+    uint material_ID;
+    uint padding0;
+    uint padding1;
+    uint padding2;
 };
 
 cbuffer cbGameObjectInfo : register(b1)
@@ -46,8 +46,7 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
     float4 Albedo_Color : SV_TARGET0;
     float4 world_Position : SV_TARGET1;
     float4 world_Normal_and_Camera_Distance : SV_TARGET2;
-    float4 Material_Light_Info : SV_TARGET3;
-    float4 Velocity_Mask_Obj_Id : SV_TARGET4;
+    float4 Velocity_Mask_Obj_Id : SV_TARGET3;
 
 };
 
@@ -98,10 +97,9 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 0.0f);
 
     float2 animatedUV1 = input.uv1 + float2(0.0, gfCurrentTime * 0.1f); // x√‡ »Â∏ß
@@ -109,7 +107,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     float4 cBaseTexColor = Plane_BaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = Plane_DetailTexture.Sample(gssWrap, animatedUV1);
 
-    output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    output.Albedo_Color.xyz = (input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f))).xyz;
+    output.Albedo_Color.a = (float) (material_info.material_ID) / 255.0f;
+    
 //       output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     
 //    output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
@@ -123,8 +123,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     
     output.world_Normal_and_Camera_Distance.xyz = plane_normal;
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, 0.0f);
-
-    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
     
     return (output);
 }

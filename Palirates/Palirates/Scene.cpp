@@ -1099,7 +1099,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 	if (test_button)
 	{
 		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
@@ -1275,6 +1275,9 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
+	m_pLights[0].m_bEnable = false;
+	m_pLights[1].m_bEnable = false;
+	m_pLights[2].m_bEnable = false;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1360,6 +1363,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
 	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+
 	m_pLights[3].m_bEnable = false;
 	m_pLights[3].m_nType = SPOT_LIGHT;
 	m_pLights[3].m_fRange = 600.0f;
@@ -1387,7 +1391,6 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[1].m_bEnable = false;
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 
