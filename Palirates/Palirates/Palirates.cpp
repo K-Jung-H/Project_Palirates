@@ -32,7 +32,7 @@ void CreateConsole()
 	std::cout << "[INFO] 콘솔 창 활성화 - 네트워크 상태 확인 가능" << std::endl;
 }
 
-#define SERVER_IP "1.242.69.251"
+#define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 9000
 
 

@@ -17,7 +17,6 @@ UINT gnDsvDescriptorIncrementSize = 0;
 	DXGI_FORMAT_R8G8B8A8_UNORM, // AlbedoColor
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_pos
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_normal & camera_distance
-	DXGI_FORMAT_R8G8B8A8_UNORM, // Material_Light_Info
 	DXGI_FORMAT_R16G16B16A16_FLOAT,   // x,y : Velocity , z: Blur Mask, w: Object ID == Outline color
 };
 

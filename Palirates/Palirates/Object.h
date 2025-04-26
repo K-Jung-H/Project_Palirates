@@ -170,14 +170,31 @@ private:
 
 class CGameObject;
 
-struct Material_Info
+struct Light_Material_Info
 {
-	XMFLOAT4 gAlbedoColor;   
+	float gRoughness;
+	float gMetallic;
+	float padding0;
+	float padding1;
 
-	float gRoughness; 
-	float gMetallic;  
-	float gSpecular_intensity;  
-	float gEmissive_intensity;
+	XMFLOAT4 gSpecular;    // Specular: rgb + intensity
+	XMFLOAT4 gEmissive;    // Emissive: rgb + intensity
+
+	Light_Material_Info()
+		: gRoughness(0.5f),
+		gMetallic(0.0f),
+		gSpecular(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)),
+		gEmissive(XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)),
+		padding0(0.0f),
+		padding1(0.0f)
+	{}
+};
+
+struct Material_GPU_Packet
+{
+	XMFLOAT4 gAlbedoColor;
+	UINT light_material_ID;
+	UINT padding[3]; 
 };
 
 class CMaterial
@@ -188,19 +205,12 @@ public:
 	virtual ~CMaterial();
 
 	::shared_ptr<CMaterial> CloneWithSharedTextures() const;
-public:
-
-	XMFLOAT4 m_cAlbedo = { 0.0f, 0.0f, 0.0f, 1.0f };
-	XMFLOAT4 m_cEmissive = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-	float m_fRoughness = 0.0f;
-	float m_fMetallic = 0.0f; 
-	float m_fSpecular = 1.0f; 
-
+public:	
+	XMFLOAT4 m_cAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f }; 
+	UINT m_Material_ID = -1; 
 
 public:
 	// not use
-	XMFLOAT4 m_xmf4SpecularColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	float m_fGlossiness = 0.0f;
 	float m_fGlossyReflection = 0.0f;
 
@@ -235,6 +245,31 @@ public:
 	void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); }
 };
 
+class Light_Material_Manager
+{
+private:
+	static UINT index; // Max : 255
+	static std::vector<Light_Material_Info> light_material_list;
+	static bool reserved_update;
+	static CTexture* material_info_buffer;
+public:
+	static void Initialize();
+	static UINT Add_Material(const Light_Material_Info& material);
+	static void Update_Material_Info(UINT idx, const Light_Material_Info& material);
+
+	static void CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	static void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	static void UpdateGraphicsShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
+
+
+	static const Light_Material_Info& Get_Material(UINT idx);
+	static size_t Get_Material_Count();
+	static void Release();
+
+	// New: Find similar material
+	static int Find_Similar_Material(const Light_Material_Info& material, float tolerance = 0.01f);
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

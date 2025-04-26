@@ -285,6 +285,7 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
     if (activeScene)
         activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
 
+    Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
 
     if (pCamera)
         pCamera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);

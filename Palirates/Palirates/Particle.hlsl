@@ -79,14 +79,13 @@ float4 PS_Transparent_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_
 
 
 
-// Pixel Shader
+// Pixel Shader - Not Use
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
 
@@ -96,8 +95,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
-
-    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
     output.Velocity_Mask_Obj_Id = float4(input.velocity, 0.0f, 1.0f);
 
     return output;
@@ -120,7 +117,7 @@ struct VS_TRAIL_OUTPUT
     float3 positionW : POSITIONW;
     float2 uv : TEXCOORD0;
     float time : TEXCOORD1;
-    float ratio : TEXCOORD2; // Ãß°¡!
+    float ratio : TEXCOORD2; 
 };
 
 
