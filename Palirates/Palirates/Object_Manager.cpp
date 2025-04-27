@@ -541,13 +541,17 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
-				//obj_ptr->UpdateTransform(NULL);
+				if (obj_ptr->Object_type == 10) {
+					obj_ptr->m_xmf4x4Parent = obj_ptr->m_xmf4x4World;
+					obj_ptr->MoveForward(fTimeElapsed);
+				}
+				obj_ptr->UpdateTransform(NULL);
 			}
 	}
 	break;
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
 				/*std::wostringstream oss;
@@ -644,7 +648,7 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 	case Object_Type::player:
 	{
 		bool Is_Visible = false;
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 		{
 			Is_Visible = obj_ptr->IsVisible(pCamera);
 			obj_ptr->Set_Active(Is_Visible);
@@ -788,7 +792,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 		{
 			if (obj_ptr->Get_Active())
 			{
@@ -908,6 +912,10 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 		return &non_skinned_object_list;
 		break;
 
+	case Object_Type::player:
+		return &player_list;
+		break;
+
 	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
@@ -932,11 +940,6 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 		::PostQuitMessage(0);
 		break;
 	}
-}
-
-std::vector<std::shared_ptr<CTerrainPlayer>>* Object_Manager::Get_Player_List()
-{
-	return &player_list;
 }
 
 void Object_Manager::Clear_Object_List(Object_Type type)
