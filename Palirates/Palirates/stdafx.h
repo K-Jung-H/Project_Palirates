@@ -31,6 +31,16 @@
 #include <array>
 #include <random>
 
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include <mutex>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#pragma comment(lib, "ws2_32.lib")
+
 using namespace std;
 
 #include <d2d1_3.h>
@@ -112,11 +122,6 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 2
 #define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 3
 
-//#define ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX 11
-//#define ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX 12
-#define PARAMETER_TEST 3
-
-
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
@@ -127,8 +132,8 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define WRITE_TEXT_UI
-//#define RENDER_OBB
 //#define LOAD_SCENE
+//#define RENDER_OBB
 #define RENDER_PARTICLE
 
 
@@ -143,7 +148,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 5
+#define RTV_Format_Num 4
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;
@@ -172,9 +177,9 @@ extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice
 extern ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
 extern ID3D12Resource* CreateTextureResourceFromWICFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
-extern BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken);
-extern int ReadIntegerFromFile(FILE *pInFile);
-extern float ReadFloatFromFile(FILE *pInFile);
+extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
+extern int ReadIntegerFromFile(FILE* pInFile);
+extern float ReadFloatFromFile(FILE* pInFile);
 
 extern void DebugOutput(const char message[]);
 extern void DebugOutput(const std::string& message);
@@ -200,11 +205,15 @@ inline bool IsEqual(float fA, float fB) { return(::IsZero(fA - fB)); }
 inline bool IsZero(float fValue, float fEpsilon) { return((fabsf(fValue) < fEpsilon)); }
 inline bool IsEqual(float fA, float fB, float fEpsilon) { return(::IsZero(fA - fB, fEpsilon)); }
 inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
-inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
+inline void Swap(float* pfS, float* pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
 inline bool IsZeroVector(const XMFLOAT3& v) { return (fabs(v.x) < EPSILON && fabs(v.y) < EPSILON && fabs(v.z) < EPSILON); }
 inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
+inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs, float tolerance = 0.001f)
+{
+	return (fabs(lhs.x - rhs.x) < tolerance && fabs(lhs.y - rhs.y) < tolerance && fabs(lhs.z - rhs.z) < tolerance && fabs(lhs.w - rhs.w) < tolerance);
+}
 
 
 namespace Vector3
@@ -383,15 +392,15 @@ namespace Matrix4x4
 	{
 		XMFLOAT4X4 xmf4x4Result;
 		XMStoreFloat4x4(&xmf4x4Result, XMLoadFloat4x4(&xmf4x4Matrix) * fScale);
-/*
-		XMVECTOR S, R, T;
-		XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&xmf4x4Matrix));
-		S = XMVectorScale(S, fScale);
-		T = XMVectorScale(T, fScale);
-		R = XMVectorScale(R, fScale);
-		//R = XMQuaternionMultiply(R, XMVectorSet(0, 0, 0, fScale));
-		XMStoreFloat4x4(&xmf4x4Result, XMMatrixAffineTransformation(S, XMVectorZero(), R, T));
-*/
+		/*
+				XMVECTOR S, R, T;
+				XMMatrixDecompose(&S, &R, &T, XMLoadFloat4x4(&xmf4x4Matrix));
+				S = XMVectorScale(S, fScale);
+				T = XMVectorScale(T, fScale);
+				R = XMVectorScale(R, fScale);
+				//R = XMQuaternionMultiply(R, XMVectorSet(0, 0, 0, fScale));
+				XMStoreFloat4x4(&xmf4x4Result, XMMatrixAffineTransformation(S, XMVectorZero(), R, T));
+		*/
 		return(xmf4x4Result);
 	}
 

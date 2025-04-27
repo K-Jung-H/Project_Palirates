@@ -20,8 +20,8 @@ enum AnimationTrack
 	TRACK_RUN_BACKWARD_LEFT = 4,
 	TRACK_RUN_BACKWARD = 5,
 	TRACK_RUN_BACKWARD_RIGHT = 6,
-	TRACK_RUN_LEFT = 7, 
-	TRACK_RUN_RIGHT = 8, 
+	TRACK_RUN_LEFT = 7,
+	TRACK_RUN_RIGHT = 8,
 	TRACK_DIVEROLL_FORWARD = 9,
 	TRACK_KNOCK_DOWN = 10,
 	TRACK_GET_UP = 11
@@ -50,7 +50,7 @@ protected:
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
-	CCamera						*m_pCamera = NULL;
+	CCamera* m_pCamera = NULL;
 	CHeightMapTerrain* last_tile_ptr = NULL;
 
 	float stateElapsedTime{ 0.0f };
@@ -64,7 +64,7 @@ protected:
 
 	bool MultiMode{ false };
 	//=================¼­¹ö=================
-	int id;  
+	int id;
 	int state;
 
 private:
@@ -84,13 +84,13 @@ public:
 	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
-	void SetPosition(const XMFLOAT3& xmf3Position) 
-	{ 
+	void SetPosition(const XMFLOAT3& xmf3Position)
+	{
 		Move(XMFLOAT3(
-			xmf3Position.x - m_xmf3Position.x, 
-			xmf3Position.y - m_xmf3Position.y, 
-			xmf3Position.z - m_xmf3Position.z), 
-			false); 
+			xmf3Position.x - m_xmf3Position.x,
+			xmf3Position.y - m_xmf3Position.y,
+			xmf3Position.z - m_xmf3Position.z),
+			false);
 	}
 
 	void SetScale(XMFLOAT3& xmf3Scale) { m_xmf3Scale = xmf3Scale; }
@@ -100,8 +100,8 @@ public:
 	float GetPitch() const { return(m_fPitch); }
 	float GetRoll() const { return(m_fRoll); }
 
-	CCamera *GetCamera() { return(m_pCamera); }
-	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
+	CCamera* GetCamera() { return(m_pCamera); }
+	void SetCamera(CCamera* pCamera) { m_pCamera = pCamera; }
 	void DelCamera() { m_pCamera = nullptr; }
 
 	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
@@ -111,31 +111,31 @@ public:
 
 	virtual void SetLookDirection(const XMFLOAT3& look);
 
-//	virtual void Animate(float fTimeElapsed);
+	//	virtual void Animate(float fTimeElapsed);
 
 	virtual void Animate_test();
 
 	virtual void Update(float fTimeElapsed);
 
-	virtual void OnPlayerUpdateCallback(float fTimeElapsed) { }
+	virtual void OnPlayerUpdateCallback(float fTimeElapsed) {}
 	void SetPlayerUpdatedContext(LPVOID pContext) { m_pPlayerUpdatedContext = pContext; }
 
-	virtual void OnCameraUpdateCallback(float fTimeElapsed) { }
+	virtual void OnCameraUpdateCallback(float fTimeElapsed) {}
 	void SetCameraUpdatedContext(LPVOID pContext) { m_pCameraUpdatedContext = pContext; }
 
-	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
+	CCamera* OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareAnimate();
-	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
-	
+
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData) {};
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
@@ -177,11 +177,11 @@ public:
 class CSoundCallbackHandler : public CAnimationCallbackHandler
 {
 public:
-	CSoundCallbackHandler() { }
-	~CSoundCallbackHandler() { }
+	CSoundCallbackHandler() {}
+	~CSoundCallbackHandler() {}
 
 public:
-	virtual void HandleCallback(void *pCallbackData, float fTrackPosition); 
+	virtual void HandleCallback(void* pCallbackData, float fTrackPosition);
 };
 
 class CTerrainPlayer : public CPlayer
@@ -191,11 +191,11 @@ private:
 
 public:
 	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
-	CTerrainPlayer() {};
+	CTerrainPlayer() {}
 	virtual ~CTerrainPlayer();
 
 public:
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);

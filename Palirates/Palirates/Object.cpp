@@ -2379,6 +2379,25 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 	return(nStrLength);
 }
 
+std::unordered_map<std::string, std::shared_ptr<CMesh>> CGameObject::MeshCache;
+
+std::shared_ptr<CMesh> CGameObject::LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+	auto it = MeshCache.find(meshPath);
+	if (it != MeshCache.end())
+		return it->second;
+
+	auto mesh = std::make_shared<CStandardMesh>(device, cmdList);
+	mesh->LoadMeshFrom_OtherFile(device, cmdList, meshPath.c_str());
+	MeshCache[meshPath] = mesh;
+	return mesh;
+}
+
+void CGameObject::ClearMeshCache()
+{
+	MeshCache.clear();
+}
+
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
