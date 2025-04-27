@@ -1231,33 +1231,32 @@ XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	XMStoreFloat4x4(&result, finalMatrix);
 	return result;
 }
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
 
 	if (m_pAnimationTracks)
 	{
-		// Bone 정보 초기화
-		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
-		// 활성화된 트랙의 전체 가중치 크기 -> 가중치 정규화에 사용
 		float totalWeight = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
-			if (m_pAnimationTracks[k].m_bEnable)
+			if (m_pAnimationTracks[k].m_fWeight > 0)
 			{
 				totalWeight += m_pAnimationTracks[k].m_fWeight;
 			}
 		}
+		if (totalWeight == 0.0f) return;
 
 
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
-			if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
+			if (m_pAnimationTracks[k].m_fWeight > 0.0f)
 			{
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
@@ -1269,19 +1268,17 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
 
-					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
-					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
+					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+					//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-						if (boneName == "Hips")
+						//if (j == pRootGameObject->RootBoneIndex)
+						if (j == 2)
 						{
 							if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
-							//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
-							//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-							//}
 							blendedTransform._41 = 0.0f;
 							//blendedTransform._42 = 0.8762761f;
 							blendedTransform._43 = 0.0f;
@@ -1289,11 +1286,11 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 						}
 					}
 					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
-						if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3) {
-							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-							/*std::wostringstream oss;
-							oss << L"XMFLOAT3: (" << HipsPosition.x << L", " << HipsPosition.y << L", " << HipsPosition.z << L")\n";
-							OutputDebugStringW(oss.str().c_str());*/
+						//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
+						if (j == 0) {
+							if (k == 3) {
+								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+							}
 
 							blendedTransform._41 = 0.0f;
 							//blendedTransform._42 = 0.0f;
@@ -1307,16 +1304,12 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 				m_pAnimationTracks[k].HandleCallback();
 			}
+			if (m_pAnimationTracks[k].m_fWeight >= 1.0f)
+				break;
 		}
 
-		// 4. Transform 업데이트
-		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)이므로, 
-		// 자식 객체에 부모 객체의 변환 정보를 상속하면서 뼈 객체마다 업데이트 된 m_xmf4x4Parent가 반영되어, 각 뼈의 정보 반영
-		// == 각 뼈들의 변환 행렬 정보 업데이트
 		pRootGameObject->UpdateTransform(NULL);
 
-
-		// 5. 추가 애니메이션 처리
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
@@ -1324,10 +1317,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)
 {
-	if (!m_pAnimationTracks || !m_pAnimationSets) 
-		return;
+	if (!m_pAnimationTracks || !m_pAnimationSets) return;
 
-	// 본 초기화
 	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 	{
 		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
@@ -1336,7 +1327,7 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 	float totalWeight = 0.0f;
 	for (int k = 0; k < m_nAnimationTracks; k++)
 	{
-		if (m_pAnimationTracks[k].m_bEnable)
+		if (m_pAnimationTracks[k].m_fWeight > 0)
 		{
 			totalWeight += m_pAnimationTracks[k].m_fWeight;
 		}
@@ -1344,10 +1335,10 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 
 	for (int k = 0; k < m_nAnimationTracks; k++)
 	{
-		if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
+		if (m_pAnimationTracks[k].m_fWeight > 0)
 		{
 			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
-			float fPosition = m_pAnimationTracks[k].m_fPosition; 
+			float fPosition = m_pAnimationTracks[k].m_fPosition;
 
 			for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 			{
@@ -1357,30 +1348,42 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-				const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+				//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-					if (boneName == "Hips")
+					//if (j == pRootGameObject->RootBoneIndex)
+					if (j == 2)
 					{
 						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 						}
-						//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
-						//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-						//}
 						blendedTransform._41 = 0.0f;
 						//blendedTransform._42 = 0.8762761f;
 						blendedTransform._43 = 0.0f;
 
 					}
 				}
+				else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+					//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
+					if (j == 0) {
+						if (k == 3) {
+							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+						}
+
+						blendedTransform._41 = 0.0f;
+						//blendedTransform._42 = 0.0f;
+						blendedTransform._43 = 0.0f;
+					}
+
+				}
 
 				m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 			}
 			m_pAnimationTracks[k].HandleCallback();
 		}
+		if (m_pAnimationTracks[k].m_fWeight >= 1.0f)
+			break;
 	}
 
-	// 트랜스폼 적용
 	pRootGameObject->UpdateTransform(nullptr);
 }
 
@@ -1391,23 +1394,23 @@ void CAnimationController::ServerAdvanceTime(const ServerAnimationSyncData& sync
 
 bool IsUpperBodyBone(const std::string& boneName)
 {
-    static const std::unordered_set<std::string> upperBodyBones =
-    {
-        "Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows", "Eyebrows", "Clavicle_L", 
+	static const std::unordered_set<std::string> upperBodyBones =
+	{
+		"Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows", "Eyebrows", "Clavicle_L",
 		"Shoulder_L", "Elbow_L", "Hand_L", /* tumb */ "Clavicle_R", "Shoulder_R", "Elbow_R", "Hand_R",  /* tumb */"SM_Wep_Sabre_01",
 
-    };
-    return upperBodyBones.find(boneName) != upperBodyBones.end();
+	};
+	return upperBodyBones.find(boneName) != upperBodyBones.end();
 }
 
 bool IsLowerBodyBone(const std::string& boneName)
 {
-    static const std::unordered_set<std::string> lowerBodyBones =
-    {
-        "UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
+	static const std::unordered_set<std::string> lowerBodyBones =
+	{
+		"UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
 		"UpperLeg_L", "LowerLeg_L", "Ankle_L", "Ball_L", "Toes_L"
-    };
-    return lowerBodyBones.find(boneName) != lowerBodyBones.end();
+	};
+	return lowerBodyBones.find(boneName) != lowerBodyBones.end();
 }
 
 void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGameObject)
@@ -1427,9 +1430,9 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 		{
 			if (m_pAnimationTracks[k].m_bEnable)
 			{
-				if (m_pAnimationTracks[k].m_nAnimationSet == 2) 
+				if (m_pAnimationTracks[k].m_nAnimationSet == 2)
 					totalWeightUpper += m_pAnimationTracks[k].m_fWeight;
-				else if (m_pAnimationTracks[k].m_nAnimationSet == 1) 
+				else if (m_pAnimationTracks[k].m_nAnimationSet == 1)
 					totalWeightLower += m_pAnimationTracks[k].m_fWeight;
 			}
 		}
@@ -1448,13 +1451,13 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 					bool isLowerBody = IsLowerBodyBone(boneName);
 
 					float totalWeight = 0.0f;
-					
+
 					if (isLowerBody)
 					{
-						totalWeight = totalWeightLower;  
+						totalWeight = totalWeightLower;
 					}
 					else {
-						totalWeight = totalWeightUpper;  
+						totalWeight = totalWeightUpper;
 					}
 
 					if ((!isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 2) ||
@@ -1468,9 +1471,9 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 
 						if (boneName == "Hips")
 						{
-							blendedTransform._41 = 0.0f; 
+							blendedTransform._41 = 0.0f;
 							blendedTransform._42 = 0.8762761f;
-							blendedTransform._43 = 0.0f; 
+							blendedTransform._43 = 0.0f;
 						}
 
 						m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
@@ -1913,12 +1916,25 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
+	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
+	if (sibling_ptr != nullptr)
+		sibling_ptr->Animate(fTimeElapsed);
 
-	if (m_pSibling) 
-		m_pSibling->Animate(fTimeElapsed);
+	shared_ptr<CGameObject> child_ptr = Get_Child();
+	if (child_ptr != nullptr)
+		child_ptr->Animate(fTimeElapsed);
 
-	if (m_pChild) 
-		m_pChild->Animate(fTimeElapsed);
+
+	if (Object_type == 10) {
+		//m_xmf4x4Parent = m_xmf4x4World;
+		//SetScale(10.0f, 10.0f, 10.0f);
+		//MoveForward(fTimeElapsed);
+		
+		//Rotate(&GetLook(), fTimeElapsed);
+		//Move(GetLook());
+		//SetPosition(GetPosition());
+		
+	}
 }
 
 void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
@@ -2475,7 +2491,7 @@ std::shared_ptr<CMesh> CGameObject::LoadMeshWithCache(const std::string& meshPat
 		return it->second;
 
 	auto mesh = std::make_shared<CStandardMesh>(device, cmdList);
-	mesh->LoadMeshFrom_OtherFile(device, cmdList, meshPath.c_str()); 
+	mesh->LoadMeshFrom_OtherFile(device, cmdList, meshPath.c_str());
 	MeshCache[meshPath] = mesh;
 	return mesh;
 }
@@ -3038,6 +3054,53 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 }
 
+std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)
+{
+	// 1) 전체 계층의 월드 트랜스폼을 갱신
+	//    (Detach 대상의 저장된 m_xmf4x4World가 최신이 아닐 수 있기 때문)
+	CGameObject* root = Get_Root_Object();
+	root->UpdateTransform(nullptr);
+
+	// 2) 이름으로 찾은 raw 포인터
+	CGameObject* target = FindFrame(const_cast<char*>(targetName));
+	if (!target || !target->m_pParent)
+		return nullptr;
+
+	CGameObject* parentRaw = target->m_pParent;
+
+	// 3) 부모의 m_pChild → sibling 체인에서 shared_ptr 찾기
+	std::shared_ptr<CGameObject> prev;
+	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
+	while (curr && curr.get() != target) {
+		prev = curr;
+		curr = curr->m_pSibling;
+	}
+	if (!curr)
+		return nullptr;    // 뭔가 꼬였으면 리턴
+
+	// 4) 대상의 최신 월드 매트릭스 저장
+	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
+
+	// 5) 부모의 자식 링크에서 제거
+	if (prev)
+		prev->m_pSibling = curr->m_pSibling;
+	else
+		parentRaw->m_pChild = curr->m_pSibling;
+
+	curr->m_pSibling = nullptr;
+	curr->m_pParent = nullptr;
+
+	// 6) 완전 독립: “로컬” 트랜스폼을 savedWorld로 덮어쓰고,
+	//    부모월드는 identity(=nullptr)로 설정
+	curr->m_xmf4x4Parent = savedWorld;
+	//curr->m_xmf4x4Parent = Matrix4x4::Identity();
+	curr->m_xmf4x4World = savedWorld;
+
+	// 7) 이 노드부터 subtree 갱신 (parentWorld=nullptr→Identity)
+	curr->UpdateTransform(nullptr);
+
+	return curr;
+}
 
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
@@ -4028,6 +4091,7 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 {
 	Object_type = OBJECT_TPYE_MONSTER;
 	CLoadedModelInfo* pHumanModel = pModel;
+	//CLoadedModelInfo* pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
 
 	if (!pHumanModel) {
@@ -4038,6 +4102,8 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 
+	//auto clonedRootObject = CGameObject::CloneHierarchy(pModel->m_pModelRootObject);
+	//Set_Child(clonedRootObject);
 	Set_Child(pHumanModel->m_pModelRootObject);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
 	for (int i = 0; i < n_Animation; ++i) {
@@ -4052,17 +4118,13 @@ CMonsterObject::~CMonsterObject()
 
 void CMonsterObject::Animate(float fTimeElapsed)
 {
-
-	//SetPosition(25.0f, 1064.0f, 25.0f);
-	OnPrepareAnimate();
+	//OnPrepareRender();
 
 	if (m_pSkinnedAnimationController)
 	{
-		/*if (Anime_test_FallingLoop)
-			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
-		else
-			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
+
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+		GetStateMachine()->update(fTimeElapsed);
 	}
 
 	/*if (On_Ground)
@@ -4081,24 +4143,7 @@ void CMonsterObject::Animate(float fTimeElapsed)
 	if (child_ptr != nullptr)
 		child_ptr->Animate(fTimeElapsed);
 
-	/*CAnimationController* animController = GetSkinnedAnimationController();
-	for (int i = 0; i < 5; i++)
-	{
-		if (test_num == 1 && i == 0) {
-			animController->SetTrackWeight(i, 1.0f);
-		}
-		else if (test_num == 2 && i == 1) {
-			animController->SetTrackWeight(i, 1.0f);
-		}
-		else if (test_num == 3 && i == 4) {
-			animController->SetTrackWeight(i, 1.0f);
-		}
-		else
-			animController->SetTrackWeight(i, 0.0f);
-	}*/
-	//CGameObject::Animate(fTimeElapsed);
-	GetStateMachine()->update(fTimeElapsed);
-	//m_StateMachine->update(fTimeElapsed);
+	//MoveForward(fTimeElapsed);
 }
 
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
@@ -4106,91 +4151,41 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	//GetStateMachine()->update(0.01f);
 }
 
-//CMultiPlayerObject::CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
-//	: m_StateMachine(std::make_unique<MultiPlayerStateMachine>(this))
-//{
-//	Object_type = OBJECT_TPYE_PLAYER;
-//	CLoadedModelInfo* pHumanModel = pModel;
-//	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
-//
-//	if (!pHumanModel) {
-//		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-//		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-//	}
-//	n_Animation = nAnimationTracks;
-//	prevWeights.resize(n_Animation, 0.0f);
-//	targetWeights.resize(n_Animation, 0.0f);
-//
-//	Set_Child(pHumanModel->m_pModelRootObject);
-//	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
-//	for (int i = 0; i < n_Animation; ++i) {
-//		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-//		m_pSkinnedAnimationController->SetTrackEnable(i, true);
-//	}
-//
-//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
-//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
-//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
-//
-//	SetScale(10.0f, 10.0f, 10.0f);
-//}
-//
-//CMultiPlayerObject::~CMultiPlayerObject()
-//{
-//}
-//
-//void CMultiPlayerObject::Animate(float fTimeElapsed)
-//{
-//
-//	//SetPosition(25.0f, 1064.0f, 25.0f);
-//	OnPrepareRender();
-//
-//	if (m_pSkinnedAnimationController)
-//	{
-//		/*if (Anime_test_FallingLoop)
-//			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
-//		else
-//			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
-//		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-//	}
-//
-//	/*if (On_Ground)
-//	{
-//		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
-//		XMFLOAT3 xmf3PlayerPosition = GetPosition();
-//		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
-//		AlignWithNormal(world_normal);
-//	}*/
-//
-//	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
-//	if (sibling_ptr != nullptr)
-//		sibling_ptr->Animate(fTimeElapsed);
-//
-//	shared_ptr<CGameObject> child_ptr = Get_Child();
-//	if (child_ptr != nullptr)
-//		child_ptr->Animate(fTimeElapsed);
-//
-//	/*CAnimationController* animController = GetSkinnedAnimationController();
-//	for (int i = 0; i < 5; i++)
-//	{
-//		if (test_num == 1 && i == 0) {
-//			animController->SetTrackWeight(i, 1.0f);
-//		}
-//		else if (test_num == 2 && i == 1) {
-//			animController->SetTrackWeight(i, 1.0f);
-//		}
-//		else if (test_num == 3 && i == 4) {
-//			animController->SetTrackWeight(i, 1.0f);
-//		}
-//		else
-//			animController->SetTrackWeight(i, 0.0f);
-//	}*/
-//	//CGameObject::Animate(fTimeElapsed);
-//	GetStateMachine()->update(fTimeElapsed);
-//	//m_StateMachine->update(fTimeElapsed);
-//}
-//
-//void CMultiPlayerObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
-//	CGameObject::Render(pd3dCommandList, pCamera);
-//	//GetStateMachine()->update(0.01f);
-//}
+ServerAnimationSyncData CMonsterObject::MakeSyncData()
+{
+	ServerAnimationSyncData data = CGameObject::MakeSyncData();
+	data.currentState = GetStateMachine()->Get_State();
+	for (int i = 0; i < n_Animation; i++) {
+		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
+		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
+	}
+
+	return data;
+}
+
+void CMonsterObject::ApplySyncData(const ServerAnimationSyncData& syncData)
+{
+	CGameObject::ApplySyncData(syncData);
+	SetPosition(syncData.position);
+	GetStateMachine()->SetState(syncData.currentState);
+	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	for (int i = 0; i < n_Animation; i++) {
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+	}
+	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
+}
+
+void CWeaponObject::Animate(float fTimeElapsed)
+{
+	//OnPrepareRender();
+	MoveForward(fTimeElapsed);
+
+	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
+	if (sibling_ptr != nullptr)
+		sibling_ptr->Animate(fTimeElapsed);
+
+	shared_ptr<CGameObject> child_ptr = Get_Child();
+	if (child_ptr != nullptr)
+		child_ptr->Animate(fTimeElapsed);
+}

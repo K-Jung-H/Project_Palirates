@@ -12,7 +12,7 @@ UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
 
- DXGI_FORMAT RenderTarget_Config::RTV_FORMATS[RTV_Format_Num] =
+DXGI_FORMAT RenderTarget_Config::RTV_FORMATS[RTV_Format_Num] =
 {
 	DXGI_FORMAT_R8G8B8A8_UNORM, // AlbedoColor
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_pos
@@ -20,7 +20,7 @@ UINT gnDsvDescriptorIncrementSize = 0;
 	DXGI_FORMAT_R16G16B16A16_FLOAT,   // x,y : Velocity , z: Blur Mask, w: Object ID == Outline color
 };
 
- DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
+DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 
 void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)
@@ -71,9 +71,9 @@ ID3D12Resource* CreateTextureResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	switch (d3dHeapType)
 	{
 	case D3D12_HEAP_TYPE_DEFAULT:
-	{		
+	{
 		D3D12_RESOURCE_STATES d3dResourceInitialStates = (ppd3dUploadBuffer && pData) ? D3D12_RESOURCE_STATE_COMMON : d3dResourceStates;
-//		D3D12_RESOURCE_STATES d3dResourceInitialStates = (ppd3dUploadBuffer && pData) ? D3D12_RESOURCE_STATE_COPY_DEST : d3dResourceStates;
+		//		D3D12_RESOURCE_STATES d3dResourceInitialStates = (ppd3dUploadBuffer && pData) ? D3D12_RESOURCE_STATE_COPY_DEST : d3dResourceStates;
 		HRESULT hResult = pd3dDevice->CreateCommittedResource(&d3dHeapPropertiesDesc, D3D12_HEAP_FLAG_NONE, &d3dResourceDesc, d3dResourceInitialStates, NULL, __uuidof(ID3D12Resource), (void**)&pd3dBuffer);
 		if (ppd3dUploadBuffer && pData)
 		{
@@ -319,7 +319,7 @@ ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12Graphics
 	d3dTextureResourceDesc.Flags = d3dResourceFlags;
 
 	HRESULT hResult = pd3dDevice->CreateCommittedResource(&d3dHeapPropertiesDesc, D3D12_HEAP_FLAG_NONE, &d3dTextureResourceDesc, d3dResourceStates, pd3dClearValue, __uuidof(ID3D12Resource), (void**)&pd3dTexture);
-	
+
 	if (FAILED(hResult))
 	{
 		OutputDebugString(L"[ERROR] CreateCommittedResource failed!\n");
@@ -405,13 +405,13 @@ void DebugOutput(const std::string& message1, const char message2[])
 	OutputDebugStringA(combinedMessage.c_str());
 }
 
-void DebugOutput(const std::string& message1, const std::string& message2) 
+void DebugOutput(const std::string& message1, const std::string& message2)
 {
 	std::string combinedMessage = message1 + message2;
 	OutputDebugStringA(combinedMessage.c_str());
 }
 
-void DebugOutput(const std::string& message1, const std::wstring& message2) 
+void DebugOutput(const std::string& message1, const std::wstring& message2)
 {
 	std::wstring wmessage1(message1.begin(), message1.end());
 	std::wstring combinedMessage = wmessage1 + message2;
@@ -463,7 +463,7 @@ XMFLOAT4 Get_Random_Color(float w)
 
 std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area)
 {
-	XMFLOAT3 min_point = 
+	XMFLOAT3 min_point =
 	{
 		center.x - area.x,
 		center.y - area.y,
