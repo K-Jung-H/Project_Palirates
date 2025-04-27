@@ -1,6 +1,8 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN     
+#define WIN32_LEAN_AND_MEAN  
+#define NOMINMAX
+
 #include <windows.h>
 
 #include <stdlib.h>
@@ -21,8 +23,9 @@
 #include <cwchar>  
 #include <cstring> 
 #include <cstdio>
-#include <unordered_set>
 
+#include <algorithm>
+#include <unordered_set>
 #include <unordered_map>
 #include <map>
 #include <array>
@@ -123,10 +126,10 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-#define WRITE_TEXT_UI
+//#define WRITE_TEXT_UI
 //#define RENDER_OBB
 //#define LOAD_SCENE
-//#define RENDER_PARTICLE
+#define RENDER_PARTICLE
 
 
 //#define DEBUG_MESSAGE
@@ -148,10 +151,22 @@ struct RenderTarget_Config
 	static  DXGI_FORMAT DSV_FORMAT;
 };
 
+enum Control_BufferType
+{
+	BUFFER_COUNTER = 0,
+	BUFFER_READBACK = 1,
+	BUFFER_COUNTER_RESET = 2
+};
+
+
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);
 
 extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAGS d3dResourceFlags = D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+
+extern ID3D12Resource* Create_Control_Buffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
+
+
 
 extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 extern ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
@@ -186,6 +201,8 @@ inline bool IsZero(float fValue, float fEpsilon) { return((fabsf(fValue) < fEpsi
 inline bool IsEqual(float fA, float fB, float fEpsilon) { return(::IsZero(fA - fB, fEpsilon)); }
 inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
 inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
+inline bool IsZeroVector(const XMFLOAT3& v) { return (fabs(v.x) < EPSILON && fabs(v.y) < EPSILON && fabs(v.z) < EPSILON); }
+inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
 
@@ -270,7 +287,7 @@ namespace Vector3
 		return(xmf3Result.x);
 	}
 
-	inline float Distance(XMFLOAT3& xmf3Vector1, XMFLOAT3& xmf3Vector2)
+	inline float Distance(const XMFLOAT3& xmf3Vector1, const XMFLOAT3& xmf3Vector2)
 	{
 		XMFLOAT3 xmf3Result;
 		XMStoreFloat3(&xmf3Result, XMVector3Length(XMLoadFloat3(&xmf3Vector1) - XMLoadFloat3(&xmf3Vector2)));

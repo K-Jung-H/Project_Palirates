@@ -123,8 +123,6 @@ public:
 	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) {}
 };
 
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 class CHeightMapImage
@@ -211,6 +209,33 @@ public:
 	virtual ~CSkyBoxMesh();
 };
 
+class PlaneMesh : public CMesh
+{
+public:
+	PlaneMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float width, int segments);
+	virtual ~PlaneMesh();
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
+	virtual void ReleaseUploadBuffers() override;
+
+protected:
+	XMFLOAT4* m_pxmf4Colors = nullptr;
+	XMFLOAT2* m_pxmf2TextureCoords0 = nullptr;
+	XMFLOAT2* m_pxmf2TextureCoords1 = nullptr;
+
+	ID3D12Resource* m_pd3dColorBuffer = nullptr;
+	ID3D12Resource* m_pd3dColorUploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dColorBufferView = {};
+
+	ID3D12Resource* m_pd3dTextureCoord0Buffer = nullptr;
+	ID3D12Resource* m_pd3dTextureCoord0UploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord0BufferView = {};
+
+	ID3D12Resource* m_pd3dTextureCoord1Buffer = nullptr;
+	ID3D12Resource* m_pd3dTextureCoord1UploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTextureCoord1BufferView = {};
+};
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
@@ -267,62 +292,6 @@ class CSkinnedMesh : public CStandardMesh
 {
 public:
 	CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	//CSkinnedMesh(const CSkinnedMesh& other)
-	//	: CStandardMesh(other) // 부모 클래스 복사
-	//{
-	//	m_nBonesPerVertex = other.m_nBonesPerVertex;
-	//	m_nSkinningBones = other.m_nSkinningBones;
-
-	//	// Bone Indices 복사
-	//	if (other.m_pxmn4BoneIndices)
-	//	{
-	//		m_pxmn4BoneIndices = new XMINT4[m_nVertices];
-	//		std::copy(other.m_pxmn4BoneIndices, other.m_pxmn4BoneIndices + m_nVertices, m_pxmn4BoneIndices);
-	//	}
-
-	//	// Bone Weights 복사
-	//	if (other.m_pxmf4BoneWeights)
-	//	{
-	//		m_pxmf4BoneWeights = new XMFLOAT4[m_nVertices];
-	//		std::copy(other.m_pxmf4BoneWeights, other.m_pxmf4BoneWeights + m_nVertices, m_pxmf4BoneWeights);
-	//	}
-
-	//	// Skinning Bone Names 복사
-	//	if (other.m_ppstrSkinningBoneNames)
-	//	{
-	//		m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
-	//		for (int i = 0; i < m_nSkinningBones; ++i)
-	//		{
-	//			strcpy_s(m_ppstrSkinningBoneNames[i], 64, other.m_ppstrSkinningBoneNames[i]);
-	//		}
-	//	}
-
-	//	// Skinning Bone Frame Caches 복사 (얕은 복사 OK, 포인터만 복사)
-	//	m_ppSkinningBoneFrameCaches = other.m_ppSkinningBoneFrameCaches;
-
-	//	// Bind Pose Offsets 복사
-	//	if (other.m_pxmf4x4BindPoseBoneOffsets)
-	//	{
-	//		m_pxmf4x4BindPoseBoneOffsets = new XMFLOAT4X4[m_nSkinningBones];
-	//		std::copy(other.m_pxmf4x4BindPoseBoneOffsets, other.m_pxmf4x4BindPoseBoneOffsets + m_nSkinningBones, m_pxmf4x4BindPoseBoneOffsets);
-	//	}
-
-	//	// Skinning Bone Transforms 복사
-	//	if (other.m_pcbxmf4x4MappedSkinningBoneTransforms)
-	//	{
-	//		m_pcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4[m_nSkinningBones];
-	//		std::copy(other.m_pcbxmf4x4MappedSkinningBoneTransforms, other.m_pcbxmf4x4MappedSkinningBoneTransforms + m_nSkinningBones, m_pcbxmf4x4MappedSkinningBoneTransforms);
-	//	}
-
-	//	// cb 버퍼 및 GPU 리소스는 별도로 CreateShaderVariables 등에서 생성하도록 함
-	//	m_pd3dBoneIndexBuffer = nullptr;
-	//	m_pd3dBoneIndexUploadBuffer = nullptr;
-	//	m_pd3dBoneWeightBuffer = nullptr;
-	//	m_pd3dBoneWeightUploadBuffer = nullptr;
-	//	m_pd3dcbBindPoseBoneOffsets = nullptr;
-	//	m_pd3dcbSkinningBoneTransforms = nullptr;
-	//	m_pcbxmf4x4MappedBindPoseBoneOffsets = nullptr;
-	//}
 	virtual ~CSkinnedMesh();
 
 protected:
@@ -369,3 +338,54 @@ public:
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
 };
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+struct TrailVertexSide
+{
+	float side;      // +1.0 for top, -1.0 for bottom
+	float time;      // creation time
+	float centerY;   // Y position of the segment's center
+	float offsetY;   // distance from centerY (used to shrink height)
+	float ratio;     // 0.0 = oldest, 1.0 = newest (used for fading)
+};
+
+class Trail_Mesh : public CStandardMesh
+{
+public:
+	Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments);
+	virtual ~Trail_Mesh();
+
+	void AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float fTime);
+	
+	void UpdateTrail(float currentTime);
+	void UpdateSegmentRatios();
+
+	void UpdateIndexBuffer();
+	void UpdateVertexBuffer();
+	void ResetTrail();
+
+	void SetSegmentThreshold(float fThreshold);
+	void SetTrailLifespan(float fSeconds);
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = nullptr) override;
+
+protected:
+	int m_nMaxTrailSegments = 0;
+	int m_nCurrentIndex = 0;
+	int m_nActiveSegments = 0;
+
+	float m_fSegmentThreshold = 1.0f;
+	float m_fTrailLifespan = 2.0f;
+
+	XMFLOAT3 m_vLastTop = {};
+	XMFLOAT3 m_vLastBottom = {};
+
+	TrailVertexSide* m_pTrailSideData = nullptr;
+	ID3D12Resource* m_pd3dTrailSideBuffer = nullptr;
+	ID3D12Resource* m_pd3dTrailSideUploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dTrailSideBufferView = {};
+};
+
