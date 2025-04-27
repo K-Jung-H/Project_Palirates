@@ -116,16 +116,16 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
 
     std::unordered_map<int, std::pair<Key_Value, Key_Value>> keyMappings = {
     { VK_UP,    { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
-    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },
+    { 0x57,     { Key_Value::Forward_Key_Down, Key_Value::Forward_Key_Up } },  
 
     { VK_DOWN,  { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },
-    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },
+    { 0x53,     { Key_Value::Back_Key_Down, Key_Value::Back_Key_Up } },  
 
     { VK_LEFT,  { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },
-    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } },
+    { 0x41,     { Key_Value::Left_Key_Down, Key_Value::Left_Key_Up } }, 
 
     { VK_RIGHT, { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
-    { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
+    { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },  
 
     { VK_SPACE, { Key_Value::Jump_Key_Down, Key_Value::Jump_Key_Up } },
     { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } }
@@ -224,7 +224,6 @@ void PlayerStateMachine::update(float Elapsed_time)
         }
         m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
         animController->SetTrackWeight(TRACK_IDLE, 1.0f);
-        isFirstUpdate = false;
     }
     else {
         for (int i = 0; i < n_Ani; i++) {
@@ -239,6 +238,7 @@ void PlayerStateMachine::update(float Elapsed_time)
 
     if (key_state.dive && Get_State() != State::Dive) {
         m_pOwner->SetStateElapsedTime(0.0f);
+       // animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = -ANIMATION_CALLBACK_EPSILON;
         changeState(State::Dive, Key_Value::None);
     }
 
@@ -248,7 +248,9 @@ void PlayerStateMachine::update(float Elapsed_time)
             m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
         }
         else {
-            changeState(State::Run, Key_Value::None);
+            if (Get_State() != State::Run) {
+                changeState(State::Run, Key_Value::None);
+            }
         }
         break;
 
@@ -296,6 +298,8 @@ void PlayerStateMachine::update(float Elapsed_time)
 
             float fFixedSpeed = 300.0f;
 
+
+            std::wostringstream oss;
             XMFLOAT3 vec = animController->HipsPosition;
             XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
 
@@ -309,7 +313,13 @@ void PlayerStateMachine::update(float Elapsed_time)
             float scaleFactor = 30.0f;
             XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
 
-            XMFLOAT3 moveDirection = m_pOwner->GetLook();
+            oss << L"XMFLOAT3: ("
+                << scaleShift.x << L", "
+                << scaleShift.y << L", "
+                << scaleShift.z << L")\n";
+            //OutputDebugStringW(oss.str().c_str());
+
+            XMFLOAT3 moveDirection = m_pOwner->GetLook(); 
             XMFLOAT3 finalMove = {
                 moveDirection.x * scaleShift.z,
                 moveDirection.y * scaleShift.z,
@@ -322,6 +332,9 @@ void PlayerStateMachine::update(float Elapsed_time)
         }
         break;
     case State::Knock_Down:
+       /* if (animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }*/
         m_pOwner->targetWeights[TRACK_KNOCK_DOWN] = 1.0f;
         break;
     case State::Get_Up:
@@ -337,12 +350,15 @@ void PlayerStateMachine::update(float Elapsed_time)
         float prev = m_pOwner->prevWeights[i];
         float target = m_pOwner->targetWeights[i];
 
-        if (fabs(prev - target) == 0.0f)
+        if (fabs(prev - target) < 0.0001f)
             continue;
 
         float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
     }
+
+    isFirstUpdate = false;
+
     //doAction(currentState, Elapsed_time);
 }
 
@@ -419,7 +435,7 @@ void MultiPlayerStateMachine::update(float Elapsed_time)
 
     switch (Get_State()) {
     case State::Idle:
-
+      
         break;
 
     case State::Run:
@@ -523,6 +539,7 @@ MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
 
 }
 
+//#define ADD
 void MonsterStateMachine::update(float Elapsed_time)
 {
     float blendSpeed = 6.0f * Elapsed_time;
@@ -537,6 +554,13 @@ void MonsterStateMachine::update(float Elapsed_time)
             animController->SetTrackWeight(i, 0.0f);
         }
         m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+        /*  if (m_pOwner->test_num == 1)
+              animController->SetTrackWeight(TRACK_IDLE, 1.0f);
+          else if (m_pOwner->test_num == 2)
+              animController->SetTrackWeight(3, 1.0f);
+          else if (m_pOwner->test_num == 3)
+              animController->SetTrackWeight(4, 1.0f);*/
+              //animController->SetTrackWeight(TRACK_IDLE, 1.0f);
         isFirstUpdate = false;
     }
     else {
@@ -579,25 +603,21 @@ void MonsterStateMachine::update(float Elapsed_time)
         shift.y = vec.y - vec2.y;
         shift.z = vec.z - vec2.z;
 
-        animController->m_xmf3PrevHipsPosition = vec;
-
-
+        animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
         {
-            float scaleFactor = 10.0f;
+            float scaleFactor = 20.0f;
 
-            XMFLOAT3 velocity = {
-                shift.x / Elapsed_time,
-                shift.y / Elapsed_time,
-                shift.z / Elapsed_time
-            };
-            XMFLOAT3 moveDirection = m_pOwner->GetLook();
+            XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
+
+
+            XMFLOAT3 moveDirection = m_pOwner->GetLook(); 
             XMFLOAT3 finalMove = {
-                moveDirection.x * Elapsed_time * scaleFactor,
-                moveDirection.y * Elapsed_time * scaleFactor,
-                moveDirection.z * Elapsed_time * scaleFactor
+                moveDirection.x * scaleShift.z,
+                moveDirection.y * scaleShift.z,
+                moveDirection.z * scaleShift.z
             };
 
-            if (velocity.z > 0.001f) {
+            if (scaleShift.z > 0.001f) {
                 m_pOwner->Move(finalMove);
             }
 
@@ -607,20 +627,48 @@ void MonsterStateMachine::update(float Elapsed_time)
 
         break;
     }
+    /* if (m_pOwner->test_num == 1) {
+         XMFLOAT3 vec = animController->HipsPosition;
+         string message3 = "blendedTransform :" + std::to_string((int)(vec.x)) + ", " + std::to_string((int)(vec.y)) + ", " + std::to_string((int)(vec.z)) + "\n";
+         DebugOutput(message3);
+     }*/
 
+    //string message2 = "M" + std::to_string(m_pOwner->test_num) + " weight: ";
     for (int i = 0; i < n_Ani; i++)
     {
 
         float prev = m_pOwner->prevWeights[i];
         float target = m_pOwner->targetWeights[i];
 
-        if (fabs(prev - target) == 0.0f)
+        if (fabs(prev - target) < 0.0001f)
             continue;
 
         float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
 
+       // message2 += std::to_string(newWeight) + " ";
     }
+   // message2 += "\n";
+    // DebugOutput(message2);
+
+    string message;
+#ifdef ADD
+    if (m_pOwner->test_num == 1) {
+        message = "M1 add: " + std::to_string((int)m_pOwner) + ",M1 ST add: " + std::to_string(m_pOwner->test_num) + ",M1 AC add " + std::to_string((int)animController) + " "
+            + std::to_string((int)(animController->m_pAnimationSets)) + '\n';
+    }
+    else if (m_pOwner->test_num == 2)
+        message = "M2 add: " + std::to_string((int)m_pOwner) + ",M2 ST add: " + std::to_string(m_pOwner->test_num) + ",M2 AC add " + std::to_string((int)animController) + " "
+        + std::to_string((int)(animController->m_pAnimationSets)) + '\n';
+    else if (m_pOwner->test_num == 3)
+        message = "M3 add: " + std::to_string((int)m_pOwner) + ",M3 ST add: " + std::to_string(m_pOwner->test_num) + ",M3 AC add " + std::to_string((int)animController) + " "
+        + std::to_string((int)(animController->m_pAnimationSets)) + '\n';
+    DebugOutput(message);
+#else
+
+#endif
+
+    //doAction(currentState, Elapsed_time);
 }
 
 void MonsterStateMachine::enterState(State state, Key_Value key_event)
