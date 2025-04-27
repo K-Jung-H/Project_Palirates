@@ -429,6 +429,18 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			if (wParam == '1') {
+				auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
+				if (sword)
+				{
+					sword.get()->Object_type = 10;
+					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+				}
+			}
+			if (wParam == 'C') {
+				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
+
+			}
 			if (wParam == 'U') {
 				ServerAnimationSyncData data;
 				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);

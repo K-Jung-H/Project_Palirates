@@ -3038,7 +3038,53 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 }
 
+std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)
+{
+	// 1) 전체 계층의 월드 트랜스폼을 갱신
+	//    (Detach 대상의 저장된 m_xmf4x4World가 최신이 아닐 수 있기 때문)
+	CGameObject* root = Get_Root_Object();
+	root->UpdateTransform(nullptr);
 
+	// 2) 이름으로 찾은 raw 포인터
+	CGameObject* target = FindFrame(const_cast<char*>(targetName));
+	if (!target || !target->m_pParent)
+		return nullptr;
+
+	CGameObject* parentRaw = target->m_pParent;
+
+	// 3) 부모의 m_pChild → sibling 체인에서 shared_ptr 찾기
+	std::shared_ptr<CGameObject> prev;
+	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
+	while (curr && curr.get() != target) {
+		prev = curr;
+		curr = curr->m_pSibling;
+	}
+	if (!curr)
+		return nullptr;    // 뭔가 꼬였으면 리턴
+
+	// 4) 대상의 최신 월드 매트릭스 저장
+	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
+
+	// 5) 부모의 자식 링크에서 제거
+	if (prev)
+		prev->m_pSibling = curr->m_pSibling;
+	else
+		parentRaw->m_pChild = curr->m_pSibling;
+
+	curr->m_pSibling = nullptr;
+	curr->m_pParent = nullptr;
+
+	// 6) 완전 독립: “로컬” 트랜스폼을 savedWorld로 덮어쓰고,
+	//    부모월드는 identity(=nullptr)로 설정
+	curr->m_xmf4x4Parent = savedWorld;
+	//curr->m_xmf4x4Parent = Matrix4x4::Identity();
+	curr->m_xmf4x4World = savedWorld;
+
+	// 7) 이 노드부터 subtree 갱신 (parentWorld=nullptr→Identity)
+	curr->UpdateTransform(nullptr);
+
+	return curr;
+}
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;

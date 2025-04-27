@@ -681,6 +681,8 @@ public:
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 
+	std::shared_ptr<CGameObject> DetachChildByName(const char* targetName);
+
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
 
