@@ -429,16 +429,27 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			if (wParam == '1') {
+			if (nMessageID == WM_KEYDOWN && wParam == '1') {
 				static bool test = true;
 				if (test) {
 					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
+					//std::shared_ptr<CGameObject> obj = sword->Clone();
+				//	scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+					//test = false;
+
+					auto rawSword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+					auto swordClone = rawSword->Clone2(false);  
+					//swordClone->UpdateTransform(nullptr);
+					swordClone->Object_type = 10;
+					swordClone->Set_Active(true);
+					//swordClone->Rotate()
+					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(swordClone, Object_Type::non_skinned);
 					test = false;
 				}
 				else {
 					auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 					sword->Set_Active(true);
-					test = true;
+					//test = true;
 				}
 				
 				

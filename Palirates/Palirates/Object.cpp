@@ -1699,6 +1699,39 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 	return clone;
 }
 
+std::shared_ptr<CGameObject> CGameObject::Clone2(bool withHierarchy)
+{
+	// 1) 복사 생성자 호출로 이 객체의 멤버(메시·머티리얼·애니메이션 컨트롤러 등)를 복사
+	auto clone = std::make_shared<CGameObject>(*this);
+
+	// 2) 부모·자식·형제 포인터는 일단 깨끗이 초기화
+	clone->m_pParent = nullptr;
+	clone->m_pChild = nullptr;
+	clone->m_pSibling = nullptr;
+
+	if (withHierarchy && this->m_pChild)
+	{
+		// 3) 첫 번째 자식부터 재귀 복제
+		clone->m_pChild = this->m_pChild->Clone(true);
+		clone->m_pChild->m_pParent = clone.get();
+
+		// 4) 나머지 형제들도 순차적으로 복제하여 링크
+		auto srcSibling = this->m_pChild->m_pSibling;
+		auto dstSibling = clone->m_pChild;
+		while (srcSibling)
+		{
+			dstSibling->m_pSibling = srcSibling->Clone(true);
+			dstSibling->m_pSibling->m_pParent = clone.get();
+
+			// 다음 형제
+			dstSibling = dstSibling->m_pSibling;
+			srcSibling = srcSibling->m_pSibling;
+		}
+	}
+
+	return clone;
+}
+
 std::shared_ptr<CGameObject> CGameObject::Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy)
 {
 	std::shared_ptr<CGameObject> instance = std::make_shared<CGameObject>();
@@ -1912,6 +1945,35 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
+	
+	if (Object_type == 10) {
+		// 1) 회전 축·속도 계산
+		XMFLOAT3 axis{ 1.0f, 0.0f, 0.0f };
+		float     speedDegPerSec = 90.0f;                  // 초당 90도
+		float     angleThisFrame = speedDegPerSec * fTimeElapsed;
+		XMVECTOR  vAxis = XMLoadFloat3(&axis);
+
+		// 2) 이번 프레임 회전 매트릭스
+		XMMATRIX R = XMMatrixRotationAxis(vAxis,
+			XMConvertToRadians(angleThisFrame));
+
+		// 3) 로컬 피벗 오프셋 (모델 높이의 절반만큼 올린 지점 예시)
+		//    실제 높이(h)는 모델에 맞춰 조절하세요.
+		float h = -1.0f;
+		float pivotY = h * 0.5f;
+
+		// 4) 피벗을 원점으로 옮기는 T₁, 다시 제자리로 돌리는 T₂
+		XMMATRIX T1 = XMMatrixTranslation(0.0f, -pivotY, 0.0f);
+		XMMATRIX T2 = XMMatrixTranslation(0.0f, pivotY, 0.0f);
+
+		// 5) T₂ · R · T₁ 순서로 피벗 회전 누적
+		XMMATRIX M = T2 * R * T1;
+		m_xmf4x4Parent = Matrix4x4::Multiply(M, m_xmf4x4Parent);
+
+		// 6) 씬 그래프에 반영
+		UpdateTransform(nullptr);
+		
+	}
 
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -3059,17 +3121,17 @@ std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetNa
 	CGameObject* parentRaw = target->m_pParent;
 
 	//// 3) 부모의 m_pChild → sibling 체인에서 shared_ptr 찾기
-	//std::shared_ptr<CGameObject> prev;
+	std::shared_ptr<CGameObject> prev;
 	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
-	//while (curr && curr.get() != target) {
-	//	prev = curr;
-	//	curr = curr->m_pSibling;
-	//}
-	//if (!curr)
-	//	return nullptr;    // 뭔가 꼬였으면 리턴
+	while (curr && curr.get() != target) {
+		prev = curr;
+		curr = curr->m_pSibling;
+	}
+	if (!curr)
+		return nullptr;    // 뭔가 꼬였으면 리턴
 
 	//// 4) 대상의 최신 월드 매트릭스 저장
-	//XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
+	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
 
 	//// 5) 부모의 자식 링크에서 제거
 	//if (prev)
@@ -3082,9 +3144,9 @@ std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetNa
 
 	//// 6) 완전 독립: “로컬” 트랜스폼을 savedWorld로 덮어쓰고,
 	////    부모월드는 identity(=nullptr)로 설정
-	//curr->m_xmf4x4Parent = savedWorld;
+	curr->m_xmf4x4Parent = savedWorld;
 	////curr->m_xmf4x4Parent = Matrix4x4::Identity();
-	//curr->m_xmf4x4World = savedWorld;
+	curr->m_xmf4x4World = savedWorld;
 
 	//// 7) 이 노드부터 subtree 갱신 (parentWorld=nullptr→Identity)
 	//curr->UpdateTransform(nullptr);

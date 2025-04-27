@@ -536,6 +536,7 @@ public:
 	
 	// Deep Copy
 	std::shared_ptr<CGameObject> Clone(bool withHierarchy = true); 
+	std::shared_ptr<CGameObject> Clone2(bool withHierarchy);
 
 	// Deep Copy Hierarchy & Shallow Copy Resource
 	static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);

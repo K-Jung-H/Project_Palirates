@@ -541,10 +541,10 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
-				if (obj_ptr->Object_type == 10) {
+				/*if (obj_ptr->Object_type == 10) {
 					obj_ptr->m_xmf4x4Parent = obj_ptr->m_xmf4x4World;
 					obj_ptr->MoveForward(fTimeElapsed);
-				}
+				}*/
 				obj_ptr->UpdateTransform(NULL);
 			}
 	}
