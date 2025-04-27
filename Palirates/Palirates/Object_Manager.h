@@ -118,7 +118,7 @@ private:
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 
-	std::vector<std::shared_ptr<CTerrainPlayer>> player_list;
+	std::vector<std::shared_ptr<CGameObject>> player_list;
 
 
 
@@ -180,8 +180,6 @@ public:
 
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
 	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
-
-	std::vector<std::shared_ptr<CTerrainPlayer>>* Get_Player_List();
 
 	void Clear_Object_List_All();
 	void Clear_Object_List(Object_Type type);
