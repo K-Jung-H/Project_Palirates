@@ -1,4 +1,4 @@
-#include "server.h"
+ï»¿#include "server.h"
 
 Server::Server(int port)
 {
@@ -25,11 +25,27 @@ void Server::AcceptClients()
         int addrLen = sizeof(clientAddr);
         SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &addrLen);
 
+
+
         int clientId = clients.size();
         clients[clientId] = clientSocket;
         sceneManager.addScene(clientId);
 
-        logger.Log("Å¬¶óÀÌ¾ğÆ® " + std::to_string(clientId) + " ¿¬°áµÊ.");
+        logger.Log("í´ë¼ì´ì–¸íŠ¸ " + std::to_string(clientId) + " ì—°ê²°ë¨.");
+
+        char sendBuffer[256];
+        sprintf_s(sendBuffer, sizeof(sendBuffer), "CLIENT_ID,%d", clientId);
+
+        int retval = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
+        if (retval == SOCKET_ERROR)
+        {
+            logger.Log("[ì„œë²„] CLIENT_ID ì „ì†¡ ì‹¤íŒ¨! ì—ëŸ¬ ì½”ë“œ: " + std::to_string(WSAGetLastError()));
+        }
+        else
+        {
+            logger.Log("[ì„œë²„] CLIENT_ID ì „ì†¡ ì„±ê³µ! ë³´ë‚¸ ë°ì´í„°: " + std::string(sendBuffer));
+        }
+
 
         SendInitialStates(clientId);
         NotifyExistingPlayersAboutNew(clientId);
@@ -53,7 +69,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             buffer[bytesReceived] = '\0';
             std::string packet(buffer);
-            logger.Log("Å¬¶óÀÌ¾ğÆ® " + std::to_string(clientId) + " ÆĞÅ¶ ¼ö½Å: " + packet);
+            logger.Log("í´ë¼ì´ì–¸íŠ¸ " + std::to_string(clientId) + " íŒ¨í‚· ìˆ˜ì‹ : " + packet);
 
             float x, y, z;
             int state;
@@ -70,17 +86,17 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     std::to_string(x) + "," + std::to_string(y) + "," +
                     std::to_string(z) + "," + std::to_string(state);
 
-                logger.Log("Å¬¶óÀÌ¾ğÆ® " + std::to_string(clientId) + "¿¡°Ô ºê·ÎµåÄ³½ºÆ®: " + response);
+                logger.Log("í´ë¼ì´ì–¸íŠ¸ " + std::to_string(clientId) + "ì—ê²Œ ë¸Œë¡œë“œìºìŠ¤íŠ¸: " + response);
                 BroadcastPacket(response, clientId);
             }
             else
             {
-                logger.Log("Àß¸øµÈ ÆĞÅ¶ Çü½Ä ¼ö½Å: " + packet);
+                logger.Log("ì˜ëª»ëœ íŒ¨í‚· í˜•ì‹ ìˆ˜ì‹ : " + packet);
             }
         }
         else if (bytesReceived == 0)
         {
-            logger.Log("Å¬¶óÀÌ¾ğÆ® " + std::to_string(clientId) + " ¿¬°á Á¾·á");
+            logger.Log("í´ë¼ì´ì–¸íŠ¸ " + std::to_string(clientId) + " ì—°ê²° ì¢…ë£Œ");
             std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId);
             BroadcastPacket(leavePacket, clientId);
             closesocket(clientSocket);
@@ -89,7 +105,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         }
         else
         {
-            logger.Log("recv() ¿À·ù ¹ß»ı: " + std::to_string(WSAGetLastError()));
+            logger.Log("recv() ì˜¤ë¥˜ ë°œìƒ: " + std::to_string(WSAGetLastError()));
             break;
         }
     }
@@ -103,11 +119,11 @@ void Server::BroadcastPacket(const std::string& packet, int senderId)
             int bytesSent = send(socket, packet.c_str(), packet.length(), 0);
             if (bytesSent == SOCKET_ERROR)
             {
-                logger.Log("[ERROR] Å¬¶óÀÌ¾ğÆ® " + std::to_string(id) + "¿¡°Ô send() ½ÇÆĞ: " + std::to_string(WSAGetLastError()));
+                logger.Log("[ERROR] í´ë¼ì´ì–¸íŠ¸ " + std::to_string(id) + "ì—ê²Œ send() ì‹¤íŒ¨: " + std::to_string(WSAGetLastError()));
             }
             else
             {
-                logger.Log("Å¬¶óÀÌ¾ğÆ® " + std::to_string(id) + "¿¡°Ô ÆĞÅ¶ Àü¼Û ¿Ï·á: " + packet);
+                logger.Log("í´ë¼ì´ì–¸íŠ¸ " + std::to_string(id) + "ì—ê²Œ íŒ¨í‚· ì „ì†¡ ì™„ë£Œ: " + packet);
             }
         }
     }
@@ -123,7 +139,7 @@ void Server::BroadcastAllStates()
                 std::to_string(player.x) + "," + std::to_string(player.y) + "," +
                 std::to_string(player.z) + "," + std::to_string(player.state);
 
-            BroadcastPacket(packet, -1); // -1ÀÌ¸é ¸ğµç Å¬¶óÀÌ¾ğÆ®¿¡°Ô Àü¼Û
+            BroadcastPacket(packet, -1); // -1ì´ë©´ ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ì „ì†¡
         }
     }
 }
@@ -167,11 +183,11 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
 
     for (const auto& [clientId, sock] : clients)
     {
-        if (clientId == newClientId) continue;  // ÀÚ±â ÀÚ½Å Á¦¿Ü
+        if (clientId == newClientId) continue;  // ìê¸° ìì‹  ì œì™¸
         send(sock, packet.c_str(), packet.length(), 0);
     }
 
-    logger.Log("±âÁ¸ À¯Àúµé¿¡°Ô ½Å±Ô Å¬¶óÀÌ¾ğÆ® " + std::to_string(newClientId) + " »óÅÂ Àü¼Û ¿Ï·á");
+    logger.Log("ê¸°ì¡´ ìœ ì €ë“¤ì—ê²Œ ì‹ ê·œ í´ë¼ì´ì–¸íŠ¸ " + std::to_string(newClientId) + " ìƒíƒœ ì „ì†¡ ì™„ë£Œ");
 }
 
 

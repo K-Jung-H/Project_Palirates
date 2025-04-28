@@ -163,7 +163,6 @@
   <ItemGroup>
     <FxCompile Include="Light.hlsl" />
     <FxCompile Include="Shaders.hlsl" />
-    <FxCompile Include="Particle_CS.hlsl" />
     <FxCompile Include="Particle.hlsl" />
     <FxCompile Include="Post_Compute_Shaders.hlsl" />
     <FxCompile Include="Deffered_Shaders.hlsl" />
