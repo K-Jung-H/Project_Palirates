@@ -31,6 +31,17 @@
 #include <array>
 #include <random>
 
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include <mutex>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#include <queue>
+#pragma comment(lib, "ws2_32.lib")
+
 using namespace std;
 
 #include <d2d1_3.h>
@@ -112,11 +123,6 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 2
 #define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 3
 
-//#define ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX 11
-//#define ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX 12
-#define PARAMETER_TEST 3
-
-
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
@@ -127,8 +133,8 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define WRITE_TEXT_UI
-//#define RENDER_OBB
 //#define LOAD_SCENE
+//#define RENDER_OBB
 #define RENDER_PARTICLE
 
 
@@ -143,7 +149,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 5
+#define RTV_Format_Num 4
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;
@@ -205,6 +211,10 @@ inline bool IsZeroVector(const XMFLOAT3& v) { return (fabs(v.x) < EPSILON && fab
 inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
+inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs, float tolerance = 0.001f)
+{
+	return (fabs(lhs.x - rhs.x) < tolerance && fabs(lhs.y - rhs.y) < tolerance && fabs(lhs.z - rhs.z) < tolerance && fabs(lhs.w - rhs.w) < tolerance);
+}
 
 
 namespace Vector3
@@ -269,6 +279,15 @@ namespace Vector3
 		XMFLOAT3 m_xmf3Normal;
 		XMStoreFloat3(&m_xmf3Normal, XMVector3Normalize(XMLoadFloat3(&xmf3Vector)));
 		return(m_xmf3Normal);
+	}
+
+	inline XMFLOAT3 Scale(const XMFLOAT3& v, float s)
+	{
+		XMVECTOR vv = XMLoadFloat3(&v);
+		XMVECTOR vs = XMVectorScale(vv, s);
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, vs);
+		return result;
 	}
 
 	inline float Length(XMFLOAT3& xmf3Vector)

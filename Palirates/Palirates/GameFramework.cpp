@@ -1,13 +1,12 @@
 //-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
-
+#pragma once
 #include "stdafx.h"
 #include "GameFramework.h"
-#include <iostream>
-#include <sstream>
-#include <iomanip>
 #include "Object_Manager.h"
+
+std::unordered_map<int, RemotePlayer> remotePlayers;
 
 CGameFramework::CGameFramework()
 {
@@ -357,6 +356,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 
 				case VK_SPACE:
+					multiMode = true;
 					break;
 
 				case VK_TAB:
@@ -429,6 +429,32 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			if (wParam == '1') {
+				static bool test = true;
+				if (test) {
+					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
+					test = false;
+				}
+				else {
+					auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+					sword->Set_Active(true);
+					test = true;
+				}
+				
+				
+
+				//if (sword)
+				{
+					//sword.get()->Object_type = 10; 
+					//sword.get()->Material_list[0]->SetShader(CMaterial::m_pStandardShader);
+					//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+				}
+				//m_pPlayer->Set_Active(false);
+			}
+			if (wParam == 'C') {
+				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
+
+			}
 			if (wParam == 'U') {
 				ServerAnimationSyncData data;
 				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -474,7 +500,7 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					nPlayer++;
 
 					string message2 = "Player list :";
-					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
 					for (auto& obj : *player_list) {
 						string name = obj->m_pstrFrameName;
 						message2 += name + ", ";
@@ -618,7 +644,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 
 
-	scene_manager->Set_Active_Scene("Character_Select");
+	scene_manager->Set_Active_Scene("In_Stage");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
 
@@ -683,15 +709,7 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 		}
 
-
-		if (multiMode) {
-			auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-			auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
-			player->GetStateMachine()->handleEvent(pKeysBuffer);
-		}
-		else {
-			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
-		}
+		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -706,32 +724,18 @@ void CGameFramework::ProcessInput()
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
-			if (multiMode) {
-				auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-				auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
-				if (cxDelta || cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						player->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						player->Rotate(cyDelta, cxDelta, 0.0f);
-				}
-				if (dwDirection)
-					player->Move(dwDirection, 1 * 12.25f, true);
-			}
-			else {
-				if (cxDelta || cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+			if (cxDelta || cyDelta)
+			{
+				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
 
-						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-				}
-				if (dwDirection)
-					m_pPlayer->Move(dwDirection, 1 * 12.25f, true);
+					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+				else
+					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
+			if (dwDirection)
+				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
+		
 	}
 	
 }
@@ -928,6 +932,16 @@ void CGameFramework::FrameAdvance()
 {
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
+	
+	{
+		std::lock_guard<std::mutex> lock(pendingCreateMutex);
+		while (!pendingPlayerCreates.empty())
+		{
+			int playerId = pendingPlayerCreates.front();
+			pendingPlayerCreates.pop();
+			CreateRemotePlayer(playerId);
+		}
+	}
 
 	// ====================== [1] Compute: Update Scene ======================
 	BeginGPUStage(GPU_Stage::Compute);
@@ -1027,7 +1041,11 @@ void CGameFramework::FrameAdvance()
 
 		// Record moving Object's Last Pos to use motion blur
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-		m_pPlayer->Record_Last_Pos();
+
+		if (m_pPlayer)
+		{
+			m_pPlayer->Record_Last_Pos();
+		}
 
 #ifndef WRITE_TEXT_UI
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
@@ -1058,6 +1076,9 @@ void CGameFramework::FrameAdvance()
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
+
+
+	SendPacket();
 }
 
 
@@ -1107,64 +1128,139 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 void CGameFramework::SendPacket()
 {
-	std::lock_guard<std::mutex> lock(networkMutex);
+	if (serverSocket == INVALID_SOCKET) return;  
+	if (!m_pPlayer) return; 
 
-	if (!serverSocket) return;
+	XMFLOAT3 pos = m_pPlayer->GetPosition();
+	int state = m_pPlayer->GetState();
 
-	CPlayer* player = GetPlayer();
-	if (!player) return;
+	char buffer[256];
+	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, state);
 
-	DirectX::XMFLOAT3 pos = player->GetPosition();
-	int state = player->GetState();
-
-	std::ostringstream packetStream;
-	packetStream << "MOVE," << player->GetID() << ","
-		<< std::fixed << std::setprecision(2) << pos.x << ","
-		<< pos.y << "," << pos.z << ","
-		<< state;
-
-	std::string packet = packetStream.str();
-
-	int bytesSent = send(serverSocket, packet.c_str(), packet.size(), 0);
-	if (bytesSent == SOCKET_ERROR)
-	{
-		std::cerr << "[ERROR] send() 실패: " << WSAGetLastError() << std::endl;
-	}
-	else
-	{
-		std::cout << "[INFO] 서버로 패킷 전송 완료: " << packet << std::endl;
-	}
+	send(serverSocket, buffer, (int)strlen(buffer), 0);
 }
 
-std::string CGameFramework::ReceiveData()
+void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-	char buffer[1024];
-	int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+	int playerId;
+	float px, py, pz;
+	int state;
 
-	if (bytesReceived > 0)
+	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
-		std::string receivedData(buffer, bytesReceived);
+		printf("[Debug] 내 클라이언트 ID 수신 완료: %d\n", ClientNum);
 
-		int playerId;
-		float px, py, pz;
-		int state;
+		CreateLocalPlayer(ClientNum);
 
-		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-			&playerId, &px, &py, &pz, &state) == 5)
+		m_pPlayer = GetSceneManager().GetPlayerById(ClientNum);
+		if (m_pCamera && m_pPlayer)
+			m_pCamera->SetPlayer(m_pPlayer);
+
+		return;
+	}
+
+	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
+		&playerId, &px, &py, &pz, &state) == 5)
+	{
+		Scene_Manager& sceneManager = GetSceneManager();
+
+		if (playerId == ClientNum)
 		{
-			Scene_Manager& sceneManager = GetSceneManager();
-			CPlayer* player = sceneManager.GetPlayerById(playerId);
-			if (player)
+			if (m_pPlayer)
 			{
-				player->SetPosition(DirectX::XMFLOAT3(px, py, pz));
-				player->SetState(state);
+				m_pPlayer->SetPosition(XMFLOAT3(px, py, pz));
+				m_pPlayer->SetState(state);
 			}
 		}
-		return receivedData;
+		else
+		{
+			auto it = m_pRemotePlayers.find(playerId);
+			if (it != m_pRemotePlayers.end())
+			{
+				it->second->SetPosition(XMFLOAT3(px, py, pz));
+				it->second->SetState(state);
+			}
+			else
+			{
+				{
+					std::lock_guard<std::mutex> lock(pendingCreateMutex);
+					pendingPlayerCreates.push(playerId);
+				}
+			}
+		}
+	}
+}
+
+void CGameFramework::CreateLocalPlayer(int playerId)
+{
+	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+	if (!scene || !scene->obj_manager || !Active_CommandList) return;
+
+	HRESULT hr = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
+	if (FAILED(hr)) return;
+
+	auto local_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+
+	local_player->SetPosition(XMFLOAT3(25.0f, 0.0f, 25.0f)); 
+	local_player->SetID(playerId);
+	local_player->SetState(0);
+	local_player->Set_Name("MyPlayer");
+	local_player->Object_type = OBJECT_TPYE_PLAYER;
+
+	scene->obj_manager->Add_Object(local_player, Object_Type::player);
+	scene_manager->RegisterRemotePlayer(playerId, local_player);
+
+	m_pPlayer = local_player.get();
+
+	if (m_pCamera)
+	{
+		m_pCamera->SetPlayer(m_pPlayer);
+	}
+}
+
+void CGameFramework::CreateRemotePlayer(int playerId)
+{
+	printf("[Debug] CreateRemotePlayer 호출: playerId = %d\n", playerId);
+
+	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
+	{
+		printf("[Debug] 이미 존재하는 플레이어입니다: %d\n", playerId);
+		return;
 	}
 
-	return "";
+	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+	if (!scene)
+	{
+		printf("[Debug] scene == nullptr\n");
+		return;
+	}
+
+	if (!scene->obj_manager)
+	{
+		printf("[Debug] scene->obj_manager == nullptr\n");
+		return;
+	}
+
+	printf("[Debug] Player 생성 시작\n");
+
+	auto new_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+
+	new_player->SetPosition(XMFLOAT3(0.f, 0.f, 0.f));
+	new_player->SetState(0);
+	new_player->Set_Name("Remote_" + std::to_string(playerId));
+	new_player->Object_type = OBJECT_TPYE_PLAYER;
+
+	printf("[Debug] Add_Object 호출 직전\n");
+
+	scene->obj_manager->Add_Object(std::static_pointer_cast<CGameObject>(new_player), Object_Type::player);
+
+	printf("[Debug] Add_Object 호출 완료\n");
+
+	m_pRemotePlayers[playerId] = new_player.get();
+
+	printf("[Debug] CreateRemotePlayer 완료: playerId = %d\n", playerId);
 }
+
 
 void CGameFramework::Disconnect()
 {
@@ -1180,73 +1276,20 @@ void CGameFramework::NetworkLoop()
 {
 	while (isRunning)
 	{
-		SendPacket();
-		std::this_thread::sleep_for(std::chrono::milliseconds(33));
-
 		char buffer[1024];
 		int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
 
 		if (bytesReceived > 0)
 		{
-			buffer[bytesReceived] = '\0'; 
+			buffer[bytesReceived] = '\0';
 			std::string receivedData(buffer);
-			std::cout << "[INFO] 서버로부터 수신된 데이터: " << receivedData << std::endl;
-			if (receivedData.starts_with("PLAYER_UPDATE"))
+
 			{
-				int id = 0;
-				float x = 0, y = 0, z = 0;
-				int state = 0;
-
-				if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-					&id, &x, &y, &z, &state) == 5)
-				{
-
-					if (id != ClientNum)
-					{
-						if (remotePlayers.find(id) == remotePlayers.end()) {
-							RemotePlayer new_player;
-							new_player.id = id;
-							new_player.position = { x, y, z };
-							new_player.state = state;
-
-							auto player = std::make_shared<CTerrainPlayer>();
-							player->SetPosition(DirectX::XMFLOAT3(x, y, z));
-							player->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(player));
-							object_manager->Add_Object(player, Object_Type::player);
-
-							new_player.player_obj = player;
-							remotePlayers[id] = new_player;
-						}
-						else
-						{
-							auto& p = remotePlayers[id];
-							p.position = { x, y, z };
-							p.state = state;
-							if (p.player_obj)
-							{
-								p.player_obj->SetPosition(DirectX::XMFLOAT3(x, y, z));
-								p.player_obj->GetStateMachine()->SetState(static_cast<State>(state));
-							}
-						}
-					}
-				}
-			}
-			else if (receivedData.starts_with("PLAYER_LEAVE"))
-			{
-				int id = 0;
-				if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &id) == 1)
-				{
-					if (remotePlayers.find(id) != remotePlayers.end())
-					{
-						if (remotePlayers[id].player_obj) 
-						{
-							object_manager->Delete_Object(remotePlayers[id].player_obj);
-						}
-						remotePlayers.erase(id);
-					}
-				}
+				std::lock_guard<std::mutex> lock(recvQueueMutex);
+				recvQueue.push(receivedData);
 			}
 		}
+
 		else if (bytesReceived == SOCKET_ERROR)
 		{
 			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
@@ -1257,9 +1300,13 @@ void CGameFramework::NetworkLoop()
 			isRunning = false;
 			break;
 		}
-		else
+		for (const auto& playerPair : m_pRemotePlayers)
 		{
-			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
+			CPlayer* player = playerPair.second;
+			XMFLOAT3 pos = player->GetPosition();
+			std::cout << "[DEBUG] Player ID: " << playerPair.first
+				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")"
+				<< std::endl;
 		}
 	}
 }

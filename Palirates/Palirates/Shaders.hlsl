@@ -11,11 +11,10 @@ cbuffer Frame_Info : register(b0)
 struct Material_Info
 {
     float4 gAlbedoColor;
-
-    float gRoughness;
-    float gMetallic;
-    float gSpecular_intensity;
-    float gEmissive_intensity;
+    uint material_ID;
+    uint padding0;
+    uint padding1;
+    uint padding2;
 };
 
 cbuffer cbGameObjectInfo : register(b1)
@@ -70,8 +69,7 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
     float4 Albedo_Color : SV_TARGET0;
     float4 world_Position : SV_TARGET1;
     float4 world_Normal_and_Camera_Distance : SV_TARGET2;
-    float4 Material_Light_Info : SV_TARGET3;
-    float4 Velocity_Mask_Obj_Id : SV_TARGET4;
+    float4 Velocity_Mask_Obj_Id : SV_TARGET3;
 
 };
 
@@ -146,10 +144,9 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -182,16 +179,13 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     }
     
     
-    output.Albedo_Color = cColor;
+    output.Albedo_Color.xyz = cColor.xyz;
+    output.Albedo_Color.a = (float) (material_info.material_ID) / 255.0f;
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = normalW;
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
-
-    output.Material_Light_Info = float4(material_info.gRoughness, material_info.gMetallic, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
     output.Velocity_Mask_Obj_Id = float4(input.velocity, 0.0f, 0.0f);
-
-
 
     return (output);
 
@@ -343,24 +337,21 @@ VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 0.0f);
     
-    float4 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0);
-    float4 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1);
+    float3 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0).xyz;
+    float3 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1).xyz;
     
     //output.Albedo_Color = input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-    output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-
+    output.Albedo_Color.xyz = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
+    output.Albedo_Color.a = (float) (material_info.material_ID) / 255.0f;
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
-
-    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
     
     return (output);
 }
@@ -384,19 +375,19 @@ VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 10.0f);
     
-    output.Albedo_Color = input.color;
+    output.Albedo_Color.xyz = input.color.xyz;
+    output.Albedo_Color.a = (float) (material_info.material_ID) / 255.0f;
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
 
-    output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
+    //output.Material_Light_Info = float4(material_info.gRoughness, 0.0f, material_info.gSpecular_intensity, material_info.gEmissive_intensity);
 
     return (output);
 }
@@ -458,24 +449,9 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
     return (output);
 }
 
-
-// OBB don't need DefferedRendering
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_BoundingBox(VS_OBB_OUTPUT input)
+float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
 {
-    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Material_Light_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    
-    return (output);
-}
-
-
-//float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
-//{
-//    float4 cColor = input.color;
+    float4 cColor = input.color;
         
-//    return (cColor);
-//}
+    return (cColor);
+}

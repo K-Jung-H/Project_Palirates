@@ -446,13 +446,6 @@ CMaterial::~CMaterial()
 CMaterial::CMaterial(const CMaterial& other)
 {
 	m_cAlbedo = other.m_cAlbedo;
-	m_cEmissive = other.m_cEmissive;
-
-	m_fRoughness = other.m_fRoughness;
-	m_fMetallic = other.m_fMetallic;
-	m_fSpecular = other.m_fSpecular;
-
-	m_xmf4SpecularColor = other.m_xmf4SpecularColor;
 	m_fGlossiness = other.m_fGlossiness;
 	m_fGlossyReflection = other.m_fGlossyReflection;
 
@@ -460,6 +453,7 @@ CMaterial::CMaterial(const CMaterial& other)
 	m_pShader = other.m_pShader;
 	m_nType = other.m_nType;
 	m_nTextures = other.m_nTextures;
+	m_Material_ID = other.m_Material_ID;
 
 	if (other.m_ppstrTextureNames != nullptr) 
 	{
@@ -500,15 +494,11 @@ std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 
 	// 색상, 파라미터 값들은 복사
 	clone->m_cAlbedo = this->m_cAlbedo;
-	clone->m_cEmissive = this->m_cEmissive;
-	clone->m_fRoughness = this->m_fRoughness;
-	clone->m_fMetallic = this->m_fMetallic;
-	clone->m_fSpecular = this->m_fSpecular;
-	clone->m_xmf4SpecularColor = this->m_xmf4SpecularColor;
 	clone->m_fGlossiness = this->m_fGlossiness;
 	clone->m_fGlossyReflection = this->m_fGlossyReflection;
 	clone->m_pShader = this->m_pShader;
 	clone->m_nType = this->m_nType;
+	clone->m_Material_ID = this->m_Material_ID;
 
 	if (this->m_ppstrTextureNames)
 	{
@@ -532,8 +522,6 @@ std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 
 	return clone;
 }
-
-
 
 void CMaterial::SetShader(CShader* pShader)
 {
@@ -600,18 +588,11 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 {
+	Material_GPU_Packet material_packet{};
+	material_packet.gAlbedoColor = m_cAlbedo;
+	material_packet.light_material_ID = m_Material_ID;
 
-
-	Material_Info material_info;
-	material_info.gAlbedoColor = m_cAlbedo;
-
-	material_info.gRoughness = m_fRoughness;
-	material_info.gMetallic = m_fMetallic;
-	material_info.gEmissive_intensity = m_cEmissive.w;
-	material_info.gSpecular_intensity = m_fSpecular;
-
-
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_info, 16); // 16~23
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
 
 	for (int i = 0; i < m_nTextures; i++)
@@ -682,8 +663,132 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	}
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
+//==========================================================
+
+UINT Light_Material_Manager::index = 0;
+std::vector<Light_Material_Info> Light_Material_Manager::light_material_list;
+bool Light_Material_Manager::reserved_update = false;
+CTexture* Light_Material_Manager::material_info_buffer = NULL;
+
+// Initialize the material manager
+void Light_Material_Manager::Initialize()
+{
+	index = 0;
+	light_material_list.clear();
+	
+}
+
+// Add a new material and return its ID
+UINT Light_Material_Manager::Add_Material(const Light_Material_Info& material)
+{
+	light_material_list.push_back(material);
+
+	reserved_update = true;
+	return index++;
+}
+
+// Update an existing material
+void Light_Material_Manager::Update_Material_Info(UINT idx, const Light_Material_Info& material)
+{
+	if (idx >= light_material_list.size())
+	{
+		throw std::out_of_range("Light_Material_Manager::UpdateMaterial - Index out of range");
+	}
+	light_material_list[idx] = material;
+	reserved_update = true;
+}
+
+void Light_Material_Manager::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (material_info_buffer)
+	{
+		delete material_info_buffer;
+		material_info_buffer = nullptr;
+	}
+
+	material_info_buffer = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 1, 0, 0, 1, 0, 0);
+
+	UINT stride = sizeof(Light_Material_Info);
+	UINT count = static_cast<UINT>(light_material_list.size());
+
+	material_info_buffer->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, light_material_list.data(), count, stride,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, material_info_buffer, 0, ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX);
+
+	reserved_update = false;
+}
+
+void Light_Material_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!reserved_update) 
+		return;
+	
+	if(material_info_buffer)
+		delete material_info_buffer;
+
+	CreateStructuredBuffer(pd3dDevice, pd3dCommandList);
+
+	reserved_update = false;
+}
+
+void Light_Material_Manager::UpdateGraphicsShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (material_info_buffer)
+	{
+			material_info_buffer->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+	}
+}
+
+// Get material info by ID
+const Light_Material_Info& Light_Material_Manager::Get_Material(UINT idx)
+{
+	if (idx >= light_material_list.size())
+	{
+		throw std::out_of_range("Light_Material_Manager::GetMaterial - Index out of range");
+	}
+	return light_material_list[idx];
+}
+
+// Get total number of materials
+size_t Light_Material_Manager::Get_Material_Count()
+{
+	return light_material_list.size();
+}
+
+// Release all materials
+void Light_Material_Manager::Release()
+{
+	if (material_info_buffer)
+	{
+		delete material_info_buffer;
+		material_info_buffer = nullptr;
+	}
+
+
+	light_material_list.clear();
+	index = 0;
+}
+
+// Find a similar material and return its ID, otherwise return -1
+int Light_Material_Manager::Find_Similar_Material(const Light_Material_Info& material, float tolerance)
+{
+	for (int i = 0; i < static_cast<int>(light_material_list.size()); ++i)
+	{
+		const Light_Material_Info& existing = light_material_list[i];
+
+		if (fabs(existing.gRoughness - material.gRoughness) < tolerance 
+			&& fabs(existing.gMetallic - material.gMetallic) < tolerance 
+			&& Compare_XMFLOAT4(existing.gSpecular, material.gSpecular, tolerance) 
+			&& Compare_XMFLOAT4(existing.gEmissive, material.gEmissive, tolerance))
+		{
+			return i; // Found similar material
+		}
+	}
+	return -1; // No similar material found
+}
+//==========================================================
+
 
 void CRootMotionCallbackHandler::HandleCallback(void* pCallbackData, float fTrackPosition)
 {
@@ -1126,33 +1231,32 @@ XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	XMStoreFloat4x4(&result, finalMatrix);
 	return result;
 }
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
 
 	if (m_pAnimationTracks)
 	{
-		// Bone 정보 초기화
-		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
-		// 활성화된 트랙의 전체 가중치 크기 -> 가중치 정규화에 사용
 		float totalWeight = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
-			if (m_pAnimationTracks[k].m_bEnable)
+			if (m_pAnimationTracks[k].m_fWeight > 0)
 			{
 				totalWeight += m_pAnimationTracks[k].m_fWeight;
 			}
 		}
+		if (totalWeight == 0.0f) return;
 
 
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
-			if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
+			if (m_pAnimationTracks[k].m_fWeight > 0.0f)
 			{
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
@@ -1164,19 +1268,17 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
 
-					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight; // 트랙의 가중치 정규화
-					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight)); // 정규화 비율을 적용한 트랙의 변환행렬 더하기
+					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-					const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+					//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-						if (boneName == "Hips")
+						//if (j == pRootGameObject->RootBoneIndex)
+						if (j == 2)
 						{
 							if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
-							//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
-							//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-							//}
 							blendedTransform._41 = 0.0f;
 							//blendedTransform._42 = 0.8762761f;
 							blendedTransform._43 = 0.0f;
@@ -1184,11 +1286,11 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 						}
 					}
 					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
-						if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3) {
-							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-							/*std::wostringstream oss;
-							oss << L"XMFLOAT3: (" << HipsPosition.x << L", " << HipsPosition.y << L", " << HipsPosition.z << L")\n";
-							OutputDebugStringW(oss.str().c_str());*/
+						//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
+						if (j == 0) {
+							if (k == 3) {
+								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+							}
 
 							blendedTransform._41 = 0.0f;
 							//blendedTransform._42 = 0.0f;
@@ -1202,16 +1304,12 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 				m_pAnimationTracks[k].HandleCallback();
 			}
+			if (m_pAnimationTracks[k].m_fWeight >= 1.0f)
+				break;
 		}
 
-		// 4. Transform 업데이트
-		// m_ppBoneFrameCaches가 각각 pRootGameObject의 자식 객체(=bone 객체)이므로, 
-		// 자식 객체에 부모 객체의 변환 정보를 상속하면서 뼈 객체마다 업데이트 된 m_xmf4x4Parent가 반영되어, 각 뼈의 정보 반영
-		// == 각 뼈들의 변환 행렬 정보 업데이트
 		pRootGameObject->UpdateTransform(NULL);
 
-
-		// 5. 추가 애니메이션 처리
 		OnRootMotion(pRootGameObject);
 		OnAnimationIK(pRootGameObject);
 	}
@@ -1219,10 +1317,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)
 {
-	if (!m_pAnimationTracks || !m_pAnimationSets) 
-		return;
+	if (!m_pAnimationTracks || !m_pAnimationSets) return;
 
-	// 본 초기화
 	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 	{
 		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
@@ -1231,7 +1327,7 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 	float totalWeight = 0.0f;
 	for (int k = 0; k < m_nAnimationTracks; k++)
 	{
-		if (m_pAnimationTracks[k].m_bEnable)
+		if (m_pAnimationTracks[k].m_fWeight > 0)
 		{
 			totalWeight += m_pAnimationTracks[k].m_fWeight;
 		}
@@ -1239,10 +1335,10 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 
 	for (int k = 0; k < m_nAnimationTracks; k++)
 	{
-		if (m_pAnimationTracks[k].m_bEnable && totalWeight > 0.0f)
+		if (m_pAnimationTracks[k].m_fWeight > 0)
 		{
 			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
-			float fPosition = m_pAnimationTracks[k].m_fPosition; 
+			float fPosition = m_pAnimationTracks[k].m_fPosition;
 
 			for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 			{
@@ -1252,30 +1348,42 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-				const std::string& boneName = m_pAnimationSets->GetBoneName(j);
+				//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-					if (boneName == "Hips")
+					//if (j == pRootGameObject->RootBoneIndex)
+					if (j == 2)
 					{
 						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 						}
-						//if (dynamic_cast<CTerrainPlayer*>(pRootGameObject)->GetStateMachine()->Get_State() == State::Idle) {
-						//	HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-						//}
 						blendedTransform._41 = 0.0f;
 						//blendedTransform._42 = 0.8762761f;
 						blendedTransform._43 = 0.0f;
 
 					}
 				}
+				else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+					//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
+					if (j == 0) {
+						if (k == 3) {
+							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+						}
+
+						blendedTransform._41 = 0.0f;
+						//blendedTransform._42 = 0.0f;
+						blendedTransform._43 = 0.0f;
+					}
+
+				}
 
 				m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 			}
 			m_pAnimationTracks[k].HandleCallback();
 		}
+		if (m_pAnimationTracks[k].m_fWeight >= 1.0f)
+			break;
 	}
 
-	// 트랜스폼 적용
 	pRootGameObject->UpdateTransform(nullptr);
 }
 
@@ -1286,23 +1394,23 @@ void CAnimationController::ServerAdvanceTime(const ServerAnimationSyncData& sync
 
 bool IsUpperBodyBone(const std::string& boneName)
 {
-    static const std::unordered_set<std::string> upperBodyBones =
-    {
-        "Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows", "Eyebrows", "Clavicle_L", 
+	static const std::unordered_set<std::string> upperBodyBones =
+	{
+		"Hips", "Spine_01", "Spine_02", "Spine_03", "Neck", "Head", "Eyes", "Eyebrows", "Eyebrows", "Clavicle_L",
 		"Shoulder_L", "Elbow_L", "Hand_L", /* tumb */ "Clavicle_R", "Shoulder_R", "Elbow_R", "Hand_R",  /* tumb */"SM_Wep_Sabre_01",
 
-    };
-    return upperBodyBones.find(boneName) != upperBodyBones.end();
+	};
+	return upperBodyBones.find(boneName) != upperBodyBones.end();
 }
 
 bool IsLowerBodyBone(const std::string& boneName)
 {
-    static const std::unordered_set<std::string> lowerBodyBones =
-    {
-        "UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
+	static const std::unordered_set<std::string> lowerBodyBones =
+	{
+		"UpperLeg_R", "LowerLeg_R", "Ankle_R", "Ball_R", "Toes_R",
 		"UpperLeg_L", "LowerLeg_L", "Ankle_L", "Ball_L", "Toes_L"
-    };
-    return lowerBodyBones.find(boneName) != lowerBodyBones.end();
+	};
+	return lowerBodyBones.find(boneName) != lowerBodyBones.end();
 }
 
 void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGameObject)
@@ -1322,9 +1430,9 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 		{
 			if (m_pAnimationTracks[k].m_bEnable)
 			{
-				if (m_pAnimationTracks[k].m_nAnimationSet == 2) 
+				if (m_pAnimationTracks[k].m_nAnimationSet == 2)
 					totalWeightUpper += m_pAnimationTracks[k].m_fWeight;
-				else if (m_pAnimationTracks[k].m_nAnimationSet == 1) 
+				else if (m_pAnimationTracks[k].m_nAnimationSet == 1)
 					totalWeightLower += m_pAnimationTracks[k].m_fWeight;
 			}
 		}
@@ -1343,13 +1451,13 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 					bool isLowerBody = IsLowerBodyBone(boneName);
 
 					float totalWeight = 0.0f;
-					
+
 					if (isLowerBody)
 					{
-						totalWeight = totalWeightLower;  
+						totalWeight = totalWeightLower;
 					}
 					else {
-						totalWeight = totalWeightUpper;  
+						totalWeight = totalWeightUpper;
 					}
 
 					if ((!isLowerBody && m_pAnimationTracks[k].m_nAnimationSet == 2) ||
@@ -1363,9 +1471,9 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 
 						if (boneName == "Hips")
 						{
-							blendedTransform._41 = 0.0f; 
+							blendedTransform._41 = 0.0f;
 							blendedTransform._42 = 0.8762761f;
-							blendedTransform._43 = 0.0f; 
+							blendedTransform._43 = 0.0f;
 						}
 
 						m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
@@ -1410,8 +1518,6 @@ void CLoadedModelInfo::PrepareSkinning()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
-
 CGameObject::CGameObject(const std::string_view& name) 
 {
 	Set_Name(name);
@@ -1810,12 +1916,13 @@ void CGameObject::Animate(float fTimeElapsed)
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 
+	if (m_pSibling)
+		if (m_pSibling->Get_Active())
+			m_pSibling->Animate(fTimeElapsed);
 
-	if (m_pSibling) 
-		m_pSibling->Animate(fTimeElapsed);
-
-	if (m_pChild) 
-		m_pChild->Animate(fTimeElapsed);
+	if (m_pChild)
+		if (m_pChild->Get_Active())
+			m_pChild->Animate(fTimeElapsed);
 }
 
 void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
@@ -1914,10 +2021,12 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	}
 
 	if (m_pSibling)
-		m_pSibling->Render(pd3dCommandList, pCamera);
+		if (m_pSibling->Get_Active())
+			m_pSibling->Render(pd3dCommandList, pCamera);
 
 	if (m_pChild)
-		m_pChild->Render(pd3dCommandList, pCamera);
+		if (m_pChild->Get_Active())
+			m_pChild->Render(pd3dCommandList, pCamera);
 }
 
 void CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -2363,19 +2472,39 @@ BYTE ReadStringFromFile(FILE *pInFile, char *pstrToken)
 	return(nStrLength);
 }
 
+std::unordered_map<std::string, std::shared_ptr<CMesh>> CGameObject::MeshCache;
+
+std::shared_ptr<CMesh> CGameObject::LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+	auto it = MeshCache.find(meshPath);
+	if (it != MeshCache.end())
+		return it->second;
+
+	auto mesh = std::make_shared<CStandardMesh>(device, cmdList);
+	mesh->LoadMeshFrom_OtherFile(device, cmdList, meshPath.c_str()); 
+	MeshCache[meshPath] = mesh;
+	return mesh;
+}
+
+void CGameObject::ClearMeshCache()
+{
+	MeshCache.clear();
+}
+
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	// delete old Material & Resize material
+	// Clear old materials
 	Material_list.clear();
-
 	int materialCount = ReadIntegerFromFile(pInFile);
-	Material_list.reserve(materialCount);  // Reserve memory
+	Material_list.reserve(materialCount);
 
 	std::shared_ptr<CMaterial> pMaterial = nullptr;
+	std::vector<Light_Material_Info> tempLightInfos; 
+	tempLightInfos.resize(materialCount);
 
 	for (;;)
 	{
@@ -2384,10 +2513,8 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		if (!strcmp(pstrToken, "<Material>:"))
 		{
 			nMaterial = ReadIntegerFromFile(pInFile);
-
-			// add & define new Material 
 			pMaterial = std::make_shared<CMaterial>(7);
-						
+
 			if (!pShader)
 			{
 				UINT nMeshType = GetMeshType();
@@ -2400,11 +2527,11 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 				}
 			}
 
-			// Resize to nMaterial
 			if (nMaterial >= Material_list.size())
 				Material_list.resize(nMaterial + 1);
 
 			Material_list[nMaterial] = pMaterial;
+			tempLightInfos[nMaterial] = Light_Material_Info{};
 		}
 		else if (!strcmp(pstrToken, "<AlbedoColor>:"))
 		{
@@ -2412,87 +2539,94 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 		else if (!strcmp(pstrToken, "<EmissiveColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_cEmissive), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gEmissive), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularColor>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_xmf4SpecularColor), sizeof(float), 4, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gSpecular), sizeof(float), 4, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<SpecularHighlight>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fSpecular), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gSpecular.w), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Smoothness>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fRoughness), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gRoughness), sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<Metallic>:"))
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fMetallic), sizeof(float), 1, pInFile);
+			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gMetallic), sizeof(float), 1, pInFile);
 		}
-		else if (!strcmp(pstrToken, "<Glossiness>:"))
+		else if (!strcmp(pstrToken, "<Glossiness>:")) // Not Use
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossiness), sizeof(float), 1, pInFile);
+			float dummy = 0.0f;
+			nReads = (UINT)::fread(&dummy, sizeof(float), 1, pInFile);
 		}
-		else if (!strcmp(pstrToken, "<GlossyReflection>:"))
+		else if (!strcmp(pstrToken, "<GlossyReflection>:")) // Not Use
 		{
-			nReads = (UINT)::fread(&(pMaterial->m_fGlossyReflection), sizeof(float), 1, pInFile);
+			float dummy = 0.0f;
+			nReads = (UINT)::fread(&dummy, sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
-				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
+				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
 				pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, 
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
 				MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
 				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
 				pParent, pInFile, pShader);
 		}
-		//else if (!strcmp(pstrToken, "<DetailAlbedoMap>:"))
-		//{
-		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_ALBEDO_MAP, ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX,
-		//		pMaterial->m_ppstrTextureNames[5], &(pMaterial->m_ppTextures[5]),
-		//		pParent, pInFile, pShader);
-		//}
-		//else if (!strcmp(pstrToken, "<DetailNormalMap>:"))
-		//{
-		//	pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_DETAIL_NORMAL_MAP, ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX,
-		//		pMaterial->m_ppstrTextureNames[6], &(pMaterial->m_ppTextures[6]),
-		//		pParent, pInFile, pShader);
-		//}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
+			// 재질 등록
+			for (int i = 0; i < Material_list.size(); ++i)
+			{
+				auto& material = Material_list[i];
+				if (material)
+				{
+					const Light_Material_Info& info = tempLightInfos[i];
+					int similarID = Light_Material_Manager::Find_Similar_Material(info);
+
+					if (similarID >= 0)
+					{
+						material->m_Material_ID = static_cast<UINT>(similarID);
+					}
+					else
+					{
+						material->m_Material_ID = Light_Material_Manager::Add_Material(info);
+					}
+				}
+			}
 			break;
 		}
 	}
-
 }
-
 
 CGameObject *CGameObject::LoadFrameHierarchyFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, CGameObject *pParent, FILE *pInFile, CShader *pShader, int *pnSkinnedMeshes)
 {
@@ -2608,22 +2742,16 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
-			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
-
 			::ReadStringFromFile(pInFile, pstrToken);
 			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken); 
+				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken);
 
-				char pstrFileName[128] = { '\0' };
-				strncpy(pstrFileName, fileName.c_str(), sizeof(pstrFileName) - 1);
-				pstrFileName[sizeof(pstrFileName) - 1] = '\0';
-
-				pMesh->LoadMeshFrom_OtherFile(pd3dDevice, pd3dCommandList, pstrFileName);
+				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
+				if (sharedMesh)
+					pGameObject->SetMesh(sharedMesh.get());
 			}
-			pGameObject->SetMesh(pMesh);
-
 		}
 		else if (!strcmp(pstrToken, "<Materials>:"))
 		{
@@ -2916,7 +3044,53 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 }
 
+std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)
+{
+	// 1) 전체 계층의 월드 트랜스폼을 갱신
+	//    (Detach 대상의 저장된 m_xmf4x4World가 최신이 아닐 수 있기 때문)
+	CGameObject* root = Get_Root_Object();
+	root->UpdateTransform(nullptr);
 
+	// 2) 이름으로 찾은 raw 포인터
+	CGameObject* target = FindFrame(const_cast<char*>(targetName));
+	if (!target || !target->m_pParent)
+		return nullptr;
+	target->Set_Active(false);
+	CGameObject* parentRaw = target->m_pParent;
+
+	//// 3) 부모의 m_pChild → sibling 체인에서 shared_ptr 찾기
+	//std::shared_ptr<CGameObject> prev;
+	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
+	//while (curr && curr.get() != target) {
+	//	prev = curr;
+	//	curr = curr->m_pSibling;
+	//}
+	//if (!curr)
+	//	return nullptr;    // 뭔가 꼬였으면 리턴
+
+	//// 4) 대상의 최신 월드 매트릭스 저장
+	//XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
+
+	//// 5) 부모의 자식 링크에서 제거
+	//if (prev)
+	//	prev->m_pSibling = curr->m_pSibling;
+	//else
+	//	parentRaw->m_pChild = curr->m_pSibling;
+
+	//curr->m_pSibling = nullptr;
+	//curr->m_pParent = nullptr;
+
+	//// 6) 완전 독립: “로컬” 트랜스폼을 savedWorld로 덮어쓰고,
+	////    부모월드는 identity(=nullptr)로 설정
+	//curr->m_xmf4x4Parent = savedWorld;
+	////curr->m_xmf4x4Parent = Matrix4x4::Identity();
+	//curr->m_xmf4x4World = savedWorld;
+
+	//// 7) 이 노드부터 subtree 갱신 (parentWorld=nullptr→Identity)
+	//curr->UpdateTransform(nullptr);
+
+	return curr;
+}
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
@@ -3413,6 +3587,12 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	Plane_Material = new CMaterial(2);
 	Plane_Material->SetShader(plane_shader);
 
+	Light_Material_Info temp;
+	temp.gSpecular = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
+	temp.gEmissive = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
+	UINT ID = Light_Material_Manager::Add_Material(temp);
+	Plane_Material->m_Material_ID = ID;
+		
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
 	desiredTexelSize = 20.0f;
@@ -3484,12 +3664,12 @@ Wave_Object::~Wave_Object()
 void Wave_Object::Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	// 상태를 COPY_DEST로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	//SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 
 	pd3dCommandList->CopyBufferRegion(Pos_Normal_ReadBack_buffer, 0, wave_data_texture->GetResource(3), 0, sizeof(UINT) * 4);
 
 	// 상태를 GENERIC_READ로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
+	//SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 XMFLOAT3 Wave_Object::Readback_Buffer_Data()
@@ -3635,12 +3815,12 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 
+
 		if (Plane_Material && Plane_Material->m_pShader)
 		{
-			Plane_Material->UpdateShaderVariable(pd3dCommandList);
-
 			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 0);
 			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			Plane_Material->UpdateShaderVariable(pd3dCommandList);
 			m_pMesh->Render(pd3dCommandList, 0);
 		}
 	}
@@ -3977,92 +4157,3 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	CGameObject::Render(pd3dCommandList, pCamera);
 	//GetStateMachine()->update(0.01f);
 }
-
-//CMultiPlayerObject::CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
-//	: m_StateMachine(std::make_unique<MultiPlayerStateMachine>(this))
-//{
-//	Object_type = OBJECT_TPYE_PLAYER;
-//	CLoadedModelInfo* pHumanModel = pModel;
-//	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
-//
-//	if (!pHumanModel) {
-//		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-//		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-//	}
-//	n_Animation = nAnimationTracks;
-//	prevWeights.resize(n_Animation, 0.0f);
-//	targetWeights.resize(n_Animation, 0.0f);
-//
-//	Set_Child(pHumanModel->m_pModelRootObject);
-//	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
-//	for (int i = 0; i < n_Animation; ++i) {
-//		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-//		m_pSkinnedAnimationController->SetTrackEnable(i, true);
-//	}
-//
-//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
-//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
-//	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
-//
-//	SetScale(10.0f, 10.0f, 10.0f);
-//}
-//
-//CMultiPlayerObject::~CMultiPlayerObject()
-//{
-//}
-//
-//void CMultiPlayerObject::Animate(float fTimeElapsed)
-//{
-//
-//	//SetPosition(25.0f, 1064.0f, 25.0f);
-//	OnPrepareRender();
-//
-//	if (m_pSkinnedAnimationController)
-//	{
-//		/*if (Anime_test_FallingLoop)
-//			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
-//		else
-//			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
-//		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-//	}
-//
-//	/*if (On_Ground)
-//	{
-//		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
-//		XMFLOAT3 xmf3PlayerPosition = GetPosition();
-//		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
-//		AlignWithNormal(world_normal);
-//	}*/
-//
-//	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
-//	if (sibling_ptr != nullptr)
-//		sibling_ptr->Animate(fTimeElapsed);
-//
-//	shared_ptr<CGameObject> child_ptr = Get_Child();
-//	if (child_ptr != nullptr)
-//		child_ptr->Animate(fTimeElapsed);
-//
-//	/*CAnimationController* animController = GetSkinnedAnimationController();
-//	for (int i = 0; i < 5; i++)
-//	{
-//		if (test_num == 1 && i == 0) {
-//			animController->SetTrackWeight(i, 1.0f);
-//		}
-//		else if (test_num == 2 && i == 1) {
-//			animController->SetTrackWeight(i, 1.0f);
-//		}
-//		else if (test_num == 3 && i == 4) {
-//			animController->SetTrackWeight(i, 1.0f);
-//		}
-//		else
-//			animController->SetTrackWeight(i, 0.0f);
-//	}*/
-//	//CGameObject::Animate(fTimeElapsed);
-//	GetStateMachine()->update(fTimeElapsed);
-//	//m_StateMachine->update(fTimeElapsed);
-//}
-//
-//void CMultiPlayerObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
-//	CGameObject::Render(pd3dCommandList, pCamera);
-//	//GetStateMachine()->update(0.01f);
-//}

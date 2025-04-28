@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Object_Manager.h"
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 
@@ -14,6 +13,7 @@ BoundingBox_Shader::BoundingBox_Shader()
 BoundingBox_Shader::~BoundingBox_Shader()
 {
 }
+
 void BoundingBox_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	m_ngraphicsPipelineStates = 1;
@@ -126,7 +126,6 @@ OBB_Drawer::OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 		obb_shader = new BoundingBox_Shader();
 		obb_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		obb_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
 	}
 }
 
@@ -389,7 +388,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 		XMFLOAT4X4 world_matrix = obj_ptr->m_xmf4x4World;
 		XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(XMLoadFloat4x4(&world_matrix)));
 
-		Mapped_Instance_info[visible_count++] = { world_matrix, true };
+		Mapped_Instance_info[visible_count++] = { world_matrix };
 	}
 
 	rendering_num = visible_count; 
@@ -542,13 +541,17 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
+				if (obj_ptr->Object_type == 10) {
+					obj_ptr->m_xmf4x4Parent = obj_ptr->m_xmf4x4World;
+					obj_ptr->MoveForward(fTimeElapsed);
+				}
 				obj_ptr->UpdateTransform(NULL);
 			}
 	}
 	break;
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
 				/*std::wostringstream oss;
@@ -582,8 +585,8 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 
 void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 {
-//	Animate_Objects(Object_Type::skinned, fTimeElapsed);
-//	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
+	Animate_Objects(Object_Type::skinned, fTimeElapsed);
+	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
 	Animate_Objects(Object_Type::trail, fTimeElapsed);
 
@@ -645,7 +648,7 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 	case Object_Type::player:
 	{
 		bool Is_Visible = false;
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 		{
 			Is_Visible = obj_ptr->IsVisible(pCamera);
 			obj_ptr->Set_Active(Is_Visible);
@@ -753,7 +756,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 		if (terrain_ptr)
 		{
 			terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
-			Synchronize_Active_Objects_and_Tile();
+//			Synchronize_Active_Objects_and_Tile();
 		}
 
 		if (instance_shader)
@@ -779,6 +782,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 						if (instance_info.obj_mesh)
 							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 					}
+					break;
 				}
 				break;
 			}
@@ -788,7 +792,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CTerrainPlayer>& obj_ptr : player_list)
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 		{
 			if (obj_ptr->Get_Active())
 			{
@@ -845,7 +849,6 @@ void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, 
 }
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
@@ -909,6 +912,10 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 		return &non_skinned_object_list;
 		break;
 
+	case Object_Type::player:
+		return &player_list;
+		break;
+
 	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
@@ -933,11 +940,6 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 		::PostQuitMessage(0);
 		break;
 	}
-}
-
-std::vector<std::shared_ptr<CTerrainPlayer>>* Object_Manager::Get_Player_List()
-{
-	return &player_list;
 }
 
 void Object_Manager::Clear_Object_List(Object_Type type)
@@ -1019,3 +1021,4 @@ void Object_Manager::Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandLis
 {
 	bounding_box_drawer->Render(pd3dCommandList, pCamera);
 }
+

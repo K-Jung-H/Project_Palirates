@@ -4,8 +4,9 @@
 Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Position: register(t1);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
-Texture2D<float4> T_Material_Light_Info : register(t3);
-Texture2D<float4> T_Velocity : register(t4);
+Texture2D<float4> T_Velocity : register(t3);
+
+
 
 cbuffer cb_Post_Camera : register(b0)
 {
@@ -13,7 +14,17 @@ cbuffer cb_Post_Camera : register(b0)
 };
 
 //==================================================================
+float4 GetDebugColorFromID(uint id)
+{
+    // Hashing을 이용해 간단한 무작위 색상 생성
+    uint hash = id * 1664525u + 1013904223u;
 
+    float r = ((hash >> 16) & 0xFF) / 255.0f;
+    float g = ((hash >> 8) & 0xFF) / 255.0f;
+    float b = (hash & 0xFF) / 255.0f;
+
+    return float4(r, g, b, 1.0f);
+}
 
 struct VS_TEXTURED_SCREEN_RECT_OUTPUT
 {
@@ -65,22 +76,17 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
     float4 world_position = T_World_Position.Sample(gssWrap, input.uv);
     float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
-    float4 material_light_info = T_Material_Light_Info.Sample(gssWrap, input.uv);
     
     float3 wNormal = wNormal_CD.xyz;
     float Camera_Distance = wNormal_CD.w;    
 
-    Material material;
-    material.gAlbedoColor = colorTexture;
-    material.gRoughness = material_light_info.r;
-    material.gMetallic = material_light_info.g;
-    material.gSpecular_intensity = material_light_info.b;
-    material.gEmissive_intensity = material_light_info.a;
-
-    //================================================================
-
-    float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, material);
     
+    uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
+   // return GetDebugColorFromID(materialID);
+    //================================================================
+    
+    float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.xyz, materialID);
+
     //================================================================    
     
     // 안개 강도 계산 (카메라와의 거리를 기반)

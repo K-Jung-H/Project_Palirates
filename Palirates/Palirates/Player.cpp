@@ -69,6 +69,12 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
 
+		if (Vector3::Length(xmf3Shift) > 0.0f)
+		{
+			xmf3Shift = Vector3::Normalize(xmf3Shift);
+			xmf3Shift = Vector3::Scale(xmf3Shift, fDistance);
+		}
+
 		Move(xmf3Shift, bUpdateVelocity);
 	}
 }

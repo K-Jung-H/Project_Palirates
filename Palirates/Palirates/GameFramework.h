@@ -1,20 +1,12 @@
 #pragma once
 
-
 #include "Timer.h"
 #include "Player.h"
 #include "Scene.h"
 #include "UI_Manager.h"
 #include "Scene_Manager.h"
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <string>
-#include <thread>
-#include <mutex>
-#include <unordered_map>
 #include "Object.h"
 
-#pragma comment(lib, "ws2_32.lib")
 
 enum class GPU_Stage
 {
@@ -56,7 +48,10 @@ struct RemotePlayer
 {
 	int id = 0;
 	DirectX::XMFLOAT3 position = { 0.f, 0.f, 0.f };
+	DirectX::XMFLOAT3 direction = { 0.f, 0.f, 1.f };
 	int state = 0;
+	int objType = 0;
+	int modelType = 0;
 	std::shared_ptr<CTerrainPlayer> player_obj = nullptr;
 
 	RemotePlayer() = default;
@@ -121,9 +116,13 @@ public:
 	//=================서버=================
 	void ConnectToServer(const std::string& ip, int port);
 	void SendPacket();
-	std::string ReceiveData();
 	void NetworkLoop();
 	void Disconnect();
+	void CreateRemotePlayer(int playerId);
+	void CreateLocalPlayer(int playerId);
+	void ProcessReceivedData(const std::string& receivedData);
+	std::queue<int> pendingPlayerCreates;
+	std::mutex pendingCreateMutex;  
 
 	Scene_Manager sceneManager;
 	std::shared_ptr<Object_Manager> object_manager;
@@ -225,11 +224,14 @@ public:
 	//=================서버=================
 	Scene_Manager& GetSceneManager() { return *scene_manager; } 
 	CPlayer* GetPlayer() { return m_pPlayer; }
-	bool multiMode{ false };
+	bool multiMode{ true };
 	int nPlayer{ 0 };
 	int ClientNum{ 0 };
 	ServerSyncManager syncManager;
 	ServerSyncManager& GetSyncManager() { return syncManager; }
+	std::unordered_map<int, CPlayer*> m_pRemotePlayers;
+	std::queue<std::string> recvQueue;
+	std::mutex recvQueueMutex;
 
 	//=================서버=================
 

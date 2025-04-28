@@ -162,6 +162,7 @@ public:
 		: id(playerId), state(startState)
 	{
 		m_xmf3Position = XMFLOAT3(startX, startY, startZ);
+		
 	}
 
 	int GetID() const { return id; }
@@ -191,6 +192,7 @@ private:
 
 public:
 	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	CTerrainPlayer() {}
 	virtual ~CTerrainPlayer();
 
 public:
