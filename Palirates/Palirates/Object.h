@@ -755,7 +755,6 @@ public:
 class Boat_Object : public CGameObject
 {
 private:
-	std::unordered_map<std::string, CGameObject*> m_AttachedMarkerFrames;
 
 	XMFLOAT3 wave_normal_vector{};
 	float wave_height = 0.0f;
@@ -767,8 +766,11 @@ private:
 	float           			m_fMaxVelocityXZ = 0.0f;
 	float           			m_fFriction = 0.0f;
 
-
+	bool Sail_Mode = true; // false == Stay_Mode
 public:
+	std::unordered_map<std::string, CGameObject*> Boat_Frames_Marker;
+
+
 	Boat_Object();
 	virtual ~Boat_Object();
 
@@ -790,9 +792,15 @@ public:
 	XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
 	float Get_RotationSpeed() { return m_fRotationSpeed; }
 
-	void RegisterMarker(const std::string& name, CGameObject* node) { m_AttachedMarkerFrames[name] = node; }
+	void RegisterMarker(const std::string& name, CGameObject* node) { Boat_Frames_Marker[name] = node; }
 
 	bool GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos);
+
+	bool Is_Moving();
+	bool Get_Sail_Mode() { return Sail_Mode; }
+	void Set_Sail_Mode(bool mode) { Sail_Mode = mode; }
+	void Change_Model(bool is_stay_mode);
+
 };
 
 class Plane_Object : public CGameObject

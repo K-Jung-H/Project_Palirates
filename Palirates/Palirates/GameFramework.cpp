@@ -997,7 +997,7 @@ void CGameFramework::FrameAdvance()
 
 
 		//Debuging G-Buffer
-		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(0);
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
 		//post_effect_manager->fullscreen_shader->OnPrepareRender(Active_CommandList);
 		//post_effect_manager->fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, Albedo_G_Buffer_SRV_handle);
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
