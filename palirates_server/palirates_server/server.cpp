@@ -63,7 +63,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
 
         if (bytesReceived > 0)
         {
