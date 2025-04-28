@@ -496,7 +496,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[1].m_bEnable = true;
+	m_pLights[1].m_bEnable = false;
 	m_pLights[1].m_nType = SPOT_LIGHT;
 	m_pLights[1].m_fRange = 500.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -510,9 +510,9 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
 
 
-	m_pLights[2].m_bEnable = false;
+	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
@@ -1111,7 +1111,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	pCamera->Update_Last_Frame_Info(pd3dCommandList);
 
 	//씬의 객체들 프러스텀 컬링
-	obj_manager->Check_Culling_All(pCamera);
+	//obj_manager->Check_Culling_All(pCamera);
 
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
@@ -1317,7 +1317,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 
 	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
-	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_bEnable = false;
 	m_pLights[0].m_nType = POINT_LIGHT;
 	m_pLights[0].m_fRange = 300.0f;
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1326,7 +1326,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[1].m_bEnable = true;
+	m_pLights[1].m_bEnable = false;
 	m_pLights[1].m_nType = SPOT_LIGHT;
 	m_pLights[1].m_fRange = 500.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1345,7 +1345,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, -0.0f);
 	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 
 	m_pLights[3].m_bEnable = false;
@@ -1376,7 +1376,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 {
 	BuildDefaultLightsAndMaterials();
 	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1461,7 +1461,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 	//=====================================================
 	{
-		CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/SM_Veh_Boat_Warship_01_Hull_Attachments.bin", NULL);
+		CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Pirate_Ship_Model.bin", NULL);
 
 		pirate_ship = std::make_shared<Boat_Object>();
 		pirate_ship->Set_Child(Ship_Model->m_pModelRootObject);
@@ -1471,12 +1471,12 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
 
 
-		pirate_ship->SetScale({ 2.0f, 2.0f, 2.0f }, true);
+		pirate_ship->SetScale({ 3.0f, 3.0f, 3.0f }, true);
 		obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
 		pirate_ship->Obj_Info();
 
 
-		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_Pos"));
+		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_pos"));
 		pirate_ship->RegisterMarker("Sailor_0", pirate_ship->FindFrame("Sailor_Pos_0"));
 		pirate_ship->RegisterMarker("Sailor_1", pirate_ship->FindFrame("Sailor_Pos_1"));
 		pirate_ship->RegisterMarker("Sailor_2", pirate_ship->FindFrame("Sailor_Pos_2"));
@@ -1486,8 +1486,23 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pirate_ship->RegisterMarker("Head", pirate_ship->FindFrame("Bottom_Head"));
 		pirate_ship->RegisterMarker("Tail", pirate_ship->FindFrame("Bottom_Tail"));
 
+		pirate_ship->RegisterMarker("Move_Model_1", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_01"));
+		pirate_ship->RegisterMarker("Move_Model_2", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_02"));
+		pirate_ship->RegisterMarker("Move_Model_3", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_03"));
+		pirate_ship->RegisterMarker("Move_Model_4", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Sails_04"));
+		pirate_ship->RegisterMarker("Move_Model_5", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Sails_05"));
 
-		
+		pirate_ship->RegisterMarker("Stay_Model_1", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_01"));
+		pirate_ship->RegisterMarker("Stay_Model_2", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_02"));
+		pirate_ship->RegisterMarker("Stay_Model_3", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_03"));
+		pirate_ship->RegisterMarker("Stay_Model_4", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_04"));
+
+		pirate_ship->RegisterMarker("Captain_Wheel", pirate_ship->FindFrame("SM_Prop_ShipWheel_02"));
+
+		pirate_ship->Set_Sail_Mode(false);
+		pirate_ship->Change_Model(true);
+
+
 		if (Ship_Model)
 			delete Ship_Model;
 
@@ -1591,6 +1606,24 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	wave_plane->Copy_Buffer_Data(pd3dCommandList);
 
 	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
+
+	bool isShipMoving = pirate_ship->Is_Moving(); // Check if the ship is moving
+	bool isSailMode = pirate_ship->Get_Sail_Mode(); // Get the current sail mode
+
+	if (isShipMoving && !isSailMode)
+	{
+		// Ship is moving but sail mode is OFF
+		pirate_ship->Set_Sail_Mode(true); // Turn ON sail mode
+		pirate_ship->Change_Model(false); // Switch to sailing model
+	}
+	else if (!isShipMoving && isSailMode)
+	{
+		// Ship is stopped but sail mode is ON
+		pirate_ship->Set_Sail_Mode(false); // Turn OFF sail mode
+		pirate_ship->Change_Model(true);   // Switch to idle model
+	}
+
+
 
 	if (focus_button)
 	{

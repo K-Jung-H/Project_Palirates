@@ -1976,7 +1976,9 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
-	if (m_pMesh)
+
+
+	if (Active && m_pMesh)
 	{
 		if (!IsVisible(pCamera))
 			return;
@@ -2024,9 +2026,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		if (m_pSibling->Get_Active())
 			m_pSibling->Render(pd3dCommandList, pCamera);
 
-	if (m_pChild)
-		if (m_pChild->Get_Active())
-			m_pChild->Render(pd3dCommandList, pCamera);
+
+	if (Active && m_pChild)
+		m_pChild->Render(pd3dCommandList, pCamera);
+
 }
 
 void CGameObject::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
@@ -3956,16 +3959,65 @@ void Boat_Object::Animate(float fTimeElapsed)
 	CGameObject::Rotate(&boat_up_vector, m_fRotationSpeed * fTimeElapsed);
 
 	 m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+
+	 XMFLOAT3 localFixedZAxis = { 0.0f, 0.0f, 1.0f };
+
+	 if (fabsf(m_fRotationSpeed) > 5.0f)
+	 {
+		 float effectiveSpeed = (fabsf(m_fRotationSpeed) - 5.0f) * 2.0f;
+		 float rotationDirection = m_fRotationSpeed / fabsf(m_fRotationSpeed); 
+		 Boat_Frames_Marker["Captain_Wheel"]->Rotate(&localFixedZAxis, rotationDirection * (15.0f + effectiveSpeed) * fTimeElapsed);
+	 }
+
 }
 
 bool Boat_Object::GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos)
 {
-	auto it = m_AttachedMarkerFrames.find(name);
-	if (it == m_AttachedMarkerFrames.end() || !it->second) return false;
+	auto it = Boat_Frames_Marker.find(name);
+	if (it == Boat_Frames_Marker.end() || !it->second) return false;
 
 	outWorldPos = it->second->GetPosition(); 
 	return true;
 }
+
+bool Boat_Object::Is_Moving()
+{
+	if (5.0f < Vector3::Length(m_xmf3Velocity))
+		return true;
+	return false;
+}
+
+void Boat_Object::Change_Model(bool is_stay_mode)
+{
+	if (is_stay_mode)
+	{
+		Boat_Frames_Marker["Move_Model_1"]->Set_Active(false);
+		Boat_Frames_Marker["Move_Model_2"]->Set_Active(false);
+		Boat_Frames_Marker["Move_Model_3"]->Set_Active(false);
+		Boat_Frames_Marker["Move_Model_4"]->Set_Active(false);
+		Boat_Frames_Marker["Move_Model_5"]->Set_Active(false);
+
+		Boat_Frames_Marker["Stay_Model_1"]->Set_Active(true);
+		Boat_Frames_Marker["Stay_Model_2"]->Set_Active(true);
+		Boat_Frames_Marker["Stay_Model_3"]->Set_Active(true);
+		Boat_Frames_Marker["Stay_Model_4"]->Set_Active(true);
+	}
+	else
+	{
+		Boat_Frames_Marker["Move_Model_1"]->Set_Active(true);
+		Boat_Frames_Marker["Move_Model_2"]->Set_Active(true);
+		Boat_Frames_Marker["Move_Model_3"]->Set_Active(true);
+		Boat_Frames_Marker["Move_Model_4"]->Set_Active(true);
+		Boat_Frames_Marker["Move_Model_5"]->Set_Active(true);
+
+		Boat_Frames_Marker["Stay_Model_1"]->Set_Active(false);
+		Boat_Frames_Marker["Stay_Model_2"]->Set_Active(false);
+		Boat_Frames_Marker["Stay_Model_3"]->Set_Active(false);
+		Boat_Frames_Marker["Stay_Model_4"]->Set_Active(false);
+	}
+
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 

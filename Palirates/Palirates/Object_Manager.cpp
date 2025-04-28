@@ -670,9 +670,9 @@ void Object_Manager::Check_Culling_All(CCamera* pCamera)
 	//if (terrain_ptr != NULL)	
 	//	terrain_ptr->Check_Culling(pCamera);
 
-	Check_Culling(pCamera, Object_Type::skinned);
-	Check_Culling(pCamera, Object_Type::non_skinned);
-	Check_Culling(pCamera, Object_Type::fixed);
+	//Check_Culling(pCamera, Object_Type::skinned);
+	//Check_Culling(pCamera, Object_Type::non_skinned);
+	//Check_Culling(pCamera, Object_Type::fixed);
 }
 
 void Object_Manager::Classify_Objects_By_Tile()
