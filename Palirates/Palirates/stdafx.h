@@ -132,7 +132,7 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define WRITE_TEXT_UI
-#define LOAD_SCENE
+//#define LOAD_SCENE
 #define RENDER_OBB
 #define RENDER_PARTICLE
 
@@ -278,6 +278,15 @@ namespace Vector3
 		XMFLOAT3 m_xmf3Normal;
 		XMStoreFloat3(&m_xmf3Normal, XMVector3Normalize(XMLoadFloat3(&xmf3Vector)));
 		return(m_xmf3Normal);
+	}
+
+	inline XMFLOAT3 Scale(const XMFLOAT3& v, float s)
+	{
+		XMVECTOR vv = XMLoadFloat3(&v);
+		XMVECTOR vs = XMVectorScale(vv, s);
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, vs);
+		return result;
 	}
 
 	inline float Length(XMFLOAT3& xmf3Vector)

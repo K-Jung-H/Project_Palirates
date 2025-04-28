@@ -429,6 +429,32 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+			if (wParam == '1') {
+				static bool test = true;
+				if (test) {
+					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
+					test = false;
+				}
+				else {
+					auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+					sword->Set_Active(true);
+					test = true;
+				}
+				
+				
+
+				//if (sword)
+				{
+					//sword.get()->Object_type = 10; 
+					//sword.get()->Material_list[0]->SetShader(CMaterial::m_pStandardShader);
+					//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+				}
+				//m_pPlayer->Set_Active(false);
+			}
+			if (wParam == 'C') {
+				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
+
+			}
 			if (wParam == 'U') {
 				ServerAnimationSyncData data;
 				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -474,7 +500,7 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					nPlayer++;
 
 					string message2 = "Player list :";
-					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
 					for (auto& obj : *player_list) {
 						string name = obj->m_pstrFrameName;
 						message2 += name + ", ";
@@ -618,7 +644,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 
 
-	scene_manager->Set_Active_Scene("Character_Select");
+	scene_manager->Set_Active_Scene("In_Stage");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
 
@@ -683,15 +709,7 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 		}
 
-
-		if (multiMode) {
-			auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-			auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
-			player->GetStateMachine()->handleEvent(pKeysBuffer);
-		}
-		else {
-			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
-		}
+		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
@@ -706,32 +724,18 @@ void CGameFramework::ProcessInput()
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
-			if (multiMode) {
-				auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-				auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
-				if (cxDelta || cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						player->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						player->Rotate(cyDelta, cxDelta, 0.0f);
-				}
-				if (dwDirection)
-					player->Move(dwDirection, 1 * 12.25f, true);
-			}
-			else {
-				if (cxDelta || cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+			if (cxDelta || cyDelta)
+			{
+				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
 
-						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-				}
-				if (dwDirection)
-					m_pPlayer->Move(dwDirection, 1 * 12.25f, true);
+					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+				else
+					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
+			if (dwDirection)
+				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
+		
 	}
 	
 }

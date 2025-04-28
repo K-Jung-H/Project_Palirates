@@ -681,6 +681,8 @@ public:
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 
+	std::shared_ptr<CGameObject> DetachChildByName(const char* targetName);
+
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
 
@@ -926,26 +928,3 @@ public:
 private:
 	std::unique_ptr<MonsterStateMachine> m_StateMachine;
 };
-
-//class CMultiPlayerObject : public CGameObject
-//{
-//public:
-//	CMultiPlayerObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
-//	virtual ~CMultiPlayerObject();
-//	virtual void Animate(float fTimeElapsed);
-//	std::unique_ptr<MultiPlayerStateMachine>& GetStateMachine() { return m_StateMachine; }
-//	int test_num{ 0 };
-//	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-//
-//	float moveX{ 0.0f };
-//	float moveZ{ 0.0f };
-//
-//	void SetMoveX(float x) { moveX = x; }
-//	void SetMoveZ(float x) { moveZ = x; }
-//	float GetMoveX() { return moveX; }
-//	float GetMoveZ() { return moveZ; }
-//	float stateElapsedTime{ 0.0f };
-//	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
-//private:
-//	std::unique_ptr<MultiPlayerStateMachine> m_StateMachine;
-//};
