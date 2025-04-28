@@ -1138,6 +1138,9 @@ void CGameFramework::SendPacket()
 	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, state);
 
 	send(serverSocket, buffer, (int)strlen(buffer), 0);
+	printf("SendPacket: ID=%d Pos=(%.2f, %.2f, %.2f)\n", ClientNum, pos.x, pos.y, pos.z);
+
+	Sleep(100);
 }
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
@@ -1217,6 +1220,7 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 		m_pCamera->SetPlayer(m_pPlayer);
 	}
 }
+
 
 void CGameFramework::CreateRemotePlayer(int playerId)
 {
