@@ -634,7 +634,8 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
 		{
 			Is_Visible = obj_ptr->IsVisible(pCamera);
-			obj_ptr->Set_Active(Is_Visible);
+			if (obj_ptr->Object_type != 10)
+				obj_ptr->Set_Active(Is_Visible);
 
 		}
 	} break;

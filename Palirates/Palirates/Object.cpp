@@ -1699,11 +1699,12 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 	return clone;
 }
 
-std::shared_ptr<CGameObject> CGameObject::Clone2(bool withHierarchy)
+std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 {
+	//Set_Active(false);
 	// 1) 복사 생성자 호출로 이 객체의 멤버(메시·머티리얼·애니메이션 컨트롤러 등)를 복사
 	auto clone = std::make_shared<CGameObject>(*this);
-
+	
 	// 2) 부모·자식·형제 포인터는 일단 깨끗이 초기화
 	clone->m_pParent = nullptr;
 	clone->m_pChild = nullptr;
@@ -1728,6 +1729,7 @@ std::shared_ptr<CGameObject> CGameObject::Clone2(bool withHierarchy)
 			srcSibling = srcSibling->m_pSibling;
 		}
 	}
+	//auto weaponClone = std::dynamic_pointer_cast<CWeaponObject>(clone);
 
 	return clone;
 }
@@ -3108,19 +3110,15 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 
 std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)
 {
-	// 1) 전체 계층의 월드 트랜스폼을 갱신
-	//    (Detach 대상의 저장된 m_xmf4x4World가 최신이 아닐 수 있기 때문)
 	CGameObject* root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
 
-	// 2) 이름으로 찾은 raw 포인터
 	CGameObject* target = FindFrame(const_cast<char*>(targetName));
 	if (!target || !target->m_pParent)
 		return nullptr;
 	target->Set_Active(false);
 	CGameObject* parentRaw = target->m_pParent;
 
-	//// 3) 부모의 m_pChild → sibling 체인에서 shared_ptr 찾기
 	std::shared_ptr<CGameObject> prev;
 	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
 	while (curr && curr.get() != target) {
@@ -3128,28 +3126,14 @@ std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetNa
 		curr = curr->m_pSibling;
 	}
 	if (!curr)
-		return nullptr;    // 뭔가 꼬였으면 리턴
+		return nullptr;    
 
-	//// 4) 대상의 최신 월드 매트릭스 저장
 	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
 
-	//// 5) 부모의 자식 링크에서 제거
-	//if (prev)
-	//	prev->m_pSibling = curr->m_pSibling;
-	//else
-	//	parentRaw->m_pChild = curr->m_pSibling;
-
-	//curr->m_pSibling = nullptr;
-	//curr->m_pParent = nullptr;
-
-	//// 6) 완전 독립: “로컬” 트랜스폼을 savedWorld로 덮어쓰고,
-	////    부모월드는 identity(=nullptr)로 설정
 	curr->m_xmf4x4Parent = savedWorld;
-	////curr->m_xmf4x4Parent = Matrix4x4::Identity();
 	curr->m_xmf4x4World = savedWorld;
 
-	//// 7) 이 노드부터 subtree 갱신 (parentWorld=nullptr→Identity)
-	//curr->UpdateTransform(nullptr);
+
 
 	return curr;
 }

@@ -674,7 +674,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_p->SetScale(10.0f, 10.0f, 10.0f);
 	obj_p->Set_Name(obj_name_2);
 	obj_p->test_num = 4;
-	obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
+	//obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
 
 
 	for (int i = 0; i < 10; i++) {

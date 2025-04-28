@@ -42,6 +42,7 @@ struct ServerAnimationSyncData
 	std::vector<float> trackPositions;
 };
 
+
 class CTexture 
 {
 public:
@@ -498,11 +499,21 @@ public:
 
 class CHeightMapTerrain;
 
+class WeaponObject
+{
+public:
+	WeaponObject() {};
+	~WeaponObject() {};
+	std::vector<std::shared_ptr<CGameObject>> pWeapon;
+};
+
 class CGameObject
 {
 private:
 	std::shared_ptr<CGameObject> m_pChild = nullptr;    
 	std::shared_ptr<CGameObject> m_pSibling = nullptr;  
+
+	
 
 	bool Active = true;
 
@@ -525,6 +536,7 @@ public:
 	XMFLOAT3 m_xmf3RotationAxis;
 	float m_fRotationSpeed;
 
+	WeaponObject* pWeapon;
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -536,7 +548,7 @@ public:
 	
 	// Deep Copy
 	std::shared_ptr<CGameObject> Clone(bool withHierarchy = true); 
-	std::shared_ptr<CGameObject> Clone2(bool withHierarchy);
+	std::shared_ptr<CGameObject> GetWeapon(bool withHierarchy);
 
 	// Deep Copy Hierarchy & Shallow Copy Resource
 	static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);
@@ -921,3 +933,4 @@ public:
 private:
 	std::unique_ptr<MonsterStateMachine> m_StateMachine;
 };
+

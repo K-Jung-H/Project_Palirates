@@ -433,23 +433,33 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 				static bool test = true;
 				if (test) {
 					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
-					//std::shared_ptr<CGameObject> obj = sword->Clone();
-				//	scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
-					//test = false;
 
 					auto rawSword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-					auto swordClone = rawSword->Clone2(false);  
-					//swordClone->UpdateTransform(nullptr);
+					auto swordClone = rawSword->GetWeapon(false);
+					m_pPlayer->pWeapon = new WeaponObject();
+					m_pPlayer->pWeapon->pWeapon.push_back(swordClone);
 					swordClone->Object_type = 10;
 					swordClone->Set_Active(true);
-					//swordClone->Rotate()
+
 					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(swordClone, Object_Type::non_skinned);
+
+					//m_pPlayer->Set_Active(false);
 					test = false;
 				}
 				else {
 					auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 					sword->Set_Active(true);
-					//test = true;
+					//m_pPlayer->m_pWeapon->Set_Active(false);
+					/*auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::non_skinned);
+					for (auto& obj : *player_list) {
+						obj.get()->Set_Active(false);
+					}*/
+					//scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::non_skinned);
+					for (auto& obj : m_pPlayer->pWeapon->pWeapon) {
+						obj->Set_Active(false);
+					}
+					//m_pPlayer->pWeapon->pWeapon.clear();
+					test = true;
 				}
 				
 				
