@@ -438,6 +438,9 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					auto swordClone = rawSword->GetWeapon(false);
 					m_pPlayer->pWeapon = new WeaponObject();
 					m_pPlayer->pWeapon->pWeapon.push_back(swordClone);
+					m_pPlayer->pWeapon->target_dir = XMVectorNegate(XMLoadFloat3(&m_pPlayer->GetLookVector()));;
+					swordClone->Launch(XMVectorNegate(XMLoadFloat3(&m_pPlayer->GetLookVector())));
+					swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&m_pPlayer->GetLookVector()));;
 					swordClone->Object_type = 10;
 					swordClone->Set_Active(true);
 
