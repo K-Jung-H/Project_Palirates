@@ -24,7 +24,10 @@ enum AnimationTrack
 	TRACK_RUN_RIGHT = 8, 
 	TRACK_DIVEROLL_FORWARD = 9,
 	TRACK_KNOCK_DOWN = 10,
-	TRACK_GET_UP = 11
+	TRACK_GET_UP = 11,
+	TRACK_ATTACK1 = 12,
+	TRACK_ATTACK2 = 13,
+	TRACK_ATTACK3 = 14
 };
 
 class CPlayer : public CGameObject
