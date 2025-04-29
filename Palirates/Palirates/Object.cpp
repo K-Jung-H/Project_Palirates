@@ -3311,6 +3311,45 @@ std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetNa
 
 	return curr;
 }
+
+std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
+	CGameObject* root = Get_Root_Object();
+	root->UpdateTransform(nullptr);
+
+	CGameObject* target = FindFrame(const_cast<char*>(targetName));
+	if (!target || !target->m_pParent)
+		return nullptr;
+	target->Set_Active(false);
+	CGameObject* parentRaw = target->m_pParent;
+
+	std::shared_ptr<CGameObject> prev;
+	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
+	while (curr && curr.get() != target) {
+		prev = curr;
+		curr = curr->m_pSibling;
+	}
+	if (!curr)
+		return nullptr;
+
+	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
+
+	curr->m_xmf4x4Parent = savedWorld;
+	curr->m_xmf4x4World = savedWorld;
+
+	auto rawSword = FindFrame("SM_Wep_Cutlass_01");
+	auto swordClone = rawSword->GetWeapon(false);
+
+	pWeapon = new WeaponObject();
+	pWeapon->pWeapon.push_back(swordClone);
+	pWeapon->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
+	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
+	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
+	swordClone->Object_type = 10;
+	swordClone->Set_Active(true);
+
+	return swordClone;
+}
+
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;

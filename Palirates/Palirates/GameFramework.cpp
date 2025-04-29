@@ -432,7 +432,8 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 			if (nMessageID == WM_KEYDOWN && wParam == '1') {
 				static bool test = true;
 				if (test) {
-					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
+					auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
+					/*auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
 
 					auto rawSword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 					auto swordClone = rawSword->GetWeapon(false);
@@ -442,9 +443,9 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					swordClone->Launch(XMVectorNegate(XMLoadFloat3(&m_pPlayer->GetLookVector())));
 					swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&m_pPlayer->GetLookVector()));;
 					swordClone->Object_type = 10;
-					swordClone->Set_Active(true);
+					swordClone->Set_Active(true);*/
 
-					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(swordClone, Object_Type::non_skinned);
+					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
 
 					//m_pPlayer->Set_Active(false);
 					test = false;
