@@ -1232,6 +1232,15 @@ XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	return result;
 }
 
+static const std::unordered_set<int> kUpdateHipsTracks = {
+	TRACK_DIVEROLL_FORWARD,
+	TRACK_ATTACK1,
+	TRACK_ATTACK2,
+	TRACK_ATTACK3,
+	TRACK_KNOCK_DOWN,
+	TRACK_GET_UP
+};
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
@@ -1261,7 +1270,6 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
-				// 각 bone 마다 변환행렬 업데이트
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
@@ -1274,14 +1282,12 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
 						//if (j == pRootGameObject->RootBoneIndex)
-						if (j == 2)
+						if (j == 2)	// player root index
 						{
-							if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+							if (kUpdateHipsTracks.contains(k) && !m_pAnimationTracks[k].m_bFinished) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
-							if (k == TRACK_ATTACK3 && !m_pAnimationTracks[k].m_bFinished) {
-								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-							}
+
 							blendedTransform._41 = 0.0f;
 							//blendedTransform._42 = 0.8762761f;
 							blendedTransform._43 = 0.0f;

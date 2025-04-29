@@ -438,30 +438,8 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 				}
 				else {
 					m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
-					//auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-					//sword->Set_Active(true);
-					//m_pPlayer->m_pWeapon->Set_Active(false);
-					/*auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::non_skinned);
-					for (auto& obj : *player_list) {
-						obj.get()->Set_Active(false);
-					}*/
-					//scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::non_skinned);
-					//for (auto& obj : m_pPlayer->pWeapon->pWeapon) {
-					//	obj->Set_Active(false);
-					//}
-					//m_pPlayer->pWeapon->pWeapon.clear();
 					test = true;
 				}
-				
-				
-
-				//if (sword)
-				{
-					//sword.get()->Object_type = 10; 
-					//sword.get()->Material_list[0]->SetShader(CMaterial::m_pStandardShader);
-					//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
-				}
-				//m_pPlayer->Set_Active(false);
 			}
 			if (wParam == 'C') {
 				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
