@@ -675,7 +675,7 @@ void CGameFramework::ProcessInput()
 	if (GetKeyboardState(pKeysBuffer) && main_scene)
 		bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
 
-	if (!bProcessedByScene)
+	if (!bProcessedByScene && m_pPlayer->bIsControllable)
 	{
 		DWORD dwDirection = 0;
 

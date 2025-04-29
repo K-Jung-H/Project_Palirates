@@ -377,9 +377,14 @@ void PlayerStateMachine::update(float Elapsed_time)
     //doAction(currentState, Elapsed_time);
 }
 
+
 void PlayerStateMachine::enterState(State state, Key_Value key_event)
 {
-
+    if (kRootMotionStates.contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = false;
+        }
+    }
     switch (state)
     {
     case State::Idle:
@@ -422,7 +427,11 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
 
 void PlayerStateMachine::exitState(State state, Key_Value key_event)
 {
-
+    if (kRootMotionStates.contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = true;
+        }
+    }
     switch (state)
     {
     case State::Idle:
