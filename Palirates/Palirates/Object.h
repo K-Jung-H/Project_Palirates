@@ -582,6 +582,8 @@ public:
 	}
 	WeaponObject* pWeapon;
 
+	bool bIsControllable{ true };
+
 public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");

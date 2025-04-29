@@ -472,7 +472,7 @@ void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
     shift.z = vec.z - vec2.z;
 
     animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
-    XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
+    XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y* scaleFactor, shift.z * scaleFactor };
 
     XMFLOAT3 moveDirection = m_pOwner->GetLook();
     XMFLOAT3 finalMove = {

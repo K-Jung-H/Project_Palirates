@@ -1232,14 +1232,7 @@ XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	return result;
 }
 
-static const std::unordered_set<int> kUpdateHipsTracks = {
-	TRACK_DIVEROLL_FORWARD,
-	TRACK_ATTACK1,
-	TRACK_ATTACK2,
-	TRACK_ATTACK3,
-	TRACK_KNOCK_DOWN,
-	TRACK_GET_UP
-};
+
 
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
