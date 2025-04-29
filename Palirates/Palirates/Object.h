@@ -42,6 +42,7 @@ struct ServerAnimationSyncData
 	std::vector<float> trackPositions;
 };
 
+
 class CTexture 
 {
 public:
@@ -498,11 +499,41 @@ public:
 
 class CHeightMapTerrain;
 
+class WeaponObject
+{
+public:
+	WeaponObject() {};
+	~WeaponObject() {};
+	std::vector<std::shared_ptr<CGameObject>> pWeapon;
+	XMVECTOR target_dir{};
+
+	XMVECTOR m_vVelocity = XMVectorZero();  // 현재 속도
+	bool    m_bInAir = false;           // 공중에 떠 있는 중인지
+	float   m_fGravity = 9.8f;            // 중력 가속도
+	float   m_fInitialUpSpeed = 5.0f;            // 점프 초기 속도
+	float   m_fMoveSpeed = 3.0f;
+
+	void Launch(const XMVECTOR& target_dir)
+	{
+		XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+		// X/Y/Z 속도를 한꺼번에 세팅 (w는 0)
+		m_vVelocity = XMVectorSet(
+			XMVectorGetX(dirNorm) * m_fMoveSpeed,
+			m_fInitialUpSpeed,
+			XMVectorGetZ(dirNorm) * m_fMoveSpeed,
+			0.0f
+		);
+		m_bInAir = true;
+	}
+};
+
 class CGameObject
 {
 private:
 	std::shared_ptr<CGameObject> m_pChild = nullptr;    
 	std::shared_ptr<CGameObject> m_pSibling = nullptr;  
+
+	
 
 	bool Active = true;
 
@@ -523,8 +554,35 @@ public:
 	XMFLOAT4X4				m_xmf4x4World{};
 
 	XMFLOAT3 m_xmf3RotationAxis;
-	float m_fRotationSpeed;
 
+	XMVECTOR target_dir{};
+	bool     m_bInAir = false;           
+	XMVECTOR m_vVelocity = XMVectorZero(); 
+
+	float    m_fMoveSpeed = 5.0f;            
+	float    m_fRotationSpeed = 360.0f;         
+	float    m_fInitialUpSpeed = 10.0f;             
+	float    m_fGravity = 9.8f;         
+
+	void SetMoveSpeed(float s) { m_fMoveSpeed = s; }
+	void SetRotationSpeed2(float s) { m_fRotationSpeed = s; }
+	void SetInitialUpSpeed(float s) { m_fInitialUpSpeed = s; }
+	void Launch(const XMVECTOR& target_dir)
+	{
+		m_fRotationSpeed = 720.0f;
+		if (m_bInAir) return;
+		m_bInAir = true;
+		XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+		m_vVelocity = XMVectorSet(
+			XMVectorGetX(dirNorm) * m_fMoveSpeed,
+			m_fInitialUpSpeed,
+			XMVectorGetZ(dirNorm) * m_fMoveSpeed,
+			0.0f
+		);
+	}
+	WeaponObject* pWeapon;
+
+	bool bIsControllable{ true };
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -536,6 +594,7 @@ public:
 	
 	// Deep Copy
 	std::shared_ptr<CGameObject> Clone(bool withHierarchy = true); 
+	std::shared_ptr<CGameObject> GetWeapon(bool withHierarchy);
 
 	// Deep Copy Hierarchy & Shallow Copy Resource
 	static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);
@@ -681,7 +740,8 @@ public:
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 
-	std::shared_ptr<CGameObject> DetachChildByName(const char* targetName);
+	virtual std::shared_ptr<CGameObject> DropWeapon(const char* targetName);
+	virtual void RestoreWeapon(const char* targetName);
 
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
@@ -928,3 +988,4 @@ public:
 private:
 	std::unique_ptr<MonsterStateMachine> m_StateMachine;
 };
+

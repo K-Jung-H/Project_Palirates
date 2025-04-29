@@ -11,21 +11,6 @@
 #include "Object.h"
 #include "Camera.h"
 
-enum AnimationTrack
-{
-	TRACK_IDLE = 0,
-	TRACK_RUN_FORWARD_LEFT = 1,
-	TRACK_RUN_FORWARD = 2,
-	TRACK_RUN_FORWARD_RIGHT = 3,
-	TRACK_RUN_BACKWARD_LEFT = 4,
-	TRACK_RUN_BACKWARD = 5,
-	TRACK_RUN_BACKWARD_RIGHT = 6,
-	TRACK_RUN_LEFT = 7, 
-	TRACK_RUN_RIGHT = 8, 
-	TRACK_DIVEROLL_FORWARD = 9,
-	TRACK_KNOCK_DOWN = 10,
-	TRACK_GET_UP = 11
-};
 
 class CPlayer : public CGameObject
 {

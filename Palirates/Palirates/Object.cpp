@@ -1232,6 +1232,8 @@ XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
 	return result;
 }
 
+
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
@@ -1261,7 +1263,6 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
-				// 각 bone 마다 변환행렬 업데이트
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
@@ -1274,11 +1275,12 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
 						//if (j == pRootGameObject->RootBoneIndex)
-						if (j == 2)
+						if (j == 2)	// player root index
 						{
-							if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+							if (kUpdateHipsTracks.contains(k) && !m_pAnimationTracks[k].m_bFinished) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
+
 							blendedTransform._41 = 0.0f;
 							//blendedTransform._42 = 0.8762761f;
 							blendedTransform._43 = 0.0f;
@@ -1699,6 +1701,41 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 	return clone;
 }
 
+std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
+{
+	//Set_Active(false);
+	// 1) 복사 생성자 호출로 이 객체의 멤버(메시·머티리얼·애니메이션 컨트롤러 등)를 복사
+	auto clone = std::make_shared<CGameObject>(*this);
+	
+	// 2) 부모·자식·형제 포인터는 일단 깨끗이 초기화
+	clone->m_pParent = nullptr;
+	clone->m_pChild = nullptr;
+	clone->m_pSibling = nullptr;
+
+	if (withHierarchy && this->m_pChild)
+	{
+		// 3) 첫 번째 자식부터 재귀 복제
+		clone->m_pChild = this->m_pChild->Clone(true);
+		clone->m_pChild->m_pParent = clone.get();
+
+		// 4) 나머지 형제들도 순차적으로 복제하여 링크
+		auto srcSibling = this->m_pChild->m_pSibling;
+		auto dstSibling = clone->m_pChild;
+		while (srcSibling)
+		{
+			dstSibling->m_pSibling = srcSibling->Clone(true);
+			dstSibling->m_pSibling->m_pParent = clone.get();
+
+			// 다음 형제
+			dstSibling = dstSibling->m_pSibling;
+			srcSibling = srcSibling->m_pSibling;
+		}
+	}
+	//auto weaponClone = std::dynamic_pointer_cast<CWeaponObject>(clone);
+
+	return clone;
+}
+
 std::shared_ptr<CGameObject> CGameObject::Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy)
 {
 	std::shared_ptr<CGameObject> instance = std::make_shared<CGameObject>();
@@ -1912,6 +1949,206 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
+	
+	if (Object_type == 10) {
+		if (!m_bInAir)
+		{
+			// 1) 현재 위치
+			XMVECTOR pos = XMLoadFloat4x4(&m_xmf4x4Parent).r[3];
+
+			// 2) 바라볼 방향: 월드 업
+			XMVECTOR lookDir = XMVectorSet(0, 1, 0, 0);
+
+			// 3) 보조 up 벡터(lookDir과 절대 평행이 아니어야 함)
+			XMVECTOR up = XMVectorSet(0, 0, 1, 0);
+
+			// 4) view 매트릭스 생성 (LH 기준)
+			XMMATRIX view = XMMatrixLookToLH(pos, lookDir, up);
+
+			// 5) world 매트릭스 = view⁻¹
+			XMMATRIX world = XMMatrixInverse(nullptr, view);
+
+			// 6) 기존 스케일 유지
+			XMFLOAT3 s = GetScale(m_xmf4x4Parent);
+			XMMATRIX scaleM = XMMatrixScaling(s.x, s.y, s.z);
+
+			// 7) 최종 합성
+			XMMATRIX finalM = scaleM * world;
+			XMStoreFloat4x4(&m_xmf4x4Parent, finalM);
+			UpdateTransform(nullptr);
+			//const float deltaY = 3.5f;
+			//XMMATRIX lift = XMMatrixTranslation(0.0f, deltaY, 0.0f);
+
+			//// 2) 기존 행렬에 곱해서 Y만 올리기
+			//XMMATRIX mat = XMLoadFloat4x4(&m_xmf4x4Parent);
+			//mat = lift * mat;  // mat = lift 행렬을 먼저 곱하면 Y축 이동만 추가됨
+
+			//// 3) 저장 & 갱신
+			//XMStoreFloat4x4(&m_xmf4x4Parent, mat);
+			//SetLookDirection(XMFLOAT3(0, 1, 0));
+			
+			//// 1) 부모 행렬 로드
+			//XMMATRIX parentMat = XMLoadFloat4x4(&m_xmf4x4Parent);
+
+			//// 2) 현재 Look 벡터 (forward)와 목표 Up 벡터
+			//XMVECTOR currentLook = XMVector3Normalize(parentMat.r[2]);
+			//XMVECTOR targetUp = XMVectorSet(0, 1, 0, 0);
+
+			//// 3) 두 벡터 사이 남은 각도 (라디안)
+			//float cosA = XMVectorGetX(XMVector3Dot(currentLook, targetUp));
+			//cosA = std::clamp(cosA, -1.0f, 1.0f);
+			//float angleTo = acosf(cosA);
+			//if (angleTo < XMConvertToRadians(0.5f))
+			//	return; // 이미 충분히 가깝다면 회전 종료
+
+			//// 4) 회전축과 deltaQ(Identity→Up 회전) 계산
+			//XMVECTOR axis = XMVector3Normalize(XMVector3Cross(currentLook, targetUp));
+			//XMVECTOR deltaQ = XMQuaternionRotationAxis(axis, angleTo);
+
+			//// 5) SLERP 인자 t
+			//float rotSpeedRad = XMConvertToRadians(m_fRotationSpeed);
+			//float t = std::clamp((rotSpeedRad * fTimeElapsed) / angleTo, 0.0f, 1.0f);
+			//deltaQ = XMQuaternionSlerp(XMQuaternionIdentity(), deltaQ, t);
+
+			//// 6) 기존 회전 쿼터니언 분리
+			//XMMATRIX rotOnly = parentMat;
+			//rotOnly.r[3] = XMVectorSet(0, 0, 0, 1);
+			//XMVECTOR currentQ = XMQuaternionRotationMatrix(rotOnly);
+
+			//// 7) newQ = deltaQ ⊗ currentQ  (순서 주의!)
+			//XMVECTOR newQ = XMQuaternionMultiply(deltaQ, currentQ);
+
+			//// 8) 새 회전 매트릭스
+			//XMMATRIX rotM = XMMatrixRotationQuaternion(newQ);
+
+			//// 9) 월드 위치 보존
+			//XMVECTOR worldPos = parentMat.r[3];
+
+			//// 10) 최종 월드 매트릭스 조립
+			////     → rotation만 rotM으로, translation은 그대로 덮어쓰기
+			//XMMATRIX worldM = rotM;
+			//worldM.r[3] = worldPos;
+
+			//// 11) 저장 및 씬 반영
+			//XMStoreFloat4x4(&m_xmf4x4Parent, worldM);
+			UpdateTransform(nullptr);
+			return;
+		}
+
+
+		// === 회전(pivot 회전) ===
+		// 축·각도
+		XMFLOAT3 axis{ 1,0,0 };
+		float angle = m_fRotationSpeed * fTimeElapsed;
+		XMVECTOR vAxis = XMLoadFloat3(&axis);
+
+		XMMATRIX R = XMMatrixRotationAxis(vAxis, XMConvertToRadians(angle));
+		float h = -1.0f;            // 모델 높이에 맞춰 조절
+		float pY = h * 0.5f;
+		XMMATRIX T1 = XMMatrixTranslation(0, -pY, 0);
+		XMMATRIX T2 = XMMatrixTranslation(0, pY, 0);
+		XMMATRIX pivotRot = T2 * R * T1;
+
+		// 2) 기존 부모 행렬 로드 → 자전 누적
+		XMMATRIX parentMat = XMLoadFloat4x4(&m_xmf4x4Parent);
+		XMMATRIX rotatedMat = pivotRot * parentMat;
+
+		// 3) 회전 후 월드 위치 추출
+		XMVECTOR worldPos = rotatedMat.r[3];
+
+		// === 수평 이동 ===
+		XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+		XMVECTOR horizOffset = XMVectorScale(dirNorm, m_fMoveSpeed * fTimeElapsed);
+
+		// === 중력 적용 ===
+		// 속도 갱신: v += (0, -g, 0) * dt
+		XMVECTOR gravDelta = XMVectorSet(0, -m_fGravity * fTimeElapsed, 0, 0);
+		m_vVelocity = XMVectorAdd(m_vVelocity, gravDelta);
+
+		// 수직 이동량 = v.y * dt
+		XMVECTOR vertOffset = XMVectorScale(m_vVelocity, fTimeElapsed);
+
+		// === 최종 위치 업데이트 ===
+		XMVECTOR totalOffset = XMVectorAdd(horizOffset, vertOffset);
+		XMVECTOR newPos = XMVectorAdd(worldPos, totalOffset);
+
+		// 착지 검사: y ≤ 0 이면 착지
+		const float groundY = 0.0f;
+		if (XMVectorGetY(newPos) <= groundY)
+		{
+			
+			newPos = XMVectorSetY(newPos, groundY);
+			m_bInAir = false;           // 착지!
+			m_vVelocity = XMVectorZero(); // 속도 초기화
+			Set_LookDirection_LookAt(XMFLOAT3(1, 0, 0));
+			//const float deltaY = 0.1f;
+			//XMMATRIX lift = XMMatrixTranslation(0.0f, deltaY, 0.0f);
+
+			// 2) 기존 행렬에 곱해서 Y만 올리기
+			//XMMATRIX mat = XMLoadFloat4x4(&m_xmf4x4Parent);
+			//mat = lift * mat;  // mat = lift 행렬을 먼저 곱하면 Y축 이동만 추가됨
+
+			// 3) 저장 & 갱신
+			//XMStoreFloat4x4(&m_xmf4x4Parent, mat);
+			UpdateTransform(nullptr);
+		}
+
+		// 4) 행렬에 위치 반영
+		rotatedMat.r[3] = newPos;
+		XMStoreFloat4x4(&m_xmf4x4Parent, rotatedMat);
+
+		// 5) 씬 그래프 갱신
+		UpdateTransform(nullptr);
+	}
+
+	//if (pWeapon) {
+	//	if (this->pWeapon->m_bInAir)
+	//	{
+	//		// 중력 가속도 적용 (Y축만)
+	//		XMVECTOR vGravityDelta = XMVectorSet(0.0f, -this->pWeapon->m_fGravity * fTimeElapsed, 0.0f, 0.0f);
+	//		this->pWeapon->m_vVelocity = XMVectorAdd(this->pWeapon->m_vVelocity, vGravityDelta);
+
+	//		// 이번 프레임 이동량 = 속도 × 시간
+	//		XMVECTOR vOffset = XMVectorScale(this->pWeapon->m_vVelocity, fTimeElapsed);
+
+	//		// 변환 매트릭스 만들고 누적
+	//		XMMATRIX M = XMMatrixTranslationFromVector(vOffset);
+	//		pWeapon->pWeapon[0]->m_xmf4x4Parent = Matrix4x4::Multiply(M, m_xmf4x4Parent);
+
+	//		// 씬 그래프에 반영
+	//		UpdateTransform(nullptr);
+
+	//		// (선택) 지면에 닿았는지 검사 — Y 위치가 groundHeight 이하가 되면 착지 처리
+	//		float currentY = XMVectorGetY(XMLoadFloat4x4(&m_xmf4x4Parent).r[3]);
+	//		const float groundHeight = 0.0f; // 지면 Y좌표
+	//		if (currentY <= groundHeight)
+	//		{
+	//			// 바닥에 달라붙게 하고
+	//			XMMATRIX clampY = XMMatrixTranslation(
+	//				XMVectorGetX(XMLoadFloat4x4(&m_xmf4x4Parent).r[3]),
+	//				groundHeight,
+	//				XMVectorGetZ(XMLoadFloat4x4(&m_xmf4x4Parent).r[3])
+	//			);
+	//			// 1) clampY * Identity
+	//			XMMATRIX result = XMMatrixMultiply(clampY, XMMatrixIdentity());
+
+	//			// 2) XMMATRIX → XMFLOAT4X4
+	//			XMStoreFloat4x4(&m_xmf4x4Parent, result);
+
+	//			UpdateTransform(nullptr);
+
+	//			// 공중 모드 종료
+	//			this->pWeapon->m_bInAir = false;
+	//			this->pWeapon->m_vVelocity = XMVectorZero();
+	//		}
+	//	}
+	//	else
+	//	{
+	//		// 지상에 있을 땐 기존 Animate 로직만
+	//		// OnPrepareAnimate()… 회전 처리 등
+	//	}
+
+	//}
 
 	if (m_pSkinnedAnimationController) 
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -3047,53 +3284,55 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 }
 
-std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)
-{
-	// 1) 전체 계층의 월드 트랜스폼을 갱신
-	//    (Detach 대상의 저장된 m_xmf4x4World가 최신이 아닐 수 있기 때문)
+std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	CGameObject* root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
 
-	// 2) 이름으로 찾은 raw 포인터
 	CGameObject* target = FindFrame(const_cast<char*>(targetName));
 	if (!target || !target->m_pParent)
 		return nullptr;
 	target->Set_Active(false);
 	CGameObject* parentRaw = target->m_pParent;
 
-	//// 3) 부모의 m_pChild → sibling 체인에서 shared_ptr 찾기
-	//std::shared_ptr<CGameObject> prev;
+	std::shared_ptr<CGameObject> prev;
 	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
-	//while (curr && curr.get() != target) {
-	//	prev = curr;
-	//	curr = curr->m_pSibling;
-	//}
-	//if (!curr)
-	//	return nullptr;    // 뭔가 꼬였으면 리턴
+	while (curr && curr.get() != target) {
+		prev = curr;
+		curr = curr->m_pSibling;
+	}
+	if (!curr)
+		return nullptr;
 
-	//// 4) 대상의 최신 월드 매트릭스 저장
-	//XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
+	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
 
-	//// 5) 부모의 자식 링크에서 제거
-	//if (prev)
-	//	prev->m_pSibling = curr->m_pSibling;
-	//else
-	//	parentRaw->m_pChild = curr->m_pSibling;
+	curr->m_xmf4x4Parent = savedWorld;
+	curr->m_xmf4x4World = savedWorld;
 
-	//curr->m_pSibling = nullptr;
-	//curr->m_pParent = nullptr;
+	auto rawSword = FindFrame(const_cast<char*>(targetName));
+	auto swordClone = rawSword->GetWeapon(false);
 
-	//// 6) 완전 독립: “로컬” 트랜스폼을 savedWorld로 덮어쓰고,
-	////    부모월드는 identity(=nullptr)로 설정
-	//curr->m_xmf4x4Parent = savedWorld;
-	////curr->m_xmf4x4Parent = Matrix4x4::Identity();
-	//curr->m_xmf4x4World = savedWorld;
+	pWeapon = new WeaponObject();
+	pWeapon->pWeapon.push_back(swordClone);
+	pWeapon->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
+	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
+	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
+	swordClone->Object_type = 10;
+	swordClone->Set_Active(true);
 
-	//// 7) 이 노드부터 subtree 갱신 (parentWorld=nullptr→Identity)
-	//curr->UpdateTransform(nullptr);
-
-	return curr;
+	return swordClone;
 }
+
+void CGameObject::RestoreWeapon(const char* targetName) {
+	auto sword = FindFrame(const_cast<char*>(targetName));
+	if (sword != nullptr)
+		sword->Set_Active(true);
+	if (!pWeapon->pWeapon.empty()) {
+		for (auto& obj : pWeapon->pWeapon) {
+			obj->Set_Active(false);
+		}
+	}
+}
+
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
