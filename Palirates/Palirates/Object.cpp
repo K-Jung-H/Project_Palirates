@@ -3282,36 +3282,6 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 }
 
-std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)
-{
-	CGameObject* root = Get_Root_Object();
-	root->UpdateTransform(nullptr);
-
-	CGameObject* target = FindFrame(const_cast<char*>(targetName));
-	if (!target || !target->m_pParent)
-		return nullptr;
-	target->Set_Active(false);
-	CGameObject* parentRaw = target->m_pParent;
-
-	std::shared_ptr<CGameObject> prev;
-	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
-	while (curr && curr.get() != target) {
-		prev = curr;
-		curr = curr->m_pSibling;
-	}
-	if (!curr)
-		return nullptr;    
-
-	XMFLOAT4X4 savedWorld = curr->m_xmf4x4World;
-
-	curr->m_xmf4x4Parent = savedWorld;
-	curr->m_xmf4x4World = savedWorld;
-
-
-
-	return curr;
-}
-
 std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	CGameObject* root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
@@ -3336,7 +3306,7 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	curr->m_xmf4x4Parent = savedWorld;
 	curr->m_xmf4x4World = savedWorld;
 
-	auto rawSword = FindFrame("SM_Wep_Cutlass_01");
+	auto rawSword = FindFrame(const_cast<char*>(targetName));
 	auto swordClone = rawSword->GetWeapon(false);
 
 	pWeapon = new WeaponObject();
@@ -3348,6 +3318,17 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	swordClone->Set_Active(true);
 
 	return swordClone;
+}
+
+void CGameObject::RestoreWeapon(const char* targetName) {
+	auto sword = FindFrame(const_cast<char*>(targetName));
+	if (sword != nullptr)
+		sword->Set_Active(true);
+	if (!pWeapon->pWeapon.empty()) {
+		for (auto& obj : pWeapon->pWeapon) {
+			obj->Set_Active(false);
+		}
+	}
 }
 
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;

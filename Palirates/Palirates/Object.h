@@ -738,9 +738,8 @@ public:
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 
-	std::shared_ptr<CGameObject> DetachChildByName(const char* targetName);
-
 	virtual std::shared_ptr<CGameObject> DropWeapon(const char* targetName);
+	virtual void RestoreWeapon(const char* targetName);
 
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
