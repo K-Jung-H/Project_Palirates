@@ -29,6 +29,10 @@ CMesh::CMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandLis
 {
 }
 
+CMesh::CMesh(const CMesh& other)
+{
+}
+
 CMesh::~CMesh()
 {
 	if (m_pd3dPositionBuffer) m_pd3dPositionBuffer->Release();

@@ -34,6 +34,18 @@ CPlayer::CPlayer()
 
 }
 
+CPlayer::CPlayer(const CPlayer& other) : CGameObject(other)
+{
+	m_StateMachine = std::make_unique<PlayerStateMachine>(this);
+
+	m_fPitch = other.m_fPitch;
+	m_fYaw = other.m_fYaw;
+	m_fRoll = other.m_fRoll;
+
+	m_xmf3Velocity = other.m_xmf3Velocity;
+	
+}
+
 CPlayer::~CPlayer()
 {
 	ReleaseShaderVariables();
@@ -272,7 +284,7 @@ void CPlayer::OnPrepareAnimate()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA) 
+	//if (nCameraMode == THIRD_PERSON_CAMERA) 
 		CGameObject::Render(pd3dCommandList, pCamera);
 }
 
@@ -365,7 +377,35 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
 	
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
+
 	if (pAngrybotModel) delete pAngrybotModel;
+}
+
+CTerrainPlayer::CTerrainPlayer(const CPlayer& other) : CPlayer(other)
+{
+	On_Ground = false;
+}
+
+CTerrainPlayer::CTerrainPlayer(const CTerrainPlayer& other)	: CPlayer(other) 
+{
+	m_StateMachine = std::make_unique<PlayerStateMachine>(this);
+
+	if (other.m_pMesh)
+		m_pMesh = new CMesh(*other.m_pMesh);
+
+	if (other.m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*other.m_pSkinnedAnimationController);
+
+	Material_list.clear();
+	for (const auto& mat : other.Material_list)
+	{
+		if (mat)
+			Material_list.push_back(std::make_shared<CMaterial>(*mat));
+		else
+			Material_list.push_back(nullptr);
+	}
+
+	On_Ground = other.On_Ground;
 }
 
 CTerrainPlayer::~CTerrainPlayer()

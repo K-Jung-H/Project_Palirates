@@ -229,7 +229,7 @@ public:
 	int ClientNum{ 0 };
 	ServerSyncManager syncManager;
 	ServerSyncManager& GetSyncManager() { return syncManager; }
-	std::unordered_map<int, CPlayer*> m_pRemotePlayers;
+	std::unordered_map<int, std::shared_ptr<CPlayer>> m_pRemotePlayers;
 	std::queue<std::string> recvQueue;
 	std::mutex recvQueueMutex;
 

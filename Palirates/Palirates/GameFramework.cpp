@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
 #pragma once
@@ -764,7 +764,19 @@ void CGameFramework::Animate_Scene()
 
 	if (multiMode)
 	{
-
+		if (m_pPlayer)
+		{
+			m_pPlayer->Animate(m_GameTimer.GetTimeElapsed());
+			m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+		}
+		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
+		{
+			if (remotePlayer)
+			{
+				remotePlayer->Animate(m_GameTimer.GetTimeElapsed());
+				remotePlayer->Update(m_GameTimer.GetTimeElapsed());
+			}
+		}
 	}
 	else
 	{
@@ -932,7 +944,19 @@ void CGameFramework::FrameAdvance()
 {
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
-	
+
+	{
+		std::lock_guard<std::mutex> lock(recvQueueMutex);
+		while (!recvQueue.empty())
+		{
+			std::string receivedData = recvQueue.front();
+			recvQueue.pop();
+
+			std::cout << "[FrameAdvance] 수신 패킷 처리: " << receivedData << std::endl;
+			ProcessReceivedData(receivedData);
+		}
+	}
+
 	{
 		std::lock_guard<std::mutex> lock(pendingCreateMutex);
 		while (!pendingPlayerCreates.empty())
@@ -988,13 +1012,29 @@ void CGameFramework::FrameAdvance()
 		UpdateShaderVariables();
 		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
 
-		if (m_pPlayer) 
+		if (m_pPlayer)
 			m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+		for (auto& [id, remotePlayer] : m_pRemotePlayers)
+		{
+			if (remotePlayer)
+				remotePlayer->Render(Active_CommandList, m_pCamera);
+		}
+
+		//auto objectList = GetSceneManager().Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
+		//if (objectList)
+		//{
+		//	for (auto& object : *objectList)
+		//	{
+		//		if (object)
+		//			object->Render(Active_CommandList, m_pCamera);
+		//	}
+		//}
+
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
 			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-		
+
 		// Merge G-Buffers
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
@@ -1020,7 +1060,7 @@ void CGameFramework::FrameAdvance()
 		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
 		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
 		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
-		
+
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
@@ -1079,8 +1119,8 @@ void CGameFramework::FrameAdvance()
 
 
 	SendPacket();
-}
 
+}
 
 
 
@@ -1138,13 +1178,13 @@ void CGameFramework::SendPacket()
 	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, state);
 
 	send(serverSocket, buffer, (int)strlen(buffer), 0);
-	printf("SendPacket: ID=%d Pos=(%.2f, %.2f, %.2f)\n", ClientNum, pos.x, pos.y, pos.z);
-
-	Sleep(100);
 }
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
+
+	std::cout << "[디버그] ProcessReceivedData() 호출됨" << std::endl;
+
 	int playerId;
 	float px, py, pz;
 	int state;
@@ -1162,11 +1202,10 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d",
-		&playerId, &px, &py, &pz, &state) == 5)
+	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d", &playerId, &px, &py, &pz, &state) == 5)
 	{
-		Scene_Manager& sceneManager = GetSceneManager();
 
+		std::cout << "[디버그] PLAYER_UPDATE 패킷 감지됨" << std::endl;
 		if (playerId == ClientNum)
 		{
 			if (m_pPlayer)
@@ -1178,24 +1217,46 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else
 		{
 			auto it = m_pRemotePlayers.find(playerId);
-			if (it != m_pRemotePlayers.end())
+			if (it == m_pRemotePlayers.end())
 			{
-				it->second->SetPosition(XMFLOAT3(px, py, pz));
-				it->second->SetState(state);
-			}
-			else
-			{
+				std::cout << "[디버그] playerId " << playerId << " 은 새 플레이어로 큐에 등록됨" << std::endl;
 				{
 					std::lock_guard<std::mutex> lock(pendingCreateMutex);
 					pendingPlayerCreates.push(playerId);
+				}
+				std::cout << "[디버그] playerId  "<< playerId  << std::endl;
+
+				return;
+			}
+			else
+			{
+				std::cout << "[디버그] playerId " << playerId << " 은 이미 m_pRemotePlayers에 있음" << std::endl;
+			}
+
+			if (it != m_pRemotePlayers.end())
+			{
+				auto remotePlayer = it->second;
+				if (remotePlayer)
+				{
+					auto syncData = GetSyncManager().GetPlayerSyncData(playerId);
+					remotePlayer->ApplySyncData(syncData);
+
+					remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
+					remotePlayer->SetState(state);
+				}
+				else
+				{
+					std::cout << "[경고] remotePlayer null 상태" << std::endl;
 				}
 			}
 		}
 	}
 }
 
+
 void CGameFramework::CreateLocalPlayer(int playerId)
 {
+	std::cout << "[디버그] CreateRemotePlayer 호출됨: " << playerId << std::endl;
 	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
 	if (!scene || !scene->obj_manager || !Active_CommandList) return;
 
@@ -1211,6 +1272,9 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 	local_player->Object_type = OBJECT_TPYE_PLAYER;
 
 	scene->obj_manager->Add_Object(local_player, Object_Type::player);
+
+	std::cout << "[디버그] Add_Object 완료" << std::endl;
+
 	scene_manager->RegisterRemotePlayer(playerId, local_player);
 
 	m_pPlayer = local_player.get();
@@ -1219,50 +1283,62 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 	{
 		m_pCamera->SetPlayer(m_pPlayer);
 	}
-}
 
+	auto playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+	std::cout << "[디버그] player_list 크기: " << playerList->size() << std::endl;
+
+	if (playerList)
+	{
+		printf("[디버그] 현재 player_list 등록 상태:\n");
+		for (auto& obj : *playerList)
+		{
+			if (obj)
+			{
+				auto rawObj = obj.get();
+				std::cout << " - 이름: " << rawObj->m_pstrFrameName	<< ", Active: " << rawObj->Get_Active() << std::endl;
+			}
+		}
+	}
+}
 
 void CGameFramework::CreateRemotePlayer(int playerId)
 {
-	printf("[Debug] CreateRemotePlayer 호출: playerId = %d\n", playerId);
+	std::cout << "[디버그] CreateRemotePlayer() 호출됨 - ID: " << playerId << std::endl;
+	Scene_Manager& sceneManager = GetSceneManager();
+	auto scene = sceneManager.Get_Active_Scene();
 
-	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
+	if (!m_pPlayer)
 	{
-		printf("[Debug] 이미 존재하는 플레이어입니다: %d\n", playerId);
+		printf("[CreateRemotePlayer] 내 플레이어가 아직 생성되지 않았습니다.\n");
 		return;
 	}
 
-	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-	if (!scene)
+	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+
+	remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
+	remotePlayer->Material_list = m_pPlayer->Material_list;
+	
+	if (m_pPlayer->m_pSkinnedAnimationController)
 	{
-		printf("[Debug] scene == nullptr\n");
-		return;
+		remotePlayer->m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*m_pPlayer->m_pSkinnedAnimationController);
 	}
 
-	if (!scene->obj_manager)
-	{
-		printf("[Debug] scene->obj_manager == nullptr\n");
-		return;
-	}
+	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	remotePlayer->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	remotePlayer->SetState(0);
+	remotePlayer->SetID(playerId);
+	remotePlayer->Set_Name("Remote_" + std::to_string(playerId));
+	remotePlayer->Object_type = OBJECT_TPYE_PLAYER;
+	remotePlayer->SetRotationSpeed(1.0f);
+	remotePlayer->Set_Active(true);
+	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
-	printf("[Debug] Player 생성 시작\n");
 
-	auto new_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+	scene->obj_manager->Add_Object(std::static_pointer_cast<CGameObject>(remotePlayer), Object_Type::player);
+	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);
 
-	new_player->SetPosition(XMFLOAT3(0.f, 0.f, 0.f));
-	new_player->SetState(0);
-	new_player->Set_Name("Remote_" + std::to_string(playerId));
-	new_player->Object_type = OBJECT_TPYE_PLAYER;
+	m_pRemotePlayers[playerId] = remotePlayer;
 
-	printf("[Debug] Add_Object 호출 직전\n");
-
-	scene->obj_manager->Add_Object(std::static_pointer_cast<CGameObject>(new_player), Object_Type::player);
-
-	printf("[Debug] Add_Object 호출 완료\n");
-
-	m_pRemotePlayers[playerId] = new_player.get();
-
-	printf("[Debug] CreateRemotePlayer 완료: playerId = %d\n", playerId);
 }
 
 
@@ -1278,10 +1354,13 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
+	std::cout << "[쓰레드 확인] NetworkLoop() 시작됨" << std::endl;
+
 	while (isRunning)
 	{
 		char buffer[1024];
 		int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+		std::cout << "[recv] 수신 성공: " << bytesReceived << std::endl;
 
 		if (bytesReceived > 0)
 		{
@@ -1291,6 +1370,7 @@ void CGameFramework::NetworkLoop()
 			{
 				std::lock_guard<std::mutex> lock(recvQueueMutex);
 				recvQueue.push(receivedData);
+				std::cout << "[recvQueue] 데이터 push 완료, 현재 큐 크기: " << recvQueue.size() << std::endl;
 			}
 		}
 
@@ -1306,7 +1386,7 @@ void CGameFramework::NetworkLoop()
 		}
 		for (const auto& playerPair : m_pRemotePlayers)
 		{
-			CPlayer* player = playerPair.second;
+			std::shared_ptr<CPlayer> player = playerPair.second;
 			XMFLOAT3 pos = player->GetPosition();
 			std::cout << "[DEBUG] Player ID: " << playerPair.first
 				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")"

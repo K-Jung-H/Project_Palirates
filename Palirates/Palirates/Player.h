@@ -67,11 +67,12 @@ protected:
 	int id;  
 	int state;
 
-private:
 	std::unique_ptr<StateMachine> m_StateMachine;
+private:
 
 public:
 	CPlayer();
+	CPlayer(const CPlayer& other);
 	virtual ~CPlayer();
 
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
@@ -193,6 +194,8 @@ private:
 public:
 	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
 	CTerrainPlayer() {}
+	CTerrainPlayer(const CPlayer& other);
+	CTerrainPlayer(const CTerrainPlayer& other);
 	virtual ~CTerrainPlayer();
 
 public:

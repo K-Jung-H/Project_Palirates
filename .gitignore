@@ -53,6 +53,7 @@
 *.wav
 *.jpg
 *.png
+*.zip
 
 Debug/
 Release/

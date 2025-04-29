@@ -829,6 +829,29 @@ CAnimationSet::CAnimationSet(float fLength, int nFramesPerSecond, int nKeyFrames
 #endif
 }
 
+CAnimationController::CAnimationController(const CAnimationController& other)
+{
+	m_fTime = other.m_fTime;
+	m_nAnimationTracks = other.m_nAnimationTracks;
+
+	m_pAnimationTracks = new CAnimationTrack[m_nAnimationTracks];
+	for (int i = 0; i < m_nAnimationTracks; ++i)
+		m_pAnimationTracks[i] = other.m_pAnimationTracks[i];
+
+	m_pAnimationSets = other.m_pAnimationSets;
+	if (m_pAnimationSets) m_pAnimationSets->AddRef();
+
+	m_pModelRootObject = other.m_pModelRootObject;
+
+	m_nSkinnedMeshes = other.m_nSkinnedMeshes;
+	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	for (int i = 0; i < m_nSkinnedMeshes; ++i)
+		m_ppSkinnedMeshes[i] = other.m_ppSkinnedMeshes[i];
+
+	m_ppd3dcbSkinningBoneTransforms = new ID3D12Resource * [m_nSkinnedMeshes]();
+	m_ppcbxmf4x4MappedSkinningBoneTransforms = new XMFLOAT4X4 * [m_nSkinnedMeshes]();
+}
+
 CAnimationSet::~CAnimationSet()
 {
 #ifdef _WITH_ANIMATION_SRT
@@ -3039,9 +3062,10 @@ ServerAnimationSyncData CGameObject::MakeSyncData()
 
 void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
-	
-	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
+	//SetRotationAxis(syncData.rotation);
+	
+	//m_nAnimationState = syncData.animationState;
 }
 
 std::shared_ptr<CGameObject> CGameObject::DetachChildByName(const char* targetName)

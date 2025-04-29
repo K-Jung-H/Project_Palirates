@@ -25,8 +25,7 @@ void Server::AcceptClients()
         int addrLen = sizeof(clientAddr);
         SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &addrLen);
 
-
-
+  
         int clientId = clients.size();
         clients[clientId] = clientSocket;
         sceneManager.addScene(clientId);
