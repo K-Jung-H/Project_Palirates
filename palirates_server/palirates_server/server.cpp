@@ -26,14 +26,23 @@ void Server::AcceptClients()
         SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &addrLen);
 
   
-        int clientId = clients.size();
+        int clientId = nextClientId++;
         clients[clientId] = clientSocket;
+
         sceneManager.addScene(clientId);
+        Scene* scene = sceneManager.getScene(clientId);
+        if (scene)
+        {
+            scene->addPlayer(clientId);  
+        }
+
+        char sendBuffer[256];
+        sprintf_s(sendBuffer, "CLIENT_ID,%d", clientId);
 
         logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
 
-        char sendBuffer[256];
-        sprintf_s(sendBuffer, sizeof(sendBuffer), "CLIENT_ID,%d", clientId);
+        //char sendBuffer[256];
+        //sprintf_s(sendBuffer, sizeof(sendBuffer), "CLIENT_ID,%d", clientId);
 
         int retval = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
         if (retval == SOCKET_ERROR)
@@ -76,6 +85,10 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &state) == 5)
             {
                 Scene* scene = sceneManager.getScene(clientId);
+                if (!scene->getPlayer(clientId)) 
+                {
+                    scene->addPlayer(clientId);
+                }
                 if (scene)
                 {
                     scene->updatePlayerPosition(clientId, x, y, z, state);
@@ -83,7 +96,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
                 std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
                     std::to_string(x) + "," + std::to_string(y) + "," +
-                    std::to_string(z) + "," + std::to_string(state);
+                    std::to_string(z) + "," + std::to_string(state) + "\n";
 
                 logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
                 BroadcastPacket(response, clientId);
@@ -136,7 +149,7 @@ void Server::BroadcastAllStates()
         {
             std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
                 std::to_string(player.x) + "," + std::to_string(player.y) + "," +
-                std::to_string(player.z) + "," + std::to_string(player.state);
+                std::to_string(player.z) + "," + std::to_string(player.state) + "\n";
 
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
@@ -155,13 +168,17 @@ void Server::SendInitialStates(int clientId)
         const GameCharacter* character = scene.getPlayer(otherId);
         if (!character) continue;
 
-        std::string packet = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
+        std::string createPacket = "PLAYER_CREATE," + std::to_string(otherId) + "\n";
+        send(clients[clientId], createPacket.c_str(), createPacket.length(), 0);
+
+        std::string updatePacket = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
             std::to_string(character->x) + "," +
             std::to_string(character->y) + "," +
             std::to_string(character->z) + "," +
-            std::to_string(character->state);
+            std::to_string(character->state) + "\n";
+        send(clients[clientId], updatePacket.c_str(), updatePacket.length(), 0);
+        logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 
-        send(clients[clientId], packet.c_str(), packet.length(), 0);
     }
 }
 
@@ -174,19 +191,24 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
     const GameCharacter* character = scene->getPlayer(newClientId);
     if (!character) return;
 
+    std::string createPacket = "PLAYER_CREATE," + std::to_string(newClientId) + "\n";
+
     std::string packet = "PLAYER_UPDATE," + std::to_string(newClientId) + "," +
         std::to_string(character->x) + "," +
         std::to_string(character->y) + "," +
         std::to_string(character->z) + "," +
-        std::to_string(character->state);
+        std::to_string(character->state) + "\n";
 
     for (const auto& [clientId, sock] : clients)
     {
         if (clientId == newClientId) continue;  // 자기 자신 제외
+
+        send(sock, createPacket.c_str(), createPacket.length(), 0);
         send(sock, packet.c_str(), packet.length(), 0);
     }
 
     logger.Log("기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
+    logger.Log("[서버] (NotifyExistingPlayersAboutNew) PLAYER_CREATE 전송: " + createPacket);
 }
 
 

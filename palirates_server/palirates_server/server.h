@@ -23,6 +23,8 @@ public:
     Server(int port);
     ~Server();
 
+    int nextClientId = 0;
+
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
