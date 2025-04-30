@@ -1333,6 +1333,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->Set_Active(true);
 	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 
+	remotePlayer->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
 	scene->obj_manager->Add_Object(std::static_pointer_cast<CGameObject>(remotePlayer), Object_Type::player);
 	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);

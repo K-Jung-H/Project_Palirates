@@ -400,7 +400,7 @@ CTerrainPlayer::CTerrainPlayer(const CTerrainPlayer& other)	: CPlayer(other)
 	for (const auto& mat : other.Material_list)
 	{
 		if (mat)
-			Material_list.push_back(std::make_shared<CMaterial>(*mat));
+			Material_list.push_back(mat->CloneWithSharedTextures());
 		else
 			Material_list.push_back(nullptr);
 	}
