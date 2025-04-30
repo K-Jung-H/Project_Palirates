@@ -84,13 +84,14 @@ class Particle_Manager
 {
 private:
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
-	std::unordered_map<Particle_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
 
+
+	static constexpr UINT THREAD_COUNT = 64;
 
 public:
+	std::unordered_map<Particle_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
 	Particle_Manager();
 	~Particle_Manager();
-
 	void Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);

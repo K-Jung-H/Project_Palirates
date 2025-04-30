@@ -378,7 +378,7 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		particle_info[i].Color = particle_format.color;
 		particle_info[i].Size = particle_format.size;
 
-		particle_info[i].Padding1 = 0.0f;
+		particle_info[i].EmitFaceIndex = particle_format.EmitFaceIndex;
 	}
 
 	return particle_info;

@@ -13,8 +13,16 @@ enum class Particle_Type
 	spread,
 	sample_1,
 	sample_2,
+	boss_skill,
 	etc
 };
+
+#define FACE_LEFT    0 // -X
+#define FACE_RIGHT   1 // +X
+#define FACE_BOTTOM  2 // -Y
+#define FACE_TOP     3 // +Y
+#define FACE_BACK    4 // -Z
+#define FACE_FRONT   5 // +Z
 
 struct Particle_Format
 {
@@ -24,6 +32,7 @@ struct Particle_Format
 
 	XMFLOAT3 center{};
 	XMFLOAT3 area_xyz{};
+	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
 
 	float MaxLifetime;
 
@@ -54,7 +63,7 @@ struct Particle_Info
 	float Roate_Value;
 
 	XMFLOAT3 Color;
-	float    Padding1;
+	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
 
 	XMFLOAT2 Size;
 	UINT     Type;

@@ -12,7 +12,7 @@ struct Particle_Info
     float Rotate_Value;
 
     float3 Color;
-    float pad1;
+    uint EmitFaceIndex;
 
     float2 Size;
     uint Type;
@@ -42,19 +42,60 @@ RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
 
+#define FACE_LEFT    0 // -X
+#define FACE_RIGHT   1 // +X
+#define FACE_BOTTOM  2 // -Y
+#define FACE_TOP     3 // +Y
+#define FACE_BACK    4 // -Z
+#define FACE_FRONT   5 // +Z
 
-float3 RandomEmitPosition(uint id, float3 min, float3 max)
+float3 GetEmitFaceCenter(int face, float3 min, float3 max)
 {
-    float seed = id * 13.13 + 0.1f;
+    float3 c = (min + max) * 0.5f;
 
-    float rx = frac(sin(seed) * 43758.5453);
-    float rz = frac(sin(seed * 7.77) * 12345.6789);
+    // FACE_X → 중심에서 해당 축만 min/max
+    switch (face)
+    {
+        case 0:
+            return float3(min.x, c.y, c.z); // LEFT (-X)
+        case 1:
+            return float3(max.x, c.y, c.z); // RIGHT (+X)
+        case 2:
+            return float3(c.x, min.y, c.z); // BOTTOM (-Y)
+        case 3:
+            return float3(c.x, max.y, c.z); // TOP (+Y)
+        case 4:
+            return float3(c.x, c.y, min.z); // BACK (-Z)
+        case 5:
+            return float3(c.x, c.y, max.z); // FRONT (+Z)
+        default:
+            return c;
+    }
+}
 
-    float x = lerp(min.x, max.x, rx);
-    float z = lerp(min.z, max.z, rz);
-    float y = max.y;
+//===============================================================
+// 면 중심에서 약간 퍼지도록 emit 위치 생성
+float3 RandomEmitPosition(uint id, float3 min, float3 max, int face)
+{
+    float3 center = GetEmitFaceCenter(face, min, max);
 
-    return float3(x, y, z);
+    float seed = (float) id * 13.13f + ElapsedTime;
+
+    float rx = frac(sin(seed * 1.5f) * 43758.5453);
+    float ry = frac(sin(seed * 3.3f) * 33445.4321);
+    float rz = frac(sin(seed * 7.7f) * 12345.6789);
+
+    // AABB 크기
+    float3 extent = (max - min) * 0.5f;
+
+    // 면에서 퍼짐 가능한 방향 (해당 face 축 제외)
+    float3 offset = float3(
+        (face == 0 || face == 1) ? 0.0f : (rx - 0.5f) * extent.x,
+        (face == 2 || face == 3) ? 0.0f : (ry - 0.5f) * extent.y,
+        (face == 4 || face == 5) ? 0.0f : (rz - 0.5f) * extent.z
+    );
+
+    return center + offset;
 }
 
 float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
@@ -77,8 +118,8 @@ float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
 
 void Emit_Snow(inout Particle_Info p, uint index)
 {
-    p.Position = RandomEmitPosition(index, EmitRegionMin, EmitRegionMax);
-    float3 dir = RandomSpreadDirection(index, Main_Direction, 0.5f);
+    p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
+    float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
     p.Velocity = normalize(dir) * Init_Velocity_Value;
 
 }
@@ -87,9 +128,8 @@ void Emit_Spark(inout Particle_Info p, uint index)
 {
     float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
     p.Position = center;
-    float3 dir = RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 2.0f);
     p.Velocity = normalize(dir) * Init_Velocity_Value;
-    p.Color = float3(1.0f, 0.0f, 0.0f);
 
 }
 
@@ -108,7 +148,41 @@ void Emit_Water_Splash(inout Particle_Info p, uint index)
     p.Color = float3(0.6f, 0.8f, 1.0f);
 }
 
+void Emit_Sand(inout Particle_Info p, uint index)
+{
+    p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
+    float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
+    p.Velocity = normalize(dir) * Init_Velocity_Value;
 
+}
+
+void Emit_Sand_Storm(inout Particle_Info p, uint index)
+{
+    float3 baseDir = normalize(Main_Direction);
+    float3 realMin = min(EmitRegionMin, EmitRegionMax);
+    float3 realMax = max(EmitRegionMin, EmitRegionMax);
+    float3 emitCenter = GetEmitFaceCenter(p.EmitFaceIndex, realMin, realMax);
+
+    float3 offset = RandomSpreadDirection(index * (p.Type + 1), baseDir, 1.0f);
+    float startRadius = 5.0f + frac(sin(index * 17.17f) * 1234.5678f) * 10.0f;
+    p.Position = emitCenter + offset * startRadius;
+
+    float3 tangent = normalize(cross(baseDir, offset));
+    float3 initialDir = normalize(baseDir * 0.7f + tangent * 0.3f);
+
+    // float noise = frac(sin(index * 31.31f) * 6789.1234f); 
+    // initialDir += RandomSpreadDirection(index, baseDir, 0.2f) * 0.2f; // 방향 노이즈 (선택 적용)
+    // initialDir = normalize(initialDir);
+
+    p.Velocity = initialDir * Init_Velocity_Value;
+    p.Color = float3(0.92f, 0.90f, 0.80f);
+}
+
+#define PARTICLE_TYPE_SNOW     0
+#define PARTICLE_TYPE_SPARK     1
+#define PARTICLE_TYPE_SPLASH    2
+#define PARTICLE_TYPE_SAND      3
+#define PARTICLE_TYPE_SAND_STORM 4
 
 #define THREAD_COUNT 64
 [numthreads(THREAD_COUNT, 1, 1)]
@@ -130,11 +204,11 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     p.Active = 1;
     p.Lifetime = 0.0f;
 
-    if (p.Type == 0)
+    if (p.Type == PARTICLE_TYPE_SNOW)
         Emit_Snow(p, index);
-    else if (p.Type == 1)
+    else if (p.Type == PARTICLE_TYPE_SPARK)
         Emit_Spark(p, index);
-    else if (p.Type == 2)
+    else if (p.Type == PARTICLE_TYPE_SPLASH)
     {
         float seed = frac(sin(index * 91.91f) * 12345.6789f);
         float startDelay = seed * 0.1f;
@@ -150,6 +224,10 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
             return; 
         }
     }
-
-        ParticleBuffer_Emit[index] = p;
+    else if (p.Type == PARTICLE_TYPE_SAND)
+        Emit_Sand(p, index);
+    else if (p.Type == PARTICLE_TYPE_SAND_STORM)
+        Emit_Sand_Storm(p, index);
+    
+    ParticleBuffer_Emit[index] = p;
 }

@@ -368,7 +368,9 @@ void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT c
 	if (cxThreadGroups < 1 || cyThreadGroups < 1 || czThreadGroups < 1)
 		return;
 	else
+	{
 		pd3dCommandList->Dispatch(cxThreadGroups, cyThreadGroups, czThreadGroups);
+	}
 }
 
 //------------------------------------------------------------------------------------------------
@@ -476,8 +478,8 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 
-
-			shader_ptr->Dispatch(pd3dCommandList, update_info.Max_Particle_N, 1, 1);
+			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
+			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);
 		}
 	}
 }
@@ -510,8 +512,9 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 
-			shader_ptr->Dispatch(pd3dCommandList, particle_data->Get_Particle_Max_Num(), 1, 1);
 
+			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
+			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);
 		}
 	}
 }
