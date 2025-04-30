@@ -445,14 +445,14 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
 
 			}
-			if (wParam == 'U') {
+			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
 				ServerAnimationSyncData data;
 				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 				data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				data.currentState = State::Dive;
+				data.currentState = State::Get_Hit_F2;
 				for (int i = 0; i < m_pPlayer->n_Animation; i++) {
 					if (i == TRACK_DIVEROLL_FORWARD)
-						data.trackPositions.push_back(0.5f);
+						data.trackPositions.push_back(0.0f);
 					else data.trackPositions.push_back(0.0f);
 					if (i == TRACK_DIVEROLL_FORWARD)
 						data.Weights.push_back(1.0f);

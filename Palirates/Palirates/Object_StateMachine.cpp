@@ -361,6 +361,13 @@ void PlayerStateMachine::update(float Elapsed_time)
         m_pOwner->targetWeights[TRACK_ATTACK3] = 1.0f;
         RootMotionMove(30.0f);
         break;
+    case State::Get_Hit_F2:
+        if (animController->m_pAnimationTracks[TRACK_GET_HIT_F2].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_GET_HIT_F2] = 1.0f;
+        RootMotionMove(30.0f, true);
+        break;
     }
 
     for (int i = 0; i < n_Ani; i++)
@@ -383,42 +390,13 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     if (kRootMotionStates.contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = false;
+            m_pOwner->SetStateElapsedTime(0.0f);
         }
+
+        ResetTrackForState(state, true);
     }
     switch (state)
     {
-    case State::Idle:
-        break;
-    case State::Run:
-        break;
-    case State::Dive:
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0;
-        break;
-    case State::Knock_Down:
-        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = 0;
-        break;
-    case State::Get_Up:
-        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = 0;
-        break;
-    case State::Attack1:
-        animController->m_pAnimationTracks[TRACK_ATTACK1].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_ATTACK1].m_fPosition = 0;
-        break;
-    case State::Attack2:
-        animController->m_pAnimationTracks[TRACK_ATTACK2].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_ATTACK2].m_fPosition = 0;
-        break;
-    case State::Attack3:
-        animController->m_pAnimationTracks[TRACK_ATTACK3].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition = 0;
-        break;
-    case State::Jump:
-        break;
-    case State::Attack_Normal:
-        break;
 
     default:
         break;
@@ -431,6 +409,8 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = true;
         }
+
+        ResetTrackForState(state, false);
     }
     switch (state)
     {
@@ -440,26 +420,19 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         break;
     case State::Dive:
         key_state.dive = false;
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
-        DebugOutput("Dive->Idle\n");
         break;
     case State::Knock_Down:
-        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
         break;
     case State::Get_Up:
-        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
         break;
     case State::Attack1:
         key_state.attack1 = false;
-        animController->m_pAnimationTracks[TRACK_ATTACK1].m_bFinished = false;
         break;
     case State::Attack2:
         key_state.attack2 = false;
-        animController->m_pAnimationTracks[TRACK_ATTACK2].m_bFinished = false;
         break;
     case State::Attack3:
         key_state.attack3 = false;
-        animController->m_pAnimationTracks[TRACK_ATTACK3].m_bFinished = false;
         break;
     case State::Jump:
         break;
@@ -497,6 +470,19 @@ void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
 
     if (scaleShift.z > 0.001f) {
         m_pOwner->Move(finalMove, false);
+    }
+}
+
+void PlayerStateMachine::ResetTrackForState(State state, bool posReset)
+{
+    auto it = kRootMotionStateToTrackMap.find(state);
+    if (it != kRootMotionStateToTrackMap.end()) {
+        int track = it->second;
+        if (animController != nullptr) {
+            animController->m_pAnimationTracks[track].m_bFinished = false;
+            if (posReset)
+                animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
+        }
     }
 }
 
