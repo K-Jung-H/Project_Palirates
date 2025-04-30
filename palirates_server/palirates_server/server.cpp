@@ -25,7 +25,7 @@ void Server::AcceptClients()
         int addrLen = sizeof(clientAddr);
         SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &addrLen);
 
-  
+
         int clientId = nextClientId++;
         clients[clientId] = clientSocket;
 
@@ -33,7 +33,7 @@ void Server::AcceptClients()
         Scene* scene = sceneManager.getScene(clientId);
         if (scene)
         {
-            scene->addPlayer(clientId);  
+            scene->addPlayer(clientId);
         }
 
         char sendBuffer[256];
@@ -85,7 +85,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &state) == 5)
             {
                 Scene* scene = sceneManager.getScene(clientId);
-                if (!scene->getPlayer(clientId)) 
+                if (!scene->getPlayer(clientId))
                 {
                     scene->addPlayer(clientId);
                 }
@@ -94,11 +94,23 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     scene->updatePlayerPosition(clientId, x, y, z, state);
                 }
 
+       
+
+      
                 std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
                     std::to_string(x) + "," + std::to_string(y) + "," +
                     std::to_string(z) + "," + std::to_string(state) + "\n";
-
                 logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
+
+                for (const auto& [otherId, sock] : clients)
+                {
+                    if (otherId == clientId) continue;
+                    int sendResult = send(sock, response.c_str(), (int)response.size(), 0);
+                    if (sendResult == SOCKET_ERROR)
+                    {
+                        logger.Log("[에러] 클라이언트 " + std::to_string(otherId) + "에게 전송 실패: " + std::to_string(WSAGetLastError()));
+                    }
+                }
                 BroadcastPacket(response, clientId);
             }
             else
@@ -216,30 +228,30 @@ Server::~Server()
 {
     for (const auto& [id, socket] : clients)
     {
-		closesocket(socket);
-	}
+        closesocket(socket);
+    }
 
-	closesocket(listenSocket);
-	WSACleanup();
+    closesocket(listenSocket);
+    WSACleanup();
 }
 
 void Server::Start()
 {
-	std::thread(&Server::AcceptClients, this).detach();
+    std::thread(&Server::AcceptClients, this).detach();
 }
 
 int main()
 {
-	Server server(9000);
-	server.Start();
+    Server server(9000);
+    server.Start();
 
     while (true)
     {
         server.BroadcastAllStates();
-		std::this_thread::sleep_for(std::chrono::seconds(1));
-	}
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 
-	return 0;
+    return 0;
 }
 
 //bool Server::ValidatePosition(float x, float y, float z)
