@@ -228,6 +228,7 @@ void StateMachine::exitState(State state, Key_Value key_event)
     }
 }
 
+
 PlayerStateMachine::PlayerStateMachine(CPlayer* owner)
     : StateMachine(State::Idle), m_pOwner(owner) {
 }
@@ -604,28 +605,7 @@ MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
 
 void MonsterStateMachine::update(float Elapsed_time)
 {
-    float blendSpeed = 6.0f * Elapsed_time;
-
-    stateElapsedTime += Elapsed_time;
-
-    if (isFirstUpdate) {
-        animController = m_pOwner->GetSkinnedAnimationController();
-        n_Ani = m_pOwner->n_Animation;
-        for (int i = 0; i < n_Ani; i++) {
-            m_pOwner->prevWeights[i] = 0.0f;
-            animController->SetTrackWeight(i, 0.0f);
-        }
-        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
-        isFirstUpdate = false;
-    }
-    else {
-
-        for (int i = 0; i < n_Ani; i++) {
-            m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
-        }
-    }
-
-    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+    OnPrepareUpdate(6.0f, Elapsed_time);
 
     if (stateElapsedTime >= stateChangeTime) {
         switch (Get_State()) {
@@ -701,6 +681,33 @@ void MonsterStateMachine::update(float Elapsed_time)
 
     }
 }
+
+void MonsterStateMachine::OnPrepareUpdate(float blendSpeedOffSet, float Elapsed_time)
+{
+    blendSpeed = 6.0f * Elapsed_time;
+
+    stateElapsedTime += Elapsed_time;
+
+    if (isFirstUpdate) {
+        animController = m_pOwner->GetSkinnedAnimationController();
+        n_Ani = m_pOwner->n_Animation;
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = 0.0f;
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+        isFirstUpdate = false;
+    }
+    else {
+
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+        }
+    }
+
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+}
+
 
 void MonsterStateMachine::enterState(State state, Key_Value key_event)
 {

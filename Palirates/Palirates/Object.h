@@ -1004,3 +1004,13 @@ public:
 	}
 };
 
+class CAnubisObject : public CMonsterObject
+{
+public:
+	CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CAnubisObject() {};
+
+	AnubisStateMachine* GetStateMachine() override {
+		return static_cast<AnubisStateMachine*>(m_StateMachine.get());
+	}
+};

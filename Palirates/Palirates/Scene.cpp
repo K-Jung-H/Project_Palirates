@@ -623,7 +623,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	//CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-	CLoadedModelInfo* pFishmanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
+	//CLoadedModelInfo* pFishmanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
 	//CLoadedModelInfo* pMedusaModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
 	//CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
 	//CLoadedModelInfo* pSeamanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
@@ -643,13 +643,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	string obj_name_8 = "test_palyer6";
 
 
-	//std::string_view name_view = obj_name_1;
-	//std::shared_ptr<CMonsterObject> humanObject_1 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pAnubisModel, 5);
-	//humanObject_1->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
-	//humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_1->Set_Name(obj_name_1);
-	//humanObject_1->test_num = 1;
-	//obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
+	std::string_view name_view = obj_name_1;
+	std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
+	AnubisObject->Set_Name(obj_name_1);
+	AnubisObject->test_num = 1;
+	obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
 	//name_view = obj_name_2;
 	//std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pMedusaModel, 5);
@@ -690,11 +689,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	for (int i = 0; i < 10; i++) {
-		//CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
 		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		m->SetPosition(1.0f * i, m_pTerrain->Get_Mesh_Height(1.0f * i, 1.0f * i), 1.0f * i);
-		m->SetScale(10.0f, 10.0f, 10.0f);
-		//m->SetScale(1.0f, 1.0f, 1.0f);
+		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
 		m->Set_Name(obj_name_3);
 		m->test_num = i + 4;
 		obj_manager->Add_Object(m, Object_Type::skinned);

@@ -1290,7 +1290,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
 						//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
 						if (j == 0) {
-							if (k == 3) {
+							if (pRootGameObject->RootMotionTrackSet.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
 
@@ -4469,4 +4469,43 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
+
+	SetScale(10.0f, 10.0f, 10.0f);
+}
+
+///////////////////////////////////////////////////////////////////
+
+CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		TRACK_ANUBIS_IDLE,
+		TRACK_ANUBIS_IDLE_BREAK,
+		TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
+		TRACK_ANUBIS_WALK,
+		TRACK_ANUBIS_BACK_WALK,
+		TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD
+	};
+
+	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
+
+	Object_type = OBJECT_TPYE_MONSTER;
+
+	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_LP.bin", NULL);
+
+	n_Animation = 10;
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+
+	Set_Child(pAnubisModel->m_pModelRootObject);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAnubisModel);
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	SetScale(15.0f, 15.0f, 15.0f);
 }
