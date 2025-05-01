@@ -1375,6 +1375,8 @@ void CStandardMesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList
 //
 CSkinnedMesh::CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CStandardMesh(pd3dDevice, pd3dCommandList)
 {
+	ZeroMemory(&m_d3dTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBiTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
 }
 
 CSkinnedMesh::~CSkinnedMesh()

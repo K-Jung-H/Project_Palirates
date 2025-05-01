@@ -1014,3 +1014,14 @@ public:
 		return static_cast<AnubisStateMachine*>(m_StateMachine.get());
 	}
 };
+
+class CDragonObject : public CMonsterObject
+{
+public:
+	CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CDragonObject() {};
+
+	DragonStateMachine* GetStateMachine() override {
+		return static_cast<DragonStateMachine*>(m_StateMachine.get());
+	}
+};

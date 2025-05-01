@@ -441,26 +441,57 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					test = true;
 				}
 			}
+			if (nMessageID == WM_KEYDOWN && wParam == VK_OEM_2) {
+				auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+
+				if (mon && !mon->empty())
+				{
+					std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
+
+					CGameObject* base = baseObj.get();
+
+					auto* anubis = dynamic_cast<CAnubisObject*>(base);
+					if (anubis)
+					{
+						//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+						anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
+						//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+						//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+					}
+
+					std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
+
+					CGameObject* base2 = baseObj2.get();
+
+					auto* dra = dynamic_cast<CDragonObject*>(base2);
+					if (dra)
+					{
+						//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+						dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+						//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+						//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+						dra->MoveUp(30.0f);
+					}
+				}
+			}
 			if (wParam == 'C') {
 				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
 
 			}
 			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
-				ServerAnimationSyncData data;
-				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-				data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				data.currentState = State::Get_Hit_F2;
-				for (int i = 0; i < m_pPlayer->n_Animation; i++) {
-					if (i == TRACK_DIVEROLL_FORWARD)
-						data.trackPositions.push_back(0.0f);
-					else data.trackPositions.push_back(0.0f);
-					if (i == TRACK_DIVEROLL_FORWARD)
-						data.Weights.push_back(1.0f);
-					else data.Weights.push_back(0.0f);
-				}
+				//ServerAnimationSyncData data;
+				////data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+				//data.position = m_pPlayer->GetPosition();
+				//data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
+				//data.currentState = State::Get_Hit_F2;
+				//for (int i = 0; i < m_pPlayer->n_Animation; i++) {
+				//	data.trackPositions.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
+				//	data.Weights.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
+				//}
 
-				GetSyncManager().AddPlayerSyncData(ClientNum, data);
-				m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+				//GetSyncManager().AddPlayerSyncData(ClientNum, data);
+				//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			}
 			if (nMessageID == WM_KEYDOWN && wParam == 'T') {
 				//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);

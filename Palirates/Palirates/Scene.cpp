@@ -677,15 +677,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//obj_p->test_num = 4;
 	////obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
 
-	//std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pDragonModel, 13);
-	//Dragon->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 20.0f), 20.0f);
-	//Dragon->SetScale(10.0f, 10.0f, 10.0f);
-	//Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	//XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
-	//Dragon->Rotate(&tt2, 90.0f);
-	////Dragon->Set_Name(obj_name_3);
-	//Dragon->test_num = 5;
-	//obj_manager->Add_Object(Dragon, Object_Type::skinned);
+	std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
+	Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+	Dragon->Rotate(&tt2, 180.0f);
+	Dragon->test_num = 5;
+	obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
 	for (int i = 0; i < 10; i++) {

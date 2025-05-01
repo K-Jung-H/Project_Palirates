@@ -1268,7 +1268,6 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
-
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
@@ -1277,8 +1276,9 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 						//if (j == pRootGameObject->RootBoneIndex)
 						if (j == 2)	// player root index
 						{
-							if (kUpdateHipsTracks.contains(k) && !m_pAnimationTracks[k].m_bFinished) {
+							if (!m_pAnimationTracks[k].m_bFinished && kUpdateHipsTracks.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+								
 							}
 
 							blendedTransform._41 = 0.0f;
@@ -1289,8 +1289,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					}
 					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
 						//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
-						if (j == 0) {
-							if (pRootGameObject->RootMotionTrackSet.contains(k)) {
+						if (j == 16) {
+							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
 
@@ -4490,13 +4490,23 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		TRACK_ANUBIS_DEAD
 	};
 
+	std::unordered_set<int> OnceType = {
+		TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD
+	};
+
+	n_Animation = 10;
+
+
 	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
 
 	Object_type = OBJECT_TPYE_MONSTER;
 
 	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_LP.bin", NULL);
 
-	n_Animation = 10;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 
@@ -4507,5 +4517,63 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
 
+	for (int i = 0; i < n_Animation; ++i) {
+		if (OnceType.contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	SetScale(15.0f, 15.0f, 15.0f);
+}
+
+///////////////////////////////////////////////////////////////////
+
+CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		TRACK_ANUBIS_IDLE,
+		TRACK_ANUBIS_IDLE_BREAK,
+		TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
+		TRACK_ANUBIS_WALK,
+		TRACK_ANUBIS_BACK_WALK,
+		TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD,
+		10
+	};
+
+	std::unordered_set<int> OnceType = {
+		//TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD,
+	};
+
+	n_Animation = 13;
+
+
+	m_StateMachine = std::make_unique<DragonStateMachine>(this);
+
+	Object_type = OBJECT_TPYE_MONSTER;
+
+	CLoadedModelInfo* pDragonModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Dragon_LP.bin", NULL);
+
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+
+	Set_Child(pDragonModel->m_pModelRootObject);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pDragonModel);
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	for (int i = 0; i < n_Animation; ++i) {
+		if (OnceType.contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
 	SetScale(15.0f, 15.0f, 15.0f);
 }

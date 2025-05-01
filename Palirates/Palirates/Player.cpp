@@ -343,7 +343,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
 		}
 	}
-	
+	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK1].m_nType = ANIMATION_TYPE_ONCE;
