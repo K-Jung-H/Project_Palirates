@@ -79,8 +79,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             std::string packet(buffer);
             logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
 
+            int id, state;
             float x, y, z;
-            int state;
+            float lookX, lookY, lookZ;
 
             if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &state) == 5)
             {
@@ -104,7 +105,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
                 for (const auto& [otherId, sock] : clients)
                 {
-                    if (otherId == clientId) continue;
+                    if (otherId == clientId) continue; // 자신에게는 전송 금지
                     int sendResult = send(sock, response.c_str(), (int)response.size(), 0);
                     if (sendResult == SOCKET_ERROR)
                     {

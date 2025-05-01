@@ -47,13 +47,13 @@
 *.VC.db
 *.VC.opendb
 *.bin
-*.txt
 *.dds
 *.raw
 *.wav
 *.jpg
 *.png
 *.zip
+*.txt
 
 Debug/
 Release/

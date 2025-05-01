@@ -691,6 +691,12 @@ public:
 		static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
 		static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 		static void ClearMeshCache();
+
+		//==================
+
+		int m_nPlayerId = -1;
+		void SetID(int id) { m_nPlayerId = id; }
+		int GetID() const { return m_nPlayerId; }
 };
 
 //==================================================================================

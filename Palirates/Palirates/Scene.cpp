@@ -1461,7 +1461,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 	//=====================================================
 	{
-		CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/SM_Veh_Boat_Warship_01_Hull_Attachments.bin", NULL);
+		CLoadedModelInfo* Ship_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Pirate_Ship_Model.bin", NULL);
 
 		pirate_ship = std::make_shared<Boat_Object>();
 		pirate_ship->Set_Child(Ship_Model->m_pModelRootObject);

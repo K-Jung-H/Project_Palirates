@@ -1,6 +1,16 @@
 #pragma once
 #include <iostream>
 
+enum class EState : int
+{
+    Idle,
+    Walk,
+    Run,
+    Jump,
+    Attack,
+    Dash
+};
+
 class Player
 {
 public:

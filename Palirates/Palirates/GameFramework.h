@@ -126,6 +126,7 @@ public:
 
 	Scene_Manager sceneManager;
 	std::shared_ptr<Object_Manager> object_manager;
+	bool bClientIdAssigned = false;
 	//=================서버=================
 
 private:

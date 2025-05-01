@@ -677,6 +677,8 @@ void CGameFramework::Release_Scenes()
 
 void CGameFramework::ProcessInput()
 {
+	if (!m_pPlayer) return;
+
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
 
@@ -945,6 +947,8 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
 
+	BeginGPUStage(GPU_Stage::Compute);
+	PrepareStage(GPU_Stage::Compute);
 	{
 		std::lock_guard<std::mutex> lock(recvQueueMutex);
 		while (!recvQueue.empty())
@@ -966,6 +970,7 @@ void CGameFramework::FrameAdvance()
 			CreateRemotePlayer(playerId);
 		}
 	}
+	EndGPUStage(GPU_Stage::Compute, true);
 
 	// ====================== [1] Compute: Update Scene ======================
 	BeginGPUStage(GPU_Stage::Compute);
@@ -1175,14 +1180,86 @@ void CGameFramework::SendPacket()
 	int state = m_pPlayer->GetState();
 
 	char buffer[256];
-	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, state);
+	sprintf(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d",ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);;
 
 	send(serverSocket, buffer, (int)strlen(buffer), 0);
 }
 
+//void CGameFramework::ProcessReceivedData(const std::string& receivedData)
+//{
+//
+//	std::cout << "[디버그] ProcessReceivedData() 호출됨" << std::endl;
+//
+//	int playerId;
+//	float px, py, pz;
+//	int state;
+//
+//	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
+//	{
+//		printf("[Debug] 내 클라이언트 ID 수신 완료: %d\n", ClientNum);
+//
+//		CreateLocalPlayer(ClientNum);
+//
+//		m_pPlayer = GetSceneManager().GetPlayerById(ClientNum);
+//		if (m_pCamera && m_pPlayer)
+//			m_pCamera->SetPlayer(m_pPlayer);
+//
+//		return;
+//	}
+//
+//	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d", &playerId, &px, &py, &pz, &state) == 5)
+//	{
+//
+//		std::cout << "[디버그] PLAYER_UPDATE 패킷 감지됨" << std::endl;
+//		if (playerId == ClientNum)
+//		{
+//			if (m_pPlayer)
+//			{
+//				m_pPlayer->SetPosition(XMFLOAT3(px, py, pz));
+//				m_pPlayer->SetState(state);
+//			}
+//		}
+//		else
+//		{
+//			auto it = m_pRemotePlayers.find(playerId);
+//			if (it == m_pRemotePlayers.end())
+//			{
+//				std::cout << "[디버그] playerId " << playerId << " 은 새 플레이어로 큐에 등록됨" << std::endl;
+//				{
+//					std::lock_guard<std::mutex> lock(pendingCreateMutex);
+//					pendingPlayerCreates.push(playerId);
+//				}
+//				std::cout << "[디버그] playerId  "<< playerId  << std::endl;
+//
+//				return;
+//			}
+//			else
+//			{
+//				std::cout << "[디버그] playerId " << playerId << " 은 이미 m_pRemotePlayers에 있음" << std::endl;
+//			}
+//
+//			if (it != m_pRemotePlayers.end())
+//			{
+//				auto remotePlayer = it->second;
+//				if (remotePlayer)
+//				{
+//					auto syncData = GetSyncManager().GetPlayerSyncData(playerId);
+//					remotePlayer->ApplySyncData(syncData);
+//
+//					remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
+//					remotePlayer->SetState(state);
+//				}
+//				else
+//				{
+//					std::cout << "[경고] remotePlayer null 상태" << std::endl;
+//				}
+//			}
+//		}
+//	}
+//}
+
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-
 	std::cout << "[디버그] ProcessReceivedData() 호출됨" << std::endl;
 
 	int playerId;
@@ -1191,7 +1268,8 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
-		printf("[Debug] 내 클라이언트 ID 수신 완료: %d\n", ClientNum);
+		std::cout << "[Debug] 내 클라이언트 ID 수신 완료: " << ClientNum << std::endl;
+		bClientIdAssigned = true;
 
 		CreateLocalPlayer(ClientNum);
 
@@ -1199,15 +1277,35 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (m_pCamera && m_pPlayer)
 			m_pCamera->SetPlayer(m_pPlayer);
 
+		// 지연된 remote 생성 처리
+		while (!pendingPlayerCreates.empty()) {
+			int pendingId = pendingPlayerCreates.front();
+			pendingPlayerCreates.pop();
+			if (pendingId != ClientNum)
+				CreateRemotePlayer(pendingId);
+		}
+
+		return;
+	}
+
+	if (!bClientIdAssigned)
+	{
+		std::cout << "[경고] 아직 CLIENT_ID를 받지 않아 패킷 처리 지연 중: " << receivedData << std::endl;
 		return;
 	}
 
 	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d", &playerId, &px, &py, &pz, &state) == 5)
 	{
-
 		std::cout << "[디버그] PLAYER_UPDATE 패킷 감지됨" << std::endl;
+
 		if (playerId == ClientNum)
 		{
+			if (px == 0.0f && py == 0.0f && pz == 0.0f)
+			{
+				std::cout << "[디버그] 좌표가 (0,0,0)이므로 무시됨" << std::endl;
+				return;
+			}
+
 			if (m_pPlayer)
 			{
 				m_pPlayer->SetPosition(XMFLOAT3(px, py, pz));
@@ -1219,49 +1317,59 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			auto it = m_pRemotePlayers.find(playerId);
 			if (it == m_pRemotePlayers.end())
 			{
-				std::cout << "[디버그] playerId " << playerId << " 은 새 플레이어로 큐에 등록됨" << std::endl;
+				// 중복 큐 방지
+				bool alreadyQueued = false;
+				std::queue<int> tempQueue = pendingPlayerCreates;
+				while (!tempQueue.empty())
+				{
+					if (tempQueue.front() == playerId)
+					{
+						alreadyQueued = true;
+						break;
+					}
+					tempQueue.pop();
+				}
+
+				if (!alreadyQueued)
 				{
 					std::lock_guard<std::mutex> lock(pendingCreateMutex);
 					pendingPlayerCreates.push(playerId);
-				}
-				std::cout << "[디버그] playerId  "<< playerId  << std::endl;
-
-				return;
-			}
-			else
-			{
-				std::cout << "[디버그] playerId " << playerId << " 은 이미 m_pRemotePlayers에 있음" << std::endl;
-			}
-
-			if (it != m_pRemotePlayers.end())
-			{
-				auto remotePlayer = it->second;
-				if (remotePlayer)
-				{
-					auto syncData = GetSyncManager().GetPlayerSyncData(playerId);
-					remotePlayer->ApplySyncData(syncData);
-
-					remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
-					remotePlayer->SetState(state);
+					std::cout << "[디버그] playerId " << playerId << " remote 큐에 추가됨" << std::endl;
 				}
 				else
 				{
-					std::cout << "[경고] remotePlayer null 상태" << std::endl;
+					std::cout << "[중복 방지] playerId " << playerId << " 이미 큐에 있음" << std::endl;
 				}
+				return;
+			}
+
+			auto remotePlayer = it->second;
+			if (remotePlayer)
+			{
+				auto& syncDataMap = GetSyncManager().GetAllSyncData();
+				if (syncDataMap.find(playerId) != syncDataMap.end())
+				{
+					auto syncData = syncDataMap[playerId];
+					remotePlayer->ApplySyncData(syncData);
+				}
+
+				remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
+				remotePlayer->SetState(state);
+			}
+			else
+			{
+				std::cout << "[경고] remotePlayer null 상태" << std::endl;
 			}
 		}
 	}
 }
 
-
 void CGameFramework::CreateLocalPlayer(int playerId)
 {
 	std::cout << "[디버그] CreateRemotePlayer 호출됨: " << playerId << std::endl;
 	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-	if (!scene || !scene->obj_manager || !Active_CommandList) return;
+	if (!scene || !scene->obj_manager) return;
 
-	HRESULT hr = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-	if (FAILED(hr)) return;
 
 	auto local_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
 
@@ -1304,24 +1412,43 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 void CGameFramework::CreateRemotePlayer(int playerId)
 {
 	std::cout << "[디버그] CreateRemotePlayer() 호출됨 - ID: " << playerId << std::endl;
-	Scene_Manager& sceneManager = GetSceneManager();
-	auto scene = sceneManager.Get_Active_Scene();
 
-	if (!m_pPlayer)
+	// 중복 방지
+	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
 	{
-		printf("[CreateRemotePlayer] 내 플레이어가 아직 생성되지 않았습니다.\n");
+		std::cout << "[중복 방지] m_pRemotePlayers 에 이미 존재: " << playerId << std::endl;
 		return;
 	}
 
-	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+	auto scene = scene_manager->Get_Active_Scene();
+	if (!scene || !scene->obj_manager)
+	{
+		std::cout << "[오류] scene 또는 obj_manager 가 NULL" << std::endl;
+		return;
+	}
+
+	// scene 내부 중복 플레이어 검사
+	auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+	for (const auto& obj : *playerList)
+	{
+		if (obj && obj->GetID() == playerId)
+		{
+			std::cout << "[중복 방지] scene 내부에도 이미 playerId 있음: " << playerId << std::endl;
+			return;
+		}
+	}
+
+	if (!m_pPlayer)
+	{
+		std::cout << "[CreateRemotePlayer] 내 플레이어가 아직 생성되지 않음" << std::endl;
+		return;
+	}
+
+	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get());
 
 	remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
 	remotePlayer->Material_list = m_pPlayer->Material_list;
-	
-	if (m_pPlayer->m_pSkinnedAnimationController)
-	{
-		remotePlayer->m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*m_pPlayer->m_pSkinnedAnimationController);
-	}
+
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	remotePlayer->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
@@ -1332,14 +1459,13 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->SetRotationSpeed(1.0f);
 	remotePlayer->Set_Active(true);
 	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
-
 	remotePlayer->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
-	scene->obj_manager->Add_Object(std::static_pointer_cast<CGameObject>(remotePlayer), Object_Type::player);
+	scene->obj_manager->Add_Object(remotePlayer, Object_Type::player);
 	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);
-
 	m_pRemotePlayers[playerId] = remotePlayer;
 
+	std::cout << "[성공] RemotePlayer 생성 완료: " << playerId << std::endl;
 }
 
 
@@ -1359,8 +1485,8 @@ void CGameFramework::NetworkLoop()
 
 	while (isRunning)
 	{
-		char buffer[1024];
-		int bytesReceived = recv(serverSocket, buffer, sizeof(buffer), 0);
+		char buffer[1024 + 1]; // null terminator 공간 확보
+		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
 		std::cout << "[recv] 수신 성공: " << bytesReceived << std::endl;
 
 		if (bytesReceived > 0)
