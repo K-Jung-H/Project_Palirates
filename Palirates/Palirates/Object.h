@@ -584,6 +584,8 @@ public:
 
 	bool bIsControllable{ true };
 
+	std::unordered_set<int> RootMotionTrackSet;
+
 public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");
@@ -979,13 +981,26 @@ public:
 class CMonsterObject : public CGameObject
 {
 public:
-	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	//CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	CMonsterObject() {};
 	virtual ~CMonsterObject();
 	virtual void Animate(float fTimeElapsed);
-	std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
+	//std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
+	virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 	int test_num{ 0 };
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-private:
+protected:
 	std::unique_ptr<MonsterStateMachine> m_StateMachine;
+};
+
+class CFishManObject : public CMonsterObject
+{
+public:
+	CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CFishManObject() {};
+	
+	FishManStateMachine* GetStateMachine() override {
+		return static_cast<FishManStateMachine*>(m_StateMachine.get());
+	}
 };
 
