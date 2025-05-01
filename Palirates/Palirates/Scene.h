@@ -104,6 +104,7 @@ public:
 
 
 	Particle_Manager* particle_manager = NULL;
+	std::shared_ptr<ParticleObject> test_sand = NULL;
 	Object_Manager* obj_manager = NULL;
 
 

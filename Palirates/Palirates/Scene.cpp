@@ -603,39 +603,18 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_spark_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 	}
 
-	Particle_Format test_sand_info;
-	{
-		test_sand_info.shader_type = Particle_Type::spread;
-		test_sand_info.particle_type = 3;
-		test_sand_info.max_particles = 1000;
-		test_sand_info.MaxLifetime = 30.0f;
-
-		test_sand_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-		test_sand_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-		test_sand_info.EmitFaceIndex = 5;
-
-
-
-		test_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-		test_sand_info.init_velocity_value = 100.0f;
-		test_sand_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		test_sand_info.size = XMFLOAT2(10.0f, 10.0f);
-		test_sand_info.color = XMFLOAT3(0.925f, 0.902f, 0.8f);
-	}
-
 	Particle_Format test_sand_storm_info;
 	{
-		test_sand_storm_info.shader_type = Particle_Type::spread;
-		test_sand_storm_info.particle_type = 4;
-		test_sand_storm_info.max_particles = 50000;
-		test_sand_storm_info.MaxLifetime = 30.0f;
+		test_sand_storm_info.shader_type = Particle_Type::sand;
+		test_sand_storm_info.particle_type = 3;
+		test_sand_storm_info.max_particles = 10000;
+		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
 		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
-		test_sand_storm_info.EmitFaceIndex = 2;
+		test_sand_storm_info.EmitFaceIndex = 5;
 
-		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 		test_sand_storm_info.init_velocity_value = 100.0f;
 		test_sand_storm_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
@@ -644,10 +623,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 
 
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_spark_info);
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_info);
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
+	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_spark_info);
+	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
+	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
 
 	
 #endif
@@ -964,6 +942,22 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}	
 		break;
 
+		case 'T':
+		{
+			test_sand->Update_Func_Index +=1;
+			test_sand->Update_Func_Index %= 3;
+
+			if (test_sand->Update_Func_Index != 2)
+			{
+				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+			}
+			else
+			{
+				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+			}
+		}
+		break;
 
 		case 'Z':
 		{

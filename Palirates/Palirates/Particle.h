@@ -11,6 +11,7 @@
 enum class Particle_Type
 {
 	spread,
+	sand,
 	sample_1,
 	sample_2,
 	boss_skill,
@@ -204,7 +205,9 @@ private:
 	XMFLOAT3 center {};
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
+	
 public:
+	UINT Update_Func_Index = 0;
 	ParticleObject();
 	virtual ~ParticleObject();
 

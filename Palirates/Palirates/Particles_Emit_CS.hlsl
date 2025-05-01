@@ -158,6 +158,8 @@ void Emit_Sand(inout Particle_Info p, uint index)
 
 void Emit_Sand_Storm(inout Particle_Info p, uint index)
 {
+
+    
     float3 baseDir = normalize(Main_Direction);
     float3 realMin = min(EmitRegionMin, EmitRegionMax);
     float3 realMax = max(EmitRegionMin, EmitRegionMax);
@@ -174,8 +176,11 @@ void Emit_Sand_Storm(inout Particle_Info p, uint index)
     // initialDir += RandomSpreadDirection(index, baseDir, 0.2f) * 0.2f; // 방향 노이즈 (선택 적용)
     // initialDir = normalize(initialDir);
 
+    float seed = frac(sin(index * 91.91f) * 10000.0f);
+    float delay = lerp(0.0f, 2.0f, seed); // 최대 2초까지 랜덤 딜레이
+    p.Lifetime = -delay;
+    
     p.Velocity = initialDir * Init_Velocity_Value;
-    p.Color = float3(0.92f, 0.90f, 0.80f);
 }
 
 #define PARTICLE_TYPE_SNOW     0

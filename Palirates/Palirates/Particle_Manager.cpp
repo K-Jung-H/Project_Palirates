@@ -396,8 +396,66 @@ D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateComputeShader(ID3DBlob** ppd3
 		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 1)
 		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Spread_CS", "cs_5_1", ppd3dShaderBlob);
-
 }
+
+
+//------------------------------------------------------------------------------------------------
+
+void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	//==================================================
+	// Common Variables Part
+
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+
+	if (common_ComputeRootSignature == NULL)
+		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
+
+	//==================================================
+
+	m_ncomputePipelineStates = 4;
+	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
+
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 0); // Emit
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 1); // Sand_Spread
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 2); // Sand_Gathering
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 3); // Sand_Storm
+
+	m_cxThreadGroups = 1;
+	m_cyThreadGroups = 1;
+	m_czThreadGroups = 1;
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Particle.hlsl", "VSParticleDraw", "vs_5_1", ppd3dShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CreateGeometryShader(ppd3dShaderBlob, 0));
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_Transparent_ParticleDraw", "ps_5_1", ppd3dShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Spread_CS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 2)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Gathering_CS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 3)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Storm_CS", "cs_5_1", ppd3dShaderBlob);
+}
+
 
 
 //===================================================================
@@ -416,9 +474,13 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 	ParticleShader* spread_shader = new Spread_ParticleShader();
 	spread_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
+	ParticleShader* sand_shader = new Sand_ParticleShader();
+	sand_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
 	//===================================================================
 
 	particle_shader_map[Particle_Type::spread] = spread_shader;
+	particle_shader_map[Particle_Type::sand] = sand_shader;
 	particle_shader_map[Particle_Type::sample_1] = NULL;
 	particle_shader_map[Particle_Type::sample_2] = NULL;
 }
@@ -498,6 +560,12 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
+			if (type == Particle_Type::sand)
+			{
+				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
+			}
+
+
 			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = particle_obj->GetAABB();
 			
 
@@ -606,6 +674,7 @@ void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	Render(pd3dCommandList, pCamera, Particle_Type::spread);
+	Render(pd3dCommandList, pCamera, Particle_Type::sand);
 	Render(pd3dCommandList, pCamera, Particle_Type::sample_1);
 	Render(pd3dCommandList, pCamera, Particle_Type::sample_2);
 }
