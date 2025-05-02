@@ -461,14 +461,8 @@ void MultiPlayerStateMachine::enterState(State state, Key_Value key_event)
     switch (state)
     {
     case State::Idle:
-        animController->m_pAnimationTracks[TRACK_IDLE].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_IDLE].m_fPosition = 0;
-        m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
         break;
     case State::Run:
-        animController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_fPosition = 0;
-        m_pOwner->targetWeights[TRACK_RUN_FORWARD] = 1.0f;
         break;
     case State::Dive:
         animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;

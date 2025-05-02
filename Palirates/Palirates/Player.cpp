@@ -639,12 +639,17 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 	CGameObject::ApplySyncData(syncData);
 	SetPosition(syncData.position);
 	GetStateMachine()->SetState(syncData.currentState);
-	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
-	for (int i = 0; i < n_Animation; i++) {
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+	
+
+	std::shared_ptr<CAnimationController> controller = GetSkinnedAnimationController();
+
+	for (int i = 0; i < n_Animation; ++i)
+	{
+		controller->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+		controller->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
 	}
-	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
+
+	controller->ApplyCurrentAnimationPose(this);
 }
 
 
