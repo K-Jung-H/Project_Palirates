@@ -95,6 +95,18 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
+    
+    if (p.Lifetime < 0.0f)
+    {
+        p.Lifetime += ElapsedTime;
+
+        if (p.Lifetime >= 0.0f)
+            p.Active = 1;
+
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
     if (p.Active == 0)
         return;
 
@@ -126,6 +138,18 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
+    
+    if (p.Lifetime < 0.0f)
+    {
+        p.Lifetime += ElapsedTime;
+
+        if (p.Lifetime >= 0.0f)
+            p.Active = 1;
+
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
     if (p.Active == 0)
         return;
 
@@ -157,22 +181,27 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
-    if (p.Active == 0)
-        return;
-
+    
     if (p.Lifetime < 0.0f)
     {
         p.Lifetime += ElapsedTime;
+
+        if (p.Lifetime >= 0.0f)
+            p.Active = 1;
+
         ParticleBuffer_Update[index] = p;
         return;
     }
+
+    if (p.Active == 0)
+        return;
     
     
     if (p.Type == PARTICLE_TYPE_SAND)
     {
-            p.Type = PARTICLE_TYPE_SAND_STORM;
-            p.EmitFaceIndex = 2;
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+        p.Type = PARTICLE_TYPE_SAND_STORM;
+        p.EmitFaceIndex = 2;
+        p.Acceleration = float3(0.0f, 0.0f, 0.0f);
         ParticleBuffer_Update[index] = p;
         return;
     }

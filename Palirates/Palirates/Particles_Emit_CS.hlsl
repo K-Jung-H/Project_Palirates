@@ -1,5 +1,4 @@
 
-
 struct Particle_Info
 {
     float3 Position;
@@ -14,15 +13,16 @@ struct Particle_Info
     float3 Color;
     uint EmitFaceIndex;
 
-    float2 Size;
+    float Size;
     uint Type;
     uint Active;
+    float padding0;
 };
 
 struct Render_Instance
 {
-    float3 Position;
-    float3 Velocity;
+    float4 Position_and_Scale;
+    float4 Velocity_and_Rotate;
     float4 Color;
 };
 
@@ -41,6 +41,8 @@ cbuffer CB_Particle_Update_Info : register(b0)
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
+
+#define XM_PI 3.14159265359f
 
 #define FACE_LEFT    0 // -X
 #define FACE_RIGHT   1 // +X
@@ -116,6 +118,25 @@ float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
     return dir;
 }
 
+float3 ConeEmitDirection(uint id, float3 baseDir, float coneAngle)
+{
+    float seed = frac(sin(id * 91.91) * 12345.6789f);
+    float theta = coneAngle * sqrt(frac(sin(seed * 11.11) * 6789.1234f)); // 원뿔 각도 내 랜덤 각도
+    float phi = frac(sin(seed * 19.19) * 9876.5432f) * 2.0f * XM_PI;
+
+    float3 orthogonal = abs(baseDir.y) < 0.99f ? float3(0.0f, 1.0f, 0.0f) : float3(1.0f, 0.0f, 0.0f);
+    float3 right = normalize(cross(baseDir, orthogonal));
+    float3 up = normalize(cross(baseDir, right));
+
+    return normalize(
+        baseDir * cos(theta) +
+        right * sin(theta) * cos(phi) +
+        up * sin(theta) * sin(phi)
+    );
+}
+
+//===============================================================
+
 void Emit_Snow(inout Particle_Info p, uint index)
 {
     p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
@@ -150,6 +171,7 @@ void Emit_Water_Splash(inout Particle_Info p, uint index)
 
 void Emit_Sand(inout Particle_Info p, uint index)
 {
+    
     p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
     float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
     p.Velocity = normalize(dir) * Init_Velocity_Value;
@@ -158,8 +180,6 @@ void Emit_Sand(inout Particle_Info p, uint index)
 
 void Emit_Sand_Storm(inout Particle_Info p, uint index)
 {
-
-    
     float3 baseDir = normalize(Main_Direction);
     float3 realMin = min(EmitRegionMin, EmitRegionMax);
     float3 realMax = max(EmitRegionMin, EmitRegionMax);
@@ -183,11 +203,32 @@ void Emit_Sand_Storm(inout Particle_Info p, uint index)
     p.Velocity = initialDir * Init_Velocity_Value;
 }
 
+void Emit_DragonFire(inout Particle_Info p, uint index)
+{
+    float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
+    p.Position = center;
+
+    float coneAngle = radians(20.0f);
+    float3 dir = ConeEmitDirection(index, Main_Direction, coneAngle);
+
+    float angle_from_center = acos(dot(normalize(dir), normalize(Main_Direction)));
+    float t = saturate(angle_from_center / coneAngle);
+    float speedMultiplier = lerp(1.5f, 0.7f, t); // center particles move faster
+
+    p.Velocity = normalize(dir) * Init_Velocity_Value * speedMultiplier;
+    p.Color = float3(1.0f, 1.0f, 1.0f); // initial white
+    p.Size = 0.1f; // start small
+}
+
+//===============================================================
+
 #define PARTICLE_TYPE_SNOW     0
 #define PARTICLE_TYPE_SPARK     1
 #define PARTICLE_TYPE_SPLASH    2
 #define PARTICLE_TYPE_SAND      3
 #define PARTICLE_TYPE_SAND_STORM 4
+#define PARTICLE_TYPE_DRAGON_FIRE 5
+
 
 #define THREAD_COUNT 64
 [numthreads(THREAD_COUNT, 1, 1)]
@@ -233,6 +274,16 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Sand(p, index);
     else if (p.Type == PARTICLE_TYPE_SAND_STORM)
         Emit_Sand_Storm(p, index);
+    else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
+        Emit_DragonFire(p, index);
+    
+    
+    
+    float seedDelay = frac(sin(index * 97.13f + ElapsedTime * 33.33f) * 31415.9265f);
+    float randomDelay = seedDelay * p.MaxLifetime;
+    p.Lifetime = -randomDelay; // 음수 Lifetime 설정
+    p.Active = 0; // 초기 비활성 상태
+
     
     ParticleBuffer_Emit[index] = p;
 }

@@ -105,6 +105,8 @@ public:
 
 	Particle_Manager* particle_manager = NULL;
 	std::shared_ptr<ParticleObject> test_sand = NULL;
+	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
+
 	Object_Manager* obj_manager = NULL;
 
 
@@ -123,6 +125,7 @@ public:
 	LIGHTS								*m_pcbMappedLights = NULL;
 
 	bool test_button = false;
+	bool particle_test_button = false;
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Manager* text_ui_manager = NULL;

@@ -88,14 +88,26 @@ class Sand_ParticleShader : public ParticleShader
 //==============================================================================
 
 
+struct GPU_OBB
+{
+	XMFLOAT3 Center;
+	UINT Active;
+
+	XMFLOAT3 Extents;
+	UINT Type; 
+
+	XMFLOAT4 Rotation;
+};
+
 
 class Particle_Manager
 {
 private:
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
-
+	CTexture* m_OBBBufferTexture = NULL;
 
 	static constexpr UINT THREAD_COUNT = 64;
+	static constexpr UINT MAX_OBBS = 256;
 
 public:
 	std::unordered_map<Particle_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
@@ -104,6 +116,10 @@ public:
 	void Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> obj_container);
+	void Release_OBB_Data_ShaderVariables();
 
 	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 

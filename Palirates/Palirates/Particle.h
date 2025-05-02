@@ -12,6 +12,7 @@ enum class Particle_Type
 {
 	spread,
 	sand,
+	dragon_fire,
 	sample_1,
 	sample_2,
 	boss_skill,
@@ -42,33 +43,34 @@ struct Particle_Format
 	XMFLOAT3 acceleration {};
 
 	XMFLOAT3 color{};
-	XMFLOAT2 size{};
+	float size;
 };
 
 struct Render_Instance
 {
-	XMFLOAT3 Position;
-	XMFLOAT4  Velocity_and_Rotate;
-	XMFLOAT4 Color;
+	XMFLOAT4 Position_and_Scale;        // xyz = Position, w = Scale
+	XMFLOAT4 Velocity_and_Rotate;       // xyz = axis, w = angle
+	XMFLOAT4 Color;                     // rgba
 };
 
 struct Particle_Info
 {
 	XMFLOAT3 Position;
-	float    Lifetime;
+	float Lifetime;
 
 	XMFLOAT3 Velocity;
-	float    MaxLifetime;
+	float MaxLifetime;
 
 	XMFLOAT3 Acceleration;
-	float Roate_Value;
+	float Rotate_Value;
 
 	XMFLOAT3 Color;
 	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
 
-	XMFLOAT2 Size;
-	UINT     Type;
-	UINT     Active;
+	float Size;            
+	UINT Type;
+	UINT Active;
+	float Padding;
 };
 
 //==============================================================================

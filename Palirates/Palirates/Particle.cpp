@@ -373,7 +373,7 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		particle_info[i].Position = XMFLOAT3{};
 		particle_info[i].Velocity = XMFLOAT3{};
 		particle_info[i].Acceleration = particle_format.acceleration;
-		particle_info[i].Roate_Value = 0.0f;
+		particle_info[i].Rotate_Value = 0.0f;
 
 		particle_info[i].Color = particle_format.color;
 		particle_info[i].Size = particle_format.size;

@@ -12,14 +12,15 @@ struct Particle_Info
     float3 Color;
     uint EmitFaceIndex;
 
-    float2 Size;
+    float Size;
     uint Type;
     uint Active;
+    float padding0;
 };
 
 struct Render_Instance
 {
-    float3 Position;
+    float4 Position_and_Scale;
     float4 Velocity_and_Rotate;
     float4 Color;
 };
@@ -29,7 +30,7 @@ struct Render_Instance
 #define PARTICLE_TYPE_SPLASH     2
 #define PARTICLE_TYPE_SAND       3
 #define PARTICLE_TYPE_SAND_STORM       4
-
+#define PARTICLE_TYPE_DRAGON_FIRE       5
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
@@ -117,21 +118,76 @@ void Update_Water_Splash(inout Particle_Info p, uint index)
 }
 
 
+float3 FireColorGradient(float lifeRatio, float outerT)
+{
+    float3 baseColor;
+
+    if (lifeRatio < 0.1f)
+    {
+        baseColor = float3(1.0f, 1.0f, 1.0f); // initial white
+    }
+    else if (lifeRatio < 0.5f)
+    {
+        float t = saturate((lifeRatio - 0.2f) / 0.5f);
+        float3 centerColor = float3(1.0f, 1.0f, 0.0f); // yellow
+        float3 outerColor = float3(1.0f, 0.1f, 0.0f); // red
+        baseColor = lerp(centerColor, outerColor, pow(outerT, 1.5f));
+        baseColor = lerp(centerColor, baseColor, pow(t, 1.2f));
+    }
+    else
+    {
+        float t = saturate((lifeRatio - 0.7f) / 0.3f);
+        float3 prevColor = float3(1.0f, 0.1f, 0.0f);
+        float3 finalColor = float3(1.0f, 0.4f, 0.1f); // orange
+        baseColor = lerp(prevColor, finalColor, pow(t, 1.5f));
+    }
+
+    return baseColor;
+}
+
+void Update_DragonFire(inout Particle_Info p, uint index)
+{
+    p.Acceleration = float3(0.0f, 0.8f, 0.0f);
+    p.Velocity += p.Acceleration * ElapsedTime;
+
+    float3 noise = float3(
+        frac(sin(index * 13.13f + ElapsedTime) * 43758.5453f) - 0.5f,
+        frac(sin(index * 27.27f + ElapsedTime * 0.5f) * 12345.6789f) - 0.5f,
+        frac(sin(index * 39.39f + ElapsedTime * 1.5f) * 98765.4321f) - 0.5f
+    );
+    p.Velocity += noise * 0.2f;
+    p.Position += p.Velocity * ElapsedTime;
+
+    float lifeRatio = saturate(p.Lifetime / p.MaxLifetime);
+    p.Size = lerp(0.1f, 1.0f, pow(lifeRatio, 1.2f)); // size grows over time
+
+    float3 dir = normalize(p.Velocity);
+    float angle = acos(dot(dir, normalize(Main_Direction)));
+    float coneAngle = radians(20.0f);
+    float outerT = saturate(angle / coneAngle); // 0 = center, 1 = edge
+
+    p.Color = FireColorGradient(lifeRatio, outerT);
+}
+
 //===============================================================
 // 인스턴싱 정보 추출
+
 void Extract_Instance(in Particle_Info p)
 {
     Render_Instance inst;
-    inst.Position = p.Position;
+
+    float safeScale = max(p.Size, 0.1f); // clamp to minimum positive scale
+    inst.Position_and_Scale = float4(p.Position.xyz, safeScale);
+
     inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
 
     float normalizedLife = saturate(p.Lifetime / p.MaxLifetime);
     float alpha = 1.0f - normalizedLife;
-
     inst.Color = float4(p.Color, alpha);
 
     InterlockedAdd(debug_buffer[3], 1);
     RenderInstanceBuffer.Append(inst);
+    
 }
 
 //===============================================================
@@ -147,7 +203,18 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
-    
+
+    if (p.Lifetime < 0.0f)
+    {
+        p.Lifetime += ElapsedTime;
+
+        if (p.Lifetime >= 0.0f)
+            p.Active = 1; 
+
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
     if (p.Active == 0)
         return;
 
@@ -171,7 +238,9 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Spark(p, index);
         else if (p.Type == PARTICLE_TYPE_SPLASH)
             Update_Water_Splash(p, index);
-
+        else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
+            Update_DragonFire(p, index);
+        
         Extract_Instance(p);
     }
 
