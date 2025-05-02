@@ -1363,7 +1363,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				if (syncDataMap.find(playerId) != syncDataMap.end())
 				{
 					auto syncData = syncDataMap[playerId];
-					remotePlayer->MakeSyncData();
+
 					remotePlayer->ApplySyncData(syncData);
 				}
 

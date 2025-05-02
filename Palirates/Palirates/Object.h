@@ -35,6 +35,7 @@ class CS_Wave_Shader;
 
 struct ServerAnimationSyncData
 {
+	int playerId;
 	XMFLOAT3 position;         
 	XMFLOAT3 lookVector;      
 	State currentState;         
