@@ -169,8 +169,19 @@ public:
 	int GetID() const { return id; }
 	void SetID(int playerId) { id = playerId; }
 
-	int GetState() const { return state; }
-	void SetState(int newState) { state = newState; }
+	State GetState() const
+	{
+		return m_StateMachine ? m_StateMachine->Get_State() : State::Idle;
+	}
+
+	void SetState(int newState)
+	{ 
+		state = newState;
+		if (m_StateMachine)
+		{
+			m_StateMachine->changeState(static_cast<State>(newState), Key_Value::None);
+		}
+	}
 
 	std::string Serialize();
 };

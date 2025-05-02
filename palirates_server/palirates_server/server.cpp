@@ -198,7 +198,7 @@ void Server::SendInitialStates(int clientId)
             std::to_string(character->lookX) + "," +
             std::to_string(safeLookY) + "," +
             std::to_string(character->lookZ) + "," +
-            std::to_string(static_cast<int>(static_cast<int>(character->state))) + "\n";
+            std::to_string(static_cast<int>(character->state)) + "\n";
         send(clients[clientId], updatePacket.c_str(), updatePacket.length(), 0);
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 

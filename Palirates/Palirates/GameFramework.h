@@ -48,7 +48,7 @@ struct RemotePlayer
 {
 	int id = 0;
 	DirectX::XMFLOAT3 position = { 0.f, 0.f, 0.f };
-	DirectX::XMFLOAT3 direction = { 0.f, 0.f, 1.f };
+	DirectX::XMFLOAT3 direction = { 0.f, 1.f, 1.f };
 	int state = 0;
 	int objType = 0;
 	int modelType = 0;

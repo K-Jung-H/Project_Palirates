@@ -1178,7 +1178,7 @@ void CGameFramework::SendPacket()
 
 	XMFLOAT3 pos = m_pPlayer->GetPosition();
 	XMFLOAT3 look = m_pPlayer->GetLookVector();
-	int state = m_pPlayer->GetState();
+	int state = static_cast<int>(m_pPlayer->GetState());
 
 	char buffer[256];
 	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);
@@ -1300,6 +1300,10 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	{
 		std::cout << "[디버그] PLAYER_UPDATE 패킷 감지됨" << std::endl;
 
+		State convertedState = static_cast<State>(state);
+
+		
+
 		if (playerId == ClientNum)
 		{
 			if (px == 0.0f && py == 0.0f && pz == 0.0f)
@@ -1313,6 +1317,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				m_pPlayer->SetPosition(XMFLOAT3(px, py, pz));
 				m_pPlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
 				m_pPlayer->SetState(state);
+
+				State convertedState = static_cast<State>(state);
+				if (m_pPlayer->GetStateMachine())
+				{
+					m_pPlayer->GetStateMachine()->changeState(convertedState, Key_Value::None);
+				}
 			}
 		}
 		else
@@ -1358,7 +1368,13 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 				remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
 				remotePlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-				remotePlayer->SetState(state);
+				
+
+				State convertedState = static_cast<State>(state);
+				if (remotePlayer->GetStateMachine())
+				{
+					remotePlayer->GetStateMachine()->changeState(convertedState, Key_Value::None);
+				}
 			}
 			else
 			{

@@ -8,7 +8,8 @@ enum class EState : int
     Run,
     Jump,
     Attack,
-    Dash
+    Dash,
+    ETC
 };
 
 class Player
@@ -23,7 +24,9 @@ public:
         float startLookX, float startLookY, float startLookZ, int startState = 1)
         : id(playerId), x(startX), y(startY), z(startZ),
         lookX(startLookX), lookY(startLookY), lookZ(startLookZ),
-        state(static_cast<EState>(startState)) {}
+        state((startState >= 0 && startState <= static_cast<int>(EState::ETC))
+            ? static_cast<EState>(startState)
+            : EState::Idle) {}
 
     void setPosition(float newX, float newY, float newZ)
     {
