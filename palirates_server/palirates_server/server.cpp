@@ -83,7 +83,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             float x, y, z;
             float lookX, lookY, lookZ;
 
-            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &state) == 5)
+            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
             {
                 Scene* scene = sceneManager.getScene(clientId);
                 if (!scene->getPlayer(clientId))
@@ -92,7 +92,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 }
                 if (scene)
                 {
-                    scene->updatePlayerPosition(clientId, x, y, z, state);
+                    scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
                 }
 
        
@@ -100,7 +100,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
       
                 std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
                     std::to_string(x) + "," + std::to_string(y) + "," +
-                    std::to_string(z) + "," + std::to_string(state) + "\n";
+                    std::to_string(z) + "," + std::to_string(lookX) + "," + std::to_string(lookY) + "," +
+                    std::to_string(lookZ) + "," + std::to_string(state) + "\n";
                 logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
 
                 for (const auto& [otherId, sock] : clients)
@@ -162,7 +163,8 @@ void Server::BroadcastAllStates()
         {
             std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
                 std::to_string(player.x) + "," + std::to_string(player.y) + "," +
-                std::to_string(player.z) + "," + std::to_string(player.state) + "\n";
+                std::to_string(player.z) + "," + std::to_string(player.lookX) + "," + std::to_string(player.y) + "," +
+                std::to_string(player.z) + "," + std::to_string(static_cast<int>(player.state)) + "\n";
 
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
@@ -188,7 +190,7 @@ void Server::SendInitialStates(int clientId)
             std::to_string(character->x) + "," +
             std::to_string(character->y) + "," +
             std::to_string(character->z) + "," +
-            std::to_string(character->state) + "\n";
+            std::to_string(static_cast<int>(static_cast<int>(character->state))) + "\n";
         send(clients[clientId], updatePacket.c_str(), updatePacket.length(), 0);
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 
@@ -210,7 +212,7 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
         std::to_string(character->x) + "," +
         std::to_string(character->y) + "," +
         std::to_string(character->z) + "," +
-        std::to_string(character->state) + "\n";
+        std::to_string(static_cast<int>(character->state)) + "\n";
 
     for (const auto& [clientId, sock] : clients)
     {

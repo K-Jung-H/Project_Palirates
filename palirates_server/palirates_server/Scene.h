@@ -12,7 +12,7 @@ private:
 public:
     Scene() = default;
 
-    void updatePlayerPosition(int id, float x, float y, float z, int state);
+    void updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
 
     const std::unordered_map<int, GameCharacter>& getPlayers() const 
     {

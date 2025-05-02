@@ -1,15 +1,16 @@
 #include "Scene.h"
 #include "Player.h"
 
-void Scene::updatePlayerPosition(int clientId, float x, float y, float z, int state)
+void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state)
 {
     Player* player = getPlayerById(clientId);
 
     if (!player)
     {
-        player = new Player(clientId, x, y, z, state);
+        player = new Player(clientId, x, y, z, lookX, lookY, lookZ, static_cast<int>(state));
         player->setPosition(x, y, z);
         player->setState(state);
+        player->setLookVec(lookX, lookY, lookZ);
 
         playerMap[clientId] = player;
 
@@ -19,11 +20,12 @@ void Scene::updatePlayerPosition(int clientId, float x, float y, float z, int st
     {
         player->setPosition(x, y, z);
         player->setState(state);
+        player->setLookVec(lookX, lookY, lookZ);
     }
 
-    std::cout << "[DEBUG] updatePlayerPosition → ID=" << clientId
-        << " Pos=(" << x << "," << y << "," << z << ")"
-        << " State=" << state << std::endl;
+   // std::cout << "[DEBUG] updatePlayerPosition → ID=" << clientId
+   //     << " Pos=(" << x << "," << y << "," << z << ")"
+   //     << " State=" << state << std::endl;
 }
 
 void Scene::printScene()
@@ -31,7 +33,7 @@ void Scene::printScene()
     std::cout << "현재 씬의 플레이어 목록:\n";
     for (const auto& [id, player] : players)
     {
-        std::cout << "플레이어 " << id << ": (" << player.x << ", " << player.y << ", " << player.z << ") 상태: " << player.state << std::endl;
+        std::cout << "플레이어 " << id << ": (" << player.x << ", " << player.y << ", " << player.z << ") 상태: " << static_cast<int>(player.state) << std::endl;
     }
 }
 
