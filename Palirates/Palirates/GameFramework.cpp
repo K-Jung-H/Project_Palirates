@@ -1177,10 +1177,11 @@ void CGameFramework::SendPacket()
 	if (!m_pPlayer) return; 
 
 	XMFLOAT3 pos = m_pPlayer->GetPosition();
+	XMFLOAT3 look = m_pPlayer->GetLookVector();
 	int state = m_pPlayer->GetState();
 
 	char buffer[256];
-	sprintf(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d",ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);;
+	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);
 
 	send(serverSocket, buffer, (int)strlen(buffer), 0);
 }
@@ -1264,6 +1265,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	int playerId;
 	float px, py, pz;
+	float lookX, lookY, lookZ;
 	int state;
 
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
@@ -1294,7 +1296,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%d", &playerId, &px, &py, &pz, &state) == 5)
+	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%f,%f,%f,%d", &playerId, &px, &py, &pz, &lookX, &lookY, &lookZ, &state) == 8)
 	{
 		std::cout << "[디버그] PLAYER_UPDATE 패킷 감지됨" << std::endl;
 
@@ -1309,6 +1311,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			if (m_pPlayer)
 			{
 				m_pPlayer->SetPosition(XMFLOAT3(px, py, pz));
+				m_pPlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
 				m_pPlayer->SetState(state);
 			}
 		}
@@ -1354,6 +1357,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				}
 
 				remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
+				remotePlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
 				remotePlayer->SetState(state);
 			}
 			else
@@ -1374,6 +1378,7 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 	auto local_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
 
 	local_player->SetPosition(XMFLOAT3(25.0f, 0.0f, 25.0f)); 
+	local_player->SetLookDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	local_player->SetID(playerId);
 	local_player->SetState(0);
 	local_player->Set_Name("MyPlayer");
@@ -1451,6 +1456,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	remotePlayer->SetLookDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	remotePlayer->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	remotePlayer->SetState(0);
 	remotePlayer->SetID(playerId);
@@ -1515,6 +1521,7 @@ void CGameFramework::NetworkLoop()
 		{
 			std::shared_ptr<CPlayer> player = playerPair.second;
 			XMFLOAT3 pos = player->GetPosition();
+			XMFLOAT3 lookVec = player->GetLookVector();
 			std::cout << "[DEBUG] Player ID: " << playerPair.first
 				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")"
 				<< std::endl;

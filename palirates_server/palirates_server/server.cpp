@@ -83,7 +83,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             float x, y, z;
             float lookX, lookY, lookZ;
 
-            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%d", &clientId, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
+            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%f,%f,%f,%d", &clientId, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
             {
                 Scene* scene = sceneManager.getScene(clientId);
                 if (!scene->getPlayer(clientId))
@@ -185,11 +185,16 @@ void Server::SendInitialStates(int clientId)
 
         std::string createPacket = "PLAYER_CREATE," + std::to_string(otherId) + "\n";
         send(clients[clientId], createPacket.c_str(), createPacket.length(), 0);
+        
+        float safeLookY = (character->lookY == 0.0f) ? 1.0f : character->lookY;
 
         std::string updatePacket = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
             std::to_string(character->x) + "," +
             std::to_string(character->y) + "," +
             std::to_string(character->z) + "," +
+            std::to_string(character->lookX) + "," +
+            std::to_string(safeLookY) + "," +
+            std::to_string(character->lookZ) + "," +
             std::to_string(static_cast<int>(static_cast<int>(character->state))) + "\n";
         send(clients[clientId], updatePacket.c_str(), updatePacket.length(), 0);
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
@@ -206,12 +211,17 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
     const GameCharacter* character = scene->getPlayer(newClientId);
     if (!character) return;
 
+    float safeLookY = (character->lookY == 0.0f) ? 1.0f : character->lookY;
+
     std::string createPacket = "PLAYER_CREATE," + std::to_string(newClientId) + "\n";
 
     std::string packet = "PLAYER_UPDATE," + std::to_string(newClientId) + "," +
         std::to_string(character->x) + "," +
         std::to_string(character->y) + "," +
         std::to_string(character->z) + "," +
+        std::to_string(character->lookX) + "," +
+        std::to_string(safeLookY) + "," +
+        std::to_string(character->lookZ) + "," +
         std::to_string(static_cast<int>(character->state)) + "\n";
 
     for (const auto& [clientId, sock] : clients)
