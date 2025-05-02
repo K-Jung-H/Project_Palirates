@@ -1,5 +1,7 @@
 ﻿#include "server.h"
 
+
+
 Server::Server(int port)
 {
     WSADATA wsaData;
@@ -95,24 +97,19 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     scene->updatePlayerPosition(clientId, x, y, z, state);
                 }
 
-       
-
-      
-                std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
-                    std::to_string(x) + "," + std::to_string(y) + "," +
-                    std::to_string(z) + "," + std::to_string(state) + "\n";
-                logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
-
-                for (const auto& [otherId, sock] : clients)
+                auto now = std::chrono::steady_clock::now();
+                if (now - lastBroadcastTime[clientId] >= kBroadcastInterval)
                 {
-                    if (otherId == clientId) continue; // 자신에게는 전송 금지
-                    int sendResult = send(sock, response.c_str(), (int)response.size(), 0);
-                    if (sendResult == SOCKET_ERROR)
-                    {
-                        logger.Log("[에러] 클라이언트 " + std::to_string(otherId) + "에게 전송 실패: " + std::to_string(WSAGetLastError()));
-                    }
+                    lastBroadcastTime[clientId] = now;
+
+                    std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
+                        std::to_string(x) + "," + std::to_string(y) + "," +
+                        std::to_string(z) + "," + std::to_string(state) + "\n";
+
+                    logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
+
+                    BroadcastPacket(response, clientId);
                 }
-                BroadcastPacket(response, clientId);
             }
             else
             {
@@ -160,6 +157,10 @@ void Server::BroadcastAllStates()
     {
         for (const auto& [playerId, player] : scene.getPlayers())
         {
+            auto now = std::chrono::steady_clock::now();
+            if (now - lastBroadcastTime[playerId] < kBroadcastInterval) continue;
+            lastBroadcastTime[playerId] = now;
+
             std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
                 std::to_string(player.x) + "," + std::to_string(player.y) + "," +
                 std::to_string(player.z) + "," + std::to_string(player.state) + "\n";

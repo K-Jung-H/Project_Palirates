@@ -7,8 +7,14 @@
 #include "DatabaseManager.h"
 #include "Logger.h"
 #include "Player.h"
+#include <chrono>
 
 #pragma comment(lib, "ws2_32.lib")
+
+
+std::unordered_map<int, std::chrono::steady_clock::time_point> lastBroadcastTime;
+const std::chrono::milliseconds BROADCAST_INTERVAL(50);
+const std::chrono::milliseconds kBroadcastInterval{ 50 };
 
 class Server
 {

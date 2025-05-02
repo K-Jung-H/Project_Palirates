@@ -234,6 +234,9 @@ public:
 	std::queue<std::string> recvQueue;
 	std::mutex recvQueueMutex;
 
+	std::mutex remotePlayerUpdateMutex;
+
+
 	//=================서버=================
 
 #ifdef WRITE_TEXT_UI

@@ -1180,7 +1180,10 @@ void CGameFramework::SendPacket()
 	int state = m_pPlayer->GetState();
 
 	char buffer[256];
-	sprintf(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d",ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);;
+
+
+	sprintf(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, state);;
+	//sprintf(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d",ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);;
 
 	send(serverSocket, buffer, (int)strlen(buffer), 0);
 }
@@ -1346,6 +1349,8 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			auto remotePlayer = it->second;
 			if (remotePlayer)
 			{
+				std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
+
 				auto& syncDataMap = GetSyncManager().GetAllSyncData();
 				if (syncDataMap.find(playerId) != syncDataMap.end())
 				{
