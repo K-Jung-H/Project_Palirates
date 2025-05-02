@@ -8,6 +8,8 @@ void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float 
     if (!player)
     {
         player = new Player(clientId, x, y, z, lookX, lookY, lookZ, static_cast<int>(state));
+        //players[clientId] = *player;
+
         player->setPosition(x, y, z);
         player->setState(state);
         player->setLookVec(lookX, lookY, lookZ);

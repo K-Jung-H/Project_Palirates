@@ -27,7 +27,7 @@ public:
 
     void addPlayer(int id) 
     {
-        players[id] = GameCharacter();
+        //players[id] = GameCharacter();
     }
 
     void removePlayer(int id) 

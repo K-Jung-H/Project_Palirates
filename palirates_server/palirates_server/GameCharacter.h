@@ -21,7 +21,8 @@ public:
     GameCharacter(int playerId, float startX, float startY, float startZ,
         float startLookX, float startLookY, float startLookZ, EState startState)
         : id(playerId), x(startX), y(startY), z(startZ),
-        lookX(startLookX), lookY((startLookY == 0.0f) ? 1.0f : startLookY), lookZ(startLookZ), state(startState) {}
+        lookX(startLookX), lookY((startLookY == 0.0f) ? 1.0f : startLookY), lookZ(startLookZ),
+        state(startState) {}
 
     void setPosition(float newX, float newY, float newZ)
     {

@@ -1378,7 +1378,7 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 	auto local_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
 
 	local_player->SetPosition(XMFLOAT3(25.0f, 0.0f, 25.0f)); 
-	local_player->SetLookDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	//local_player->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	local_player->SetID(playerId);
 	local_player->SetState(0);
 	local_player->Set_Name("MyPlayer");
@@ -1456,7 +1456,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-	remotePlayer->SetLookDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
+	//remotePlayer->SetLookDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	remotePlayer->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	remotePlayer->SetState(0);
 	remotePlayer->SetID(playerId);
@@ -1523,7 +1523,7 @@ void CGameFramework::NetworkLoop()
 			XMFLOAT3 pos = player->GetPosition();
 			XMFLOAT3 lookVec = player->GetLookVector();
 			std::cout << "[DEBUG] Player ID: " << playerPair.first
-				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")"
+				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << ", LookVec : (" << lookVec.x << ", " << lookVec.y << ", " << lookVec.z << ")"
 				<< std::endl;
 		}
 	}

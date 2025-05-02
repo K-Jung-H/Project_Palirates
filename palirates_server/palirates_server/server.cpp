@@ -96,11 +96,11 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 }
 
        
-
+                float safeLookY = (lookY == 0.0f) ? 1.0f : lookY;
       
                 std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
                     std::to_string(x) + "," + std::to_string(y) + "," +
-                    std::to_string(z) + "," + std::to_string(lookX) + "," + std::to_string(lookY) + "," +
+                    std::to_string(z) + "," + std::to_string(lookX) + "," + std::to_string(safeLookY) + "," +
                     std::to_string(lookZ) + "," + std::to_string(state) + "\n";
                 logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
 
@@ -161,10 +161,13 @@ void Server::BroadcastAllStates()
     {
         for (const auto& [playerId, player] : scene.getPlayers())
         {
-            std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
+
+            float safeLookY = (player.lookY == 0.0f) ? 1.0f : player.lookY;
+
+              std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
                 std::to_string(player.x) + "," + std::to_string(player.y) + "," +
-                std::to_string(player.z) + "," + std::to_string(player.lookX) + "," + std::to_string(player.y) + "," +
-                std::to_string(player.z) + "," + std::to_string(static_cast<int>(player.state)) + "\n";
+                std::to_string(player.z) + "," + std::to_string(player.lookX) + "," + std::to_string(safeLookY) + "," +
+                std::to_string(player.lookZ) + "," + std::to_string(static_cast<int>(player.state)) + "\n";
 
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
