@@ -1276,7 +1276,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 						//if (j == pRootGameObject->RootBoneIndex)
 						if (j == 2)	// player root index
 						{
-							if (!m_pAnimationTracks[k].m_bFinished && kUpdateHipsTracks.contains(k)) {
+							if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 								
 							}

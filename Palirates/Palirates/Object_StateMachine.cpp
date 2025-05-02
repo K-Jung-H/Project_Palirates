@@ -376,7 +376,7 @@ void PlayerStateMachine::update(float Elapsed_time)
 
 void PlayerStateMachine::enterState(State state, Key_Value key_event)
 {
-    if (kRootMotionStates.contains(state)) {
+    if (GetRootMotionStates().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = false;
             m_pOwner->SetStateElapsedTime(0.0f);
@@ -400,7 +400,7 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
 void PlayerStateMachine::exitState(State state, Key_Value key_event)
 {
 
-    if (kRootMotionStates.contains(state)) {
+    if (GetRootMotionStates().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = true;
         }
@@ -473,8 +473,8 @@ void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
 
 void PlayerStateMachine::ResetTrackForState(State state, bool posReset)
 {
-    auto it = kRootMotionStateToTrackMap.find(state);
-    if (it != kRootMotionStateToTrackMap.end()) {
+    auto it = GetRootMotionStateToTrackMap().find(state);
+    if (it != GetRootMotionStateToTrackMap().end()) {
         int track = it->second;
         if (animController != nullptr) {
             animController->m_pAnimationTracks[track].m_bFinished = false;
@@ -839,7 +839,7 @@ void AnubisStateMachine::update(float Elapsed_time)
 
 void AnubisStateMachine::enterState(State state, Key_Value key_event)
 {
-    if (kAnubisRootMotionStateToTrackMap.contains(state)) {
+    if (GetAnubisRootMotionStateToTrackMap().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = false;
         }
@@ -862,7 +862,7 @@ void AnubisStateMachine::enterState(State state, Key_Value key_event)
 
 void AnubisStateMachine::exitState(State state, Key_Value key_event)
 {
-     if (kAnubisRootMotionStateToTrackMap.contains(state)) {
+     if (GetAnubisRootMotionStateToTrackMap().contains(state)) {
          if (m_pOwner != nullptr) {
              m_pOwner->bIsControllable = true;
          }
@@ -873,8 +873,8 @@ void AnubisStateMachine::exitState(State state, Key_Value key_event)
 
 void AnubisStateMachine::ResetTrackForState(State state, bool posReset)
 {
-    auto it = kAnubisRootMotionStateToTrackMap.find(state);
-    if (it != kAnubisRootMotionStateToTrackMap.end()) {
+    auto it = GetAnubisRootMotionStateToTrackMap().find(state);
+    if (it != GetAnubisRootMotionStateToTrackMap().end()) {
         int track = it->second;
         if (animController != nullptr) {
             animController->m_pAnimationTracks[track].m_bFinished = false;
@@ -926,7 +926,7 @@ void DragonStateMachine::update(float Elapsed_time)
 
 void DragonStateMachine::enterState(State state, Key_Value key_event)
 {
-    if (kDragonRootMotionStateToTrackMap.contains(state)) {
+    if (GetDragonRootMotionStateToTrackMap().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = false;
         }
@@ -949,7 +949,7 @@ void DragonStateMachine::enterState(State state, Key_Value key_event)
 
 void DragonStateMachine::exitState(State state, Key_Value key_event)
 {
-    if (kDragonRootMotionStateToTrackMap.contains(state)) {
+    if (GetDragonRootMotionStateToTrackMap().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = true;
         }
@@ -960,8 +960,8 @@ void DragonStateMachine::exitState(State state, Key_Value key_event)
 
 void DragonStateMachine::ResetTrackForState(State state, bool posReset)
 {
-    auto it = kDragonRootMotionStateToTrackMap.find(state);
-    if (it != kDragonRootMotionStateToTrackMap.end()) {
+    auto it = GetDragonRootMotionStateToTrackMap().find(state);
+    if (it != GetDragonRootMotionStateToTrackMap().end()) {
         int track = it->second;
         if (animController != nullptr) {
             animController->m_pAnimationTracks[track].m_bFinished = false;
