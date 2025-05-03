@@ -109,6 +109,8 @@ private:
 	static constexpr UINT THREAD_COUNT = 64;
 	static constexpr UINT MAX_OBBS = 256;
 
+	std::vector<std::shared_ptr<ParticleObject>> destroy_queue;
+
 public:
 	std::unordered_map<Particle_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
 	Particle_Manager();
@@ -139,5 +141,7 @@ public:
 	void Clear_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 
+	void Queue_Destroy(std::shared_ptr<ParticleObject> obj) { destroy_queue.push_back(obj); }
+	void Process_Destroy_Queue();
 };
 

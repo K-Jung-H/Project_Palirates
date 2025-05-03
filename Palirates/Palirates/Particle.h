@@ -196,7 +196,9 @@ public:
 };
 //==============================================================================
 
-class ParticleObject : public CGameObject
+class Particle_Manager;
+
+class ParticleObject : public CGameObject, public std::enable_shared_from_this<ParticleObject>
 {
 private:
 	Particle_Shape_Mesh* shape_mesh = NULL;
@@ -208,6 +210,9 @@ private:
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
 	
+
+	Particle_Manager* owner_manager = nullptr; 
+
 public:
 	UINT Update_Func_Index = 0;
 	ParticleObject();
@@ -243,4 +248,10 @@ public:
 	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(center, area_xyz); }
 	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }
 	UINT Get_Size_Render_Instance() { return particle_data->N_Render_Instance; }
+
+
+	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
+
+	void Add_Destroy_Queue();
+
 };

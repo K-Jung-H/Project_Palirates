@@ -642,7 +642,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
 	Observer* select_scene_observer = new Observer(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
-
+	
 
 	scene_manager->Set_Active_Scene("In_Stage");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
@@ -1062,6 +1062,10 @@ void CGameFramework::FrameAdvance()
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
+
+	Particle_Manager* active_scene_particle_manager = scene_manager->Get_Active_Scene()->particle_manager;
+	if (active_scene_particle_manager)
+		active_scene_particle_manager->Process_Destroy_Queue();
 }
 
 

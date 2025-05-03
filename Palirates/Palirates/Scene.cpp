@@ -938,7 +938,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 			if (test_button)
 				break;
-
 			test_button = true;
 		}	
 		break;
@@ -951,6 +950,9 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'T':
 		{
+			if (test_sand == NULL)
+				break;
+
 			test_sand->Update_Func_Index +=1;
 			test_sand->Update_Func_Index %= 3;
 
@@ -1118,14 +1120,14 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
-	if (particle_test_button)
-	{
-		XMFLOAT3 test_pos = m_pPlayer->GetPosition();
-		test_pos.y += 15.0f;
-		test_dragonfire->Set_Center(test_pos);
-		test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
-	}
+	
+	//if (particle_test_button)
+	//{
+		//XMFLOAT3 test_pos = m_pPlayer->GetPosition();
+		//test_pos.y += 15.0f;
+		//test_dragonfire->Set_Center(test_pos);
+		//test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
+	//}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1141,6 +1143,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+
+
 	if (test_button)
 	{
 		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");

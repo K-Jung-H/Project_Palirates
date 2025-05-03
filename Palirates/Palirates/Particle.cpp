@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Particle.h"
+#include "Particle_Manager.h"
 
 //==============================================================================
 
@@ -289,6 +290,14 @@ Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdL
 
 Particle::~Particle()
 {
+
+	if (particle_buffer_texture)
+	{
+		particle_buffer_texture->ReleaseUploadBuffers();
+		delete particle_buffer_texture;
+		particle_buffer_texture = nullptr;
+	}
+
 	ReleaseBuffers();
 }
 
@@ -357,6 +366,16 @@ D3D12_VERTEX_BUFFER_VIEW Particle::Update_Render_Instance_VBV()
 
 void Particle::ReleaseBuffers()
 {
+	if (Particle_Info_List_counterBuffer) { Particle_Info_List_counterBuffer->Release(); Particle_Info_List_counterBuffer = nullptr; }
+	if (Particle_Info_List_readbackBuffer) { Particle_Info_List_readbackBuffer->Release(); Particle_Info_List_readbackBuffer = nullptr; }
+
+	if (Render_Instance_counterBuffer) { Render_Instance_counterBuffer->Release(); Render_Instance_counterBuffer = nullptr; }
+	if (Render_Instance_readbackBuffer) { Render_Instance_readbackBuffer->Release(); Render_Instance_readbackBuffer = nullptr; }
+
+	if (Debug_ReadBack_buffer) { Debug_ReadBack_buffer->Release(); Debug_ReadBack_buffer = nullptr; }
+
+	if (CounterResetBuffer) { CounterResetBuffer->Release(); CounterResetBuffer = nullptr; }
+	if (Debug_Reset_Buffer) { Debug_Reset_Buffer->Release(); Debug_Reset_Buffer = nullptr; }
 }
 
 Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
@@ -545,6 +564,8 @@ ParticleObject::ParticleObject() : CGameObject(1)
 
 ParticleObject::~ParticleObject()
 {
+	delete particle_data;
+
 }
 
 void ParticleObject::ReleaseUploadBuffers()
@@ -608,6 +629,16 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	if (instance_num == 0)
 		return;
 
+	 
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+
 	if (shape_mesh)
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 
+}
+
+void ParticleObject::Add_Destroy_Queue() 
+{
+	if (owner_manager) 
+		owner_manager->Queue_Destroy(shared_from_this()); 
 }

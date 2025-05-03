@@ -507,6 +507,7 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 {
 	static int N = 0;
 	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
+	new_particle_obj->Set_OwnerManager(this);
 	new_particle_obj->Set_Shape(particle_shape_mesh);
 	new_particle_obj->Init_Info(particle_info);
 	new_particle_obj->Set_Name(to_string(N));
@@ -559,7 +560,6 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 		}
 	}
 }
-
 
 void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
@@ -639,7 +639,6 @@ void Particle_Manager::Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommand
 	}
 }
 
-
 void Particle_Manager::Sync_AfterAnimate( Particle_Type type)
 {
 	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
@@ -693,3 +692,22 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	Render(pd3dCommandList, pCamera, Particle_Type::sample_2);
 }
 
+
+void Particle_Manager::Process_Destroy_Queue()
+{
+	for (const auto& obj : destroy_queue)
+	{
+		for (std::pair<const Particle_Type, std::vector<std::shared_ptr<ParticleObject>>>& pair : particle_object_list_map)
+		{
+			std::vector<std::shared_ptr<ParticleObject>>& list = pair.second;
+
+			std::vector<std::shared_ptr<ParticleObject>>::iterator it = std::find(list.begin(), list.end(), obj);
+			if (it != list.end())
+			{
+				list.erase(it);
+				break;
+			}
+		}
+	}
+	destroy_queue.clear();
+}
