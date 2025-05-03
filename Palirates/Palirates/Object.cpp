@@ -2214,7 +2214,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
 
-
 	if (Active && m_pMesh)
 	{
 		if (!IsVisible(pCamera))
@@ -2237,19 +2236,13 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 						for (int j = 0; j < pipelineStateNum; ++j)
 						{
 							pShader->Setting_Render(pd3dCommandList, j);
-
-
-							// 재료(Material) 셰이더 변수 업데이트
 							material_ptr->UpdateShaderVariable(pd3dCommandList);
-
 
 							m_pMesh->Render(pd3dCommandList, i);
 						}
 					}
 					else
 					{
-
-						// 셰이더가 없는 경우에도 재료 업데이트 후 메쉬 렌더링
 						material_ptr->UpdateShaderVariable(pd3dCommandList);
 						m_pMesh->Render(pd3dCommandList, i);
 					}
@@ -2260,11 +2253,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	}
 
 	if (m_pSibling)
-		if (m_pSibling->Get_Active())
 			m_pSibling->Render(pd3dCommandList, pCamera);
 
 
-	if (Active && m_pChild)
+	if (m_pChild)
 		m_pChild->Render(pd3dCommandList, pCamera);
 
 }
