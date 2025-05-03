@@ -429,40 +429,30 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			if (wParam == '1') {
+			if (nMessageID == WM_KEYDOWN && wParam == '1') {
 				static bool test = true;
 				if (test) {
-					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
+					auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
+					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
 					test = false;
 				}
 				else {
-					auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-					sword->Set_Active(true);
+					m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
 					test = true;
 				}
-				
-				
-
-				//if (sword)
-				{
-					//sword.get()->Object_type = 10; 
-					//sword.get()->Material_list[0]->SetShader(CMaterial::m_pStandardShader);
-					//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
-				}
-				//m_pPlayer->Set_Active(false);
 			}
 			if (wParam == 'C') {
 				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
 
 			}
-			if (wParam == 'U') {
+			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
 				ServerAnimationSyncData data;
 				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
 				data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				data.currentState = State::Dive;
+				data.currentState = State::Get_Hit_F2;
 				for (int i = 0; i < m_pPlayer->n_Animation; i++) {
 					if (i == TRACK_DIVEROLL_FORWARD)
-						data.trackPositions.push_back(0.5f);
+						data.trackPositions.push_back(0.0f);
 					else data.trackPositions.push_back(0.0f);
 					if (i == TRACK_DIVEROLL_FORWARD)
 						data.Weights.push_back(1.0f);
@@ -685,7 +675,7 @@ void CGameFramework::ProcessInput()
 	if (GetKeyboardState(pKeysBuffer) && main_scene)
 		bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
 
-	if (!bProcessedByScene)
+	if (!bProcessedByScene && m_pPlayer->bIsControllable)
 	{
 		DWORD dwDirection = 0;
 

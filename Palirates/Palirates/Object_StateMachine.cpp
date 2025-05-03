@@ -10,6 +10,9 @@ std::map<State, std::wstring> stateToStringMap = {
     {State::Get_Up, L"Get Up"},
     {State::Dive, L"Dive"},
     {State::Jump, L"Jump"},
+    {State::Attack1, L"Attack"},
+    {State::Attack2, L"Attack"},
+    {State::Attack3, L"Attack"},
     {State::Attack_Normal, L"Attack Normal"},
     {State::ETC, L"ETC"}
 };
@@ -79,7 +82,21 @@ void Key_State::update(Key_Value key_state)
         break;
     case Key_Value::Dive_Key_Up:
         break;
-
+    case Key_Value::Attack1_Key_Down:
+        attack1 = true;
+        break;
+    case Key_Value::Attack1_Key_Up:
+        break;
+    case Key_Value::Attack2_Key_Down:
+        attack2 = true;
+        break;
+    case Key_Value::Attack2_Key_Up:
+        break;
+    case Key_Value::Attack3_Key_Down:
+        attack3 = true;
+        break;
+    case Key_Value::Attack3_Key_Up:
+        break;
     case Key_Value::None:
     case Key_Value::ETC:
     default:
@@ -128,7 +145,11 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
     { 0x44,     { Key_Value::Right_Key_Down, Key_Value::Right_Key_Up } },
 
     { VK_SPACE, { Key_Value::Jump_Key_Down, Key_Value::Jump_Key_Up } },
-    { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } }
+    { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } },
+
+    { VK_OEM_COMMA, { Key_Value::Attack1_Key_Down, Key_Value::Attack1_Key_Up } },
+    { VK_OEM_PERIOD, { Key_Value::Attack2_Key_Down, Key_Value::Attack2_Key_Up } },
+    { VK_OEM_2, { Key_Value::Attack3_Key_Down, Key_Value::Attack3_Key_Up } }
     };
 
     for (const auto& [key, keyPair] : keyMappings)
@@ -241,6 +262,18 @@ void PlayerStateMachine::update(float Elapsed_time)
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Dive, Key_Value::None);
     }
+    if (key_state.attack1 && Get_State() != State::Attack1) {
+        m_pOwner->SetStateElapsedTime(0.0f);
+        changeState(State::Attack1, Key_Value::None);
+    }
+    if (key_state.attack2 && Get_State() != State::Attack2) {
+        m_pOwner->SetStateElapsedTime(0.0f);
+        changeState(State::Attack2, Key_Value::None);
+    } 
+    if (key_state.attack3 && Get_State() != State::Attack3) {
+        m_pOwner->SetStateElapsedTime(0.0f);
+        changeState(State::Attack3, Key_Value::None);
+    }
 
     switch (Get_State()) {
     case State::Idle:
@@ -293,42 +326,47 @@ void PlayerStateMachine::update(float Elapsed_time)
         }
         else {
             m_pOwner->targetWeights[TRACK_DIVEROLL_FORWARD] = 1.0f;
-
-            float fFixedSpeed = 300.0f;
-
-            XMFLOAT3 vec = animController->HipsPosition;
-            XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
-
-            XMFLOAT3 shift;
-            shift.x = vec.x - vec2.x;
-            shift.y = vec.y - vec2.y;
-            shift.z = vec.z - vec2.z;
-
-            animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
-
-            float scaleFactor = 30.0f;
-            XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y, shift.z * scaleFactor };
-
-            XMFLOAT3 moveDirection = m_pOwner->GetLook();
-            XMFLOAT3 finalMove = {
-                moveDirection.x * scaleShift.z,
-                moveDirection.y * scaleShift.z,
-                moveDirection.z * scaleShift.z
-            };
-
-            if (scaleShift.z > 0.001f) {
-                m_pOwner->Move(finalMove, false);
-            }
+            RootMotionMove(30.0f);
         }
         break;
-    case State::Knock_Down:
+    case State::Knock_Down: 
         m_pOwner->targetWeights[TRACK_KNOCK_DOWN] = 1.0f;
+        RootMotionMove(30.0f, true);
         break;
     case State::Get_Up:
         if (animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished) {
             changeState(State::Idle, Key_Value::None);
         }
         m_pOwner->targetWeights[TRACK_GET_UP] = 1.0f;
+        RootMotionMove(10.0f);
+        break;
+    case State::Attack1:
+        if (animController->m_pAnimationTracks[TRACK_ATTACK1].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ATTACK1] = 1.0f;
+        RootMotionMove(30.0f);
+        break;
+    case State::Attack2:
+        if (animController->m_pAnimationTracks[TRACK_ATTACK2].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ATTACK2] = 1.0f;
+        RootMotionMove(30.0f);
+        break;
+    case State::Attack3:
+        if (animController->m_pAnimationTracks[TRACK_ATTACK3].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ATTACK3] = 1.0f;
+        RootMotionMove(30.0f);
+        break;
+    case State::Get_Hit_F2:
+        if (animController->m_pAnimationTracks[TRACK_GET_HIT_F2].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_GET_HIT_F2] = 1.0f;
+        RootMotionMove(30.0f, true);
         break;
     }
 
@@ -346,9 +384,34 @@ void PlayerStateMachine::update(float Elapsed_time)
     //doAction(currentState, Elapsed_time);
 }
 
+
 void PlayerStateMachine::enterState(State state, Key_Value key_event)
 {
+    if (kRootMotionStates.contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = false;
+            m_pOwner->SetStateElapsedTime(0.0f);
+        }
 
+        ResetTrackForState(state, true);
+    }
+    switch (state)
+    {
+
+    default:
+        break;
+    }
+}
+
+void PlayerStateMachine::exitState(State state, Key_Value key_event)
+{
+    if (kRootMotionStates.contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = true;
+        }
+
+        ResetTrackForState(state, false);
+    }
     switch (state)
     {
     case State::Idle:
@@ -356,16 +419,20 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     case State::Run:
         break;
     case State::Dive:
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0;
+        key_state.dive = false;
         break;
     case State::Knock_Down:
-        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = 0;
         break;
     case State::Get_Up:
-        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
-        animController->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = 0;
+        break;
+    case State::Attack1:
+        key_state.attack1 = false;
+        break;
+    case State::Attack2:
+        key_state.attack2 = false;
+        break;
+    case State::Attack3:
+        key_state.attack3 = false;
         break;
     case State::Jump:
         break;
@@ -377,33 +444,45 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     }
 }
 
-void PlayerStateMachine::exitState(State state, Key_Value key_event)
+void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
+    XMFLOAT3 vec = animController->HipsPosition;
+    XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
+
+    XMFLOAT3 shift;
+    shift.x = vec.x - vec2.x;
+    shift.y = vec.y - vec2.y;
+    shift.z = vec.z - vec2.z;
+
+    animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
+    XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y* scaleFactor, shift.z * scaleFactor };
+
+    XMFLOAT3 moveDirection = m_pOwner->GetLook();
+    XMFLOAT3 finalMove = {
+        moveDirection.x * scaleShift.z,
+        moveDirection.y * scaleShift.z,
+        moveDirection.z * scaleShift.z
+    };
+
+    if (bUseNegative) {
+        finalMove.x *= -1 * finalMove.x;
+        finalMove.z *= -1 * finalMove.z;
+    }
+
+    if (scaleShift.z > 0.001f) {
+        m_pOwner->Move(finalMove, false);
+    }
+}
+
+void PlayerStateMachine::ResetTrackForState(State state, bool posReset)
 {
-
-    switch (state)
-    {
-    case State::Idle:
-        break;
-    case State::Run:
-        break;
-    case State::Dive:
-        key_state.dive = false;
-        animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_bFinished = false;
-        DebugOutput("Dive->Idle\n");
-        break;
-    case State::Knock_Down:
-        animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished = false;
-        break;
-    case State::Get_Up:
-        animController->m_pAnimationTracks[TRACK_GET_UP].m_bFinished = false;
-        break;
-    case State::Jump:
-        break;
-    case State::Attack_Normal:
-        break;
-
-    default:
-        break;
+    auto it = kRootMotionStateToTrackMap.find(state);
+    if (it != kRootMotionStateToTrackMap.end()) {
+        int track = it->second;
+        if (animController != nullptr) {
+            animController->m_pAnimationTracks[track].m_bFinished = false;
+            if (posReset)
+                animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
+        }
     }
 }
 

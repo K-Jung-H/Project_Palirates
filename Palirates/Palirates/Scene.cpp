@@ -701,7 +701,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_p->SetScale(10.0f, 10.0f, 10.0f);
 	obj_p->Set_Name(obj_name_2);
 	obj_p->test_num = 4;
-	obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
+	//obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
 
 
 	for (int i = 0; i < 10; i++) {
@@ -971,6 +971,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'Z':
 		{
 			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
