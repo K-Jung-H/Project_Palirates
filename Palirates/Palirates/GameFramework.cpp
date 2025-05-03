@@ -1020,12 +1020,15 @@ void CGameFramework::FrameAdvance()
 		if (m_pPlayer)
 			m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-		for (auto& [id, remotePlayer] : m_pRemotePlayers)
 		{
-			if (remotePlayer)
-				remotePlayer->Render(Active_CommandList, m_pCamera);
-		}
+			std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
+			for (auto& [id, remotePlayer] : m_pRemotePlayers)
+			{
+				if (remotePlayer)
+					remotePlayer->Render(Active_CommandList, m_pCamera);
+			}
+		}
 		//auto objectList = GetSceneManager().Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
 		//if (objectList)
 		//{
