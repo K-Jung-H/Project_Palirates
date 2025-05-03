@@ -637,16 +637,46 @@ ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
 
 void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
-	CGameObject::ApplySyncData(syncData);
 	SetPosition(syncData.position);
-	SetState(static_cast<int>(syncData.currentState));
-	
+	SetLookDirection(syncData.lookVector);
+	SetState(syncData.currentState);
 
-	for (int i = 0; i < syncData.trackPositions.size(); ++i)
+	if (GetStateMachine())
 	{
-		auto& track = GetSkinnedAnimationController()->m_pAnimationTracks[i];
-		track.SetPosition(syncData.trackPositions[i]);
-		track.SetWeight(syncData.Weights[i]);
+		GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	}
+
+		switch (syncData.currentState)
+		{
+		case State::Idle:
+			GetSkinnedAnimationController()->SetTrackAnimationSet(0, 0);
+			break;
+		case State::Run:
+			GetSkinnedAnimationController()->SetTrackAnimationSet(1, 1);
+			break;
+		}
+
+	std::shared_ptr<CAnimationController>  anim = GetSkinnedAnimationController();
+	if (anim)
+	{
+		// 트랙 위치, 가중치가 들어왔다면 사용
+		if (!syncData.trackPositions.empty() && !syncData.Weights.empty())
+		{
+			int nTracks = std::min((int)anim->m_nAnimationTracks, (int)syncData.trackPositions.size());
+			for (int i = 0; i < nTracks; ++i)
+			{
+				anim->m_pAnimationTracks[i].SetPosition(syncData.trackPositions[i]);
+				anim->m_pAnimationTracks[i].SetWeight(syncData.Weights[i]);
+			}
+		}
+		else
+		{
+			for (int i = 0; i < anim->m_nAnimationTracks; ++i)
+			{
+				anim->m_pAnimationTracks[i].SetPosition(0.0f);
+				anim->m_pAnimationTracks[i].SetWeight(1.0f); // 한 트랙만 활성화 되어도 재생됨
+			}
+		}
 	}
 }
 

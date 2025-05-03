@@ -183,6 +183,11 @@ public:
 		}
 	}
 
+	void SetState(State newState)
+	{
+		SetState(static_cast<int>(newState));
+	}
+
 	std::string Serialize();
 };
 

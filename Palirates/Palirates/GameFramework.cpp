@@ -394,6 +394,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
+			
 				default:
 					break;
 			}
@@ -771,14 +772,14 @@ void CGameFramework::Animate_Scene()
 			m_pPlayer->Animate(m_GameTimer.GetTimeElapsed());
 			m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
 		}
-		//for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
-		//{
-		//	if (remotePlayer)
-		//	{
-		//		remotePlayer->Animate(m_GameTimer.GetTimeElapsed());
-		//		remotePlayer->Update(m_GameTimer.GetTimeElapsed());
-		//	}
-		//}
+		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
+		{
+			if (remotePlayer)
+			{
+				remotePlayer->Animate(m_GameTimer.GetTimeElapsed());
+				remotePlayer->Update(m_GameTimer.GetTimeElapsed());
+			}
+		}
 	}
 	else
 	{
