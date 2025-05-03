@@ -1271,10 +1271,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-					//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-						//if (j == pRootGameObject->RootBoneIndex)
-						if (j == 2)	// player root index
+						if (j == RootIndex)
 						{
 							if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
@@ -1288,8 +1286,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 						}
 					}
 					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
-						//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
-						if (j == 16) {
+						if (j == RootIndex) {
 							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
@@ -1350,12 +1347,10 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-				//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-					//if (j == pRootGameObject->RootBoneIndex)
-					if (j == 2)
+					if (j == RootIndex)
 					{
-						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+						if (!m_pAnimationTracks[k].m_bFinished&& GetUpdateHipsTracks().contains(k)) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 						}
 						blendedTransform._41 = 0.0f;
@@ -1365,9 +1360,8 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 					}
 				}
 				else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
-					//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
-					if (j == 0) {
-						if (k == 3) {
+					if (j == RootIndex) {
+						if (!m_pAnimationTracks[k].m_bFinished&& pRootGameObject->RootMotionTrackSet.contains(k)) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 						}
 
@@ -4453,6 +4447,10 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
+	RootMotionTrackSet = {
+		3
+	};
+
 	m_StateMachine = std::make_unique<FishManStateMachine>(this);
 
 	Object_type = OBJECT_TPYE_MONSTER;
@@ -4460,11 +4458,13 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	CLoadedModelInfo* pFishManModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FishmanLP.bin", NULL);
 
 	n_Animation = 9;
+	RootIndex = 0;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 
 	Set_Child(pFishManModel->m_pModelRootObject);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pFishManModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
@@ -4499,7 +4499,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	};
 
 	n_Animation = 10;
-
+	RootIndex = 0;
 
 	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
 
@@ -4512,6 +4512,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	Set_Child(pAnubisModel->m_pModelRootObject);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAnubisModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
@@ -4552,7 +4553,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	};
 
 	n_Animation = 13;
-
+	RootIndex = 16;
 
 	m_StateMachine = std::make_unique<DragonStateMachine>(this);
 
@@ -4565,6 +4566,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	Set_Child(pDragonModel->m_pModelRootObject);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pDragonModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);

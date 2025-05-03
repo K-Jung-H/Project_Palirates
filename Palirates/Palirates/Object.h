@@ -449,6 +449,8 @@ public:
 	//Microsoft::WRL::ComPtr<ID3D12Resource> m_ppd3dcbSkinningBoneTransforms = NULL;
 	XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
 
+	int RootIndex{ 0 };
+
 public:
 	void Bone_Info();
 
@@ -585,6 +587,8 @@ public:
 	bool bIsControllable{ true };
 
 	std::unordered_set<int> RootMotionTrackSet;
+
+	int RootIndex{ 0 };
 
 public:
 	CGameObject(const std::string_view& name = "No_name");

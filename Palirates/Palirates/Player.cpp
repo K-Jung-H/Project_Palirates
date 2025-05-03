@@ -319,9 +319,11 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	Set_Child(pAngrybotModel->m_pModelRootObject);
 
 	n_Animation = 16;
+	RootIndex = 2;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
@@ -343,7 +345,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
 		}
 	}
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK1].m_nType = ANIMATION_TYPE_ONCE;
