@@ -645,7 +645,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	std::string_view name_view = obj_name_1;
 	std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-	AnubisObject->Add_Collider(10.0f);
+	//AnubisObject->Add_Collider(10.0f);
 	AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
 	AnubisObject->Set_Name(obj_name_1);
 	AnubisObject->test_num = 1;
@@ -691,7 +691,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
 		m->Set_Name(obj_name_3);
-		m->Add_Collider(10.0f);
+		//m->Add_Collider(10.0f);
 ;		m->test_num = i + 4;
 		obj_manager->Add_Object(m, Object_Type::skinned);
 	}
@@ -1084,11 +1084,12 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 {
 #ifdef RENDER_OBB
 
-	vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
+	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::skinned);
+	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
-	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
+	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
