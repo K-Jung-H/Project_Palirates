@@ -657,25 +657,19 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 		}
 
 	std::shared_ptr<CAnimationController>  anim = GetSkinnedAnimationController();
-	if (anim)
+	if (auto anim = GetSkinnedAnimationController())
 	{
-		// 트랙 위치, 가중치가 들어왔다면 사용
-		if (!syncData.trackPositions.empty() && !syncData.Weights.empty())
+		switch (syncData.currentState)
 		{
-			int nTracks = std::min((int)anim->m_nAnimationTracks, (int)syncData.trackPositions.size());
-			for (int i = 0; i < nTracks; ++i)
-			{
-				anim->m_pAnimationTracks[i].SetPosition(syncData.trackPositions[i]);
-				anim->m_pAnimationTracks[i].SetWeight(syncData.Weights[i]);
-			}
-		}
-		else
-		{
-			for (int i = 0; i < anim->m_nAnimationTracks; ++i)
-			{
-				anim->m_pAnimationTracks[i].SetPosition(0.0f);
-				anim->m_pAnimationTracks[i].SetWeight(1.0f); // 한 트랙만 활성화 되어도 재생됨
-			}
+		case State::Idle:
+			anim->SetTrackAnimationSet(0, 0);
+			break;
+		case State::Run:
+			anim->SetTrackAnimationSet(0, 1);
+			break;
+		case State::Dive:
+			anim->SetTrackAnimationSet(0, 2);
+			break;
 		}
 	}
 }
