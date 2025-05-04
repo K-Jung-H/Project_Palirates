@@ -1286,6 +1286,14 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			pendingPlayerCreates.pop();
 			if (pendingId != ClientNum)
 				CreateRemotePlayer(pendingId);
+
+			{
+				std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+				if (pendingUpdateMap.contains(pendingId)) {
+					ProcessReceivedData(pendingUpdateMap[pendingId]);
+					pendingUpdateMap.erase(pendingId);
+				}
+			}
 		}
 
 		return;
@@ -1294,6 +1302,14 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	if (!bClientIdAssigned)
 	{
 		std::cout << "[경고] 아직 CLIENT_ID를 받지 않아 패킷 처리 지연 중: " << receivedData << std::endl;
+
+		int playerId;
+		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
+		{
+			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+			pendingUpdateMap[playerId] = receivedData;  // 최신 패킷 하나만 저장
+		}
+
 		return;
 	}
 

@@ -542,8 +542,8 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 			GetStateMachine()->update(fTimeElapsed);
 		}
 		else if (Object_type == OBJECT_TPYE_PLAYER) {
-			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-			//GetStateMachine()->update(fTimeElapsed);
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
 		}
 	}
 
@@ -635,6 +635,7 @@ ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
 	return data;
 }
 
+
 void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
 	SetPosition(syncData.position);
@@ -646,31 +647,26 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 		GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
 	}
 
-		switch (syncData.currentState)
-		{
-		case State::Idle:
-			GetSkinnedAnimationController()->SetTrackAnimationSet(0, 0);
-			break;
-		case State::Run:
-			GetSkinnedAnimationController()->SetTrackAnimationSet(1, 1);
-			break;
-		}
-
-	std::shared_ptr<CAnimationController>  anim = GetSkinnedAnimationController();
 	if (auto anim = GetSkinnedAnimationController())
 	{
+		int setIndex = 0;
 		switch (syncData.currentState)
 		{
-		case State::Idle:
-			anim->SetTrackAnimationSet(0, 0);
-			break;
-		case State::Run:
-			anim->SetTrackAnimationSet(0, 1);
-			break;
-		case State::Dive:
-			anim->SetTrackAnimationSet(0, 2);
-			break;
+			case State::Idle:          setIndex = 0; break;
+			case State::Run:           setIndex = 1; break;
+			case State::Knock_Down:    setIndex = 2; break;
+			case State::Get_Up:        setIndex = 3; break;
+			case State::Dive:          setIndex = 4; break;
+			case State::Jump:          setIndex = 5; break;
+			case State::Attack_Normal: setIndex = 6; break;
+			case State::ETC:           setIndex = 7; break;
+			default:                   setIndex = 0; break;
 		}
+
+		anim->SetTrackAnimationSet(0, setIndex);
+		anim->SetTrackEnable(0, true);
+		anim->SetTrackWeight(0, 1.0f);
+		anim->m_pAnimationTracks[0].SetPosition(0.0f);
 	}
 }
 

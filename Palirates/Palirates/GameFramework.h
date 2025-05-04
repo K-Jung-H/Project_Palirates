@@ -122,7 +122,9 @@ public:
 	void CreateLocalPlayer(int playerId);
 	void ProcessReceivedData(const std::string& receivedData);
 	std::queue<int> pendingPlayerCreates;
-	std::mutex pendingCreateMutex;  
+	std::mutex pendingCreateMutex; 
+	std::unordered_map<int, std::string> pendingUpdateMap;
+	std::mutex pendingUpdateMutex;
 
 	Scene_Manager sceneManager;
 	std::shared_ptr<Object_Manager> object_manager;
