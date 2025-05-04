@@ -1011,7 +1011,7 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
 			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
 
-			bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
+			//bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 		else if (!strcmp(pstrToken, "<Positions>:"))
 		{
@@ -1477,7 +1477,7 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
 			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
 
-			//bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
+			bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 		else if (!strcmp(pstrToken, "<BoneNames>:"))
 		{
@@ -1563,6 +1563,35 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void 
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
 }
 
+BoundingOrientedBox CSkinnedMesh::Get_WorldOBB()
+{
+	BoundingOrientedBox result = {}; // 초기화된 기본값
+
+	// AABB 유효성 검사
+	if (XMVector3Equal(XMLoadFloat3(&m_xmf3AABBExtents), XMVectorZero()))
+		return result;
+
+	// 로컬 OBB 생성
+	XMFLOAT3 adjustedCenter = m_xmf3AABBCenter;
+
+	adjustedCenter.y -= m_xmf3AABBExtents.y;
+
+	BoundingOrientedBox localOBB(
+		adjustedCenter,
+		m_xmf3AABBExtents,
+		XMFLOAT4(0, 0, 0, 1)
+	);
+
+	// 뼈 캐시에서 월드행렬 얻기
+	if (m_ppSkinningBoneFrameCaches.empty() || !m_ppSkinningBoneFrameCaches[0])
+		return result;
+
+	const XMFLOAT4X4& boneWorld = m_ppSkinningBoneFrameCaches[0]->m_xmf4x4World;
+	XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
+
+	localOBB.Transform(result, boneWorldMatrix);
+	return result;
+}
 
 //===============================================================
 Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments)

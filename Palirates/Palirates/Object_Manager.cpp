@@ -145,6 +145,8 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D1
 
 	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
+	ZeroMemory(Mapped_Instance_info, sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num);
+
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(BoundingBox_Instance_Info);
@@ -181,10 +183,13 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 	else
 	{
-		XMFLOAT4X4 world_matrix;
+		XMFLOAT4X4 world_matrix = Matrix4x4::Identity();
 
 		for (std::shared_ptr<CGameObject> obj_ptr : obb_obj_ptr_list)
 		{
+			if (visible_count >= obb_instance_buffer_max_num)
+				break;
+
 			if (!Get_OBB_WorldMatrix(obj_ptr.get(), &world_matrix))
 				continue;
 			else
@@ -298,48 +303,38 @@ void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<st
 
 bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
 {
-	/*if (g_obj->Get_Collider() == NULL)
-		return false;
-
-	BoundingOrientedBox pBoundingBox(*g_obj->Get_Collider());
-	XMVECTOR extents = XMLoadFloat3(&pBoundingBox.Extents);
-
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
-
-	XMVECTOR scale, rotation, translation;
-	XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix);
-
-	XMMATRIX scaleMatrix = XMMatrixScaling(
-		15.0f * XMVectorGetX(extents),
-		15.0f * XMVectorGetY(extents),
-		15.0f * XMVectorGetZ(extents));
-
-	XMVECTOR obbRotation = XMLoadFloat4(&pBoundingBox.Orientation);
-	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(obbRotation);
-	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + XMLoadFloat3(&pBoundingBox.Center));
-
-	XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-
-	XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalWorldMatrix));
-
-	return true;*/
-
 	if (!g_obj || !g_obj->Get_Collider())
 		return false;
 
-	BoundingOrientedBox localOBB = *g_obj->Get_Collider();
-	BoundingOrientedBox worldOBB;
+	// 스킨메쉬 여부 확인
+	CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(g_obj->m_pMesh);
+	if (skinnedMesh)
+	{
+		BoundingOrientedBox worldOBB = skinnedMesh->Get_WorldOBB();
 
+		XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&worldOBB.Extents) * 2.0f);
+		XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation));
+		XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
+
+		XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+		XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
+		return true;
+	}
+
+	// 일반 메시 처리
 	XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
+	XMVECTOR scale, rotQuat, trans;
+	if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
+		return false;
 
-	localOBB.Transform(worldOBB, world);
+	BoundingOrientedBox localOBB = *g_obj->Get_Collider();
+	XMVECTOR extents = XMLoadFloat3(&localOBB.Extents);
+	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(extents * scale);
+	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotQuat);
+	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(trans + XMLoadFloat3(&localOBB.Center));
 
-	XMMATRIX obbMatrix =
-		XMMatrixScaling(worldOBB.Extents.x * 2.0f, worldOBB.Extents.y * 2.0f, worldOBB.Extents.z * 2.0f) *
-		//XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation)) *
-		XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
-
-	XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
+	XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+	XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
 	return true;
 }
 

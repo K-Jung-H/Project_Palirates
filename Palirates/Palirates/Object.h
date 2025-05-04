@@ -756,6 +756,8 @@ public:
 		static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
 		static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 		static void ClearMeshCache();
+
+		void AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root);
 };
 
 //==================================================================================

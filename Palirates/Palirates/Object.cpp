@@ -2725,6 +2725,31 @@ void CGameObject::ClearMeshCache()
 	MeshCache.clear();
 }
 
+void CGameObject::AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root)
+{
+	if (!root) return;
+
+	// 현재 오브젝트에 메쉬가 있고 스킨드메쉬인 경우 처리
+	if (root->m_pMesh)
+	{
+		CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(root->m_pMesh);
+		if (skinnedMesh)
+		{
+			BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
+			BoundingOrientedBox* pCollider = new BoundingOrientedBox(obb);
+			root->Set_Collider(pCollider);
+		}
+	}
+
+	// 재귀적으로 자식도 탐색
+	if (root->Get_Child())
+		AttachOBBsToAllSkinnedMeshes(root->Get_Child());
+
+	// 형제도 재귀적으로 탐색
+	if (root->Get_Sibling())
+		AttachOBBsToAllSkinnedMeshes(root->Get_Sibling());
+}
+
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
@@ -4471,6 +4496,22 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 
 	SetScale(10.0f, 10.0f, 10.0f);
+
+	//auto model = FindFrame("spear_lp");
+	////auto model = FindFrame("body_lp");
+	//XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	//XMVECTOR scale, rotationQuat, translation;
+	//XMFLOAT4 quaternion;
+	//XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	//if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	//{
+	//
+	//	XMStoreFloat4(&quaternion, rotationQuat); 
+	//}
+	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	//model->Set_Collider(b);
+
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4524,6 +4565,19 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		}
 	}
 	SetScale(15.0f, 15.0f, 15.0f);
+	//auto model = FindFrame("Staff_LP");
+	//XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	//XMVECTOR scale, rotationQuat, translation;
+	//XMFLOAT4 quaternion;
+	//XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	//if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	//{
+
+	//	XMStoreFloat4(&quaternion, rotationQuat);
+	//}
+	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	//model->Set_Collider(b);
 }
 
 ///////////////////////////////////////////////////////////////////

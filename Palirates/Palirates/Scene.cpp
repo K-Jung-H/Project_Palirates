@@ -651,6 +651,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	AnubisObject->test_num = 1;
 	obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
+
 	//name_view = obj_name_2;
 	//std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pMedusaModel, 5);
 	//humanObject_2->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 10.0f), 10.0f);
@@ -692,7 +693,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
 		m->Set_Name(obj_name_3);
 		//m->Add_Collider(10.0f);
-;		m->test_num = i + 4;
+		m->test_num = i + 4;
+		//m->AttachOBBsToAllSkinnedMeshes(m);
 		obj_manager->Add_Object(m, Object_Type::skinned);
 	}
 
@@ -1084,12 +1086,11 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 {
 #ifdef RENDER_OBB
 
-	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
-	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::skinned);
-	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+	vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
+	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
 
-	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
+	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);

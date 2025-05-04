@@ -98,6 +98,13 @@ public:
 
 	BoundingOrientedBox* Get_BoundingBox() { return bounding_box; };
 	void Set_BoundingBox(BoundingOrientedBox* obb_ptr);
+
+	XMFLOAT3 GetAABBCenter() {
+		return m_xmf3AABBCenter;
+	}
+	XMFLOAT3 GetAABBExtents() {
+		return m_xmf3AABBExtents;
+	}
 };
 
 class OBBContainer : public CMesh
@@ -337,6 +344,34 @@ public:
 	virtual void ReleaseUploadBuffers();
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
+
+	BoundingOrientedBox CSkinnedMesh::Get_WorldOBB();
+	//{
+	//	BoundingOrientedBox result = {}; // 초기화된 기본값
+
+	//	// AABB가 유효하지 않으면 반환
+	//	if (XMVector3Equal(XMLoadFloat3(&m_xmf3AABBExtents), XMVectorZero()))
+	//		return result;
+
+	//	// 로컬 기준 OBB 생성 (중심, 반지름, 회전 없음)
+	//	BoundingOrientedBox localOBB(
+	//		m_xmf3AABBCenter,
+	//		m_xmf3AABBExtents,
+	//		XMFLOAT4(0, 0, 0, 1)
+	//	);
+
+	//	// 스킨 본 캐시에서 root bone의 world matrix 가져오기
+	//	if (m_ppSkinningBoneFrameCaches.empty() || !m_ppSkinningBoneFrameCaches[0])
+	//		return result;
+
+	//	const XMFLOAT4X4& boneWorld = m_ppSkinningBoneFrameCaches[0]->m_xmf4x4World;
+	//	XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
+
+	//	// bone 월드 행렬을 이용해 로컬 OBB를 변환
+	//	localOBB.Transform(result, boneWorldMatrix);
+
+	//	return result;
+	//}
 };
 
 
