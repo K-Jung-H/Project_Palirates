@@ -28,6 +28,13 @@ void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float 
    // std::cout << "[DEBUG] updatePlayerPosition ¡æ ID=" << clientId
    //     << " Pos=(" << x << "," << y << "," << z << ")"
    //     << " State=" << state << std::endl;
+
+
+}
+
+void Scene::addMonster(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state)
+{
+      
 }
 
 void Scene::printScene()

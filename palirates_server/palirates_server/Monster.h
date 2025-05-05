@@ -1,10 +1,19 @@
 #pragma once
 #include <string>
 
+enum class Monster_Type : int
+{
+    jJol,
+    midBoss,
+    Boss
+};
+
+
 struct Monster
 {
     int id;
     float x, y, z;
+    float lookX, lookY, lookZ;
     int hp;
     int state; // 0: idle, 1: 이동, 2: 공격
 

@@ -3,6 +3,7 @@
 #include <iostream>
 #include "GameCharacter.h"
 #include "Player.h"
+#include "Monster.h"
 
 class Scene
 {
@@ -35,7 +36,10 @@ public:
         players.erase(id);
     }
 
+    void addMonster(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
+
     void printScene();
     Player* getPlayerById(int id);
     std::unordered_map<int, Player*> playerMap;
+    std::unordered_map<int, Monster> monsterMap;
 };
