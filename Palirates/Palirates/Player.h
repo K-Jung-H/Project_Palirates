@@ -48,6 +48,7 @@ protected:
 	float moveZ{ 0.0f };
 
 	bool MultiMode{ false };
+
 	//=================¼­¹ö=================
 	int id;  
 	int state;
