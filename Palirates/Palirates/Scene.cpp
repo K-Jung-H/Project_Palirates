@@ -636,7 +636,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
 #endif
 
 //	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -716,8 +717,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 	for (int i = 0; i < 10; i++) {
-		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
+
+		CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
+		std::shared_ptr<CMonsterObject> m = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pFishmanModel_t, 5);
+		m->SetPosition(1.0f * i, m_pTerrain->Get_Mesh_Height(1.0f * i, 1.0f * i), 1.0f * i);
+		m->SetScale(10.0f, 10.0f, 10.0f);
+		m->Add_Collider(1.0f);
+
 		m->Set_Name(obj_name_3);
 		//m->Add_Collider(10.0f);
 		m->test_num = i + 4;
@@ -740,7 +746,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 #ifdef LOAD_SCENE
 	// Load Scene
 
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+
+
+
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("test_scene");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
@@ -764,6 +774,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Classify_Objects_By_Tile();
 
 	Object_Manager::Reserve_Update();
+
+	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+	obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+
 
 	/*if (pGargoyleModel)
 		delete pGargoyleModel;
@@ -1115,24 +1129,15 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 	
-	//if (particle_test_button)
-	//{
-		//XMFLOAT3 test_pos = m_pPlayer->GetPosition();
-		//test_pos.y += 15.0f;
-		//test_dragonfire->Set_Center(test_pos);
-		//test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
-	//}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_OBB
 
-	vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
+	// Update every frame
+	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
 
-	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
@@ -1142,12 +1147,10 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (test_button)
 	{
 		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-
 		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 		trail_obj->Set_Trail_Target(trail_target, false);
 		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
 		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-
 		test_button = false;
 	}
 }
@@ -1205,7 +1208,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
+	obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
@@ -1333,7 +1336,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	//=====================================================
@@ -1452,7 +1455,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
@@ -1562,8 +1565,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 			delete Ship_Model;
 
 	}
+
 	//=====================================================
 
+#ifdef RENDER_PARTICLE
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
@@ -1583,9 +1588,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.size = 1.0f;
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
-	
+
 	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
 	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
+#endif
 	//=====================================================
 
 

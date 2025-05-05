@@ -41,6 +41,17 @@ struct Fixed_Object_Info
 
 };
 
+enum class Object_Type
+{
+	skinned,
+	non_skinned,
+	fixed,
+	player,
+	trail,
+	plane,
+	etc
+};
+
 
 class BoundingBox_Shader : public CShader
 {
@@ -59,59 +70,44 @@ public:
 };
 
 
-class OBB_Drawer
+class Object_Manager;
+
+class OBB_Drawer 
 {
-protected:
-	ID3D12Resource* Instance_info = NULL;
-	BoundingBox_Instance_Info* Mapped_Instance_info = NULL;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
-
-	int obb_instance_buffer_max_num = DEFAULT_INSTANCE_NUM;
-	int rendering_num = 1;
-
 public:
+	OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
+	~OBB_Drawer();
+
+	void Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void Release_OBB_Data_ShaderVariables();
+
+	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type, Object_Manager* obj_mgr);
+
+	void Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
+
+private:
+	void Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list);
+	void Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map);
+
+	bool Compute_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world);
+	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited);
+
+private:
 	static CubeMesh* obb_Mesh;
 	static BoundingBox_Shader* obb_shader;
 
-	OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
-	~OBB_Drawer();
+	ID3D12Resource* Instance_info = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView{};
+	BoundingBox_Instance_Info* Mapped_Instance_info = nullptr;
 
-	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Release_OBB_Data_ShaderVariables();
-	
-	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>> gameobj_container);
-	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container);
-
-
-	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited);
-	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
-	
-
-
-	
-	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-
-};
-
-
-
-
-
-enum class Object_Type
-{
-	skinned,
-	non_skinned,
-	fixed,
-	player,
-	trail,
-	plane,
-	etc
+	int obb_instance_buffer_max_num = 64;
+	int rendering_num = 0;
 };
 
 class Object_Manager
 {
+
 private:
-	shared_ptr<OBB_Drawer> bounding_box_drawer;
 	shared_ptr<CHeightMapTerrain> terrain_ptr;
 
 	// 움직이는 객체들
@@ -119,7 +115,6 @@ private:
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 
 	std::vector<std::shared_ptr<CGameObject>> player_list;
-
 
 
 private:
@@ -133,12 +128,13 @@ private:
 	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
 	void Synchronize_Active_Objects_and_Tile();
 
+	std::unordered_map<Object_Type, std::shared_ptr<OBB_Drawer>> obb_drawer_map;
 
 public:
 	//test 
 	Wave_Object* wave_obj = NULL;
 	std::vector<std::shared_ptr<CGameObject>> plane_obj_list;
-
+	shared_ptr<OBB_Drawer> bounding_box_drawer;
 	
 
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
@@ -180,16 +176,18 @@ public:
 
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
 	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
+	std::vector<std::shared_ptr<CGameObject>> Gather_All_Fixed_Objects();
 
 	void Clear_Object_List_All();
 	void Clear_Object_List(Object_Type type);
 
 	//========================================================================
-	void Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	void Create_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	void Create_OBB_Drawers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
-	void Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
-	void Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info > gameobj_container);
+	void Update_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void Update_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	void Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void Render_OBB_Drawers(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 };
 
