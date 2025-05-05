@@ -561,47 +561,74 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 
 	Particle_Format test_snow_info;
 	{
 		test_snow_info.shader_type = Particle_Type::spread;
 		test_snow_info.particle_type = 0;
 		test_snow_info.max_particles = 1000;
+		test_snow_info.MaxLifetime = 3.0f;
 
 		test_snow_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
 		test_snow_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
+		test_snow_info.EmitFaceIndex = 3;
 
-		test_snow_info.MaxLifetime = 3.0f;
 
 		test_snow_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 		test_snow_info.init_velocity_value = 0.0f;
 		test_snow_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
 
-		test_snow_info.size = XMFLOAT2(10.0f, 10.0f);
+		test_snow_info.size = 1.0f;
 		test_snow_info.color = XMFLOAT3(0.5f, 0.5f, 1.0f);
 	}
 
-	Particle_Format test_spark_info;
+	Particle_Format test_dragon_fire_info;
 	{
-		test_spark_info.shader_type = Particle_Type::spread;
-		test_spark_info.particle_type = 1;
-		test_spark_info.max_particles = 30;
+		test_dragon_fire_info.shader_type = Particle_Type::spread;
+		test_dragon_fire_info.particle_type = 5;
+		test_dragon_fire_info.max_particles = 3000;
+		test_dragon_fire_info.MaxLifetime = 1.0f;
 
-		test_spark_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
-		test_spark_info.area_xyz = XMFLOAT3(100.0f, 100.0f, 100.0f);
+		test_dragon_fire_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
+		test_dragon_fire_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
+		test_dragon_fire_info.EmitFaceIndex = 0;
 
-		test_spark_info.MaxLifetime = 1.0f;
 
-		test_spark_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-		test_spark_info.init_velocity_value = 100.0f;
-		test_spark_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+		test_dragon_fire_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		test_dragon_fire_info.init_velocity_value = 100.0f;
+		test_dragon_fire_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
 
-		test_spark_info.size = XMFLOAT2(10.0f, 10.0f);
-		test_spark_info.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
+		test_dragon_fire_info.size = 1.0f;
+		test_dragon_fire_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 	}
 
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_spark_info);
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
+	Particle_Format test_sand_storm_info;
+	{
+		test_sand_storm_info.shader_type = Particle_Type::sand;
+		test_sand_storm_info.particle_type = 3;
+		test_sand_storm_info.max_particles = 10000;
+		test_sand_storm_info.MaxLifetime = 10.0f;
+
+		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.EmitFaceIndex = 5;
+
+		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+		test_sand_storm_info.init_velocity_value = 100.0f;
+		test_sand_storm_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		test_sand_storm_info.size = 1.0f;
+		test_sand_storm_info.color = XMFLOAT3(0.925f, 0.902f, 0.8f);
+	}
+
+
+
+	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
+	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
+
+	
 #endif
 
 
@@ -921,9 +948,35 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 			if (test_button)
 				break;
-
 			test_button = true;
-		}	break;
+		}	
+		break;
+
+		case 'E':
+		{
+			particle_test_button = !particle_test_button;
+		}
+		break;
+
+		case 'T':
+		{
+			if (test_sand == NULL)
+				break;
+
+			test_sand->Update_Func_Index +=1;
+			test_sand->Update_Func_Index %= 3;
+
+			if (test_sand->Update_Func_Index != 2)
+			{
+				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+			}
+			else
+			{
+				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+			}
+		}
+		break;
 
 		case 'Z':
 		{
@@ -1061,8 +1114,14 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
-
+	
+	//if (particle_test_button)
+	//{
+		//XMFLOAT3 test_pos = m_pPlayer->GetPosition();
+		//test_pos.y += 15.0f;
+		//test_dragonfire->Set_Center(test_pos);
+		//test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
+	//}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1078,6 +1137,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+
+
 	if (test_button)
 	{
 		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
@@ -1519,7 +1580,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.init_velocity_value = 100.0f;
 		water_splashes_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
 
-		water_splashes_info.size = XMFLOAT2(10.0f, 10.0f);
+		water_splashes_info.size = 1.0f;
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
 	
