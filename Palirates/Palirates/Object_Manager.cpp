@@ -315,6 +315,7 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 			XMMATRIX finalMatrix = scaleMatrix * g_obj->customRotation * rotationMatrix * translationMatrix;
 
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
+			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
 
 			return true;
 		}
@@ -341,6 +342,7 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 				XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
 
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
+			XMStoreFloat4x4(&g_obj->WeaponMatrix, obbMatrix);
 			return true;
 		}
 	}

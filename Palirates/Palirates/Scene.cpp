@@ -660,9 +660,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	string obj_name_1 = "test_obj_name_1";
-	string obj_name_2 = "test_obj_name_2";
-	string obj_name_3 = "test_obj_name_3";
+	string Monster_1 = "Anubis";
+	string Monster_2 = "Dragon";
+	string Monster_3 = "FishMan";
 	string obj_name_4 = "test_palyer2";
 	string obj_name_5 = "test_palyer3";
 	string obj_name_6 = "test_palyer4";
@@ -670,11 +670,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	string obj_name_8 = "test_palyer6";
 
 
-	std::string_view name_view = obj_name_1;
+	std::string_view name_view = Monster_1;
 	std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	//AnubisObject->Add_Collider(10.0f);
 	AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
-	AnubisObject->Set_Name(obj_name_1);
 	AnubisObject->test_num = 1;
 	obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
@@ -718,7 +717,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	for (int i = 0; i < 10; i++) {
 		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
-		m->Set_Name(obj_name_3);
+		//m->Set_Name(obj_name_3);
 		//m->Add_Collider(10.0f);
 		m->test_num = i + 4;
 		//m->AttachOBBsToAllSkinnedMeshes(m);
@@ -955,6 +954,25 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
+			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (mon && !mon->empty())
+			{
+				std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
+
+				CGameObject* base2 = baseObj2.get();
+
+				auto* dra = dynamic_cast<CDragonObject*>(base2);
+				if (dra)
+				{
+					if (particle_test_button) {
+						dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+					}
+					else {
+						dra->GetStateMachine()->changeState(State::Idle, Key_Value::None);
+					}
+					//dra->MoveUp(30.0f);
+				}
+			}
 		}
 		break;
 
@@ -1122,6 +1140,44 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		//test_dragonfire->Set_Center(test_pos);
 		//test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
 	//}
+
+	if (particle_test_button)
+	{
+		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+		XMFLOAT3 test_pos{};
+		if (list) {
+			for (auto& obj : *list) {
+				const char* objName = obj->Get_Name();
+				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
+				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack2) {
+					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
+
+					if (weapon) {
+						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
+
+						// 위치 추출
+						XMVECTOR scale, rotQuat, trans;
+						if (!XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix)) {
+							trans = XMVectorZero(); 
+						}
+
+						XMFLOAT3 position;
+						XMStoreFloat3(&position, trans);
+						position.y -= 5.0f;
+						position.z -= 5.0f;
+						test_dragonfire->Set_Center(position);
+
+						XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
+						XMFLOAT3 look;
+						XMStoreFloat3(&look, forward);
+						test_dragonfire->Set_Main_Direction(look);
+					}
+				}
+			}
+		}
+		
+		
+	}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1262,6 +1318,7 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
+
 
 }
 

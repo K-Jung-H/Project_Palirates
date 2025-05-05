@@ -4624,6 +4624,8 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	SetScale(15.0f, 15.0f, 15.0f);
 
+	Set_Name("Dragon");
+
 	WeaponName = "HeadA_LP";
 	auto model = FindFrame(WeaponName);
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
@@ -4638,4 +4640,8 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
+	model->customRotation = XMMatrixRotationRollPitchYaw(
+		XMConvertToRadians(160.0f),
+		XMConvertToRadians(90.0f),
+		XMConvertToRadians(0.0f));
 }
