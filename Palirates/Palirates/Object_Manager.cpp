@@ -27,17 +27,17 @@ D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState
 	UINT nInputElementDescs = 7;  
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	// Á¤Á¡ Á¤º¸¸¦ À§ÇÑ ÀÔ·Â ¿ø¼Òµé
+	// ì •ì  ì •ë³´ë¥¼ ìœ„í•œ ì…ë ¥ ì›ì†Œë“¤
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[1] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-	// ÀÎ½ºÅÏ½Ì Á¤º¸¸¦ À§ÇÑ ÀÔ·Â ¿ø¼Òµé
+	// ì¸ìŠ¤í„´ì‹± ì •ë³´ë¥¼ ìœ„í•œ ì…ë ¥ ì›ì†Œë“¤
 	pd3dInputElementDescs[2] = { "WORLDMATRIX", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[3] = { "WORLDMATRIX", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[4] = { "WORLDMATRIX", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[5] = { "WORLDMATRIX", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
-	// ÀÎ½ºÅÏ½º »ö»ó
+	// ì¸ìŠ¤í„´ìŠ¤ ìƒ‰ìƒ
 	pd3dInputElementDescs[6] = { "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
 
@@ -150,13 +150,13 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D1
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(BoundingBox_Instance_Info);
-	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 Á¤·ÄµÈ Å©±â »ç¿ë
+	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 ì •ë ¬ëœ í¬ê¸° ì‚¬ìš©
 }
 
 void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
 {
 	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
-	std::unordered_set<CGameObject*> visited;  // Áßº¹ °Ë»ç¸¦ À§ÇÑ ÄÁÅ×ÀÌ³Ê
+	std::unordered_set<CGameObject*> visited;  // ì¤‘ë³µ ê²€ì‚¬ë¥¼ ìœ„í•œ ì»¨í…Œì´ë„ˆ
 
 	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
 		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
@@ -168,17 +168,17 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	if (obb_num > obb_instance_buffer_max_num)
 	{
-		// »õ·Î¿î ¹öÆÛ Å©±â ÀçÁ¶Á¤ 
-		// == Å©±â¸¦ Å°¿î »õ·Î¿î ¹öÆÛ »ı¼º
+		// ìƒˆë¡œìš´ ë²„í¼ í¬ê¸° ì¬ì¡°ì • 
+		// == í¬ê¸°ë¥¼ í‚¤ìš´ ìƒˆë¡œìš´ ë²„í¼ ìƒì„±
 		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
 
 
 		Release_OBB_Data_ShaderVariables();
 
-		// »õ·Î¿î ÃÖ´ë Å©±â ¾÷µ¥ÀÌÆ®
+		// ìƒˆë¡œìš´ ìµœëŒ€ í¬ê¸° ì—…ë°ì´íŠ¸
 		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
 
-		// »õ·Î¿î ¹öÆÛ »ı¼º
+		// ìƒˆë¡œìš´ ë²„í¼ ìƒì„±
 		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 	else
@@ -212,86 +212,81 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container)
 {
 	int obb_num = 0;
-
 	for (auto& [meshName, instance_info] : gameobj_container)
-	{
 		obb_num += instance_info.fixed_obj_list.size();
-	}
 
 	if (obb_num > obb_instance_buffer_max_num)
 	{
-		// »õ·Î¿î ¹öÆÛ Å©±â ÀçÁ¶Á¤ 
-		// == Å©±â¸¦ Å°¿î »õ·Î¿î ¹öÆÛ »ı¼º
 		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
 
-
 		Release_OBB_Data_ShaderVariables();
-
-		// »õ·Î¿î ÃÖ´ë Å©±â ¾÷µ¥ÀÌÆ®
 		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
-
-		// »õ·Î¿î ¹öÆÛ »ı¼º
 		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
-	else
+
+	int visible_count = 0;
+	XMFLOAT4X4 world_matrix;
+
+	for (auto& [meshName, instance_info] : gameobj_container)
 	{
-		XMFLOAT4X4 world_matrix;
+		if (!instance_info.obj_mesh || !instance_info.obj_mesh->Get_BoundingBox())
+			continue;
 
-		int visible_count = 0;
-		for (auto& [meshName, instance_info] : gameobj_container)
+		BoundingOrientedBox meshOBB = *instance_info.obj_mesh->Get_BoundingBox();
+
+		for (std::shared_ptr<CGameObject> fixed_obj_ptr : instance_info.fixed_obj_list)
 		{
-			if (instance_info.obj_mesh->Get_BoundingBox() == NULL)
-				continue;
-		
+			XMMATRIX objWorld = XMLoadFloat4x4(&fixed_obj_ptr->m_xmf4x4World);
 
-			for (std::shared_ptr<CGameObject> fixed_obj_ptr : instance_info.fixed_obj_list)
-			{
-				BoundingOrientedBox temp_box(*instance_info.obj_mesh->Get_BoundingBox());
+			// 1. ë¶„í•´: ê°ì²´ì˜ ìŠ¤ì¼€ì¼, íšŒì „, ì´ë™
+			XMVECTOR scale, rotation, translation;
+			XMMatrixDecompose(&scale, &rotation, &translation, objWorld);
 
-				XMMATRIX worldMatrix = XMLoadFloat4x4(&fixed_obj_ptr->m_xmf4x4World);
-				XMVECTOR scale, rotation, translation;
-				XMMatrixDecompose(&scale, &rotation, &translation, worldMatrix); 
+			// 2. ë©”ì‹œ OBB ì •ë³´ ë¡œë”©
+			XMVECTOR obbCenter = XMLoadFloat3(&meshOBB.Center);
+			XMVECTOR obbExtents = XMLoadFloat3(&meshOBB.Extents);
+			XMVECTOR obbOrientation = XMLoadFloat4(&meshOBB.Orientation);
 
-				XMVECTOR extents = XMLoadFloat3(&temp_box.Extents);
-				XMMATRIX scaleMatrix = XMMatrixScaling(
-					2.0f * XMVectorGetX(extents) * XMVectorGetX(scale),
-					2.0f * XMVectorGetY(extents) * XMVectorGetY(scale),
-					2.0f * XMVectorGetZ(extents) * XMVectorGetZ(scale));
+			// 3. íšŒì „ ê²°í•©: ë©”ì‹œ OBBì˜ íšŒì „ * ê°ì²´ íšŒì „
+			XMVECTOR finalQuat = XMQuaternionMultiply(obbOrientation, rotation);
+			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(finalQuat);
 
-				XMStoreFloat4(&temp_box.Orientation, rotation);
-				XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
+			// 4. OBB ì¤‘ì‹¬ íšŒì „ í›„ ì´ë™
+			XMVECTOR rotatedCenter = XMVector3Transform(obbCenter, rotationMatrix);
+			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + rotatedCenter);
 
-				XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + XMLoadFloat3(&temp_box.Center));
+			// 5. ìŠ¤ì¼€ì¼ ê³„ì‚° (Extents * 2.0 * ê°ì²´ ìŠ¤ì¼€ì¼)
+			XMMATRIX scaleMatrix = XMMatrixScaling(
+				XMVectorGetX(obbExtents) * XMVectorGetX(scale) * 2.0f,
+				XMVectorGetY(obbExtents) * XMVectorGetY(scale) * 2.0f,
+				XMVectorGetZ(obbExtents) * XMVectorGetZ(scale) * 2.0f);
 
-				XMMATRIX finalWorldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+			// 6. ìµœì¢… ì›”ë“œ í–‰ë ¬
+			XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
+			XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(finalMatrix));
 
-				XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(finalWorldMatrix));
+			// 7. GPU ì—…ë¡œë“œ
+			Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
 
+			if (fixed_obj_ptr->Get_Active())
+				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
+			else
+				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
 
-				Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
-
-				if (fixed_obj_ptr->Get_Active())
-					XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
-				else
-					XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
-
-				++visible_count;
-			}
-
+			++visible_count;
 		}
-
-		rendering_num = visible_count;
 	}
 
+	rendering_num = visible_count;
 }
 
 void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited)
 {
-	// ÀÌ¹Ì ¹æ¹®ÇÑ °´Ã¼´Â »ı·«
+	// ì´ë¯¸ ë°©ë¬¸í•œ ê°ì²´ëŠ” ìƒëµ
 	if (!obj || visited.count(obj.get()) > 0)  
 		return;
 
-	// ÇöÀç °´Ã¼ ¹æ¹® ±â·Ï Ã³¸®
+	// í˜„ì¬ ê°ì²´ ë°©ë¬¸ ê¸°ë¡ ì²˜ë¦¬
 	visited.insert(obj.get());  
 
 	if (obj->Get_Collider() != NULL)
@@ -305,7 +300,7 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 {
 	if (!g_obj || !g_obj->Get_Collider())
 		return false;
-
+  
 	CGameObject* target = g_obj;
 	if (target)
 	{
@@ -382,7 +377,7 @@ void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dD
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(Instance_Info);
-	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 Á¤·ÄµÈ Å©±â »ç¿ë
+	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 ì •ë ¬ëœ í¬ê¸° ì‚¬ìš©
 
 }
 
@@ -406,7 +401,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 		Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	// °¡½Ã¼º °Ë»ç ÈÄ, º¸ÀÌ´Â ÀÎ½ºÅÏ½º¸¸ ¾÷µ¥ÀÌÆ®
+	// ê°€ì‹œì„± ê²€ì‚¬ í›„, ë³´ì´ëŠ” ì¸ìŠ¤í„´ìŠ¤ë§Œ ì—…ë°ì´íŠ¸
 	for (auto& obj_ptr : fixed_obj_list)
 	{
 		if (!obj_ptr->Get_Active())
@@ -505,7 +500,7 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 		if (unique_mesh_names.insert(name).second)
 			container[name].obj_mesh = std::shared_ptr<CMesh>(obj_ptr->m_pMesh);
 
-		// ±âÁ¸ raw pointer ÇØÁ¦
+		// ê¸°ì¡´ raw pointer í•´ì œ
 		obj_ptr->m_pMesh = nullptr; 
 	}
 
@@ -624,7 +619,7 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (do_instance_update == false)
 		return;
 	else
-		do_instance_update = false; // ´ÙÀ½ Update È£Ãâ Àü±îÁö´Â ÀÎ½ºÅÏ½º Á¤º¸ À¯ÁöÇÏ±â
+		do_instance_update = false; // ë‹¤ìŒ Update í˜¸ì¶œ ì „ê¹Œì§€ëŠ” ì¸ìŠ¤í„´ìŠ¤ ì •ë³´ ìœ ì§€í•˜ê¸°
 
 	for (auto& pair : fixed_obj_info_map)
 	{
@@ -694,7 +689,7 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 
 void Object_Manager::Check_Culling_All(CCamera* pCamera)
 {
-	/// Å¸ÀÏ¸Ê ÄÃ¸µÇÏ±â
+	/// íƒ€ì¼ë§µ ì»¬ë§í•˜ê¸°
 	//if (terrain_ptr != NULL)	
 	//	terrain_ptr->Check_Culling(pCamera);
 
@@ -705,7 +700,7 @@ void Object_Manager::Check_Culling_All(CCamera* pCamera)
 
 void Object_Manager::Classify_Objects_By_Tile()
 {	
-	// °´Ã¼µéÀÇ À§Ä¡¿¡ µû¶ó Å¸ÀÏ·Î ºĞ·ùÇÏ´Â ÇÔ¼ö
+	// ê°ì²´ë“¤ì˜ ìœ„ì¹˜ì— ë”°ë¼ íƒ€ì¼ë¡œ ë¶„ë¥˜í•˜ëŠ” í•¨ìˆ˜
 	
 	//=============================== 
 	for (auto& [tile_num, obj_list] : obj_list_in_tile)
@@ -731,18 +726,18 @@ void Object_Manager::Classify_Objects_By_Tile()
 
 void Object_Manager::Synchronize_Active_Objects_and_Tile()
 {
-	// È°¼ºÈ­µÈ Å¸ÀÏ ¹øÈ£ ¸®½ºÆ® »ı¼º
+	// í™œì„±í™”ëœ íƒ€ì¼ ë²ˆí˜¸ ë¦¬ìŠ¤íŠ¸ ìƒì„±
 	std::vector<int> active_tile_num_list;
 	terrain_ptr->Get_Active_TileNum_List(active_tile_num_list);
 	std::unordered_set<int> active_tile_set(active_tile_num_list.begin(), active_tile_num_list.end());
 
-	// °´Ã¼¸¦ °®°í ÀÖ´Â Å¸ÀÏ Áß¿¡¼­,
-	// È°¼ºÈ­µÈ Å¸ÀÏÀÌ °®´Â °´Ã¼µéÀº È°¼ºÈ­
-	// ºñÈ°¼ºÈ­µÈ Å¸ÀÏÀÇ °´Ã¼µéÀº ºñÈ°¼ºÈ­
+	// ê°ì²´ë¥¼ ê°–ê³  ìˆëŠ” íƒ€ì¼ ì¤‘ì—ì„œ,
+	// í™œì„±í™”ëœ íƒ€ì¼ì´ ê°–ëŠ” ê°ì²´ë“¤ì€ í™œì„±í™”
+	// ë¹„í™œì„±í™”ëœ íƒ€ì¼ì˜ ê°ì²´ë“¤ì€ ë¹„í™œì„±í™”
 	for (auto& [tile_num, obj_list] : obj_list_in_tile)
 	{
 		bool tile_active = true;
-		if (active_tile_set.find(tile_num) != active_tile_set.end()) // È°¼ºÈ­ Å¸ÀÏ ¸®½ºÆ®¿¡ Æ÷ÇÔµÈ Å¸ÀÏÀÎ °æ¿ì
+		if (active_tile_set.find(tile_num) != active_tile_set.end()) // í™œì„±í™” íƒ€ì¼ ë¦¬ìŠ¤íŠ¸ì— í¬í•¨ëœ íƒ€ì¼ì¸ ê²½ìš°
 			tile_active = true;
 		else
 			tile_active = false;
@@ -783,7 +778,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	{
 		if (terrain_ptr)
 		{
-			terrain_ptr->Render(pd3dCommandList, pCamera); // ·»´õ¸µ°ú + È°¼ºÈ­ Å¸ÀÏ ¼±º°
+			terrain_ptr->Render(pd3dCommandList, pCamera); // ë Œë”ë§ê³¼ + í™œì„±í™” íƒ€ì¼ ì„ ë³„
 //			Synchronize_Active_Objects_and_Tile();
 		}
 
@@ -798,15 +793,15 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 				{
 					if (obj_material)
 					{
-						// Àç·á(Material) ¼ÎÀÌ´õ º¯¼ö ¾÷µ¥ÀÌÆ®
-						// ÇöÀç ÀÇ¹Ì ¾øÀ½, °á±¹ ¸ŞÅ×¸®¾ó ÇÏ³ªÀÇ Á¤º¸¸¦ ±â¹İÀ¸·Î ÀÎ½ºÅÏ½Ì
-						// -> ÇÑ¹ø¸¸ µ¿ÀÛÇØ¾ß ÇÔ 
-						// -> ÇÏ³ªÀÇ ¸ÓÅ×¸®¾óÀ» ¸ğµÎ¿¡°Ô Àû¿ëÇÏ°Ô µÊ
-						// -> °¢°¢ ´Ù¸¥¸ÓÅ×¸®¾óÀ» ÇÏ·Á¸é, ÀÎ½ºÅÏ½ÌÀ» ÇÏ¸é ¾ÈµÊ or ÀÎ½ºÅÏ½Ì ³Ñ¹ö ±â¹İÀ¸·Î ¼ÎÀÌ´õ¿¡¼­ Ã³¸®ÇÏ±â
-						// ¾Æ´Ï¸é ÀÎ½ºÅÏ½Ì Á¤º¸¿¡ ÀçÁú ID Àü´Ş ¹× ID ±â¹İ Á¶¸í ·»´õ¸µ
+						// ì¬ë£Œ(Material) ì…°ì´ë” ë³€ìˆ˜ ì—…ë°ì´íŠ¸
+						// í˜„ì¬ ì˜ë¯¸ ì—†ìŒ, ê²°êµ­ ë©”í…Œë¦¬ì–¼ í•˜ë‚˜ì˜ ì •ë³´ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ì¸ìŠ¤í„´ì‹±
+						// -> í•œë²ˆë§Œ ë™ì‘í•´ì•¼ í•¨ 
+						// -> í•˜ë‚˜ì˜ ë¨¸í…Œë¦¬ì–¼ì„ ëª¨ë‘ì—ê²Œ ì ìš©í•˜ê²Œ ë¨
+						// -> ê°ê° ë‹¤ë¥¸ë¨¸í…Œë¦¬ì–¼ì„ í•˜ë ¤ë©´, ì¸ìŠ¤í„´ì‹±ì„ í•˜ë©´ ì•ˆë¨ or ì¸ìŠ¤í„´ì‹± ë„˜ë²„ ê¸°ë°˜ìœ¼ë¡œ ì…°ì´ë”ì—ì„œ ì²˜ë¦¬í•˜ê¸°
+						// ì•„ë‹ˆë©´ ì¸ìŠ¤í„´ì‹± ì •ë³´ì— ì¬ì§ˆ ID ì „ë‹¬ ë° ID ê¸°ë°˜ ì¡°ëª… ë Œë”ë§
 						obj_material->UpdateShaderVariable(pd3dCommandList);
 							
-						// ¸Ş½¬ ·»´õ¸µ
+						// ë©”ì‰¬ ë Œë”ë§
 						if (instance_info.obj_mesh)
 							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 					}
@@ -994,9 +989,9 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 			info.fixed_obj_list.clear();
 			info.fixed_obj_list.shrink_to_fit(); 
 
-			info.obj_mesh.reset(); // °­Á¦·Î nullptr·Î ¼³Á¤
+			info.obj_mesh.reset(); // ê°•ì œë¡œ nullptrë¡œ ì„¤ì •
 
-			// ¼öµ¿ ÇÒ´çµÈ ¸Ş¸ğ¸® 
+			// ìˆ˜ë™ í• ë‹¹ëœ ë©”ëª¨ë¦¬ 
 			if (info.Instance_info)
 			{
 				info.Instance_info -> Unmap(0, NULL);
@@ -1005,7 +1000,7 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 			}
 		}
 
-		// ÄÁÅ×ÀÌ³Ê ÀÚÃ¼¸¦ ¿ÏÀüÈ÷ ºñ¿ì°í ¸Ş¸ğ¸® ÇØÁ¦
+		// ì»¨í…Œì´ë„ˆ ìì²´ë¥¼ ì™„ì „íˆ ë¹„ìš°ê³  ë©”ëª¨ë¦¬ í•´ì œ
 		fixed_obj_info_map.clear();
 		unique_mesh_names.clear();
 
