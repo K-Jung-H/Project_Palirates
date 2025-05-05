@@ -1379,6 +1379,8 @@ CSkinnedMesh::CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *
 {
 	ZeroMemory(&m_d3dTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
 	ZeroMemory(&m_d3dBiTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBoneIndexBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBoneWeightBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
 }
 
 CSkinnedMesh::~CSkinnedMesh()
@@ -1477,7 +1479,7 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
 			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
 
-			bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
+			//bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 		else if (!strcmp(pstrToken, "<BoneNames>:"))
 		{
@@ -1494,6 +1496,7 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 					DebugOutput("\nBone Name: ", m_ppstrSkinningBoneNames[i]);
 #endif
 					m_ppSkinningBoneFrameCaches[i] = nullptr;
+					//m_nSkinningBoneIndex[i] = i;
 					//m_ppSkinningBoneFrameCaches[i].reset();
 				}
 			}
@@ -1565,28 +1568,22 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void 
 
 BoundingOrientedBox CSkinnedMesh::Get_WorldOBB()
 {
-	BoundingOrientedBox result = {}; // 초기화된 기본값
+	BoundingOrientedBox result = {}; 
 
-	// AABB 유효성 검사
 	if (XMVector3Equal(XMLoadFloat3(&m_xmf3AABBExtents), XMVectorZero()))
 		return result;
 
-	// 로컬 OBB 생성
-	XMFLOAT3 adjustedCenter = m_xmf3AABBCenter;
-
-	adjustedCenter.y -= m_xmf3AABBExtents.y;
-
 	BoundingOrientedBox localOBB(
-		adjustedCenter,
+		XMFLOAT3(0.0f,0.0f,0.0f),
+		//m_xmf3AABBCenter,
 		m_xmf3AABBExtents,
 		XMFLOAT4(0, 0, 0, 1)
 	);
 
-	// 뼈 캐시에서 월드행렬 얻기
-	if (m_ppSkinningBoneFrameCaches.empty() || !m_ppSkinningBoneFrameCaches[0])
+	if (m_ppSkinningBoneFrameCaches.empty() || !m_ppSkinningBoneFrameCaches[m_nSkinningBones -1])
 		return result;
 
-	const XMFLOAT4X4& boneWorld = m_ppSkinningBoneFrameCaches[0]->m_xmf4x4World;
+	const XMFLOAT4X4& boneWorld = m_ppSkinningBoneFrameCaches[m_nSkinningBones - 1]->m_xmf4x4World;
 	XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
 
 	localOBB.Transform(result, boneWorldMatrix);

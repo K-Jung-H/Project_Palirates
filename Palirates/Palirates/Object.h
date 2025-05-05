@@ -590,6 +590,10 @@ public:
 
 	int RootIndex{ 0 };
 
+	char* WeaponName = "";
+	BoundingOrientedBox m_WorldOBB;
+	XMMATRIX customRotation = XMMatrixIdentity();
+
 public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");

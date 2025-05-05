@@ -640,7 +640,7 @@ void MonsterStateMachine::update(float Elapsed_time)
         m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
         break;
     case State::Run:
-        m_pOwner->targetWeights[3] = 1.0f;
+        m_pOwner->targetWeights[6] = 1.0f;
 
         RootMotionMove(10.0f);
 

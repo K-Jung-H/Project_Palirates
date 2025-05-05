@@ -298,80 +298,97 @@ public:
 class CSkinnedMesh : public CStandardMesh
 {
 public:
-	CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	CSkinnedMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual ~CSkinnedMesh();
 
 protected:
-	ID3D12Resource					*m_pd3dBoneIndexBuffer = NULL;
-	ID3D12Resource					*m_pd3dBoneIndexUploadBuffer = NULL;
+	ID3D12Resource* m_pd3dBoneIndexBuffer = NULL;
+	ID3D12Resource* m_pd3dBoneIndexUploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dBoneIndexBufferView;
 
-	ID3D12Resource					*m_pd3dBoneWeightBuffer = NULL;
-	ID3D12Resource					*m_pd3dBoneWeightUploadBuffer = NULL;
+	ID3D12Resource* m_pd3dBoneWeightBuffer = NULL;
+	ID3D12Resource* m_pd3dBoneWeightUploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dBoneWeightBufferView;
 
 protected:
 	int								m_nBonesPerVertex = 4;
 
-	XMINT4*							m_pxmn4BoneIndices = NULL;
-	XMFLOAT4*						m_pxmf4BoneWeights = NULL;
+	XMINT4* m_pxmn4BoneIndices = NULL;
+	XMFLOAT4* m_pxmf4BoneWeights = NULL;
 
 public:
-	int								m_nSkinningBones = 0; 
+	int								m_nSkinningBones = 0;
 
 	char							(*m_ppstrSkinningBoneNames)[64]; //[m_nSkinningBones]
 	//CGameObject						**m_ppSkinningBoneFrameCaches = NULL; //[m_nSkinningBones]
 	//	std::vector<std::weak_ptr<CGameObject>> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
 	std::vector<CGameObject*> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
 
-	XMFLOAT4X4						*m_pxmf4x4BindPoseBoneOffsets = NULL; //[m_nSkinningBones], Transposed
+	XMFLOAT4X4* m_pxmf4x4BindPoseBoneOffsets = NULL; //[m_nSkinningBones], Transposed
 
-	ID3D12Resource					*m_pd3dcbBindPoseBoneOffsets = NULL; //[m_nSkinningBones]
-	XMFLOAT4X4						*m_pcbxmf4x4MappedBindPoseBoneOffsets = NULL; //[m_nSkinningBones]
+	ID3D12Resource* m_pd3dcbBindPoseBoneOffsets = NULL; //[m_nSkinningBones]
+	XMFLOAT4X4* m_pcbxmf4x4MappedBindPoseBoneOffsets = NULL; //[m_nSkinningBones]
 
-	ID3D12Resource					*m_pd3dcbSkinningBoneTransforms = NULL; //[m_nSkinningBones], Pointer Only
-	XMFLOAT4X4						*m_pcbxmf4x4MappedSkinningBoneTransforms = NULL; //[m_nSkinningBones]
+	ID3D12Resource* m_pd3dcbSkinningBoneTransforms = NULL; //[m_nSkinningBones], Pointer Only
+	XMFLOAT4X4* m_pcbxmf4x4MappedSkinningBoneTransforms = NULL; //[m_nSkinningBones]
+
+	//std::vector<int> m_nSkinningBoneIndex;
 
 public:
 	// 오브젝트의 계층구조에서 해당 메시에 연결해야 하는 뼈 오브젝트를 객체 이름을 기반으로 찾아 메시에 정보 저장
 	void PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject);
-	void LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, FILE *pInFile);
+	void LoadSkinInfoFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, FILE* pInFile);
 
-	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
-	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 
 	virtual void ReleaseUploadBuffers();
 
-	virtual void OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void *pContext);
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
 
 	BoundingOrientedBox CSkinnedMesh::Get_WorldOBB();
-	//{
-	//	BoundingOrientedBox result = {}; // 초기화된 기본값
+	BoundingOrientedBox CSkinnedMesh::Get_WorldOBB_FromSkinnedVertices()
+	{
+		if (!m_pxmf3Positions || !m_pxmn4BoneIndices || !m_pxmf4BoneWeights ||
+			!m_pcbxmf4x4MappedSkinningBoneTransforms || !m_pcbxmf4x4MappedBindPoseBoneOffsets)
+			return {};
 
-	//	// AABB가 유효하지 않으면 반환
-	//	if (XMVector3Equal(XMLoadFloat3(&m_xmf3AABBExtents), XMVectorZero()))
-	//		return result;
+		std::vector<XMFLOAT3> skinnedPositions;
+		skinnedPositions.reserve(m_nVertices);
 
-	//	// 로컬 기준 OBB 생성 (중심, 반지름, 회전 없음)
-	//	BoundingOrientedBox localOBB(
-	//		m_xmf3AABBCenter,
-	//		m_xmf3AABBExtents,
-	//		XMFLOAT4(0, 0, 0, 1)
-	//	);
+		for (int i = 0; i < m_nVertices; ++i)
+		{
+			XMVECTOR vPos = XMLoadFloat3(&m_pxmf3Positions[i]);
+			XMINT4 boneIndices = m_pxmn4BoneIndices[i];
+			XMFLOAT4 weights = m_pxmf4BoneWeights[i];
 
-	//	// 스킨 본 캐시에서 root bone의 world matrix 가져오기
-	//	if (m_ppSkinningBoneFrameCaches.empty() || !m_ppSkinningBoneFrameCaches[0])
-	//		return result;
+			XMMATRIX bone0 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.x]) *
+				XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.x]);
+			XMMATRIX bone1 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.y]) *
+				XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.y]);
+			XMMATRIX bone2 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.z]) *
+				XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.z]);
+			XMMATRIX bone3 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.w]) *
+				XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.w]);
 
-	//	const XMFLOAT4X4& boneWorld = m_ppSkinningBoneFrameCaches[0]->m_xmf4x4World;
-	//	XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
+			XMVECTOR vSkin = XMVectorZero();
+			vSkin += XMVector3Transform(vPos, bone0) * weights.x;
+			vSkin += XMVector3Transform(vPos, bone1) * weights.y;
+			vSkin += XMVector3Transform(vPos, bone2) * weights.z;
+			vSkin += XMVector3Transform(vPos, bone3) * weights.w;
 
-	//	// bone 월드 행렬을 이용해 로컬 OBB를 변환
-	//	localOBB.Transform(result, boneWorldMatrix);
+			XMFLOAT3 skinnedPos;
+			XMStoreFloat3(&skinnedPos, vSkin);
+			skinnedPositions.push_back(skinnedPos);
+		}
 
-	//	return result;
-	//}
+		// 회전 포함해서 OBB 추출
+		BoundingOrientedBox obb;
+		BoundingOrientedBox::CreateFromPoints(obb, (UINT)skinnedPositions.size(), skinnedPositions.data(), sizeof(XMFLOAT3));
+
+		return obb;
+	};
 };
 
 

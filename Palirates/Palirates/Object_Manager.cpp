@@ -306,36 +306,50 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 	if (!g_obj || !g_obj->Get_Collider())
 		return false;
 
-	// 스킨메쉬 여부 확인
-	CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(g_obj->m_pMesh);
-	if (skinnedMesh)
+	CGameObject* target = g_obj;
+	if (target)
 	{
-		BoundingOrientedBox worldOBB = skinnedMesh->Get_WorldOBB();
+		CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(target->m_pMesh);
+		if (skinnedMesh)
+		{
+			BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
+			XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents) * 2.0f);
+			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
+			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
 
-		XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&worldOBB.Extents) * 2.0f);
-		XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation));
-		XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
+			XMMATRIX finalMatrix = scaleMatrix * g_obj->customRotation * rotationMatrix * translationMatrix;
 
-		XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-		XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
-		return true;
+			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
+
+			return true;
+		}
+		else {
+			BoundingOrientedBox localOBB = *g_obj->Get_Collider();
+			BoundingOrientedBox worldOBB = {};
+
+			XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
+			localOBB.Transform(worldOBB, world);
+
+			XMVECTOR scale, rotQuat, trans;
+			if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world)) {
+				rotQuat = XMQuaternionIdentity();
+			}
+			XMStoreFloat4(&worldOBB.Orientation, rotQuat);
+
+			if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f) {
+				return false;
+			}
+
+			XMMATRIX obbMatrix =
+				XMMatrixScaling(worldOBB.Extents.x * 2.0f, worldOBB.Extents.y * 2.0f, worldOBB.Extents.z * 2.0f) *
+				XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation)) *
+				XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
+
+			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
+			return true;
+		}
 	}
-
-	// 일반 메시 처리
-	XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
-	XMVECTOR scale, rotQuat, trans;
-	if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
-		return false;
-
-	BoundingOrientedBox localOBB = *g_obj->Get_Collider();
-	XMVECTOR extents = XMLoadFloat3(&localOBB.Extents);
-	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(extents * scale);
-	XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotQuat);
-	XMMATRIX translationMatrix = XMMatrixTranslationFromVector(trans + XMLoadFloat3(&localOBB.Center));
-
-	XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-	XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
-	return true;
+	return false;
 }
 
 
