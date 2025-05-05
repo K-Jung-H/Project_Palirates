@@ -938,24 +938,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}		break;
 		case 'C':
 		{
-			//auto it = obj_manager->Get_Object_List(Object_Type::skinned);
-			//if (it && it->size() > 5) {
-			//	auto multiPlayerObj = std::dynamic_pointer_cast<CMultiPlayerObject>((*it)[5]);
-			//	if (multiPlayerObj) {  
-			//		multiPlayerObj->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//		//multiPlayerObj->GetStateMachine()->changeState(State::Dive, Key_Value::None);
-			//		multiPlayerObj->SetStateElapsedTime(0.0f);
-			//	}
-			//}
-
-			//if (it && it->size() > 6) {
-			//	auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
-			//	if (multiPlayerObj) {
-			//		multiPlayerObj->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//		//multiPlayerObj->GetStateMachine()->changeState(State::Dive, Key_Value::None);
-			//		multiPlayerObj->SetStateElapsedTime(0.0f);
-			//	}
-			//}
+			obj_manager->Clear_Object_List(Object_Type::skinned);
 		}		break;
 		case 'V':
 		{

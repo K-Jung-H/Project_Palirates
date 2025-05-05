@@ -429,54 +429,39 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			if (nMessageID == WM_KEYDOWN && wParam == '1') {
-				static bool test = true;
-				if (test) {
-					auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
-					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
-					test = false;
-				}
-				else {
-					m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
-					test = true;
-				}
-			}
 			if (nMessageID == WM_KEYDOWN && wParam == VK_OEM_2) {
-				auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+				// Monster State Change EX
+				//auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 
-				if (mon && !mon->empty())
-				{
-					std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
+				//if (mon && !mon->empty())
+				//{
+				//	std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
 
-					CGameObject* base = baseObj.get();
+				//	CGameObject* base = baseObj.get();
 
-					auto* anubis = dynamic_cast<CAnubisObject*>(base);
-					if (anubis)
-					{
-						//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-						anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
-						//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-						//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-					}
+				//	auto* anubis = dynamic_cast<CAnubisObject*>(base);
+				//	if (anubis)
+				//	{
+				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+				//		anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+				//	}
 
-					std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
+				//	std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
 
-					CGameObject* base2 = baseObj2.get();
+				//	CGameObject* base2 = baseObj2.get();
 
-					auto* dra = dynamic_cast<CDragonObject*>(base2);
-					if (dra)
-					{
-						//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-						dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-						//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-						//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-						dra->MoveUp(30.0f);
-					}
-				}
-			}
-			if (wParam == 'C') {
-				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
-
+				//	auto* dra = dynamic_cast<CDragonObject*>(base2);
+				//	if (dra)
+				//	{
+				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+				//		dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+				//		dra->MoveUp(30.0f);
+				//	}
+				//}
 			}
 			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
 				//ServerAnimationSyncData data;
@@ -768,7 +753,7 @@ void CGameFramework::Animate_Scene()
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
-	// test 
+	// Server logic EX
 	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
 	//data.position.x += 10.0f;
 
@@ -779,7 +764,6 @@ void CGameFramework::Animate_Scene()
 	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
 
 	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
-	// test 
 
 	//===============================================================
 
@@ -791,6 +775,22 @@ void CGameFramework::Animate_Scene()
 	{
 		m_pPlayer->Animate(fTimeElapsed);
 		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+
+		static bool dead = false;
+		// Weapon Drop EX
+		if (!dead) {
+			if (m_pPlayer->GetStateMachine()->Get_State() == State::Knock_Down) {
+				auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
+				scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+				dead = true;
+			}
+		}
+		else {
+			if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down) {
+				m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
+				dead = false;
+			}
+		}
 	}
 }
 
