@@ -5,7 +5,8 @@ enum class Monster_Type : int
 {
     jJol,
     midBoss,
-    Boss
+    Boss,
+    ETC
 };
 
 
@@ -16,11 +17,12 @@ struct Monster
     float lookX, lookY, lookZ;
     int hp;
     int state; // 0: idle, 1: 이동, 2: 공격
+    Monster_Type type;
 
-    Monster() : id(-1), x(0), y(0), z(0), hp(100), state(0) {}
+    Monster() : id(-1), x(0), y(0), z(0), lookX(0), lookY(1), lookZ(0), hp(100), state(0), type(Monster_Type::ETC) {}
 
-    Monster(int monsterId, float startX, float startY, float startZ, int health)
-        : id(monsterId), x(startX), y(startY), z(startZ), hp(health), state(0) {}
+    Monster(int monsterId, float startX, float startY, float startZ, float lookvecX, float lookvecY, float lookvecZ, int health, int state, Monster_Type type)
+        : id(monsterId), x(startX), y(startY), z(startZ), hp(health), lookX(lookvecX), lookY(lookvecY), lookZ(lookvecZ), state(state), type(type) {}
 
     void update(float newX, float newY, float newZ, int newState, int newHp)
     {

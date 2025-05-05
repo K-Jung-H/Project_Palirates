@@ -36,7 +36,8 @@ public:
         players.erase(id);
     }
 
-    void addMonster(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
+    const std::unordered_map<int, Monster>& getMonsters() const { return monsterMap; }
+    void addMonster(int id, const Monster& monster) { monsterMap[id] = monster; }
 
     void printScene();
     Player* getPlayerById(int id);

@@ -169,10 +169,22 @@ void Server::BroadcastAllStates()
                 std::to_string(player.z) + "," + std::to_string(player.lookX) + "," + std::to_string(safeLookY) + "," +
                 std::to_string(player.lookZ) + "," + std::to_string(static_cast<int>(player.state)) + "\n";
 
+
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
+        }
+
+        for (const auto& [id, m] : scene->getMonsters()) 
+        {
+            std::string packet = "MONSTER_UPDATE," + std::to_string(m.id) + "," +
+                std::to_string(m.x) + "," + std::to_string(m.y) + "," + std::to_string(m.z) + "," +
+                std::to_string(m.lookX) + "," + std::to_string(m.lookY) + "," + std::to_string(m.lookZ) + "," +
+                std::to_string(m.hp) + "," + std::to_string(m.state) + "," + std::to_string((int)m.type) + "\n";
+
+            BroadcastPacket(packet, -1);
         }
     }
 }
+
 
 void Server::SendInitialStates(int clientId)
 {
@@ -201,6 +213,20 @@ void Server::SendInitialStates(int clientId)
             std::to_string(static_cast<int>(character->state)) + "\n";
         send(clients[clientId], updatePacket.c_str(), updatePacket.length(), 0);
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
+
+
+        for (const auto& [monsterId, monster] : scene->getMonsters())
+        {
+            std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
+            send(clients[clientId], create.c_str(), create.length(), 0);
+
+            std::string update = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
+                std::to_string(monster.x) + "," + std::to_string(monster.y) + "," + std::to_string(monster.z) + "," +
+                std::to_string(monster.lookX) + "," + std::to_string(monster.lookY) + "," + std::to_string(monster.lookZ) + "," +
+                std::to_string(monster.hp) + "," + std::to_string(monster.state) + "," + std::to_string((int)monster.type) + "\n";
+
+
+            send(clients[clientId], update.c_str(), update.length(), 0);
 
     }
 }
