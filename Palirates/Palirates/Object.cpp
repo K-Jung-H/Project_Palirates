@@ -1268,17 +1268,15 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
 					XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
 
-
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-					//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-						//if (j == pRootGameObject->RootBoneIndex)
-						if (j == 2)	// player root index
+						if (j == RootIndex)
 						{
-							if (kUpdateHipsTracks.contains(k) && !m_pAnimationTracks[k].m_bFinished) {
+							if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+								
 							}
 
 							blendedTransform._41 = 0.0f;
@@ -1288,9 +1286,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 						}
 					}
 					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
-						//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
-						if (j == 0) {
-							if (k == 3) {
+						if (j == RootIndex) {
+							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 							}
 
@@ -1350,12 +1347,10 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-				//const std::string& boneName = m_pAnimationSets->GetBoneName(j);
 				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-					//if (j == pRootGameObject->RootBoneIndex)
-					if (j == 2)
+					if (j == RootIndex)
 					{
-						if (k == TRACK_DIVEROLL_FORWARD && !m_pAnimationTracks[k].m_bFinished) {
+						if (!m_pAnimationTracks[k].m_bFinished&& GetUpdateHipsTracks().contains(k)) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 						}
 						blendedTransform._41 = 0.0f;
@@ -1365,9 +1360,8 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 					}
 				}
 				else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
-					//if ((boneName == "Gargoyle_LP" || boneName == "Anubis_lp"/* || boneName == "Hips"*/) && k == 3)
-					if (j == 0) {
-						if (k == 3) {
+					if (j == RootIndex) {
+						if (!m_pAnimationTracks[k].m_bFinished&& pRootGameObject->RootMotionTrackSet.contains(k)) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
 						}
 
@@ -2216,8 +2210,8 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	if (Active && m_pMesh)
 	{
-		if (!IsVisible(pCamera))
-			return;
+		//if (!IsVisible(pCamera))
+			//return;
 
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
@@ -2723,6 +2717,31 @@ void CGameObject::ClearMeshCache()
 	MeshCache.clear();
 }
 
+void CGameObject::AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root)
+{
+	//if (!root) return;
+
+	//// 현재 오브젝트에 메쉬가 있고 스킨드메쉬인 경우 처리
+	//if (root->m_pMesh)
+	//{
+	//	CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(root->m_pMesh);
+	//	if (skinnedMesh)
+	//	{
+	//		BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
+	//		BoundingOrientedBox* pCollider = new BoundingOrientedBox(obb);
+	//		root->Set_Collider(pCollider);
+	//	}
+	//}
+
+	//// 재귀적으로 자식도 탐색
+	//if (root->Get_Child())
+	//	AttachOBBsToAllSkinnedMeshes(root->Get_Child());
+
+	//// 형제도 재귀적으로 탐색
+	//if (root->Get_Sibling())
+	//	AttachOBBsToAllSkinnedMeshes(root->Get_Sibling());
+}
+
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
@@ -3215,29 +3234,21 @@ std::string CGameObject::Get_Mesh_Name()
 
 BoundingOrientedBox* CGameObject::Get_Collider()
 {
-	if (m_pMesh == NULL)
-		return NULL;
+	if (m_pMesh == NULL) return NULL;
+
 	BoundingOrientedBox* pOriginalBoundingBox = m_pMesh->Get_BoundingBox();
-	if (pOriginalBoundingBox == NULL)
-		return NULL;
+	if (pOriginalBoundingBox == NULL) return NULL;
 
+	m_WorldOBB = *pOriginalBoundingBox;
 
-
-	BoundingOrientedBox pWorldBoundingBox(*pOriginalBoundingBox);
-//	pWorldBoundingBox.Center = GetPosition();
-
-	if (pWorldBoundingBox.Extents.x == 0.0f)
-		pWorldBoundingBox.Extents.x = 1.0f;
-	if (pWorldBoundingBox.Extents.y == 0.0f)
-		pWorldBoundingBox.Extents.y = 1.0f;
-	if (pWorldBoundingBox.Extents.z == 0.0f)
-		pWorldBoundingBox.Extents.z = 1.0f;
-
+	if (m_WorldOBB.Extents.x == 0.0f) m_WorldOBB.Extents.x = 1.0f;
+	if (m_WorldOBB.Extents.y == 0.0f) m_WorldOBB.Extents.y = 1.0f;
+	if (m_WorldOBB.Extents.z == 0.0f) m_WorldOBB.Extents.z = 1.0f;
 
 	XMVECTOR quaternionRotation = XMQuaternionRotationMatrix(XMLoadFloat4x4(&m_xmf4x4World));
-	XMStoreFloat4(&pWorldBoundingBox.Orientation, quaternionRotation);
+	XMStoreFloat4(&m_WorldOBB.Orientation, quaternionRotation);
 
-	return &pWorldBoundingBox;
+	return &m_WorldOBB;
 }
 
 void CGameObject::Add_Collider(float cube_length)
@@ -4358,28 +4369,28 @@ void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	trail_mesh->Render(pd3dCommandList, 0);
 }
 
-CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
-	: m_StateMachine(std::make_unique<MonsterStateMachine>(this))
-{
-	Object_type = OBJECT_TPYE_MONSTER;
-	CLoadedModelInfo* pHumanModel = pModel;
-	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
-
-	if (!pHumanModel) {
-		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-	}
-	n_Animation = nAnimationTracks;
-	prevWeights.resize(n_Animation, 0.0f);
-	targetWeights.resize(n_Animation, 0.0f);
-
-	Set_Child(pHumanModel->m_pModelRootObject);
-	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
-	for (int i = 0; i < n_Animation; ++i) {
-		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-		m_pSkinnedAnimationController->SetTrackEnable(i, true);
-	}
-}
+//CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
+//	: m_StateMachine(std::make_unique<MonsterStateMachine>(this))
+//{
+//	Object_type = OBJECT_TPYE_MONSTER;
+//	CLoadedModelInfo* pHumanModel = pModel;
+//	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
+//
+//	if (!pHumanModel) {
+//		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+//		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+//	}
+//	n_Animation = nAnimationTracks;
+//	prevWeights.resize(n_Animation, 0.0f);
+//	targetWeights.resize(n_Animation, 0.0f);
+//
+//	Set_Child(pHumanModel->m_pModelRootObject);
+//	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+//	for (int i = 0; i < n_Animation; ++i) {
+//		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+//		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+//	}
+//}
 
 CMonsterObject::~CMonsterObject()
 {
@@ -4439,4 +4450,192 @@ void CMonsterObject::Animate(float fTimeElapsed)
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
 	CGameObject::Render(pd3dCommandList, pCamera);
 	//GetStateMachine()->update(0.01f);
+}
+
+///////////////////////////////////////////////////////////////////
+
+CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		3
+	};
+
+	m_StateMachine = std::make_unique<FishManStateMachine>(this);
+
+	Object_type = OBJECT_TPYE_MONSTER;
+
+	CLoadedModelInfo* pFishManModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FishmanLP.bin", NULL);
+
+	n_Animation = 9;
+	RootIndex = 0;
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+
+	Set_Child(pFishManModel->m_pModelRootObject);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pFishManModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	SetScale(10.0f, 10.0f, 10.0f);
+	WeaponName = "spear_lp";
+	auto model = FindFrame(WeaponName);
+	//auto model = FindFrame("body_lp");
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	{
+	
+		XMStoreFloat4(&quaternion, rotationQuat); 
+	}
+	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	model->Set_Collider(b);
+
+	model->customRotation = XMMatrixRotationRollPitchYaw(
+		XMConvertToRadians(45.0f),
+		XMConvertToRadians(30.0f),
+		XMConvertToRadians(0.0f));
+}
+
+///////////////////////////////////////////////////////////////////
+
+CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		TRACK_ANUBIS_IDLE,
+		TRACK_ANUBIS_IDLE_BREAK,
+		TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
+		TRACK_ANUBIS_WALK,
+		TRACK_ANUBIS_BACK_WALK,
+		TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD
+	};
+
+	std::unordered_set<int> OnceType = {
+		TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD
+	};
+
+	n_Animation = 10;
+	RootIndex = 0;
+
+	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
+
+	Object_type = OBJECT_TPYE_MONSTER;
+
+	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_LP.bin", NULL);
+
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+
+	Set_Child(pAnubisModel->m_pModelRootObject);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAnubisModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	for (int i = 0; i < n_Animation; ++i) {
+		if (OnceType.contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	SetScale(15.0f, 15.0f, 15.0f);
+
+	WeaponName = "Staff_LP";
+	auto model = FindFrame(WeaponName);
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	{
+
+		XMStoreFloat4(&quaternion, rotationQuat);
+	}
+	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	model->Set_Collider(b);
+}
+
+///////////////////////////////////////////////////////////////////
+
+CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		TRACK_ANUBIS_IDLE,
+		TRACK_ANUBIS_IDLE_BREAK,
+		TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
+		TRACK_ANUBIS_WALK,
+		TRACK_ANUBIS_BACK_WALK,
+		TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD,
+		10
+	};
+
+	std::unordered_set<int> OnceType = {
+		//TRACK_ANUBIS_ATTACK1,
+		TRACK_ANUBIS_ATTACK2,
+		TRACK_ANUBIS_SKILL,
+		TRACK_ANUBIS_GET_HIT,
+		TRACK_ANUBIS_DEAD,
+	};
+
+	n_Animation = 13;
+	RootIndex = 16;
+
+	m_StateMachine = std::make_unique<DragonStateMachine>(this);
+
+	Object_type = OBJECT_TPYE_MONSTER;
+
+	CLoadedModelInfo* pDragonModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Dragon_LP.bin", NULL);
+
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+
+	Set_Child(pDragonModel->m_pModelRootObject);
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pDragonModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	for (int i = 0; i < n_Animation; ++i) {
+		if (OnceType.contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	SetScale(15.0f, 15.0f, 15.0f);
+
+	WeaponName = "HeadA_LP";
+	auto model = FindFrame(WeaponName);
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	{
+
+		XMStoreFloat4(&quaternion, rotationQuat);
+	}
+	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	model->Set_Collider(b);
 }

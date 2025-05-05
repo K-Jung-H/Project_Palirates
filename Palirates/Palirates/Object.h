@@ -449,6 +449,8 @@ public:
 	//Microsoft::WRL::ComPtr<ID3D12Resource> m_ppd3dcbSkinningBoneTransforms = NULL;
 	XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
 
+	int RootIndex{ 0 };
+
 public:
 	void Bone_Info();
 
@@ -583,6 +585,14 @@ public:
 	WeaponObject* pWeapon;
 
 	bool bIsControllable{ true };
+
+	std::unordered_set<int> RootMotionTrackSet;
+
+	int RootIndex{ 0 };
+
+	char* WeaponName = "";
+	BoundingOrientedBox m_WorldOBB;
+	XMMATRIX customRotation = XMMatrixIdentity();
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -750,6 +760,8 @@ public:
 		static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
 		static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 		static void ClearMeshCache();
+
+		void AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root);
 };
 
 //==================================================================================
@@ -979,13 +991,47 @@ public:
 class CMonsterObject : public CGameObject
 {
 public:
-	CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	//CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+	CMonsterObject() {};
 	virtual ~CMonsterObject();
 	virtual void Animate(float fTimeElapsed);
-	std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
+	//std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
+	virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 	int test_num{ 0 };
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-private:
+protected:
 	std::unique_ptr<MonsterStateMachine> m_StateMachine;
 };
 
+class CFishManObject : public CMonsterObject
+{
+public:
+	CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CFishManObject() {};
+	
+	FishManStateMachine* GetStateMachine() override {
+		return static_cast<FishManStateMachine*>(m_StateMachine.get());
+	}
+};
+
+class CAnubisObject : public CMonsterObject
+{
+public:
+	CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CAnubisObject() {};
+
+	AnubisStateMachine* GetStateMachine() override {
+		return static_cast<AnubisStateMachine*>(m_StateMachine.get());
+	}
+};
+
+class CDragonObject : public CMonsterObject
+{
+public:
+	CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual ~CDragonObject() {};
+
+	DragonStateMachine* GetStateMachine() override {
+		return static_cast<DragonStateMachine*>(m_StateMachine.get());
+	}
+};

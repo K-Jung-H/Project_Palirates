@@ -319,9 +319,11 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	Set_Child(pAngrybotModel->m_pModelRootObject);
 
 	n_Animation = 16;
+	RootIndex = 2;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
@@ -339,11 +341,11 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	m_pSkinnedAnimationController->Bone_Info();
 	// Once type Setting
 	for (int i = 0; i < n_Animation; ++i) {
-		if (kUpdateHipsTracks.contains(i)) {
+		if (GetUpdateHipsTracks().contains(i)) {
 			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
 		}
 	}
-	
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
 	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK1].m_nType = ANIMATION_TYPE_ONCE;
@@ -373,6 +375,24 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
 	
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
+
+	auto model = FindFrame("SM_Wep_Cutlass_01");
+	//auto model = FindFrame("body_lp");
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	{
+
+		XMStoreFloat4(&quaternion, rotationQuat);
+	}
+	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	model->Set_Collider(b);
+
+	//weapon = model;
+
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 
