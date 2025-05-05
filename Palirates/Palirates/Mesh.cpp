@@ -1010,6 +1010,8 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		{
 			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
 			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
+
+			//bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 		else if (!strcmp(pstrToken, "<Positions>:"))
 		{
@@ -1375,6 +1377,10 @@ void CStandardMesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList
 //
 CSkinnedMesh::CSkinnedMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) : CStandardMesh(pd3dDevice, pd3dCommandList)
 {
+	ZeroMemory(&m_d3dTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBiTangentBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBoneIndexBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
+	ZeroMemory(&m_d3dBoneWeightBufferView, sizeof(D3D12_VERTEX_BUFFER_VIEW));
 }
 
 CSkinnedMesh::~CSkinnedMesh()
@@ -1472,6 +1478,8 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 		{
 			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
 			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
+
+			//bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
 		}
 		else if (!strcmp(pstrToken, "<BoneNames>:"))
 		{
@@ -1488,6 +1496,7 @@ void CSkinnedMesh::LoadSkinInfoFromFile(ID3D12Device *pd3dDevice, ID3D12Graphics
 					DebugOutput("\nBone Name: ", m_ppstrSkinningBoneNames[i]);
 #endif
 					m_ppSkinningBoneFrameCaches[i] = nullptr;
+					//m_nSkinningBoneIndex[i] = i;
 					//m_ppSkinningBoneFrameCaches[i].reset();
 				}
 			}
@@ -1557,6 +1566,29 @@ void CSkinnedMesh::OnPreRender(ID3D12GraphicsCommandList *pd3dCommandList, void 
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, 7, pVertexBufferViews);
 }
 
+BoundingOrientedBox CSkinnedMesh::Get_WorldOBB()
+{
+	BoundingOrientedBox result = {}; 
+
+	if (XMVector3Equal(XMLoadFloat3(&m_xmf3AABBExtents), XMVectorZero()))
+		return result;
+
+	BoundingOrientedBox localOBB(
+		XMFLOAT3(0.0f,0.0f,0.0f),
+		//m_xmf3AABBCenter,
+		m_xmf3AABBExtents,
+		XMFLOAT4(0, 0, 0, 1)
+	);
+
+	if (m_ppSkinningBoneFrameCaches.empty() || !m_ppSkinningBoneFrameCaches[m_nSkinningBones -1])
+		return result;
+
+	const XMFLOAT4X4& boneWorld = m_ppSkinningBoneFrameCaches[m_nSkinningBones - 1]->m_xmf4x4World;
+	XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
+
+	localOBB.Transform(result, boneWorldMatrix);
+	return result;
+}
 
 //===============================================================
 Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments)

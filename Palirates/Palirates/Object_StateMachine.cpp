@@ -234,7 +234,7 @@ PlayerStateMachine::PlayerStateMachine(CPlayer* owner)
 
 void PlayerStateMachine::update(float Elapsed_time)
 {
-    float blendSpeed = 6.0f * Elapsed_time;
+    blendSpeed = 6.0f * Elapsed_time;
 
     if (isFirstUpdate) {
         animController = m_pOwner->GetSkinnedAnimationController();
@@ -370,24 +370,13 @@ void PlayerStateMachine::update(float Elapsed_time)
         break;
     }
 
-    for (int i = 0; i < n_Ani; i++)
-    {
-        float prev = m_pOwner->prevWeights[i];
-        float target = m_pOwner->targetWeights[i];
-
-        if (fabs(prev - target) == 0.0f)
-            continue;
-
-        float newWeight = prev + (target - prev) * blendSpeed;
-        animController->SetTrackWeight(i, newWeight);
-    }
-    //doAction(currentState, Elapsed_time);
+    SetWeight();
 }
 
 
 void PlayerStateMachine::enterState(State state, Key_Value key_event)
 {
-    if (kRootMotionStates.contains(state)) {
+    if (GetRootMotionStates().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = false;
             m_pOwner->SetStateElapsedTime(0.0f);
@@ -395,9 +384,14 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
 
         ResetTrackForState(state, true);
     }
+
     switch (state)
     {
-
+    case State::Idle:
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = true;
+        }
+        break;
     default:
         break;
     }
@@ -405,13 +399,16 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
 
 void PlayerStateMachine::exitState(State state, Key_Value key_event)
 {
-    if (kRootMotionStates.contains(state)) {
+
+    if (GetRootMotionStates().contains(state)) {
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = true;
         }
 
         ResetTrackForState(state, false);
+        
     }
+
     switch (state)
     {
     case State::Idle:
@@ -445,6 +442,7 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
 }
 
 void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
+
     XMFLOAT3 vec = animController->HipsPosition;
     XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
 
@@ -453,7 +451,7 @@ void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
     shift.y = vec.y - vec2.y;
     shift.z = vec.z - vec2.z;
 
-    animController->m_xmf3PrevHipsPosition = animController->HipsPosition;
+    animController->m_xmf3PrevHipsPosition = vec;
     XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y* scaleFactor, shift.z * scaleFactor };
 
     XMFLOAT3 moveDirection = m_pOwner->GetLook();
@@ -464,8 +462,8 @@ void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
     };
 
     if (bUseNegative) {
-        finalMove.x *= -1 * finalMove.x;
-        finalMove.z *= -1 * finalMove.z;
+        finalMove.x = -1 * finalMove.x;
+        finalMove.z = -1 * finalMove.z;
     }
 
     if (scaleShift.z > 0.001f) {
@@ -475,14 +473,29 @@ void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
 
 void PlayerStateMachine::ResetTrackForState(State state, bool posReset)
 {
-    auto it = kRootMotionStateToTrackMap.find(state);
-    if (it != kRootMotionStateToTrackMap.end()) {
+    auto it = GetRootMotionStateToTrackMap().find(state);
+    if (it != GetRootMotionStateToTrackMap().end()) {
         int track = it->second;
         if (animController != nullptr) {
             animController->m_pAnimationTracks[track].m_bFinished = false;
             if (posReset)
                 animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
         }
+    }
+}
+
+void PlayerStateMachine::SetWeight()
+{
+    for (int i = 0; i < n_Ani; i++)
+    {
+        float prev = m_pOwner->prevWeights[i];
+        float target = m_pOwner->targetWeights[i];
+
+        if (fabs(prev - target) == 0.0f)
+            continue;
+
+        float newWeight = prev + (target - prev) * blendSpeed;
+        animController->SetTrackWeight(i, newWeight);
     }
 }
 
@@ -604,28 +617,7 @@ MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
 
 void MonsterStateMachine::update(float Elapsed_time)
 {
-    float blendSpeed = 6.0f * Elapsed_time;
-
-    stateElapsedTime += Elapsed_time;
-
-    if (isFirstUpdate) {
-        animController = m_pOwner->GetSkinnedAnimationController();
-        n_Ani = m_pOwner->n_Animation;
-        for (int i = 0; i < n_Ani; i++) {
-            m_pOwner->prevWeights[i] = 0.0f;
-            animController->SetTrackWeight(i, 0.0f);
-        }
-        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
-        isFirstUpdate = false;
-    }
-    else {
-
-        for (int i = 0; i < n_Ani; i++) {
-            m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
-        }
-    }
-
-    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+    OnPrepareUpdate(6.0f, Elapsed_time);
 
     if (stateElapsedTime >= stateChangeTime) {
         switch (Get_State()) {
@@ -648,57 +640,72 @@ void MonsterStateMachine::update(float Elapsed_time)
         m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
         break;
     case State::Run:
-        m_pOwner->targetWeights[3] = 1.0f;
+        m_pOwner->targetWeights[6] = 1.0f;
 
-        XMFLOAT3 vec = animController->HipsPosition;
-        XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
+        RootMotionMove(10.0f);
 
-        XMFLOAT3 shift;
-        shift.x = vec.x - vec2.x;
-        shift.y = vec.y - vec2.y;
-        shift.z = vec.z - vec2.z;
-
-        animController->m_xmf3PrevHipsPosition = vec;
-
-
-        {
-            float scaleFactor = 10.0f;
-
-            XMFLOAT3 velocity = {
-                shift.x / Elapsed_time,
-                shift.y / Elapsed_time,
-                shift.z / Elapsed_time
-            };
-            XMFLOAT3 moveDirection = m_pOwner->GetLook();
-            XMFLOAT3 finalMove = {
-                moveDirection.x * Elapsed_time * scaleFactor,
-                moveDirection.y * Elapsed_time * scaleFactor,
-                moveDirection.z * Elapsed_time * scaleFactor
-            };
-
-            if (velocity.z > 0.001f) {
-                m_pOwner->Move(finalMove);
-            }
-
-        }
         break;
-    case State::Dive:
+    case State::Attack2:
 
         break;
     }
 
-    for (int i = 0; i < n_Ani; i++)
-    {
+    SetWeight();
+}
 
-        float prev = m_pOwner->prevWeights[i];
-        float target = m_pOwner->targetWeights[i];
+void MonsterStateMachine::OnPrepareUpdate(float blendSpeedOffSet, float Elapsed_time)
+{
+    blendSpeed = 6.0f * Elapsed_time;
 
-        if (fabs(prev - target) == 0.0f)
-            continue;
+    stateElapsedTime += Elapsed_time;
 
-        float newWeight = prev + (target - prev) * blendSpeed;
-        animController->SetTrackWeight(i, newWeight);
+    if (isFirstUpdate) {
+        animController = m_pOwner->GetSkinnedAnimationController();
+        n_Ani = m_pOwner->n_Animation;
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = 0.0f;
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+        isFirstUpdate = false;
+    }
+    else {
 
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+        }
+    }
+
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+}
+
+void MonsterStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
+
+    XMFLOAT3 vec = animController->HipsPosition;
+    XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
+
+    XMFLOAT3 shift;
+    shift.x = vec.x - vec2.x;
+    shift.y = vec.y - vec2.y;
+    shift.z = vec.z - vec2.z;
+
+    animController->m_xmf3PrevHipsPosition = vec;
+    XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y * scaleFactor, shift.z * scaleFactor };
+
+    XMFLOAT3 moveDirection = m_pOwner->GetLook();
+    XMFLOAT3 finalMove = {
+        moveDirection.x * scaleShift.z,
+        moveDirection.y * scaleShift.z,
+        moveDirection.z * scaleShift.z
+    };
+
+    if (bUseNegative) {
+        finalMove.x = -1 * finalMove.x;
+        finalMove.z = -1 * finalMove.z;
+    }
+
+    if (scaleShift.z > 0.001f) {
+        m_pOwner->Move(finalMove);
     }
 }
 
@@ -725,6 +732,13 @@ void MonsterStateMachine::enterState(State state, Key_Value key_event)
 
 void MonsterStateMachine::exitState(State state, Key_Value key_event)
 {
+   /* if (kAnubisRootMotionStateToTrackMap.contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = true;
+        }
+
+        ResetTrackForState(state, false);
+    }*/
 
     switch (state)
     {
@@ -741,5 +755,218 @@ void MonsterStateMachine::exitState(State state, Key_Value key_event)
 
     default:
         break;
+    }
+}
+
+void MonsterStateMachine::SetWeight()
+{
+    for (int i = 0; i < n_Ani; i++)
+    {
+        float prev = m_pOwner->prevWeights[i];
+        float target = m_pOwner->targetWeights[i];
+
+        if (fabs(prev - target) == 0.0f)
+            continue;
+
+        float newWeight = prev + (target - prev) * blendSpeed;
+        animController->SetTrackWeight(i, newWeight);
+    }
+}
+
+////////////////////////////////////////////////////////
+
+void AnubisStateMachine::update(float Elapsed_time)
+{
+    OnPrepareUpdate(6.0f, Elapsed_time);
+
+    if (stateElapsedTime >= stateChangeTime) {
+        switch (Get_State()) {
+        case State::Idle:
+            changeState(State::Run, Key_Value::None);
+            break;
+        case State::Run:
+            changeState(State::Idle, Key_Value::None);
+            break;
+        case State::Dive:
+            break;
+        }
+
+        stateElapsedTime = 0.0f;
+        stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
+    }
+
+    switch (Get_State()) {
+    case State::Idle:
+        m_pOwner->targetWeights[TRACK_ANUBIS_IDLE] = 1.0f;
+        break;
+    case State::Run:
+        m_pOwner->targetWeights[TRACK_ANUBIS_WALK] = 1.0f;
+        RootMotionMove(10.0f);
+
+        break;
+    case State::Get_Hit:
+        if (animController->m_pAnimationTracks[TRACK_ANUBIS_GET_HIT].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ANUBIS_GET_HIT] = 1.0f;
+        RootMotionMove(20.0f, true);
+        break;
+    case State::Attack1:
+        if (animController->m_pAnimationTracks[TRACK_ANUBIS_ATTACK1].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ANUBIS_ATTACK1] = 1.0f;
+        RootMotionMove(30.0f);
+        break;
+    case State::Attack2:
+        if (animController->m_pAnimationTracks[TRACK_ANUBIS_ATTACK2].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ANUBIS_ATTACK2] = 1.0f;
+        RootMotionMove(30.0f);
+        break;
+    case State::Attack3:
+        if (animController->m_pAnimationTracks[TRACK_ANUBIS_SKILL].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_ANUBIS_SKILL] = 1.0f;
+        RootMotionMove(10.0f);
+        break;
+    }
+
+    SetWeight();
+}
+
+void AnubisStateMachine::enterState(State state, Key_Value key_event)
+{
+    if (GetAnubisRootMotionStateToTrackMap().contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = false;
+        }
+
+        ResetTrackForState(state, true);
+    }
+    switch (state)
+    {
+    case State::Attack1:
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = 0.0f;
+            m_pOwner->targetWeights[i] = 0.0f;
+            animController->m_pAnimationTracks[i].m_fPosition = 0.0f;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void AnubisStateMachine::exitState(State state, Key_Value key_event)
+{
+     if (GetAnubisRootMotionStateToTrackMap().contains(state)) {
+         if (m_pOwner != nullptr) {
+             m_pOwner->bIsControllable = true;
+         }
+
+         ResetTrackForState(state, false);
+     }
+}
+
+void AnubisStateMachine::ResetTrackForState(State state, bool posReset)
+{
+    auto it = GetAnubisRootMotionStateToTrackMap().find(state);
+    if (it != GetAnubisRootMotionStateToTrackMap().end()) {
+        int track = it->second;
+        if (animController != nullptr) {
+            animController->m_pAnimationTracks[track].m_bFinished = false;
+            if (posReset)
+                animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
+        }
+    }
+}
+
+void DragonStateMachine::update(float Elapsed_time)
+{
+    OnPrepareUpdate(6.0f, Elapsed_time);
+
+    /*if (stateElapsedTime >= stateChangeTime) {
+        switch (Get_State()) {
+        case State::Idle:
+            changeState(State::Run, Key_Value::None);
+            break;
+        case State::Run:
+            changeState(State::Idle, Key_Value::None);
+            break;
+        case State::Dive:
+            break;
+        }
+
+        stateElapsedTime = 0.0f;
+        stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
+    }*/
+
+    switch (Get_State()) {
+    case State::Idle:
+        // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+        m_pOwner->targetWeights[5] = 1.0f;
+        break;
+    case State::Run:
+        m_pOwner->targetWeights[3] = 1.0f;
+
+        RootMotionMove(10.0f);
+
+        break;
+    case State::Attack2:
+        m_pOwner->targetWeights[10] = 1.0f;
+        RootMotionMove(0.0f);
+        break;
+    }
+
+    SetWeight();
+}
+
+void DragonStateMachine::enterState(State state, Key_Value key_event)
+{
+    if (GetDragonRootMotionStateToTrackMap().contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = false;
+        }
+
+        ResetTrackForState(state, true);
+    }
+    switch (state)
+    {
+    case State::Attack1:
+        for (int i = 0; i < n_Ani; i++) {
+            m_pOwner->prevWeights[i] = 0.0f;
+            m_pOwner->targetWeights[i] = 0.0f;
+            animController->m_pAnimationTracks[i].m_fPosition = 0.0f;
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void DragonStateMachine::exitState(State state, Key_Value key_event)
+{
+    if (GetDragonRootMotionStateToTrackMap().contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = true;
+        }
+
+        ResetTrackForState(state, false);
+    }
+}
+
+void DragonStateMachine::ResetTrackForState(State state, bool posReset)
+{
+    auto it = GetDragonRootMotionStateToTrackMap().find(state);
+    if (it != GetDragonRootMotionStateToTrackMap().end()) {
+        int track = it->second;
+        if (animController != nullptr) {
+            animController->m_pAnimationTracks[track].m_bFinished = false;
+            if (posReset)
+                animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
+        }
     }
 }
