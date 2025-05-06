@@ -4371,16 +4371,45 @@ void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	trail_mesh->Render(pd3dCommandList, 0);
 }
 
+//CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks)
+//	: m_StateMachine(std::make_unique<MonsterStateMachine>(this))
+//{
+//	Object_type = OBJECT_TPYE_MONSTER;
+//	CLoadedModelInfo* pHumanModel = pModel;
+//	//pHumanModel->m_pAnimationSets = pHumanModel->m_pAnimationSets->Clone();
+//
+//	if (!pHumanModel) {
+//		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+//		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
+//	}
+//	n_Animation = nAnimationTracks;
+//	prevWeights.resize(n_Animation, 0.0f);
+//	targetWeights.resize(n_Animation, 0.0f);
+//
+//	Set_Child(pHumanModel->m_pModelRootObject);
+//	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, nAnimationTracks, pHumanModel);
+//	for (int i = 0; i < n_Animation; ++i) {
+//		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+//		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+//	}
+//}
+
 CMonsterObject::~CMonsterObject()
 {
 }
 
 void CMonsterObject::Animate(float fTimeElapsed)
 {
+
+	//SetPosition(25.0f, 1064.0f, 25.0f);
 	OnPrepareAnimate();
 
 	if (m_pSkinnedAnimationController)
 	{
+		/*if (Anime_test_FallingLoop)
+			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
+		else
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);*/
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 	}
 
@@ -4400,11 +4429,29 @@ void CMonsterObject::Animate(float fTimeElapsed)
 	if (child_ptr != nullptr)
 		child_ptr->Animate(fTimeElapsed);
 
+	/*CAnimationController* animController = GetSkinnedAnimationController();
+	for (int i = 0; i < 5; i++)
+	{
+		if (test_num == 1 && i == 0) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else if (test_num == 2 && i == 1) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else if (test_num == 3 && i == 4) {
+			animController->SetTrackWeight(i, 1.0f);
+		}
+		else
+			animController->SetTrackWeight(i, 0.0f);
+	}*/
+	//CGameObject::Animate(fTimeElapsed);
 	GetStateMachine()->update(fTimeElapsed);
+	//m_StateMachine->update(fTimeElapsed);
 }
 
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
 	CGameObject::Render(pd3dCommandList, pCamera);
+	//GetStateMachine()->update(0.01f);
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4412,19 +4459,7 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	RootMotionTrackSet = {
-		TRACK_FISHMAN_WALK,
-		TRACK_FISHMAN_WALK_BACK,
-		TRACK_FISHMAN_ATTACK1,
-		TRACK_FISHMAN_ATTACK2,
-		TRACK_FISHMAN_GET_HIT,
-		TRACK_FISHMAN_DEAD
-	};
-
-	std::unordered_set<int> OnceType = {
-		TRACK_FISHMAN_ATTACK1,
-		TRACK_FISHMAN_ATTACK2,
-		TRACK_FISHMAN_GET_HIT,
-		TRACK_FISHMAN_DEAD
+		3
 	};
 
 	m_StateMachine = std::make_unique<FishManStateMachine>(this);
@@ -4445,11 +4480,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
-	for (int i = 0; i < n_Animation; ++i) {
-		if (OnceType.contains(i)) {
-			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
-		}
-	}
+
 	SetScale(10.0f, 10.0f, 10.0f);
 	WeaponName = "spear_lp";
 	auto model = FindFrame(WeaponName);
@@ -4595,8 +4626,6 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	SetScale(15.0f, 15.0f, 15.0f);
 
-	Set_Name("Dragon");
-
 	WeaponName = "HeadA_LP";
 	auto model = FindFrame(WeaponName);
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
@@ -4611,8 +4640,5 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
-	model->customRotation = XMMatrixRotationRollPitchYaw(
-		XMConvertToRadians(160.0f),
-		XMConvertToRadians(90.0f),
-		XMConvertToRadians(0.0f));
 }
+
