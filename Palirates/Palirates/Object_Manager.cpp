@@ -154,7 +154,6 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12Gra
 
 void OBB_Drawer::Release_OBB_Data_ShaderVariables()
 {
-
 	if (Instance_info)
 	{
 		Instance_info->Unmap(0, nullptr);
@@ -201,8 +200,7 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 		obb_instance_buffer_max_num = std::min(count * 2, MAX_INSTANCING_NUM);
 		Create_OBB_Data_ShaderVariables(device, cmdList);
 	}
-
-
+  
 	int visible_count = 0;
 	for (auto& obj : obb_list)
 	{
@@ -295,7 +293,6 @@ void OBB_Drawer::Update_OBB_Test(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 				continue;
 			else
 				Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
-
 
 			if (obj_ptr->Get_Active())
 				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
