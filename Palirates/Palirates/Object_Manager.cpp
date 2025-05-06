@@ -206,13 +206,14 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 	int visible_count = 0;
 	for (auto& obj : obb_list)
 	{
-		XMFLOAT4X4 world;
-		if (!obj->Get_Collider()) continue;
+		XMFLOAT4X4 world_matrix;
 
-		if (!Compute_OBB_WorldMatrix(*obj->Get_Collider(), obj->m_xmf4x4World, world))
+		if (!Get_OBB_WorldMatrix(obj.get(), &world_matrix))
 			continue;
+		else
+			Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
 
-		Mapped_Instance_info[visible_count].world_4x4transform = world;
+		Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
 		XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color,obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
 		++visible_count;
 	}
@@ -243,7 +244,7 @@ void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList
 		{
 
 			XMFLOAT4X4 world;
-			if (!Compute_OBB_WorldMatrix(meshOBB, obj->m_xmf4x4World, world))
+			if (!Compute_Fixed_OBB_WorldMatrix(meshOBB, obj->m_xmf4x4World, world))
 				continue;
 
 			Mapped_Instance_info[visible_count].world_4x4transform = world;
@@ -254,6 +255,136 @@ void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList
 	}
 
 	rendering_num = visible_count;
+}
+
+void OBB_Drawer::Update_OBB_Test(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
+{
+	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
+	std::unordered_set<CGameObject*> visited;
+
+	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
+		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
+
+
+
+	int obb_num = obb_obj_ptr_list.size();
+	int visible_count = 0;
+
+	if (obb_num > obb_instance_buffer_max_num)
+	{
+		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
+
+
+		Release_OBB_Data_ShaderVariables();
+
+		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
+
+		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+	else
+	{
+		XMFLOAT4X4 world_matrix = Matrix4x4::Identity();
+
+		for (std::shared_ptr<CGameObject> obj_ptr : obb_obj_ptr_list)
+		{
+			if (visible_count >= obb_instance_buffer_max_num)
+				break;
+
+
+			if (!Get_OBB_WorldMatrix(obj_ptr.get(), &world_matrix))
+				continue;
+			else
+				Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
+
+
+			if (obj_ptr->Get_Active())
+				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
+			else
+				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
+
+			++visible_count;
+		}
+
+		rendering_num = visible_count;
+	}
+
+}
+
+bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
+{
+	if (!g_obj || !g_obj->Get_Collider())
+		return false;
+
+	CGameObject* target = g_obj;
+	if (target)
+	{
+		CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(target->m_pMesh);
+		if (skinnedMesh)
+		{
+			BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
+			XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents) * 2.0f);
+			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
+			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
+
+			XMMATRIX finalMatrix = scaleMatrix * g_obj->customRotation * rotationMatrix * translationMatrix;
+			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
+			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
+
+			return true;
+		}
+		else
+		{
+			BoundingOrientedBox localOBB = *g_obj->Get_Collider();
+			BoundingOrientedBox worldOBB = {};
+
+			XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
+			localOBB.Transform(worldOBB, world);
+
+			XMVECTOR scale, rotQuat, trans;
+			if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
+				rotQuat = XMQuaternionIdentity();
+
+			XMStoreFloat4(&worldOBB.Orientation, rotQuat);
+
+			if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f)
+				return false;
+
+
+			XMMATRIX obbMatrix =
+				XMMatrixScaling(worldOBB.Extents.x * 2.0f, worldOBB.Extents.y * 2.0f, worldOBB.Extents.z * 2.0f) *
+				XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation)) *
+				XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
+
+			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
+			XMStoreFloat4x4(&g_obj->WeaponMatrix, obbMatrix);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool OBB_Drawer::Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world)
+{
+	XMMATRIX objWorld = XMLoadFloat4x4(&objectWorld);
+
+	XMVECTOR scale = XMVectorSet(
+		localOBB.Extents.x * 2.0f,
+		localOBB.Extents.y * 2.0f,
+		localOBB.Extents.z * 2.0f,
+		0.0f
+	);
+
+	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(scale);
+	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&localOBB.Orientation));
+	XMMATRIX offsetMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&localOBB.Center));
+
+	XMMATRIX localOBBMatrix = scaleMatrix * rotMatrix * offsetMatrix;
+
+	XMMATRIX finalMatrix = localOBBMatrix * objWorld;
+
+	XMStoreFloat4x4(&out_world, XMMatrixTranspose(finalMatrix));
+	return true;
+
 }
 
 void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited)
@@ -268,34 +399,7 @@ void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<st
 	FindOBBObjects(obj->Get_Sibling(), obb_list, visited);
 }
 
-bool OBB_Drawer::Compute_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world)
-{
 
-	// �ܼ��� ��ü ���� OBB ������ ����� ��ȯ (��ü�� ���� BoxCollider �����̶� ����)
-	XMMATRIX objWorld = XMLoadFloat4x4(&objectWorld);
-
-	// extents * 2 �� ���� ũ��
-	XMVECTOR scale = XMVectorSet(
-		localOBB.Extents.x * 2.0f,
-		localOBB.Extents.y * 2.0f,
-		localOBB.Extents.z * 2.0f,
-		0.0f
-	);
-
-	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(scale);
-	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&localOBB.Orientation));
-	XMMATRIX offsetMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&localOBB.Center));
-
-	// ���� OBB ���� ��� (��ü ����)
-	XMMATRIX localOBBMatrix = scaleMatrix * rotMatrix * offsetMatrix;
-
-	// ���� �������� ��ȯ
-	XMMATRIX finalMatrix = localOBBMatrix * objWorld;
-
-	XMStoreFloat4x4(&out_world, XMMatrixTranspose(finalMatrix));
-	return true;
-
-}
 void OBB_Drawer::Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera)
 {
 	obb_shader->Setting_Render(cmdList, 0);
@@ -439,7 +543,6 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 		{
 			container[name].obj_mesh = std::shared_ptr<CMesh>(obj_ptr->m_pMesh);
 
-			// ���� raw pointer ����
 			obj_ptr->m_pMesh = nullptr;
 		}
 

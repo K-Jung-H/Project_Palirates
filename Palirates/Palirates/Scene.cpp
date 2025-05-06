@@ -716,18 +716,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-	for (int i = 0; i < 10; i++) {
-
-		CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
-		std::shared_ptr<CMonsterObject> m = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pFishmanModel_t, 5);
-		m->SetPosition(1.0f * i, m_pTerrain->Get_Mesh_Height(1.0f * i, 1.0f * i), 1.0f * i);
-		m->SetScale(10.0f, 10.0f, 10.0f);
-		m->Add_Collider(1.0f);
-
-		m->Set_Name(obj_name_3);
-		//m->Add_Collider(10.0f);
+	for (int i = 0; i < 10; i++) 
+	{
+		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
+		//m->Set_Name(obj_name_3);
 		m->test_num = i + 4;
-		//m->AttachOBBsToAllSkinnedMeshes(m);
 		obj_manager->Add_Object(m, Object_Type::skinned);
 	}
 
