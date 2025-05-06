@@ -923,9 +923,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case 'Q':
 		{
-			if (test_button)
-				break;
-			test_button = true;
+			test_button = !test_button;
 		}	
 		break;
 
@@ -1135,7 +1133,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 					if (weapon) {
 						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
 
-						// 위치 추출
 						XMVECTOR scale, rotQuat, trans;
 						if (!XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix)) {
 							trans = XMVectorZero();
@@ -1172,14 +1169,23 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 
-	if (test_button)
+	if (m_pPlayer->GetTrailOn())
 	{
-		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-		trail_obj->Set_Trail_Target(trail_target, false);
-		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-		test_button = false;
+		if (!m_pPlayer->GetTrailStart()) {
+			CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+			trail_obj->Set_Trail_Target(trail_target, false);
+			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+			obj_manager->Add_Object(trail_obj, Object_Type::trail);
+			m_pPlayer->SetTrailObj(trail_obj);
+			m_pPlayer->GetTrailObj()->Set_Active(true);
+			m_pPlayer->Trail_Start();
+		}
+
+		if (!m_pPlayer->GetTrailObj()->Get_Active()) {
+			m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
+			m_pPlayer->GetTrailObj()->Set_Active(true);
+		}
 	}
 
 	if (particle_test_button)

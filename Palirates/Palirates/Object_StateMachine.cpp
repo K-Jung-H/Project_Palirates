@@ -276,14 +276,20 @@ void PlayerStateMachine::update(float Elapsed_time)
     if (key_state.attack1 && Get_State() != State::Attack1) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack1, Key_Value::None);
+        m_pOwner->bTrailOn();
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
     if (key_state.attack2 && Get_State() != State::Attack2) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack2, Key_Value::None);
+        m_pOwner->bTrailOn();
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
     if (key_state.attack3 && Get_State() != State::Attack3) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack3, Key_Value::None);
+        m_pOwner->bTrailOn();
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
 
     switch (Get_State()) {
@@ -435,12 +441,21 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         break;
     case State::Attack1:
         key_state.attack1 = false;
+        m_pOwner->bTrailOff();
+        m_pOwner->GetTrailObj()->Set_Active(false);
+        m_pOwner->Weapon_ptr->bUpdateOBBOff();
         break;
     case State::Attack2:
         key_state.attack2 = false;
+        m_pOwner->bTrailOff();
+        m_pOwner->GetTrailObj()->Set_Active(false);
+        m_pOwner->Weapon_ptr->bUpdateOBBOff();
         break;
     case State::Attack3:
         key_state.attack3 = false;
+        m_pOwner->bTrailOff();
+        m_pOwner->GetTrailObj()->Set_Active(false);
+        m_pOwner->Weapon_ptr->bUpdateOBBOff();
         break;
     case State::Jump:
         break;
@@ -866,7 +881,7 @@ void FishManStateMachine::update(float Elapsed_time)
             changeState(State::Idle, Key_Value::None);
         }
         m_pOwner->targetWeights[TRACK_FISHMAN_GET_HIT] = 1.0f;
-        RootMotionMove(20.0f, true);
+        RootMotionMove(0.0f, true);
         break;
     case State::Attack1:
         if (animController->m_pAnimationTracks[TRACK_FISHMAN_ATTACK1].m_bFinished) {

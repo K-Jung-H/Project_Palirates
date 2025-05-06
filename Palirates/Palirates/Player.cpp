@@ -376,8 +376,9 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
-	auto model = FindFrame("SM_Wep_Cutlass_01");
+	auto model = FindFrame_v2("SM_Wep_Cutlass_01");
 	//auto model = FindFrame("body_lp");
+	model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
 	XMFLOAT4 quaternion;
@@ -390,9 +391,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	}
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
-
-	//weapon = model;
-
+	Weapon_ptr = model;
 	if (pAngrybotModel) delete pAngrybotModel;
 }
 

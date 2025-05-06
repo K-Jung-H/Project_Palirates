@@ -198,7 +198,7 @@ public:
 
 class Particle_Manager;
 
-class ParticleObject : public CGameObject, public std::enable_shared_from_this<ParticleObject>
+class ParticleObject : public CGameObject
 {
 private:
 	Particle_Shape_Mesh* shape_mesh = NULL;
