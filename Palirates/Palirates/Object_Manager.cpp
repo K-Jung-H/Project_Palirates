@@ -112,55 +112,157 @@ D3D12_SHADER_BYTECODE BoundingBox_Shader::CreatePixelShader(ID3DBlob** PixelShad
 }
 
 
-CubeMesh* OBB_Drawer::obb_Mesh = NULL;
-BoundingBox_Shader* OBB_Drawer::obb_shader = NULL;
+CubeMesh* OBB_Drawer::obb_Mesh = nullptr;
+BoundingBox_Shader* OBB_Drawer::obb_shader = nullptr;
 
-OBB_Drawer::OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+OBB_Drawer::OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig)
 {
-	if (obb_Mesh == NULL)
-		obb_Mesh = new CubeMesh(pd3dDevice, pd3dCommandList);
-	
+	if (!obb_Mesh)
+		obb_Mesh = new CubeMesh(device, cmdList);
 
-	if (obb_shader == NULL)
+	if (!obb_shader)
 	{
 		obb_shader = new BoundingBox_Shader();
-		obb_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-		obb_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		obb_shader->CreateShader(device, cmdList, rootSig);
+		obb_shader->CreateShaderVariables(device, cmdList);
 	}
 }
 
 OBB_Drawer::~OBB_Drawer()
 {
 	Release_OBB_Data_ShaderVariables();
-	obb_Mesh->Release();
+	if (obb_Mesh) obb_Mesh->Release();
 	delete obb_shader;
-
 }
 
-
-void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
 	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
 
-	Instance_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, bufferSize,	D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-	Instance_info->Map(0, NULL, (void**)&Mapped_Instance_info);
-	ZeroMemory(Mapped_Instance_info, sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num);
 
+	Instance_info = CreateBufferResource(device, cmdList, nullptr, bufferSize,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, nullptr);
+	Instance_info->Map(0, nullptr, reinterpret_cast<void**>(&Mapped_Instance_info));
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(BoundingBox_Instance_Info);
-	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 정렬된 크기 사용
+	m_d3dInstancingBufferView.SizeInBytes = bufferSize;
+
 }
 
-void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
+void OBB_Drawer::Release_OBB_Data_ShaderVariables()
+{
+	if (Instance_info)
+	{
+		Instance_info->Unmap(0, nullptr);
+		Instance_info->Release();
+		Instance_info = nullptr;
+	}
+}
+
+
+void OBB_Drawer::Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type, Object_Manager* obj_mgr)
+{
+	switch (type)
+	{
+	case Object_Type::fixed:
+		if (auto map_ptr = obj_mgr->Get_Object_List_Map(type))
+			Update_From_Map(device, cmdList, *map_ptr);
+		break;
+
+	case Object_Type::skinned:
+	case Object_Type::non_skinned:
+		if (auto vec_ptr = obj_mgr->Get_Object_List(type))
+			Update_From_Vector(device, cmdList, *vec_ptr);
+		break;
+
+	default:
+		break;
+	}
+}
+
+
+void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list)
+{
+	std::vector<std::shared_ptr<CGameObject>> obb_list;
+	std::unordered_set<CGameObject*> visited;
+
+
+	for (auto& obj : obj_list)
+		FindOBBObjects(obj, obb_list, visited);
+
+	int count = static_cast<int>(obb_list.size());
+	if (count > obb_instance_buffer_max_num)
+	{
+		Release_OBB_Data_ShaderVariables();
+		obb_instance_buffer_max_num = std::min(count * 2, MAX_INSTANCING_NUM);
+		Create_OBB_Data_ShaderVariables(device, cmdList);
+	}
+  
+	int visible_count = 0;
+	for (auto& obj : obb_list)
+	{
+		XMFLOAT4X4 world_matrix;
+
+		if (!Get_OBB_WorldMatrix(obj.get(), &world_matrix))
+			continue;
+		else
+			Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
+
+		Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
+		XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color,obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
+		++visible_count;
+	}
+
+	rendering_num = visible_count;
+}
+
+void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map)
+{
+	int total = 0;
+	for (const auto& [_, info] : obj_map)
+		total += static_cast<int>(info.fixed_obj_list.size());
+
+	if (total > obb_instance_buffer_max_num)
+	{
+		Release_OBB_Data_ShaderVariables();
+		obb_instance_buffer_max_num = std::min(total * 2, MAX_INSTANCING_NUM);
+		Create_OBB_Data_ShaderVariables(device, cmdList);
+	}
+
+	int visible_count = 0;
+	for (const auto& [_, info] : obj_map)
+	{
+		if (!info.obj_mesh || !info.obj_mesh->Get_BoundingBox()) continue;
+		const BoundingOrientedBox& meshOBB = *info.obj_mesh->Get_BoundingBox();
+
+		for (const auto& obj : info.fixed_obj_list)
+		{
+
+			XMFLOAT4X4 world;
+			if (!Compute_Fixed_OBB_WorldMatrix(meshOBB, obj->m_xmf4x4World, world))
+				continue;
+
+			Mapped_Instance_info[visible_count].world_4x4transform = world;
+			XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color,
+				obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
+			++visible_count;
+		}
+	}
+
+	rendering_num = visible_count;
+}
+
+void OBB_Drawer::Update_OBB_Test(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
 {
 	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
-	std::unordered_set<CGameObject*> visited;  
+	std::unordered_set<CGameObject*> visited;
 
 	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
 		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
-	
+
 
 
 	int obb_num = obb_obj_ptr_list.size();
@@ -186,6 +288,7 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 			if (visible_count >= obb_instance_buffer_max_num)
 				break;
 
+
 			if (!Get_OBB_WorldMatrix(obj_ptr.get(), &world_matrix))
 				continue;
 			else
@@ -204,92 +307,11 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 }
 
-
-void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container)
-{
-	int obb_num = 0;
-	for (auto& [meshName, instance_info] : gameobj_container)
-		obb_num += instance_info.fixed_obj_list.size();
-
-	if (obb_num > obb_instance_buffer_max_num)
-	{
-		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
-
-		Release_OBB_Data_ShaderVariables();
-		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
-		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
-	}
-
-	int visible_count = 0;
-	XMFLOAT4X4 world_matrix;
-
-	for (auto& [meshName, instance_info] : gameobj_container)
-	{
-		if (!instance_info.obj_mesh || !instance_info.obj_mesh->Get_BoundingBox())
-			continue;
-
-		BoundingOrientedBox meshOBB = *instance_info.obj_mesh->Get_BoundingBox();
-
-		for (std::shared_ptr<CGameObject> fixed_obj_ptr : instance_info.fixed_obj_list)
-		{
-			XMMATRIX objWorld = XMLoadFloat4x4(&fixed_obj_ptr->m_xmf4x4World);
-
-			XMVECTOR scale, rotation, translation;
-			XMMatrixDecompose(&scale, &rotation, &translation, objWorld);
-
-			XMVECTOR obbCenter = XMLoadFloat3(&meshOBB.Center);
-			XMVECTOR obbExtents = XMLoadFloat3(&meshOBB.Extents);
-			XMVECTOR obbOrientation = XMLoadFloat4(&meshOBB.Orientation);
-
-			XMVECTOR finalQuat = XMQuaternionMultiply(obbOrientation, rotation);
-			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(finalQuat);
-
-			XMVECTOR rotatedCenter = XMVector3Transform(obbCenter, rotationMatrix);
-			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + rotatedCenter);
-
-			XMMATRIX scaleMatrix = XMMatrixScaling(
-				XMVectorGetX(obbExtents) * XMVectorGetX(scale) * 2.0f,
-				XMVectorGetY(obbExtents) * XMVectorGetY(scale) * 2.0f,
-				XMVectorGetZ(obbExtents) * XMVectorGetZ(scale) * 2.0f);
-
-			XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
-			XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(finalMatrix));
-
-			Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
-
-			if (fixed_obj_ptr->Get_Active())
-				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
-			else
-				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
-
-			++visible_count;
-		}
-	}
-
-	rendering_num = visible_count;
-}
-
-void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited)
-{
-	// 이미 방문한 객체는 생략
-	if (!obj || visited.count(obj.get()) > 0)  
-		return;
-
-	// 현재 객체 방문 기록 처리
-	visited.insert(obj.get());  
-
-	if (obj->Get_Collider() != NULL)
-		obb_obj_ptr_list.push_back(obj);
-
-	FindOBBObjects(obj->Get_Child(), obb_obj_ptr_list, visited);
-	FindOBBObjects(obj->Get_Sibling(), obb_obj_ptr_list, visited);
-}
-
 bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
 {
 	if (!g_obj || !g_obj->Get_Collider())
 		return false;
-	
+  
 	CGameObject* target = g_obj;
 	if (target)
 	{
@@ -302,13 +324,13 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
 
 			XMMATRIX finalMatrix = scaleMatrix * g_obj->customRotation * rotationMatrix * translationMatrix;
-
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
 			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
 
 			return true;
 		}
-		else {
+		else
+		{
 			BoundingOrientedBox localOBB = *g_obj->Get_Collider();
 			BoundingOrientedBox worldOBB = {};
 
@@ -316,14 +338,14 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 			localOBB.Transform(worldOBB, world);
 
 			XMVECTOR scale, rotQuat, trans;
-			if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world)) {
+			if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
 				rotQuat = XMQuaternionIdentity();
-			}
+
 			XMStoreFloat4(&worldOBB.Orientation, rotQuat);
 
-			if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f) {
+			if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f)
 				return false;
-			}
+
 
 			XMMATRIX obbMatrix =
 				XMMatrixScaling(worldOBB.Extents.x * 2.0f, worldOBB.Extents.y * 2.0f, worldOBB.Extents.z * 2.0f) *
@@ -338,23 +360,49 @@ bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matri
 	return false;
 }
 
-
-void OBB_Drawer::Release_OBB_Data_ShaderVariables()
+bool OBB_Drawer::Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world)
 {
-	if (Instance_info) Instance_info->Unmap(0, NULL);
-	if (Instance_info) Instance_info->Release();
+	XMMATRIX objWorld = XMLoadFloat4x4(&objectWorld);
+
+	XMVECTOR scale = XMVectorSet(
+		localOBB.Extents.x * 2.0f,
+		localOBB.Extents.y * 2.0f,
+		localOBB.Extents.z * 2.0f,
+		0.0f
+	);
+
+	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(scale);
+	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&localOBB.Orientation));
+	XMMATRIX offsetMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&localOBB.Center));
+
+	XMMATRIX localOBBMatrix = scaleMatrix * rotMatrix * offsetMatrix;
+
+	XMMATRIX finalMatrix = localOBBMatrix * objWorld;
+
+	XMStoreFloat4x4(&out_world, XMMatrixTranspose(finalMatrix));
+	return true;
+
 }
 
-void OBB_Drawer::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited)
 {
-	obb_shader->Setting_Render(pd3dCommandList, 0);
+	if (!obj || visited.count(obj.get()) > 0) return;
 
+
+	visited.insert(obj.get());
+	if (obj->Get_Collider()) obb_list.push_back(obj);
+
+	FindOBBObjects(obj->Get_Child(), obb_list, visited);
+	FindOBBObjects(obj->Get_Sibling(), obb_list, visited);
+}
+
+
+void OBB_Drawer::Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera)
+{
+	obb_shader->Setting_Render(cmdList, 0);
 	if (obb_Mesh)
-		obb_Mesh->Render(pd3dCommandList, m_d3dInstancingBufferView, rendering_num);
-
-};
-
-
+		obb_Mesh->Render(cmdList, m_d3dInstancingBufferView, rendering_num);
+}
 
 //==================================================
 
@@ -489,10 +537,12 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 		container[name].fixed_obj_list.push_back(obj_ptr);
 
 		if (unique_mesh_names.insert(name).second)
+		{
 			container[name].obj_mesh = std::shared_ptr<CMesh>(obj_ptr->m_pMesh);
 
-		// 기존 raw pointer 해제
-		obj_ptr->m_pMesh = nullptr; 
+			obj_ptr->m_pMesh = nullptr;
+		}
+
 	}
 
 	std::shared_ptr<CGameObject> child_ptr = obj_ptr->Get_Child();
@@ -964,6 +1014,16 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
+std::vector<std::shared_ptr<CGameObject>> Object_Manager::Gather_All_Fixed_Objects()
+{
+	std::vector<std::shared_ptr<CGameObject>> result;
+	for (auto& [name, info] : fixed_obj_info_map)
+	{
+		result.insert(result.end(), info.fixed_obj_list.begin(), info.fixed_obj_list.end());
+	}
+	return result;
+}
+
 void Object_Manager::Clear_Object_List(Object_Type type)
 {
 	switch (type)
@@ -1022,24 +1082,40 @@ void Object_Manager::Clear_Object_List_All()
 
 
 //==================================================
-
-void Object_Manager::Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+void Object_Manager::Create_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	bounding_box_drawer = make_shared<OBB_Drawer>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	bounding_box_drawer->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+	if (obb_drawer_map.find(type) != obb_drawer_map.end())
+		return;
+
+	auto drawer = std::make_shared<OBB_Drawer>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	drawer->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+	obb_drawer_map[type] = drawer;
 }
 
-void Object_Manager::Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
+void Object_Manager::Create_OBB_Drawers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
-	bounding_box_drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, gameobj_container);
+	std::vector<Object_Type> types = { Object_Type::fixed, Object_Type::skinned, Object_Type::non_skinned };
+	for (Object_Type type : types)
+		Create_OBB_Drawer(type, pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 }
 
-void Object_Manager::Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info > gameobj_container)
+void Object_Manager::Update_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	bounding_box_drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, gameobj_container);
+	auto it = obb_drawer_map.find(type);
+	if (it != obb_drawer_map.end())
+	{
+		it->second->Update_OBB_Data(pd3dDevice, pd3dCommandList, type, this);
+	}
 }
 
-void Object_Manager::Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Object_Manager::Update_OBB_Drawers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	bounding_box_drawer->Render(pd3dCommandList, pCamera);
+	for (auto& [type, drawer] : obb_drawer_map)
+		drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, type, this);
+}
+
+void Object_Manager::Render_OBB_Drawers(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* camera)
+{
+	for (auto& [type, drawer] : obb_drawer_map)
+		drawer->Render(pd3dCommandList, camera);
 }
