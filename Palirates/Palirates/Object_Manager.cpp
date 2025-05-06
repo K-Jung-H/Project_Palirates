@@ -24,7 +24,7 @@ void BoundingBox_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState)
 {
-	UINT nInputElementDescs = 7;
+	UINT nInputElementDescs = 7;  
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 	// 정점 정보를 위한 입력 원소들
@@ -214,7 +214,7 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 			Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
 
 		Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
-		XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
+		XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color,obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
 		++visible_count;
 	}
 
@@ -381,7 +381,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 
 	if (instance_obj_num > instance_buffer_max_num)
 	{
-		//		DebugOutput("\n\nResizing buffer to fit more" + obj_mesh->Get_Name() + "instances\n\n\n");
+//		DebugOutput("\n\nResizing buffer to fit more" + obj_mesh->Get_Name() + "instances\n\n\n");
 
 		Release_Instance_Data_ShaderVariables();
 
@@ -402,7 +402,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 		Mapped_Instance_info[visible_count++] = { world_matrix };
 	}
 
-	rendering_num = visible_count;
+	rendering_num = visible_count; 
 }
 
 void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
@@ -440,7 +440,7 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 		non_skinned_object_list.push_back(obj_ptr);
 		break;
 	case Object_Type::fixed:
-	{
+	{		
 		Add_Object_To_Unordered_Map(obj_ptr, fixed_obj_info_map);
 	}	break;
 	case Object_Type::player:
@@ -449,7 +449,7 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 			player_list.push_back(std::dynamic_pointer_cast<CTerrainPlayer>(obj_ptr));
 	}
 	break;
-
+	
 	case Object_Type::trail:
 	{
 		if (obj_ptr != NULL)
@@ -482,7 +482,7 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 	//	name == "SM_Env_Flat_Sand_02")
 	//	name = "None";
 
-	if (name != "None")
+	if (name != "None") 
 	{
 		container[name].fixed_obj_list.push_back(obj_ptr);
 
@@ -498,12 +498,12 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 	std::shared_ptr<CGameObject> child_ptr = obj_ptr->Get_Child();
 	if (child_ptr != nullptr)
 		Add_Object_To_Unordered_Map(child_ptr, container);
-
+	
 
 	std::shared_ptr<CGameObject> sibling_ptr = obj_ptr->Get_Sibling();
 	if (sibling_ptr != nullptr)
 		Add_Object_To_Unordered_Map(sibling_ptr, container);
-
+	
 }
 
 void Object_Manager::Delete_Object(std::shared_ptr<CGameObject > obj_ptr)
@@ -522,17 +522,17 @@ void Object_Manager::Delete_Object(std::shared_ptr<CGameObject > obj_ptr)
 		non_skinned_object_list.erase(it);
 
 	//===========[fixed]===========
-	for (auto iter = fixed_obj_info_map.begin(); iter != fixed_obj_info_map.end(); )
+	for (auto iter = fixed_obj_info_map.begin(); iter != fixed_obj_info_map.end(); ) 
 	{
 		auto& obj_vector = iter->second.fixed_obj_list;
 
 		obj_vector.erase(std::remove(obj_vector.begin(), obj_vector.end(), obj_ptr), obj_vector.end());
 
-		if (obj_vector.empty())
+		if (obj_vector.empty()) 
 			iter = fixed_obj_info_map.erase(iter);
-		else
+		else 
 			++iter;
-
+		
 	}
 }
 
@@ -542,7 +542,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 	case Object_Type::skinned:
 	{
-		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
+		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 			if (obj_ptr->Get_Active())
 				obj_ptr->Animate(fTimeElapsed);
 	}
@@ -550,7 +550,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 
 	case Object_Type::non_skinned:
 	{
-		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
+		for ( std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
 			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
@@ -637,7 +637,7 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 		{
 			Is_Visible = obj_ptr->IsVisible(pCamera);
 			obj_ptr->Set_Active(Is_Visible);
-
+			
 		}
 	} break;
 
@@ -655,7 +655,7 @@ void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 
 	case Object_Type::fixed:
 	{
-		if (terrain_ptr)
+		if(terrain_ptr)
 			Synchronize_Active_Objects_and_Tile();
 	} break;
 
@@ -690,9 +690,9 @@ void Object_Manager::Check_Culling_All(CCamera* pCamera)
 }
 
 void Object_Manager::Classify_Objects_By_Tile()
-{
+{	
 	// 객체들의 위치에 따라 타일로 분류하는 함수
-
+	
 	//=============================== 
 	for (auto& [tile_num, obj_list] : obj_list_in_tile)
 		obj_list.clear();
@@ -734,7 +734,7 @@ void Object_Manager::Synchronize_Active_Objects_and_Tile()
 			tile_active = false;
 
 		for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
-			obj_ptr->Set_Active(tile_active);
+			obj_ptr->Set_Active(tile_active);		
 	}
 
 	Reserve_Update();
@@ -747,7 +747,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	case Object_Type::skinned:
 	{
 		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
-		{
+		{	
 			if (skinned_obj_ptr->Get_Active())
 			{
 				skinned_obj_ptr->UpdateTransform(NULL);
@@ -770,7 +770,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 		if (terrain_ptr)
 		{
 			terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
-			//			Synchronize_Active_Objects_and_Tile();
+//			Synchronize_Active_Objects_and_Tile();
 		}
 
 		if (instance_shader)
@@ -778,9 +778,9 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
-			for (std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
+			for(std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
 			{
-				for (std::shared_ptr<CMaterial> obj_material : obj_ptr->Material_list)
+				for(std::shared_ptr<CMaterial> obj_material : obj_ptr->Material_list)
 				{
 					if (obj_material)
 					{
@@ -791,7 +791,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 						// -> 각각 다른머테리얼을 하려면, 인스턴싱을 하면 안됨 or 인스턴싱 넘버 기반으로 셰이더에서 처리하기
 						// 아니면 인스턴싱 정보에 재질 ID 전달 및 ID 기반 조명 렌더링
 						obj_material->UpdateShaderVariable(pd3dCommandList);
-
+							
 						// 메쉬 렌더링
 						if (instance_info.obj_mesh)
 							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
@@ -858,7 +858,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 }
 void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (terrain_ptr)
+	if (terrain_ptr) 
 		terrain_ptr->Render(pd3dCommandList, pCamera);
 }
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -930,7 +930,7 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 		return &player_list;
 		break;
 
-	case Object_Type::etc:
+	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
 		::PostQuitMessage(0);
@@ -983,19 +983,19 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 		break;
 
 	case Object_Type::fixed:
-		for (auto& pair : fixed_obj_info_map)
+		for (auto& pair : fixed_obj_info_map) 
 		{
 			Fixed_Object_Info& info = pair.second;
 
 			info.fixed_obj_list.clear();
-			info.fixed_obj_list.shrink_to_fit();
+			info.fixed_obj_list.shrink_to_fit(); 
 
 			info.obj_mesh.reset(); // 강제로 nullptr로 설정
 
 			// 수동 할당된 메모리 
 			if (info.Instance_info)
 			{
-				info.Instance_info->Unmap(0, NULL);
+				info.Instance_info -> Unmap(0, NULL);
 				info.Instance_info->Release();
 				info.Instance_info = nullptr;
 			}
