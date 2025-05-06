@@ -276,14 +276,17 @@ void PlayerStateMachine::update(float Elapsed_time)
     if (key_state.attack1 && Get_State() != State::Attack1) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack1, Key_Value::None);
+        m_pOwner->bTrailOn();
     }
     if (key_state.attack2 && Get_State() != State::Attack2) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack2, Key_Value::None);
+        m_pOwner->bTrailOn();
     }
     if (key_state.attack3 && Get_State() != State::Attack3) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack3, Key_Value::None);
+        m_pOwner->bTrailOn();
     }
 
     switch (Get_State()) {
@@ -435,12 +438,18 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         break;
     case State::Attack1:
         key_state.attack1 = false;
+        m_pOwner->bTrailOff();
+        m_pOwner->GetTrailObj()->Set_Active(false);
         break;
     case State::Attack2:
         key_state.attack2 = false;
+        m_pOwner->bTrailOff();
+        m_pOwner->GetTrailObj()->Set_Active(false);
         break;
     case State::Attack3:
         key_state.attack3 = false;
+        m_pOwner->bTrailOff();
+        m_pOwner->GetTrailObj()->Set_Active(false);
         break;
     case State::Jump:
         break;

@@ -986,6 +986,10 @@ public:
 
 	virtual void Animate(float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	Trail_Mesh* GetTrailMesh() {
+		return trail_mesh;
+	}
+
 };
 
 

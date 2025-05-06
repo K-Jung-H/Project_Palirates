@@ -580,7 +580,8 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
 		{
-			obj_ptr->Animate(fTimeElapsed);
+			if (obj_ptr->Get_Active())
+				obj_ptr->Animate(fTimeElapsed);
 		}
 	}
 	break;
@@ -829,7 +830,8 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 		trail_shader->Setting_Render(pd3dCommandList, 0);
 		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
 		{
-			obj_ptr->Render(pd3dCommandList, pCamera);
+			if (obj_ptr->Get_Active())
+				obj_ptr->Render(pd3dCommandList, pCamera);
 		}
 
 	}
