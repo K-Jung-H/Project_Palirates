@@ -26,6 +26,17 @@ struct Render_Instance
     float4 Color;
 };
 
+struct OBB_INFO
+{
+    float3 Center;
+    uint Active;
+
+    float3 Extents;
+    uint Type;
+
+    float4 Rotation;
+};
+
 cbuffer CB_Particle_Update_Info : register(b0)
 {
     float3 EmitRegionMin; 
@@ -36,11 +47,16 @@ cbuffer CB_Particle_Update_Info : register(b0)
 
     float3 Main_Direction; 
     float Init_Velocity_Value;
+    
+    uint obb_num;
+    float3 padding0;
 }
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
+
+StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 
 #define XM_PI 3.14159265359f
 

@@ -16,6 +16,9 @@ struct CB_Particle_Update_Info
 
 	XMFLOAT3 Main_Direction;
 	float Init_Velocity_Value;
+
+	UINT obb_num;
+	XMFLOAT3 padding0;
 };
 
 class ParticleShader : public CShader
@@ -93,9 +96,10 @@ class Particle_Manager
 private:
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
 	CTexture* m_OBBBufferTexture = NULL;
+	UINT OBB_num = 0;
 
 	static constexpr UINT THREAD_COUNT = 64;
-	static constexpr UINT MAX_OBBS = 256;
+	static constexpr UINT MAX_OBBS = 5000;
 
 	std::vector<std::shared_ptr<ParticleObject>> destroy_queue;
 
@@ -108,7 +112,9 @@ public:
 	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
 	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);
-	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<GPU_OBB> obb_container);
+	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);
+
+	void Bind_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Release_OBB_Data_ShaderVariables();
 
 	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);

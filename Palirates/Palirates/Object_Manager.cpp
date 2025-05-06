@@ -1038,26 +1038,35 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 		{
 			if (!obj || !obj->Get_Active()) continue;
 
-			// 위치 = 객체 위치
-			XMFLOAT3 position = obj->GetPosition();
+			XMMATRIX objMat = XMLoadFloat4x4(&obj->m_xmf4x4World);
 
-			// 회전 추출
-			XMMATRIX mat = XMLoadFloat4x4(&obj->m_xmf4x4World);
-			XMVECTOR scale, rotation, _;
-			XMMatrixDecompose(&scale, &rotation, &_, mat);
+			// 분해하여 객체 회전과 스케일 추출
+			XMVECTOR scale, rotation, translation;
+			XMMatrixDecompose(&scale, &rotation, &translation, objMat);
 
-			// 스케일 반영
+			// 1. Center 변환 (localOBB.Center → 월드)
+			XMVECTOR localCenter = XMLoadFloat3(&localOBB.Center);
+			XMVECTOR worldCenter = XMVector3Transform(localCenter, objMat);
+
+			// 2. Orientation 변환 (로컬 OBB 회전 * 객체 회전)
+			XMVECTOR obbRot = XMLoadFloat4(&localOBB.Orientation);
+			XMVECTOR finalRot = XMQuaternionMultiply(obbRot, rotation);
+			finalRot = XMQuaternionNormalize(finalRot);
+
+			// 3. Extents 변환 (로컬 Extents * 객체 스케일)
 			XMFLOAT3 scaleVec;
 			XMStoreFloat3(&scaleVec, scale);
-
-			GPU_OBB obb{};
-			obb.Center = position;
-			XMStoreFloat4(&obb.Rotation, rotation);
-			obb.Extents = {
+			XMFLOAT3 worldExtents = {
 				localOBB.Extents.x * scaleVec.x,
 				localOBB.Extents.y * scaleVec.y,
 				localOBB.Extents.z * scaleVec.z
 			};
+
+			// GPU OBB 구성
+			GPU_OBB obb{};
+			XMStoreFloat3(&obb.Center, worldCenter);
+			XMStoreFloat4(&obb.Rotation, finalRot);
+			obb.Extents = worldExtents;
 			obb.Type = static_cast<UINT>(obj->Object_type);
 			obb.Active = obj->Get_Active() ? 1 : 0;
 
