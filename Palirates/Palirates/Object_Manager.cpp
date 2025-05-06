@@ -156,7 +156,7 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D1
 void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
 {
 	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
-	std::unordered_set<CGameObject*> visited;  // 중복 검사를 위한 컨테이너
+	std::unordered_set<CGameObject*> visited;  
 
 	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
 		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
@@ -168,17 +168,13 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	if (obb_num > obb_instance_buffer_max_num)
 	{
-		// 새로운 버퍼 크기 재조정 
-		// == 크기를 키운 새로운 버퍼 생성
 		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
 
 
 		Release_OBB_Data_ShaderVariables();
 
-		// 새로운 최대 크기 업데이트
 		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
 
-		// 새로운 버퍼 생성
 		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 	else
@@ -238,34 +234,27 @@ void OBB_Drawer::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		{
 			XMMATRIX objWorld = XMLoadFloat4x4(&fixed_obj_ptr->m_xmf4x4World);
 
-			// 1. 분해: 객체의 스케일, 회전, 이동
 			XMVECTOR scale, rotation, translation;
 			XMMatrixDecompose(&scale, &rotation, &translation, objWorld);
 
-			// 2. 메시 OBB 정보 로딩
 			XMVECTOR obbCenter = XMLoadFloat3(&meshOBB.Center);
 			XMVECTOR obbExtents = XMLoadFloat3(&meshOBB.Extents);
 			XMVECTOR obbOrientation = XMLoadFloat4(&meshOBB.Orientation);
 
-			// 3. 회전 결합: 메시 OBB의 회전 * 객체 회전
 			XMVECTOR finalQuat = XMQuaternionMultiply(obbOrientation, rotation);
 			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(finalQuat);
 
-			// 4. OBB 중심 회전 후 이동
 			XMVECTOR rotatedCenter = XMVector3Transform(obbCenter, rotationMatrix);
 			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(translation + rotatedCenter);
 
-			// 5. 스케일 계산 (Extents * 2.0 * 객체 스케일)
 			XMMATRIX scaleMatrix = XMMatrixScaling(
 				XMVectorGetX(obbExtents) * XMVectorGetX(scale) * 2.0f,
 				XMVectorGetY(obbExtents) * XMVectorGetY(scale) * 2.0f,
 				XMVectorGetZ(obbExtents) * XMVectorGetZ(scale) * 2.0f);
 
-			// 6. 최종 월드 행렬
 			XMMATRIX finalMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 			XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(finalMatrix));
 
-			// 7. GPU 업로드
 			Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
 
 			if (fixed_obj_ptr->Get_Active())
@@ -554,8 +543,14 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::skinned:
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
-			if (obj_ptr->Get_Active())
+			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
+				std::shared_ptr<CMonsterObject> monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr);
+				if (monster_ptr)
+				{
+					//monster_ptr->GetStateMachine()->SetTargetPos()
+				}
+			}
 	}
 	break;
 

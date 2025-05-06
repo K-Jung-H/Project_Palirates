@@ -283,7 +283,6 @@ void CMotionBlurShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGrou
 	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
 }
 
-
 //==========================================================================================
 
 CTextureToFullScreenShader::CTextureToFullScreenShader()

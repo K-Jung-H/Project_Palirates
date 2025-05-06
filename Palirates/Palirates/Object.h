@@ -599,6 +599,8 @@ public:
 		return m;
 		}();
 
+	XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
+
 public:
 	CGameObject(const std::string_view& name = "No_name");
 	CGameObject(int nMaterials, const std::string_view& name = "No_name");

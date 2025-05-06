@@ -1011,6 +1011,22 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 			obj_manager->Clear_Object_List(Object_Type::skinned);
 		}		break;
+		case VK_OEM_COMMA:
+		{
+			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (mon && !mon->empty())
+			{
+				std::shared_ptr<CGameObject> baseObj2 = (*mon)[2];
+
+				CGameObject* base2 = baseObj2.get();
+
+				auto* dra = dynamic_cast<CFishManObject*>(base2);
+				if (dra)
+				{
+					dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				}
+			}
+		}		break;
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1119,7 +1135,15 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 	m_fElapsedTime = fTimeElapsed;
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
-
+	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (list) {
+		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+			}
+		}
+	}
 
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)

@@ -738,7 +738,6 @@ void CGameFramework::ProcessInput()
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-
 					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
@@ -974,7 +973,6 @@ void CGameFramework::FrameAdvance()
 		Update_Scene();
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
-
 
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
