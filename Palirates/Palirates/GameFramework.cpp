@@ -635,6 +635,8 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
 	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
+	pPlayer->SetOutlineColor(3);
+
 
 	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
 	scene_manager->Register_Scene("Game_Board", game_board_scene);
@@ -1028,8 +1030,8 @@ void CGameFramework::FrameAdvance()
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
-		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
-		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
+		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
+		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
 		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
 		
 		// Apply reserved effects

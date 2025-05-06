@@ -454,6 +454,7 @@ CMaterial::CMaterial(const CMaterial& other)
 	m_nType = other.m_nType;
 	m_nTextures = other.m_nTextures;
 	m_Material_ID = other.m_Material_ID;
+	Outline_Color_ID = other.Outline_Color_ID;
 
 	if (other.m_ppstrTextureNames != nullptr)
 	{
@@ -499,6 +500,7 @@ std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 	clone->m_pShader = this->m_pShader;
 	clone->m_nType = this->m_nType;
 	clone->m_Material_ID = this->m_Material_ID;
+	clone->Outline_Color_ID = this->Outline_Color_ID;
 
 	if (this->m_ppstrTextureNames)
 	{
@@ -591,6 +593,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	Material_GPU_Packet material_packet{};
 	material_packet.gAlbedoColor = m_cAlbedo;
 	material_packet.light_material_ID = m_Material_ID;
+	material_packet.Outline_Color_ID = Outline_Color_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
@@ -1884,7 +1887,23 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial* pMaterial)
 	Material_list[nMaterial] = material_ptr;
 }
 
-void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh** ppSkinnedMeshes, int* pnSkinnedMesh)
+
+void CGameObject::SetOutlineColor(int id)
+{
+	if (Material_list.size())
+	{
+		for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			material_ptr->Outline_Color_ID = id;
+	}
+
+	if (m_pSibling)
+		m_pSibling->SetOutlineColor(id);
+
+	if (m_pChild)
+		m_pChild->SetOutlineColor(id);
+}
+
+void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
 {
 	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
 		ppSkinnedMeshes[(*pnSkinnedMesh)++] = (CSkinnedMesh*)m_pMesh;

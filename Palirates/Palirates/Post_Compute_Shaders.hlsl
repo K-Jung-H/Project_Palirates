@@ -68,9 +68,9 @@ void SobelEdge_Toon(uint3 tid, uint3 gid)
 {
     float objId = gtxtVelocity_Mask_Obj_Id[gid.xy].w;
 
-    if (objId == 10.0f || objId == 20.0f)
+    if (objId >= 10.0f)
     {
-        // 그냥 원본 복사 (윤곽선 생략)
+        // 그냥 원본 복사 (윤곽선 생략 대상)
         gtxtRWOutput[gid.xy] = gtxtInput[gid.xy];
         return;
     }
@@ -78,13 +78,19 @@ void SobelEdge_Toon(uint3 tid, uint3 gid)
     float3 edgeColor = GetObjectColorById(objId);
     float3 original = gtxtInput[gid.xy].rgb;
 
-    float h = dot(gf3ToLuminance,     -gf4GroupSharedCache[tid.x][tid.y + 1].rgb + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
-    + -gf4GroupSharedCache[tid.x + 2][tid.y + 1].rgb);
+    // Sobel 계산
+    float h = dot(gf3ToLuminance, -gf4GroupSharedCache[tid.x][tid.y + 1].rgb 
+        + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
+        + -gf4GroupSharedCache[tid.x + 2][tid.y + 1].rgb);
 
-    float v = dot(gf3ToLuminance, -gf4GroupSharedCache[tid.x + 1][tid.y].rgb + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
-    + -gf4GroupSharedCache[tid.x + 1][tid.y + 2].rgb);
+    float v = dot(gf3ToLuminance, -gf4GroupSharedCache[tid.x + 1][tid.y].rgb 
+        + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
+        + -gf4GroupSharedCache[tid.x + 1][tid.y + 2].rgb);
 
-    float edge = sqrt(h * h + v * v) * 1.3f;
+    // 윤곽선 객체일수록 edge 강하게
+    float edgeScale = (objId != 0.0f) ? 10.0f : 1.0f;
+
+    float edge = sqrt(h * h + v * v) * 1.3f * edgeScale;
     edge = saturate(edge);
 
     float3 finalColor = lerp(original, edgeColor, edge);

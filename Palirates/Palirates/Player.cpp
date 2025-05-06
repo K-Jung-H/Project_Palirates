@@ -338,7 +338,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
-	m_pSkinnedAnimationController->Bone_Info();
+	//m_pSkinnedAnimationController->Bone_Info();
 	// Once type Setting
 	for (int i = 0; i < n_Animation; ++i) {
 		if (GetUpdateHipsTracks().contains(i)) {
