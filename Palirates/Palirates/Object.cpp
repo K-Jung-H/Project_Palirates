@@ -2211,9 +2211,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	if (Active && m_pMesh)
 	{
 		//if (!IsVisible(pCamera))
-
-		//	return;
-
+			//return;
 
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
@@ -4640,5 +4638,8 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
+	model->customRotation = XMMatrixRotationRollPitchYaw(
+		XMConvertToRadians(160.0f),
+		XMConvertToRadians(90.0f),
+		XMConvertToRadians(0.0f));
 }
-

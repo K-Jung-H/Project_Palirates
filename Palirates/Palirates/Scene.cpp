@@ -516,7 +516,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
-//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 	m_pLights[3].m_bEnable = false;
 	m_pLights[3].m_nType = SPOT_LIGHT;
 	m_pLights[3].m_fRange = 600.0f;
@@ -540,12 +540,12 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 }
 
-void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature); 
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 
@@ -628,7 +628,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
 
-	
+
 #endif
 
 
@@ -640,7 +640,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 #endif
 
-//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
@@ -716,7 +716,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-	for (int i = 0; i < 10; i++) 
+	for (int i = 0; i < 10; i++)
 	{
 		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
@@ -734,7 +734,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	obj_manager->Add_Object(humanObject_8, Object_Type::player);*/
 
-	
+
 
 	//=====================================================
 #ifdef LOAD_SCENE
@@ -780,9 +780,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+		//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+		//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+		//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -847,7 +847,7 @@ void CScene::Update_UI()
 		float player_x = m_pPlayer->GetMoveX();
 		float player_z = m_pPlayer->GetMoveZ();
 		State currentState = m_pPlayer->GetStateMachine()->Get_State();
-		std::wstring stateStr = stateToStringMap[currentState];  
+		std::wstring stateStr = stateToStringMap[currentState];
 		State LastState = m_pPlayer->GetStateMachine()->Get_LastState();
 		std::wstring LastStateStr = stateToStringMap[LastState];
 
@@ -883,8 +883,8 @@ void CScene::ReleaseObjects()
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr.reset();
-		
-		if (m_pSkyBox) delete m_pSkyBox;
+
+	if (m_pSkyBox) delete m_pSkyBox;
 
 
 	ReleaseShaderVariables();
@@ -893,15 +893,15 @@ void CScene::ReleaseObjects()
 }
 
 
-void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256 * N
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
+	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
 }
 
-void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 }
 
@@ -933,13 +933,13 @@ void CScene::ReleaseUploadBuffers()
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr->ReleaseUploadBuffers();
 
-	
+
 	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
 	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager->Get_Object_List(Object_Type::non_skinned);
 
 	for (std::shared_ptr<CGameObject> obj_ptr : *skinned_obj_container)
 		obj_ptr->ReleaseUploadBuffers();
-	
+
 	for (std::shared_ptr<CGameObject> obj_ptr : *non_skinned_obj_container)
 		obj_ptr->ReleaseUploadBuffers();
 
@@ -962,7 +962,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_button)
 				break;
 			test_button = true;
-		}	
+		}
 		break;
 
 		case 'E':
@@ -976,7 +976,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand == NULL)
 				break;
 
-			test_sand->Update_Func_Index +=1;
+			test_sand->Update_Func_Index += 1;
 			test_sand->Update_Func_Index %= 3;
 
 			if (test_sand->Update_Func_Index != 2)
@@ -1026,7 +1026,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			}*/
 
 		}		break;
-		case 'B': 
+		case 'B':
 		{
 			//auto it = obj_manager->Get_Object_List(Object_Type::skinned);
 			//if (it && it->size() > 6) {
@@ -1074,7 +1074,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	return(false);
 }
 
-bool CScene::ProcessInput(UCHAR *pKeysBuffer)
+bool CScene::ProcessInput(UCHAR* pKeysBuffer)
 {
 	bool bKeyProcessed = false;
 
@@ -1105,11 +1105,11 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 
 
-	return false; 
+	return false;
 
 }
 
-void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
+void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
@@ -1127,7 +1127,16 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-	
+  
+	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (list) {
+		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+			}
+		}
+	}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1174,12 +1183,12 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 }
 
-void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+	//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
-	
+
 
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
@@ -1726,7 +1735,7 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 	else
 	{
 		camera_ptr->EnableFocusTracking(false, XMFLOAT3(0.0f, 0.0f, 0.0f));
-		XMFLOAT3 lookDir = XMFLOAT3(0.0f, 0.0f, 1.0f); 
+		XMFLOAT3 lookDir = XMFLOAT3(0.0f, 0.0f, 1.0f);
 		camera_ptr->SetLookDirection(lookDir);
 		camera_ptr->RegenerateViewMatrix();
 
@@ -1784,15 +1793,15 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '1':
 			SetCameraTarget("Captain");
-		break;
+			break;
 
 		case '2':
 			SetCameraTarget("Sailor_0");
-		break;
+			break;
 
 		case '3':
 			SetCameraTarget("Sailor_1");
-		break;
+			break;
 
 		case '4':
 			SetCameraTarget("Sailor_2");
@@ -1804,7 +1813,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '6':
 			SetCameraTarget("Sailor_4");
-		break;
+			break;
 
 		default:
 			break;
