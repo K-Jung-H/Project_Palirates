@@ -516,7 +516,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
-//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 	m_pLights[3].m_bEnable = false;
 	m_pLights[3].m_nType = SPOT_LIGHT;
 	m_pLights[3].m_fRange = 600.0f;
@@ -540,12 +540,12 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 }
 
-void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature); 
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 
@@ -628,7 +628,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
 
-	
+
 #endif
 
 
@@ -636,10 +636,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
 #endif
 
-//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
+	//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 
 
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
@@ -660,9 +661,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 
 
-	string Monster_1 = "Anubis";
-	string Monster_2 = "Dragon";
-	string Monster_3 = "FishMan";
+	string obj_name_1 = "test_obj_name_1";
+	string obj_name_2 = "test_obj_name_2";
+	string obj_name_3 = "test_obj_name_3";
 	string obj_name_4 = "test_palyer2";
 	string obj_name_5 = "test_palyer3";
 	string obj_name_6 = "test_palyer4";
@@ -670,10 +671,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	string obj_name_8 = "test_palyer6";
 
 
-	std::string_view name_view = Monster_1;
+	std::string_view name_view = obj_name_1;
 	std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	//AnubisObject->Add_Collider(10.0f);
 	AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
+	AnubisObject->Set_Name(obj_name_1);
 	AnubisObject->test_num = 1;
 	obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
@@ -714,13 +716,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 10; i++)
+	{
 		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
 		//m->Set_Name(obj_name_3);
-		//m->Add_Collider(10.0f);
 		m->test_num = i + 4;
-		//m->AttachOBBsToAllSkinnedMeshes(m);
 		obj_manager->Add_Object(m, Object_Type::skinned);
 	}
 
@@ -733,13 +734,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	obj_manager->Add_Object(humanObject_8, Object_Type::player);*/
 
-	
+
 
 	//=====================================================
 #ifdef LOAD_SCENE
 	// Load Scene
 
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+
+
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("test_scene");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
@@ -764,12 +768,22 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	Object_Manager::Reserve_Update();
 
+	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+	obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+
+
 	/*if (pGargoyleModel)
 		delete pGargoyleModel;
 	if (pGargoyleModel2)
 		delete pGargoyleModel2;
 	if (pGargoyleModel3)
 		delete pGargoyleModel3;*/
+
+#ifdef RENDER_PARTICLE
+		//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+		//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+		//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+#endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -833,7 +847,7 @@ void CScene::Update_UI()
 		float player_x = m_pPlayer->GetMoveX();
 		float player_z = m_pPlayer->GetMoveZ();
 		State currentState = m_pPlayer->GetStateMachine()->Get_State();
-		std::wstring stateStr = stateToStringMap[currentState];  
+		std::wstring stateStr = stateToStringMap[currentState];
 		State LastState = m_pPlayer->GetStateMachine()->Get_LastState();
 		std::wstring LastStateStr = stateToStringMap[LastState];
 
@@ -869,8 +883,8 @@ void CScene::ReleaseObjects()
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr.reset();
-		
-		if (m_pSkyBox) delete m_pSkyBox;
+
+	if (m_pSkyBox) delete m_pSkyBox;
 
 
 	ReleaseShaderVariables();
@@ -879,15 +893,15 @@ void CScene::ReleaseObjects()
 }
 
 
-void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	UINT ncbElementBytes = ((sizeof(LIGHTS) + 255) & ~255); //256 * N
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
+	m_pd3dcbLights->Map(0, NULL, (void**)&m_pcbMappedLights);
 }
 
-void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 }
 
@@ -919,13 +933,13 @@ void CScene::ReleaseUploadBuffers()
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr->ReleaseUploadBuffers();
 
-	
+
 	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
 	std::vector<std::shared_ptr<CGameObject>>* non_skinned_obj_container = obj_manager->Get_Object_List(Object_Type::non_skinned);
 
 	for (std::shared_ptr<CGameObject> obj_ptr : *skinned_obj_container)
 		obj_ptr->ReleaseUploadBuffers();
-	
+
 	for (std::shared_ptr<CGameObject> obj_ptr : *non_skinned_obj_container)
 		obj_ptr->ReleaseUploadBuffers();
 
@@ -948,31 +962,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_button)
 				break;
 			test_button = true;
-		}	
+		}
 		break;
 
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
-			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
-			if (mon && !mon->empty())
-			{
-				std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
-
-				CGameObject* base2 = baseObj2.get();
-
-				auto* dra = dynamic_cast<CDragonObject*>(base2);
-				if (dra)
-				{
-					if (particle_test_button) {
-						dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-					}
-					else {
-						dra->GetStateMachine()->changeState(State::Idle, Key_Value::None);
-					}
-					//dra->MoveUp(30.0f);
-				}
-			}
 		}
 		break;
 
@@ -981,7 +976,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand == NULL)
 				break;
 
-			test_sand->Update_Func_Index +=1;
+			test_sand->Update_Func_Index += 1;
 			test_sand->Update_Func_Index %= 3;
 
 			if (test_sand->Update_Func_Index != 2)
@@ -1047,7 +1042,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			}*/
 
 		}		break;
-		case 'B': 
+		case 'B':
 		{
 			//auto it = obj_manager->Get_Object_List(Object_Type::skinned);
 			//if (it && it->size() > 6) {
@@ -1095,7 +1090,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	return(false);
 }
 
-bool CScene::ProcessInput(UCHAR *pKeysBuffer)
+bool CScene::ProcessInput(UCHAR* pKeysBuffer)
 {
 	bool bKeyProcessed = false;
 
@@ -1126,24 +1121,16 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 
 
-	return false; 
+	return false;
 
 }
 
-void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
+void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	m_fElapsedTime = fTimeElapsed;
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
-	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
-	if (list) {
-		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
-			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
-			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
-				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
-			}
-		}
-	}
+
 
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
@@ -1156,51 +1143,15 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-	
-	//if (particle_test_button)
-	//{
-		//XMFLOAT3 test_pos = m_pPlayer->GetPosition();
-		//test_pos.y += 15.0f;
-		//test_dragonfire->Set_Center(test_pos);
-		//test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
-	//}
 
-	if (particle_test_button)
-	{
-		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
-		XMFLOAT3 test_pos{};
-		if (list) {
-			for (auto& obj : *list) {
-				const char* objName = obj->Get_Name();
-				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
-				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack2) {
-					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
-
-					if (weapon) {
-						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
-
-						// 위치 추출
-						XMVECTOR scale, rotQuat, trans;
-						if (!XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix)) {
-							trans = XMVectorZero(); 
-						}
-
-						XMFLOAT3 position;
-						XMStoreFloat3(&position, trans);
-						position.y -= 5.0f;
-						position.z -= 5.0f;
-						test_dragonfire->Set_Center(position);
-
-						XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
-						XMFLOAT3 look;
-						XMStoreFloat3(&look, forward);
-						test_dragonfire->Set_Main_Direction(look);
-					}
-				}
+	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (list) {
+		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
 			}
 		}
-		
-		
 	}
 }
 
@@ -1208,11 +1159,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 {
 #ifdef RENDER_OBB
 
-	vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
-
-	//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
+	// Update every frame
+	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
@@ -1222,12 +1170,10 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (test_button)
 	{
 		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-
 		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 		trail_obj->Set_Trail_Target(trail_target, false);
 		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
 		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-
 		test_button = false;
 	}
 }
@@ -1253,12 +1199,12 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 }
 
-void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+	//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
-	
+
 
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
@@ -1285,7 +1231,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
+	obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
@@ -1342,7 +1288,6 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 		m_pLights[1].m_xmf3Position.y += 10.0f;
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
-
 
 }
 
@@ -1414,7 +1359,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	//=====================================================
@@ -1533,7 +1478,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
@@ -1643,8 +1588,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 			delete Ship_Model;
 
 	}
+
 	//=====================================================
 
+#ifdef RENDER_PARTICLE
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
@@ -1664,9 +1611,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.size = 1.0f;
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
-	
+
 	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
 	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
+#endif
 	//=====================================================
 
 
@@ -1803,7 +1751,7 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 	else
 	{
 		camera_ptr->EnableFocusTracking(false, XMFLOAT3(0.0f, 0.0f, 0.0f));
-		XMFLOAT3 lookDir = XMFLOAT3(0.0f, 0.0f, 1.0f); 
+		XMFLOAT3 lookDir = XMFLOAT3(0.0f, 0.0f, 1.0f);
 		camera_ptr->SetLookDirection(lookDir);
 		camera_ptr->RegenerateViewMatrix();
 
@@ -1861,15 +1809,15 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '1':
 			SetCameraTarget("Captain");
-		break;
+			break;
 
 		case '2':
 			SetCameraTarget("Sailor_0");
-		break;
+			break;
 
 		case '3':
 			SetCameraTarget("Sailor_1");
-		break;
+			break;
 
 		case '4':
 			SetCameraTarget("Sailor_2");
@@ -1881,7 +1829,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '6':
 			SetCameraTarget("Sailor_4");
-		break;
+			break;
 
 		default:
 			break;

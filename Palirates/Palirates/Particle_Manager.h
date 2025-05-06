@@ -88,18 +88,6 @@ class Sand_ParticleShader : public ParticleShader
 //==============================================================================
 
 
-struct GPU_OBB
-{
-	XMFLOAT3 Center;
-	UINT Active;
-
-	XMFLOAT3 Extents;
-	UINT Type; 
-
-	XMFLOAT4 Rotation;
-};
-
-
 class Particle_Manager
 {
 private:
