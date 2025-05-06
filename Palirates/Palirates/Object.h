@@ -584,6 +584,12 @@ public:
 	}
 	WeaponObject* pWeapon;
 
+	XMFLOAT4X4 WeaponMatrix = []() {
+		XMFLOAT4X4 m;
+		XMStoreFloat4x4(&m, XMMatrixIdentity());
+		return m;
+		}();
+
 	bool bIsControllable{ true };
 
 	std::unordered_set<int> RootMotionTrackSet;
