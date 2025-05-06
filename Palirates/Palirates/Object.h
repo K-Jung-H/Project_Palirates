@@ -196,7 +196,9 @@ struct Material_GPU_Packet
 {
 	XMFLOAT4 gAlbedoColor;
 	UINT light_material_ID;
-	UINT padding[3];
+	UINT Outline_Color_ID;
+	UINT padding0; 
+	UINT padding1;
 };
 
 class CMaterial
@@ -207,9 +209,11 @@ public:
 	virtual ~CMaterial();
 
 	::shared_ptr<CMaterial> CloneWithSharedTextures() const;
-public:
-	XMFLOAT4 m_cAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
-	UINT m_Material_ID = -1;
+public:	
+	XMFLOAT4 m_cAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f }; 
+	UINT m_Material_ID = 0; 
+	UINT Outline_Color_ID = 0;
+
 
 public:
 	// not use
@@ -631,10 +635,12 @@ public:
 	void Set_Active(bool active, bool bIsRoot = true);
 	bool Get_Active() { return Active; }
 
-	void SetMesh(CMesh* pMesh);
-	void SetShader(CShader* pShader);
-	void SetShader(int nMaterial, CShader* pShader);
-	void SetMaterial(int nMaterial, CMaterial* pMaterial);
+	void SetMesh(CMesh *pMesh);
+	void SetShader(CShader *pShader);
+	void SetShader(int nMaterial, CShader *pShader);
+	void SetMaterial(int nMaterial, CMaterial *pMaterial);
+	void SetOutlineColor(int id);
+
 
 	void Set_Child(std::shared_ptr<CGameObject> pChild);
 

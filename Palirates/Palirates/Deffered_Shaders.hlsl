@@ -23,6 +23,8 @@ float4 GetDebugColorFromID(uint id)
     float g = ((hash >> 8) & 0xFF) / 255.0f;
     float b = (hash & 0xFF) / 255.0f;
 
+    if (id == 0)
+        return float4(1.0f, 1.0f, 1.0f, 1.0f);
     return float4(r, g, b, 1.0f);
 }
 
@@ -82,7 +84,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
-   // return GetDebugColorFromID(materialID);
+    
     //================================================================
     
     float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.xyz, materialID);

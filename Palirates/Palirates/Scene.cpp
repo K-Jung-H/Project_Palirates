@@ -1188,6 +1188,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
+
+#ifdef RENDER_PARTICLE
 	if (particle_test_button)
 	{
 		XMFLOAT3 position = m_pPlayer->GetPosition();
@@ -1195,9 +1197,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 		test_dragonfire->Set_Main_Direction(look);
 		test_dragonfire->Set_Center(position);
-
-
 	}
+#endif
 
 }
 
@@ -1335,10 +1336,10 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.3f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 00.0f, 0.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[1].m_bEnable = false;
+	m_pLights[1].m_bEnable = true;
 	m_pLights[1].m_nType = SPOT_LIGHT;
 	m_pLights[1].m_fRange = 500.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1352,7 +1353,7 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
 
 
-	m_pLights[1].m_bEnable = false;
+	m_pLights[1].m_bEnable = true;
 	m_pLights[1].m_nType = DIRECTIONAL_LIGHT;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -1363,7 +1364,7 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[0].m_bEnable = false;
+	m_pLights[0].m_bEnable = true;
 	m_pLights[1].m_bEnable = false;
 	m_pLights[2].m_bEnable = false;
 
@@ -1687,6 +1688,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 
+
+#ifdef RENDER_PARTICLE
 	XMFLOAT3 bottom_head_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
 
@@ -1698,7 +1701,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	water_particle_2->Set_Center(bottom_tail_particle_pos);
 	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
-
+#endif
 
 	if (m_pPlayer && m_pPlayer->GetCamera())
 	{
