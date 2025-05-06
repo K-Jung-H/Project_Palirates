@@ -5,7 +5,7 @@
 #include "Shader.h"
 
 #define DEFAULT_INSTANCE_NUM 1
-#define MAX_INSTANCING_NUM 10000  // ÃƒÃ–Â´Ã« Ã€ÃÂ½ÂºÃ…ÃÂ½Âº Â°Â³Â¼Ã¶ ÃÂ¦Ã‡Ã‘ 
+#define MAX_INSTANCING_NUM 10000  // ÃÖ´ë ÀÎ½ºÅÏ½º °³¼ö Á¦ÇÑ 
 
 struct BoundingBox_Instance_Info;
 struct Fixed_Object_Info;
@@ -74,7 +74,7 @@ public:
 
 class Object_Manager;
 
-class OBB_Drawer
+class OBB_Drawer 
 {
 public:
 	OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
@@ -91,6 +91,7 @@ public:
 private:
 	void Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list);
 	void Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map);
+	
 	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
 
 	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited);
