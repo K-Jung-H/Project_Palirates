@@ -486,22 +486,42 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 {
 }
 
-void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
 {
-	m_OBBBufferTexture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 0, 1, 0, 0, 1, 0);
+	if (m_OBBBufferTexture) delete m_OBBBufferTexture;
 
-	m_OBBBufferTexture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, nullptr, MAX_OBBS, sizeof(GPU_OBB), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+	m_OBBBufferTexture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 0, 1, 0, 0, 1, 0);
+	m_OBBBufferTexture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, obb_container.empty() ? nullptr : (void*)obb_container.data(), MAX_OBBS, sizeof(GPU_OBB), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+
 	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, m_OBBBufferTexture, 0, 4);
 }
 
-void Particle_Manager::Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> obj_container)
-{
 
+void Particle_Manager::Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<GPU_OBB> obb_container)
+{
+	ID3D12Resource* pResource = m_OBBBufferTexture->GetResource(0); 
+	if (!pResource) return;
+
+	D3D12_RANGE readRange = { 0, 0 }; 
+	void* mappedPtr = nullptr;
+
+	if (SUCCEEDED(pResource->Map(0, &readRange, &mappedPtr)))
+	{
+		memcpy(mappedPtr, obb_container.get(), sizeof(GPU_OBB));
+		pResource->Unmap(0, nullptr);
+	}
 }
+
 void Particle_Manager::Release_OBB_Data_ShaderVariables()
 {
-
+	if (m_OBBBufferTexture)
+	{
+		m_OBBBufferTexture->Release();
+		delete m_OBBBufferTexture;
+		m_OBBBufferTexture = nullptr;
+	}
 }
+
 
 std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
 {

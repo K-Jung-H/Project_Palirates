@@ -257,59 +257,6 @@ void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList
 	rendering_num = visible_count;
 }
 
-void OBB_Drawer::Update_OBB_Test(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container)
-{
-	std::vector<std::shared_ptr<CGameObject>> obb_obj_ptr_list;
-	std::unordered_set<CGameObject*> visited;
-
-	for (std::shared_ptr<CGameObject> obj_ptr : gameobj_container)
-		FindOBBObjects(obj_ptr, obb_obj_ptr_list, visited);
-
-
-
-	int obb_num = obb_obj_ptr_list.size();
-	int visible_count = 0;
-
-	if (obb_num > obb_instance_buffer_max_num)
-	{
-		DebugOutput("\n\nResizing buffer to fit more instances\n\n\n");
-
-
-		Release_OBB_Data_ShaderVariables();
-
-		obb_instance_buffer_max_num = std::min<int>(obb_num * 2, MAX_INSTANCING_NUM);
-
-		Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
-	}
-	else
-	{
-		XMFLOAT4X4 world_matrix = Matrix4x4::Identity();
-
-		for (std::shared_ptr<CGameObject> obj_ptr : obb_obj_ptr_list)
-		{
-			if (visible_count >= obb_instance_buffer_max_num)
-				break;
-
-
-			if (!Get_OBB_WorldMatrix(obj_ptr.get(), &world_matrix))
-				continue;
-			else
-				Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
-
-
-			if (obj_ptr->Get_Active())
-				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::LimeGreen);
-			else
-				XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, Colors::Crimson);
-
-			++visible_count;
-		}
-
-		rendering_num = visible_count;
-	}
-
-}
-
 bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
 {
 	if (!g_obj || !g_obj->Get_Collider())
@@ -1077,6 +1024,49 @@ void Object_Manager::Clear_Object_List_All()
 
 }
 
+std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
+{
+	std::vector<GPU_OBB> obbList;
+
+	for (const auto& [meshName, fixedInfo] : fixed_obj_info_map)
+	{
+		if (!fixedInfo.obj_mesh || !fixedInfo.obj_mesh->Get_BoundingBox()) continue;
+
+		const BoundingOrientedBox& localOBB = *fixedInfo.obj_mesh->Get_BoundingBox();
+
+		for (const auto& obj : fixedInfo.fixed_obj_list)
+		{
+			if (!obj || !obj->Get_Active()) continue;
+
+			// 위치 = 객체 위치
+			XMFLOAT3 position = obj->GetPosition();
+
+			// 회전 추출
+			XMMATRIX mat = XMLoadFloat4x4(&obj->m_xmf4x4World);
+			XMVECTOR scale, rotation, _;
+			XMMatrixDecompose(&scale, &rotation, &_, mat);
+
+			// 스케일 반영
+			XMFLOAT3 scaleVec;
+			XMStoreFloat3(&scaleVec, scale);
+
+			GPU_OBB obb{};
+			obb.Center = position;
+			XMStoreFloat4(&obb.Rotation, rotation);
+			obb.Extents = {
+				localOBB.Extents.x * scaleVec.x,
+				localOBB.Extents.y * scaleVec.y,
+				localOBB.Extents.z * scaleVec.z
+			};
+			obb.Type = static_cast<UINT>(obj->Object_type);
+			obb.Active = obj->Get_Active() ? 1 : 0;
+
+			obbList.push_back(obb);
+		}
+	}
+
+	return obbList;
+}
 
 //==================================================
 void Object_Manager::Create_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
