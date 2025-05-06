@@ -7,7 +7,7 @@
 
 class Post_ComputeShader : public PostProcessBaseShader
 {
-protected:
+private:
 	static ID3D12RootSignature* Post_ComputeRootSignature_ptr;
 
 	int									n_Post_computePipelineStates = 0;

@@ -260,17 +260,6 @@ void PlayerStateMachine::update(float Elapsed_time)
 
     if (key_state.dive && Get_State() != State::Dive) {
         m_pOwner->SetStateElapsedTime(0.0f);
-        if (key_state.right)
-            m_pOwner->SetLookDirection(m_pOwner->GetRight());
-        if (key_state.left){
-            XMVECTOR rightVec = XMLoadFloat3(&m_pOwner->GetRight());
-            XMVECTOR leftVec = -rightVec;
-
-            XMFLOAT3 left;
-            XMStoreFloat3(&left, leftVec);
-            m_pOwner->SetLookDirection(left);
-
-        }
         changeState(State::Dive, Key_Value::None);
     }
     if (key_state.attack1 && Get_State() != State::Attack1) {
@@ -784,190 +773,36 @@ void MonsterStateMachine::SetWeight()
     }
 }
 
-void MonsterStateMachine::RotateLookToTarget(const XMFLOAT3& targetPos, float fDeltaTime, float fLerpSpeed, float fTriggerDistance)
-{
-    const XMFLOAT3& selfPosF3 = m_pOwner->GetPosition();
-
-    float distance = GetDistance(selfPosF3, targetPos);
-    if (distance > fTriggerDistance) return;
-    if (!TargetSet) ChangeTargetSet();
-
-    XMVECTOR selfPos = XMLoadFloat3(&selfPosF3);
-    XMVECTOR target = XMLoadFloat3(&targetPos);
-    XMVECTOR toTarget = XMVector3Normalize(target - selfPos);
-
-    XMVECTOR currentLook = XMLoadFloat3(&m_pOwner->GetLook());
-    XMVECTOR newLook = XMVector3Normalize(XMVectorLerp(currentLook, toTarget, fLerpSpeed * fDeltaTime));
-
-    XMFLOAT3 finalLook;
-    XMStoreFloat3(&finalLook, newLook);
-    m_pOwner->SetLookDirection(finalLook);
-}
-
-void MonsterStateMachine::ChangeIfNear(State nextState, float triggerDistance)
-{
-    float distance = GetDistance(m_pOwner->GetPosition(), m_TargetPosition);
-    if (distance > triggerDistance) return;
-
-    XMVECTOR selfPos = XMLoadFloat3(&m_pOwner->GetPosition());
-    XMVECTOR targetPos = XMLoadFloat3(&m_TargetPosition);
-    XMVECTOR dir = XMVector3Normalize(targetPos - selfPos);
-
-    dir = XMVectorSetY(dir, 0.0f); 
-    dir = XMVector3Normalize(dir);
-
-    XMFLOAT3 finalLook;
-    XMStoreFloat3(&finalLook, dir);
-    m_pOwner->SetLookDirection(finalLook);
-
-    changeState(nextState, Key_Value::None);
-}
-
 ////////////////////////////////////////////////////////
-
-void FishManStateMachine::update(float Elapsed_time)
-{
-    OnPrepareUpdate(6.0f, Elapsed_time);
-
-    if (!GetTargetSet()) {
-        if (stateElapsedTime >= stateChangeTime) {
-            switch (Get_State()) {
-            case State::Idle:
-                changeState(State::Run, Key_Value::None);
-                break;
-            case State::Run:
-                changeState(State::Idle, Key_Value::None);
-                break;
-            }
-
-            stateElapsedTime = 0.0f;
-            stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
-        }
-    }
-
-    switch (Get_State()) {
-    case State::Idle:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
-        if (TargetSet)  changeState(State::Run, Key_Value::None);
-        m_pOwner->targetWeights[TRACK_FISHMAN_IDLE] = 1.0f;
-        break;
-    case State::Run:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
-        m_pOwner->targetWeights[TRACK_FISHMAN_WALK] = 1.0f;
-        RootMotionMove(10.0f); 
-        {
-            std::uniform_int_distribution<int> dist(0, 1);
-            State attackState = (dist(m_Rng) == 0) ? State::Attack1 : State::Attack2;
-            ChangeIfNear(attackState, 20.0f);
-        }
-        break;
-    case State::Get_Hit:
-        if (animController->m_pAnimationTracks[TRACK_FISHMAN_GET_HIT].m_bFinished) {
-            changeState(State::Idle, Key_Value::None);
-        }
-        m_pOwner->targetWeights[TRACK_FISHMAN_GET_HIT] = 1.0f;
-        RootMotionMove(20.0f, true);
-        break;
-    case State::Attack1:
-        if (animController->m_pAnimationTracks[TRACK_FISHMAN_ATTACK1].m_bFinished) {
-            changeState(State::Idle, Key_Value::None);
-        }
-        m_pOwner->targetWeights[TRACK_FISHMAN_ATTACK1] = 1.0f;
-        RootMotionMove(20.0f);
-        break;
-    case State::Attack2:
-        if (animController->m_pAnimationTracks[TRACK_FISHMAN_ATTACK2].m_bFinished) {
-            changeState(State::Idle, Key_Value::None);
-        }
-        m_pOwner->targetWeights[TRACK_FISHMAN_ATTACK2] = 1.0f;
-        RootMotionMove(20.0f);
-        break;
-    }
-
-    SetWeight();
-}
-
-void FishManStateMachine::enterState(State state, Key_Value key_event)
-{
-    if (GetFishManRootMotionStateToTrackMap().contains(state)) {
-        if (m_pOwner != nullptr) {
-            m_pOwner->bIsControllable = false;
-        }
-
-        ResetTrackForState(state, true);
-    }
-    switch (state)
-    {
-    default:
-        break;
-    }
-}
-
-void FishManStateMachine::exitState(State state, Key_Value key_event)
-{
-    if (GetFishManRootMotionStateToTrackMap().contains(state)) {
-        if (m_pOwner != nullptr) {
-            m_pOwner->bIsControllable = true;
-        }
-
-        ResetTrackForState(state, false);
-    }
-}
-
-void FishManStateMachine::ResetTrackForState(State state, bool posReset)
-{
-    auto it = GetFishManRootMotionStateToTrackMap().find(state);
-    if (it != GetFishManRootMotionStateToTrackMap().end()) {
-        int track = it->second;
-        if (animController != nullptr) {
-            animController->m_pAnimationTracks[track].m_bFinished = false;
-            if (posReset)
-                animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
-        }
-    }
-}
 
 void AnubisStateMachine::update(float Elapsed_time)
 {
     OnPrepareUpdate(6.0f, Elapsed_time);
 
-    if (!GetTargetSet()) {
-        if (stateElapsedTime >= stateChangeTime) {
-            switch (Get_State()) {
-            case State::Idle:
-                changeState(State::Run, Key_Value::None);
-                break;
-            case State::Run:
-                changeState(State::Idle, Key_Value::None);
-                break;
-            }
-            stateElapsedTime = 0.0f;
-            stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
+    if (stateElapsedTime >= stateChangeTime) {
+        switch (Get_State()) {
+        case State::Idle:
+            changeState(State::Run, Key_Value::None);
+            break;
+        case State::Run:
+            changeState(State::Idle, Key_Value::None);
+            break;
+        case State::Dive:
+            break;
         }
+
+        stateElapsedTime = 0.0f;
+        stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
     }
 
     switch (Get_State()) {
     case State::Idle:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
         m_pOwner->targetWeights[TRACK_ANUBIS_IDLE] = 1.0f;
-        if (TargetSet)  changeState(State::Run, Key_Value::None);
         break;
     case State::Run:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
         m_pOwner->targetWeights[TRACK_ANUBIS_WALK] = 1.0f;
         RootMotionMove(10.0f);
-        {
-            std::uniform_int_distribution<int> dist(0, 2); 
-            State attackState;
 
-            switch (dist(m_Rng)) {
-            case 0: attackState = State::Attack1; break;
-            case 1: attackState = State::Attack2; break;
-            case 2: attackState = State::Attack3; break;
-            }
-
-            ChangeIfNear(attackState, 30.0f);
-        }
         break;
     case State::Get_Hit:
         if (animController->m_pAnimationTracks[TRACK_ANUBIS_GET_HIT].m_bFinished) {
@@ -1071,19 +906,16 @@ void DragonStateMachine::update(float Elapsed_time)
 
     switch (Get_State()) {
     case State::Idle:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
         // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
-        m_pOwner->targetWeights[0] = 1.0f;
+        m_pOwner->targetWeights[5] = 1.0f;
         break;
     case State::Run:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
         m_pOwner->targetWeights[3] = 1.0f;
 
         RootMotionMove(10.0f);
 
         break;
     case State::Attack2:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 150.0f);
         m_pOwner->targetWeights[10] = 1.0f;
         RootMotionMove(0.0f);
         break;
