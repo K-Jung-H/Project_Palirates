@@ -495,10 +495,10 @@ public:
 #define OBJECT_TPYE_MAIN_PLAYER		0x01
 #define OBJECT_TPYE_PLAYER		0x02
 #define OBJECT_TPYE_MONSTER		0x04
-//#define OBJECT_TPYE_PLAYER		0x08
-//#define OBJECT_TPYE_PLAYER		0x10
-//#define OBJECT_TPYE_PLAYER		0x20
-//#define OBJECT_TPYE_PLAYER		0x40
+#define OBJECT_TPYE_PLAYER_WEAPON		0x08
+//#define OBJECT_TPYE_PLAYER_BODY		0x10
+#define OBJECT_TPYE_MONSTER_WEAPON		0x20
+//#define OBJECT_TPYE_MONSTER_BODY		0x40
 
 class CHeightMapTerrain;
 
@@ -530,7 +530,7 @@ public:
 	}
 };
 
-class CGameObject
+class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 private:
 	std::shared_ptr<CGameObject> m_pChild = nullptr;
@@ -601,6 +601,9 @@ public:
 		}();
 
 	XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
+
+	bool bUpdateOBB{ true };
+	std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -709,6 +712,7 @@ public:
 	void UpdateTransform(XMFLOAT4X4* pxmf4x4Parent = NULL);
 
 	CGameObject* FindFrame(char* pstrFrameName);
+	std::shared_ptr<CGameObject> FindFrame_v2(const char* pstrFrameName);
 
 	CTexture* FindReplicatedTexture(_TCHAR* pstrTextureName);
 
@@ -763,6 +767,9 @@ public:
 
 	std::vector<float> prevWeights;
 	std::vector<float> targetWeights;
+
+	void bUpdateOBBOn() { bUpdateOBB = true; }
+	void bUpdateOBBOff() { bUpdateOBB = false; }
 
 public:
 	static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;

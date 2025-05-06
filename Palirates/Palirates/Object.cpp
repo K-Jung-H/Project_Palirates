@@ -1920,6 +1920,28 @@ CGameObject* CGameObject::FindFrame(char* pstrFrameName)
 	return nullptr;
 }
 
+std::shared_ptr<CGameObject> CGameObject::FindFrame_v2(const char* pstrFrameName)
+{
+	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
+		return shared_from_this();  
+
+	std::shared_ptr<CGameObject> found;
+
+	if (m_pSibling)
+	{
+		found = m_pSibling->FindFrame_v2(pstrFrameName);
+		if (found) return found;
+	}
+
+	if (m_pChild)
+	{
+		found = m_pChild->FindFrame_v2(pstrFrameName);
+		if (found) return found;
+	}
+
+	return nullptr;
+}
+
 void CGameObject::UpdateTransform(XMFLOAT4X4* pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Parent, *pxmf4x4Parent) : m_xmf4x4Parent;
@@ -4452,6 +4474,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	WeaponName = "spear_lp";
 	auto model = FindFrame(WeaponName);
 	//auto model = FindFrame("body_lp");
+	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
 	XMFLOAT4 quaternion;
@@ -4465,6 +4488,13 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
+
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 0.8f, 0.0f),  
+		XMFLOAT3(0.4f, 0.8f, 0.4f),  
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
+	);
+	Set_Collider(body);
 
 	model->customRotation = XMMatrixRotationRollPitchYaw(
 		XMConvertToRadians(45.0f),
@@ -4526,6 +4556,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	WeaponName = "Staff_LP";
 	auto model = FindFrame(WeaponName);
+	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
 	XMFLOAT4 quaternion;
@@ -4597,6 +4628,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	WeaponName = "HeadA_LP";
 	auto model = FindFrame(WeaponName);
+	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
 	XMFLOAT4 quaternion;
