@@ -543,8 +543,10 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::skinned:
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
-			if (obj_ptr->Get_Active())
+			if (obj_ptr->Get_Active()) {
+				if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
 				obj_ptr->Animate(fTimeElapsed);
+			}
 	}
 	break;
 

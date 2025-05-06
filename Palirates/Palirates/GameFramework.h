@@ -206,7 +206,8 @@ public:
 	PostProcessBaseShader* MRT_shader = NULL;
 
 
-	CPlayer						*m_pPlayer = NULL;
+	//CPlayer						*m_pPlayer = NULL;
+	std::shared_ptr<CPlayer> m_pPlayer = NULL;
 	CCamera						*m_pCamera = NULL;
 
 
@@ -216,7 +217,7 @@ public:
 
 	//=================서버=================
 	Scene_Manager& GetSceneManager() { return *scene_manager; } 
-	CPlayer* GetPlayer() { return m_pPlayer; }
+	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
 	bool multiMode{ false };
 	int nPlayer{ 0 };
 	int ClientNum{ 0 };

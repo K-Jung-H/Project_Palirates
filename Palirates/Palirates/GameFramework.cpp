@@ -71,7 +71,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
 	Build_Scenes();
-
+	scene_manager->Get_Active_Scene()->obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
 	return(true);
 }
 
@@ -633,20 +633,20 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
 	scene_manager->Register_Scene("In_Stage", in_stage_scene);
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
+	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 
 	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
 	scene_manager->Register_Scene("Game_Board", game_board_scene);
 	scene_manager->Build_Scene("Game_Board", m_pd3dDevice, Active_CommandList);
-	Observer* game_board_observer = new Observer(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	std::shared_ptr<Observer> game_board_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
 	scene_manager->Set_Scene_Player("Game_Board", game_board_observer);
 
 
 	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
 	scene_manager->Register_Scene("Character_Select", character_select_scene);
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
-	Observer* select_scene_observer = new Observer(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
+	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
@@ -1140,7 +1140,7 @@ void CGameFramework::SendPacket()
 
 	if (!serverSocket) return;
 
-	CPlayer* player = GetPlayer();
+	std::shared_ptr<CPlayer> player = GetPlayer();
 	if (!player) return;
 
 	DirectX::XMFLOAT3 pos = player->GetPosition();
