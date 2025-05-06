@@ -639,6 +639,8 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void ParticleObject::Add_Destroy_Queue() 
 {
-	if (owner_manager) 
-		owner_manager->Queue_Destroy(shared_from_this()); 
+	auto particlePtr = std::dynamic_pointer_cast<ParticleObject>(shared_from_this());
+
+	if (particlePtr)
+		owner_manager->Queue_Destroy(particlePtr);
 }

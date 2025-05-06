@@ -31,7 +31,7 @@
 #include <map>
 #include <array>
 #include <random>
-
+#include <optional>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
