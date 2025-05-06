@@ -173,7 +173,7 @@ void Server::BroadcastAllStates()
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
 
-        for (const auto& [id, m] : scene->getMonsters()) 
+        for (const auto& [id, m] : scene.getMonsters()) 
         {
             std::string packet = "MONSTER_UPDATE," + std::to_string(m.id) + "," +
                 std::to_string(m.x) + "," + std::to_string(m.y) + "," + std::to_string(m.z) + "," +
@@ -215,7 +215,7 @@ void Server::SendInitialStates(int clientId)
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 
 
-        for (const auto& [monsterId, monster] : scene->getMonsters())
+        for (const auto& [monsterId, monster] : scene.getMonsters())
         {
             std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
             send(clients[clientId], create.c_str(), create.length(), 0);
@@ -255,13 +255,13 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
 
     for (const auto& [clientId, sock] : clients)
     {
-        if (clientId == newClientId) continue;  // 자기 자신 제외
+        if (clientId == newClientId) continue; // 자기 자신 제외
 
         send(sock, createPacket.c_str(), createPacket.length(), 0);
         send(sock, packet.c_str(), packet.length(), 0);
     }
 
-    logger.Log("기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
+    logger.Log("[서버] 기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
     logger.Log("[서버] (NotifyExistingPlayersAboutNew) PLAYER_CREATE 전송: " + createPacket);
 }
 

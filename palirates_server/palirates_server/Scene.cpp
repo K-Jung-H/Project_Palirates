@@ -32,9 +32,9 @@ void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float 
 
 }
 
-void Scene::addMonster(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state)
+void Scene::addMonster(int id, float x, float y, float z, float lookX, float lookY, float lookZ, int hp, int state, Monster_Type type)
 {
-      
+    monsterMap[id] = Monster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
 }
 
 void Scene::printScene()
