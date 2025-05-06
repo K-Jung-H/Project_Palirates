@@ -2211,9 +2211,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	if (Active && m_pMesh)
 	{
 		//if (!IsVisible(pCamera))
-
-		//	return;
-
+			//return;
 
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
