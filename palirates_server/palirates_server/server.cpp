@@ -200,7 +200,7 @@ void Server::SendInitialStates(int clientId)
 
         std::string createPacket = "PLAYER_CREATE," + std::to_string(otherId) + "\n";
         send(clients[clientId], createPacket.c_str(), createPacket.length(), 0);
-        
+
         float safeLookY = (character->lookY == 0.0f) ? 1.0f : character->lookY;
 
         std::string updatePacket = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
@@ -228,9 +228,9 @@ void Server::SendInitialStates(int clientId)
 
             send(clients[clientId], update.c_str(), update.length(), 0);
 
+        }
     }
 }
-
 
 void Server::NotifyExistingPlayersAboutNew(int newClientId)
 {
