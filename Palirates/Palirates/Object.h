@@ -447,9 +447,6 @@ public:
 	void Obj_Info(int depth=0);
 	void Set_Name(std::string_view name);
 
-	const char* Get_Name() const { return m_pstrFrameName; }
-	std::string Get_Name() const { return std::string(m_pstrFrameName); }
-
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
 
 	virtual void OnPrepareAnimate() { }
