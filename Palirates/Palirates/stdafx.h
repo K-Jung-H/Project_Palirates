@@ -136,7 +136,7 @@ extern HINSTANCE						ghAppInstance;
 
 //#define WRITE_TEXT_UI
 
-#define LOAD_SCENE
+//#define LOAD_SCENE
 #define RENDER_OBB
 #define RENDER_PARTICLE
 
