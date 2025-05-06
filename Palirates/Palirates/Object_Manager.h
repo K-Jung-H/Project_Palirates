@@ -41,17 +41,6 @@ struct Fixed_Object_Info
 
 };
 
-enum class Object_Type
-{
-	skinned,
-	non_skinned,
-	fixed,
-	player,
-	trail,
-	plane,
-	etc
-};
-
 
 class BoundingBox_Shader : public CShader
 {
@@ -70,118 +59,137 @@ public:
 };
 
 
-class Object_Manager;
-
-class OBB_Drawer 
+class OBB_Drawer
 {
+protected:
+	ID3D12Resource* Instance_info = NULL;
+	BoundingBox_Instance_Info* Mapped_Instance_info = NULL;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
+
+	int obb_instance_buffer_max_num = DEFAULT_INSTANCE_NUM;
+	int rendering_num = 1;
+
 public:
-	OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
-	~OBB_Drawer();
-
-	void Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	void Release_OBB_Data_ShaderVariables();
-
-	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type, Object_Manager* obj_mgr);
-
-	void Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
-
-private:
-	void Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list);
-	void Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map);
-	
-	void Update_OBB_Test(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
-	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
-
-	bool Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world);
-	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited);
-
-private:
 	static CubeMesh* obb_Mesh;
 	static BoundingBox_Shader* obb_shader;
 
-	ID3D12Resource* Instance_info = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView{};
-	BoundingBox_Instance_Info* Mapped_Instance_info = nullptr;
+	OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	~OBB_Drawer();
 
-	int obb_instance_buffer_max_num = 64;
-	int rendering_num = 0;
+	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Release_OBB_Data_ShaderVariables();
+	
+	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>> gameobj_container);
+	void Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info> gameobj_container);
+
+
+	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_obj_ptr_list, std::unordered_set<CGameObject*>& visited);
+	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
+	
+
+
+	
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
 };
 
+
+
+
+
+enum class Object_Type
+{
+	skinned,
+	non_skinned,
+	fixed,
+	player,
+	trail,
+	plane,
+	etc
+};
 
 class Object_Manager
 {
 private:
-	// Terrain and tile management
-	std::shared_ptr<CHeightMapTerrain> terrain_ptr;
+	shared_ptr<OBB_Drawer> bounding_box_drawer;
+	shared_ptr<CHeightMapTerrain> terrain_ptr;
+
+	// 움직이는 객체들
+	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
+	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
+
+	std::vector<std::shared_ptr<CGameObject>> player_list;
+
+
+
+private:
+	// 고정된 사물 객체
+	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;		// 사물 객체 정보
+	std::unordered_set<std::string> unique_mesh_names; 	// 사물 중복 검사
+
+	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
+
+private:
 	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
 	void Synchronize_Active_Objects_and_Tile();
 
-	// Dynamic object lists
-	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
-	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
-	std::vector<std::shared_ptr<CGameObject>> player_list;
-	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
-	std::vector<std::shared_ptr<CGameObject>> plane_obj_list;
-
-	// Static object map
-	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
-	std::unordered_set<std::string> unique_mesh_names;
-	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
-
-	// OBB drawer map per object type
-	std::unordered_map<Object_Type, std::shared_ptr<OBB_Drawer>> obb_drawer_map;
 
 public:
-	// Constructor / Destructor
+	//test 
+	Wave_Object* wave_obj = NULL;
+	std::vector<std::shared_ptr<CGameObject>> plane_obj_list;
+
+	
+
+	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
+	static std::shared_ptr<CShader> trail_shader;
+
+
+	void Classify_Objects_By_Tile();
+
+	static std::shared_ptr<CShader> instance_shader;
+	static bool do_instance_update;
+	static	void Reserve_Update() { do_instance_update = true; }
+
 	Object_Manager();
 	~Object_Manager();
 
-	// Object management
 	void Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Type type);
-	void Delete_Object(std::shared_ptr<CGameObject> obj_ptr);
-	void Clear_Object_List(Object_Type type);
-	void Clear_Object_List_All();
+	void Delete_Object(std::shared_ptr<CGameObject > obj_ptr);
+	void Set_Terrain_Object(std::shared_ptr<CHeightMapTerrain > obj_ptr) { terrain_ptr = obj_ptr; }
 
-	// Terrain setter
-	void Set_Terrain_Object(std::shared_ptr<CHeightMapTerrain> obj_ptr) { terrain_ptr = obj_ptr; }
 
-	// Accessors for object lists
-	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
-	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
-	std::vector<std::shared_ptr<CGameObject>> Gather_All_Fixed_Objects();
-
-	// Animation and logic update
 	void Animate_Objects_All(float fTimeElapsed);
 	void Animate_Objects(Object_Type type, float fTimeElapsed);
-	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Post_Update(Object_Type type);
-	void Post_Update_All();
 
-	// Visibility / culling
+	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
 	void Check_Culling_All(CCamera* pCamera);
 
-	// Rendering
-	void Render_Terrain(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
-	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
-	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
-	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+	
+	void Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
-	// Instancing update flag
-	static std::shared_ptr<CShader> instance_shader;
-	static bool do_instance_update;
-	static void Reserve_Update() { do_instance_update = true; }
+	void Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
-	// OBB drawer management
-	void Create_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
-	void Create_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
-	void Update_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	void Update_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	void Render_OBB_Drawers(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 
-	// Miscellaneous
-	static std::shared_ptr<CShader> trail_shader;
-	Wave_Object* wave_obj = nullptr;
 
-	void Classify_Objects_By_Tile();
+	void Post_Update(Object_Type type);
+	void Post_Update_All();
+
+	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
+	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
+
+	void Clear_Object_List_All();
+	void Clear_Object_List(Object_Type type);
+
+	//========================================================================
+	void Create_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	void Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
+	void Update_OBB_Drawer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::unordered_map<std::string, Fixed_Object_Info > gameobj_container);
+
+	void Render_OBB_Drawer(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 };
+

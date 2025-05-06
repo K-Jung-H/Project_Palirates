@@ -337,39 +337,7 @@ public class Scene_Model_Maker_Binary : MonoBehaviour
         }
     }
 
-    void WriteOrientedBoundingBox(Mesh mesh)
-    {
-        GameObject meshObject = GameObject.Find(mesh.name);
-        Vector3 center;
-        Vector3 extents;
-        Quaternion rotation = Quaternion.identity;
-
-        if (meshObject != null)
-        {
-            BoxCollider box = meshObject.GetComponent<BoxCollider>();
-            if (box != null)
-            {
-                center = box.center;
-                extents = box.size * 0.5f;
-            }
-            else
-            {
-                center = mesh.bounds.center;
-                extents = mesh.bounds.extents;
-            }
-        }
-        else
-        {
-            center = mesh.bounds.center;
-            extents = mesh.bounds.extents;
-        }
-
-        global_binaryWriter.Write("<Oriented_Bounds_Box>:");
-        WriteVector(center);
-        WriteVector(extents);
-        WriteQuaternion(rotation);
-    }
-    //================================================================================
+//================================================================================
 
 
 
@@ -460,8 +428,7 @@ public class Scene_Model_Maker_Binary : MonoBehaviour
             global_binaryWriter = meshWriter; 
 
             WriteObjectName("<Mesh>:", mesh.vertexCount, mesh);
-            //WriteBoundingBox("<Bounds>:", mesh.bounds);
-            WriteOrientedBoundingBox(mesh);
+            WriteBoundingBox("<Bounds>:", mesh.bounds);
             WriteVectors("<Positions>:", mesh.vertices);
             WriteColors("<Colors>:", mesh.colors);
             WriteTextureCoords("<TextureCoords0>:", mesh.uv);
