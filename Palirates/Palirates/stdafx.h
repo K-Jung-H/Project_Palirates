@@ -136,9 +136,9 @@ extern HINSTANCE						ghAppInstance;
 
 //#define WRITE_TEXT_UI
 
-//#define LOAD_SCENE
+#define LOAD_SCENE
 #define RENDER_OBB
-//#define RENDER_PARTICLE
+#define RENDER_PARTICLE
 
 
 //#define DEBUG_MESSAGE
@@ -167,6 +167,16 @@ enum Control_BufferType
 	BUFFER_COUNTER_RESET = 2
 };
 
+struct GPU_OBB
+{
+	XMFLOAT3 Center;
+	UINT Active;
+
+	XMFLOAT3 Extents;
+	UINT Type;
+
+	XMFLOAT4 Rotation;
+};
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);

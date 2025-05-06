@@ -88,18 +88,6 @@ class Sand_ParticleShader : public ParticleShader
 //==============================================================================
 
 
-struct GPU_OBB
-{
-	XMFLOAT3 Center;
-	UINT Active;
-
-	XMFLOAT3 Extents;
-	UINT Type; 
-
-	XMFLOAT4 Rotation;
-};
-
-
 class Particle_Manager
 {
 private:
@@ -119,8 +107,8 @@ public:
 
 	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
 
-	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> obj_container);
+	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);
+	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<GPU_OBB> obb_container);
 	void Release_OBB_Data_ShaderVariables();
 
 	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);

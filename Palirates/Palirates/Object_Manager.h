@@ -1,8 +1,8 @@
 #pragma once
+#include "stdafx.h"
 #include "Object.h"
 #include "Player.h"
 #include "Shader.h"
-
 
 #define DEFAULT_INSTANCE_NUM 1
 #define MAX_INSTANCING_NUM 10000  // 최대 인스턴스 개수 제한 
@@ -10,7 +10,7 @@
 struct BoundingBox_Instance_Info;
 struct Fixed_Object_Info;
 struct Instance_Info;
-
+struct GPU_OBB;
 
 struct Instance_Info
 {
@@ -22,6 +22,8 @@ struct alignas(16) BoundingBox_Instance_Info
 	XMFLOAT4X4 world_4x4transform;
 	XMFLOAT4 box_color;
 };
+
+
 
 struct Fixed_Object_Info
 {
@@ -82,6 +84,7 @@ public:
 	void Release_OBB_Data_ShaderVariables();
 
 	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type, Object_Manager* obj_mgr);
+	static bool Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world);
 
 	void Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 
@@ -89,10 +92,8 @@ private:
 	void Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list);
 	void Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map);
 	
-	void Update_OBB_Test(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::vector<std::shared_ptr<CGameObject>>gameobj_container);
 	bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
 
-	bool Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world);
 	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited);
 
 private:
@@ -184,4 +185,12 @@ public:
 	Wave_Object* wave_obj = nullptr;
 
 	void Classify_Objects_By_Tile();
+
+
+
+	std::vector<GPU_OBB> m_OBBDataArray;
+	std::vector<GPU_OBB> Extract_Fixed_OBBs();
+	void Update_Fixed_OBBs() { m_OBBDataArray = Extract_Fixed_OBBs(); }
+	const std::vector<GPU_OBB>& Get_Fixed_OBBs() const { return m_OBBDataArray; }
+
 };
