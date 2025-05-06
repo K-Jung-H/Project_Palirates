@@ -431,22 +431,23 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			if (nMessageID == WM_KEYDOWN && wParam == VK_OEM_2) {
 				// Monster State Change EX
+				//static bool test = false;
 				//auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 
 				//if (mon && !mon->empty())
 				//{
-				//	std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
+				////	std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
 
-				//	CGameObject* base = baseObj.get();
+				////	CGameObject* base = baseObj.get();
 
-				//	auto* anubis = dynamic_cast<CAnubisObject*>(base);
-				//	if (anubis)
-				//	{
-				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-				//		anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				//	}
+				////	auto* anubis = dynamic_cast<CAnubisObject*>(base);
+				////	if (anubis)
+				////	{
+				////		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+				////		anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
+				////		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				////		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+				////	}
 
 				//	std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
 
@@ -455,11 +456,15 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 				//	auto* dra = dynamic_cast<CDragonObject*>(base2);
 				//	if (dra)
 				//	{
-				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-				//		dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				//		dra->MoveUp(30.0f);
+				//		if (test) {
+				//			dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//			test = !test;
+				//		}
+				//		else {
+				//			dra->GetStateMachine()->changeState(State::Idle, Key_Value::None);
+				//			test = !test;
+				//		}
+				//		//dra->MoveUp(30.0f);
 				//	}
 				//}
 			}
@@ -733,7 +738,6 @@ void CGameFramework::ProcessInput()
 			if (cxDelta || cyDelta)
 			{
 				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-
 					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
@@ -969,7 +973,6 @@ void CGameFramework::FrameAdvance()
 		Update_Scene();
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
-
 
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);

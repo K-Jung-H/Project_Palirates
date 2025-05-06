@@ -599,6 +599,13 @@ public:
 	char* WeaponName = "";
 	BoundingOrientedBox m_WorldOBB;
 	XMMATRIX customRotation = XMMatrixIdentity();
+	XMFLOAT4X4 WeaponMatrix = []() {
+		XMFLOAT4X4 m;
+		XMStoreFloat4x4(&m, XMMatrixIdentity());
+		return m;
+		}();
+
+	XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
 
 public:
 	CGameObject(const std::string_view& name = "No_name");
@@ -636,6 +643,7 @@ public:
 	void Obj_Info(int depth=0);
 	void Set_Name(std::string_view name);
 
+	const char* Get_Name() const { return m_pstrFrameName; }
 	std::string Get_Name() const { return std::string(m_pstrFrameName); }
 
 	virtual void BuildMaterials(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList) { }
