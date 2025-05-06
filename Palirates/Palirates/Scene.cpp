@@ -686,7 +686,19 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		}
 	}
 
-	
+
+	//obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
+
+	/*name_view = obj_name_8;
+	std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, m_pTerrain.get());
+	humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
+	humanObject_8->Set_Name(obj_name_8);
+	humanObject_8->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(humanObject_8));
+	humanObject_8->Object_type = OBJECT_TPYE_PLAYER;
+
+	obj_manager->Add_Object(humanObject_8, Object_Type::player);*/
+
+
 
 	//=====================================================
 #ifdef LOAD_SCENE
@@ -732,9 +744,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+	//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -920,6 +932,25 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
+			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (mon && !mon->empty())
+			{
+				std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
+
+				CGameObject* base2 = baseObj2.get();
+
+				auto* dra = dynamic_cast<CDragonObject*>(base2);
+				if (dra)
+				{
+					if (particle_test_button) {
+						dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+					}
+					else {
+						dra->GetStateMachine()->changeState(State::Idle, Key_Value::None);
+					}
+					//dra->MoveUp(30.0f);
+				}
+			}
 		}
 		break;
 
@@ -1080,6 +1111,53 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
 	}
 	
+	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (list) {
+		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+			}
+		}
+	}
+
+	if (particle_test_button)
+	{
+		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+		XMFLOAT3 test_pos{};
+		if (list) {
+			for (auto& obj : *list) {
+				const char* objName = obj->Get_Name();
+				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
+				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack2) {
+					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
+
+					if (weapon) {
+						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
+
+						// 위치 추출
+						XMVECTOR scale, rotQuat, trans;
+						if (!XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix)) {
+							trans = XMVectorZero();
+						}
+
+						XMFLOAT3 position;
+						XMStoreFloat3(&position, trans);
+						position.y -= 5.0f;
+						position.z -= 5.0f;
+						test_dragonfire->Set_Center(position);
+
+						XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
+						XMFLOAT3 look;
+						XMStoreFloat3(&look, forward);
+						test_dragonfire->Set_Main_Direction(look);
+					}
+				}
+			}
+		}
+
+
+	}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
