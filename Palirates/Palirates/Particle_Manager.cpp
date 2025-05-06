@@ -202,8 +202,6 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	m_czThreadGroups = 1;
 }
 
-
-
 D3D12_SHADER_BYTECODE ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
@@ -242,14 +240,20 @@ ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd
 		pd3dDescriptorRanges[2].BaseShaderRegister = 2;  // u2
 		pd3dDescriptorRanges[2].RegisterSpace = 0;
 		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[3].NumDescriptors = 1;
+		pd3dDescriptorRanges[3].BaseShaderRegister = 0;  // t0
+		pd3dDescriptorRanges[3].RegisterSpace = 0;
+		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
-	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
 	{
 		// b1 - ConstantBuffer 업데이트에 필요한 정보
 		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 		pd3dRootParameters[0].Descriptor.ShaderRegister = 0; // Frame_Info
 		pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[0].Constants.Num32BitValues = 12;
+		pd3dRootParameters[0].Constants.Num32BitValues = 16;
 		pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// u0 - RWStructuredBuffer<Particle> : 파티클 데이터 버퍼 (읽기/쓰기 용도)
@@ -269,6 +273,10 @@ ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
+		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
+		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
@@ -488,28 +496,42 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
 {
-	if (m_OBBBufferTexture) delete m_OBBBufferTexture;
-
-	m_OBBBufferTexture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 0, 1, 0, 0, 1, 0);
-	m_OBBBufferTexture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, obb_container.empty() ? nullptr : (void*)obb_container.data(), MAX_OBBS, sizeof(GPU_OBB), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-
+	UINT obbCount = std::min(static_cast<UINT>(obb_container.size()), MAX_OBBS);
+	
+	if (m_OBBBufferTexture) 
+		delete m_OBBBufferTexture;
+	
+	m_OBBBufferTexture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 0, 0, 1, 0, 0, 1);
+	m_OBBBufferTexture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, obbCount ? (void*)obb_container.data() : nullptr, obbCount, sizeof(GPU_OBB), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	OBB_num = obbCount;
 	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, m_OBBBufferTexture, 0, 4);
 }
 
 
-void Particle_Manager::Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<GPU_OBB> obb_container)
+void Particle_Manager::Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
 {
-	ID3D12Resource* pResource = m_OBBBufferTexture->GetResource(0); 
+	if (!m_OBBBufferTexture || obb_container.empty()) 
+		return;
+
+	ID3D12Resource* pResource = m_OBBBufferTexture->GetResource(0);
 	if (!pResource) return;
 
-	D3D12_RANGE readRange = { 0, 0 }; 
 	void* mappedPtr = nullptr;
+	D3D12_RANGE readRange = { 0, 0 }; 
 
 	if (SUCCEEDED(pResource->Map(0, &readRange, &mappedPtr)))
 	{
-		memcpy(mappedPtr, obb_container.get(), sizeof(GPU_OBB));
+		memcpy(mappedPtr, obb_container.data(), sizeof(GPU_OBB) * obb_container.size());
 		pResource->Unmap(0, nullptr);
 	}
+
+	OBB_num = static_cast<UINT>(obb_container.size());
+}
+
+void Particle_Manager::Bind_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if(m_OBBBufferTexture)
+		m_OBBBufferTexture->UpdateComputeSrvShaderVariables(pd3dCommandList);
 }
 
 void Particle_Manager::Release_OBB_Data_ShaderVariables()
@@ -571,6 +593,8 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 			update_info.EmitRegionMax = aabb_pos.second;
 			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 			update_info.Init_Velocity_Value = particle_obj->Get_Init_Velocity_Value();
+			update_info.obb_num = OBB_num;
+			update_info.padding0 = XMFLOAT3{};
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
@@ -610,10 +634,12 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 			update_info.EmitRegionMax = aabb_pos.second;
 			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 			update_info.Init_Velocity_Value = particle_obj->Get_Init_Velocity_Value();
+			update_info.obb_num = OBB_num;
+			update_info.padding0 = XMFLOAT3{};
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
-
+			Bind_OBB_Data_ShaderVariables(pd3dCommandList);
 
 			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
 			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);

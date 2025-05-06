@@ -622,8 +622,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.color = XMFLOAT3(0.925f, 0.902f, 0.8f);
 	}
 
-
-
 	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
@@ -649,81 +647,45 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
-
-	//CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-	//CLoadedModelInfo* pFishmanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
-	//CLoadedModelInfo* pMedusaModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
-	//CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	//CLoadedModelInfo* pSeamanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
-	//CLoadedModelInfo* pWenchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Wench_v12.bin", NULL);
-	//CLoadedModelInfo* pFirst_MateModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
-	//CLoadedModelInfo* pDragonModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Dragon_LP.bin", NULL);
-
-
-
-	string obj_name_1 = "test_obj_name_1";
-	string obj_name_2 = "test_obj_name_2";
-	string obj_name_3 = "test_obj_name_3";
-	string obj_name_4 = "test_palyer2";
-	string obj_name_5 = "test_palyer3";
-	string obj_name_6 = "test_palyer4";
-	string obj_name_7 = "test_palyer5";
-	string obj_name_8 = "test_palyer6";
-
-
-	std::string_view name_view = obj_name_1;
-	std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-	//AnubisObject->Add_Collider(10.0f);
-	AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
-	AnubisObject->Set_Name(obj_name_1);
-	AnubisObject->test_num = 1;
-	obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
-
-
-	//name_view = obj_name_2;
-	//std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pMedusaModel, 5);
-	//humanObject_2->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 10.0f), 10.0f);
-	//humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_2->Set_Name(obj_name_2);
-	//humanObject_2->test_num = 2;
-	//obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
-
-	//name_view = obj_name_3;
-	//std::shared_ptr<CMonsterObject> humanObject_3 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pGargoyleModel, 5);
-	//humanObject_3->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
-	//humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	//XMFLOAT3 tt = { 0.0f, 1.0f, 0.0f };
-	//humanObject_3->Rotate(&tt, 90.0f);
-	//humanObject_3->Set_Name(obj_name_3);
-	//humanObject_3->test_num = 3;
-	//obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
-
-	//name_view = obj_name_4;
-	//std::shared_ptr<CMonsterObject> obj_p = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pWenchModel, 12);
-	//obj_p->SetPosition(5.0f, m_pTerrain->Get_Mesh_Height(5.0f, 5.0f), 5.0f);
-	//obj_p->SetScale(10.0f, 10.0f, 10.0f);
-	//obj_p->Set_Name(obj_name_2);
-	//obj_p->test_num = 4;
-	////obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
-
-	std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-	Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
-	Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
-	Dragon->Rotate(&tt2, 180.0f);
-	Dragon->test_num = 5;
-	obj_manager->Add_Object(Dragon, Object_Type::skinned);
-
-
-	for (int i = 0; i < 10; i++) 
 	{
-		std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
-		//m->Set_Name(obj_name_3);
-		m->test_num = i + 4;
-		obj_manager->Add_Object(m, Object_Type::skinned);
+		string obj_name_1 = "test_obj_name_1";
+		string obj_name_2 = "test_obj_name_2";
+		string obj_name_3 = "test_obj_name_3";
+		string obj_name_4 = "test_palyer2";
+		string obj_name_5 = "test_palyer3";
+		string obj_name_6 = "test_palyer4";
+		string obj_name_7 = "test_palyer5";
+		string obj_name_8 = "test_palyer6";
+
+
+		std::string_view name_view = obj_name_1;
+		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		//AnubisObject->Add_Collider(10.0f);
+		AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
+		AnubisObject->Set_Name(obj_name_1);
+		AnubisObject->test_num = 1;
+		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
+
+
+		//std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		//Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
+		//Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+		//XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+		//Dragon->Rotate(&tt2, 180.0f);
+		//Dragon->test_num = 5;
+		//obj_manager->Add_Object(Dragon, Object_Type::skinned);
+
+
+		for (int i = 0; i < 10; i++)
+		{
+			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
+			//m->Set_Name(obj_name_3);
+			m->test_num = i + 4;
+			obj_manager->Add_Object(m, Object_Type::skinned);
+		}
 	}
+
 
 	//obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
 
@@ -736,7 +698,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	obj_manager->Add_Object(humanObject_8, Object_Type::player);*/
 
-	
+
 
 	//=====================================================
 #ifdef LOAD_SCENE
@@ -750,7 +712,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_scene->Set_Name("test_scene");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
 	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
+	test_scene->SetScale({ 10.0f, 10.0f ,10.0f } , true);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
 	//=====================================================
@@ -1219,6 +1181,18 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		obj_manager->Add_Object(trail_obj, Object_Type::trail);
 		test_button = false;
 	}
+
+	if (particle_test_button)
+	{
+		XMFLOAT3 position = m_pPlayer->GetPosition();
+		XMFLOAT3 look = m_pPlayer->GetLook();
+
+		test_dragonfire->Set_Main_Direction(look);
+		test_dragonfire->Set_Center(position);
+
+
+	}
+
 }
 
 void CScene::After_Update_Objects()

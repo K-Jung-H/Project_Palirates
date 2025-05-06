@@ -164,7 +164,7 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
         p.EmitFaceIndex = 5;
         p.Acceleration = float3(0.0f, -9.8f, 0.0f);
         
-        Update_Focus_Sand(p, index);
+        Update_Focus_Sand(p, index);   
         Extract_Instance(p);
     }
 

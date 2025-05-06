@@ -25,6 +25,17 @@ struct Render_Instance
     float4 Color;
 };
 
+struct OBB_INFO
+{
+    float3 Center;
+    uint Active;
+
+    float3 Extents;
+    uint Type;
+
+    float4 Rotation;
+};
+
 #define PARTICLE_TYPE_SNOW       0
 #define PARTICLE_TYPE_SPARK      1
 #define PARTICLE_TYPE_SPLASH     2
@@ -42,11 +53,40 @@ cbuffer CB_Particle_Update_Info : register(b0)
 
     float3 Main_Direction;
     float Init_Velocity_Value;
+    
+    uint obb_num;
+    float3 padding0;
 }
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
+
+StructuredBuffer<OBB_INFO> OBB_List : register(t0);
+
+//===============================================================
+
+float3 RotateVectorByQuaternion(float3 v, float4 q)
+{
+    return v + 2.0f * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+}
+
+bool CheckOBBCollision(float3 p_point, OBB_INFO obb)
+{
+    if (obb.Active == 0)
+        return false;
+
+    float3 delta = p_point - obb.Center;
+
+    // Inverse quaternion (conjugate)
+    float4 invRot = float4(-obb.Rotation.xyz, obb.Rotation.w);
+
+    // Apply inverse rotation to point (convert to OBB local space)
+    float3 localPos = RotateVectorByQuaternion(delta, invRot);
+
+    // Check AABB bounds in OBB-local space
+    return all(abs(localPos) <= obb.Extents);
+}
 
 //===============================================================
 
@@ -240,6 +280,19 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Water_Splash(p, index);
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
             Update_DragonFire(p, index);
+        
+        for (uint i = 0; i < obb_num; ++i)
+        {
+            if (CheckOBBCollision(p.Position, OBB_List[i]))
+            {
+                p.Velocity = float3(0.0f, 0.0f, 0.0f);
+                p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                p.Color = float3(0.0f, 0.0f, 1.0f);
+                break; 
+            }
+        }
+
+        
         
         Extract_Instance(p);
     }
