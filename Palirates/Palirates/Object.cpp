@@ -4110,6 +4110,15 @@ CMonsterObject::CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
 		//pHumanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
 	}
+
+	if (pHumanModel && pHumanModel->m_pModelRootObject)
+	{
+		m_pMesh = pHumanModel->m_pModelRootObject->m_pMesh;
+		//m_pShader = pHumanModel->m_pModelRootObject->m_pShader;
+		//m_pMaterial = pHumanModel->m_pModelRootObject->m_pMaterial;
+	}
+
+
 	n_Animation = nAnimationTracks;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
@@ -4179,5 +4188,8 @@ void CMonsterObject::Animate(float fTimeElapsed)
 
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
 	CGameObject::Render(pd3dCommandList, pCamera);
-	//GetStateMachine()->update(0.01f);
+
+	//std::cout << "[디버그] CGameObject::Render 호출됨: 이름 = " << Get_Name() << std::endl;
+
+	GetStateMachine()->update(0.01f);
 }

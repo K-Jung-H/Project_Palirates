@@ -42,7 +42,7 @@ struct Monster
 
     std::string Serialize()
     {
-        return "MONSTER_DATA," + std::to_string(id) + "," +
+        return "MONSTER_UPDATE," + std::to_string(id) + "," +
             std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + "," +
             std::to_string(lookX) + "," + std::to_string(lookY) + "," + std::to_string(lookZ) + "," +
             std::to_string(hp) + "," + std::to_string(state) + "," +

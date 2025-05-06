@@ -27,7 +27,11 @@ void Server::AcceptClients()
 
 
         int clientId = nextClientId++;
-        clients[clientId] = clientSocket;
+
+        ClientSession session;
+        session.socket = clientSocket;
+        session.is_connected = true;
+        clients[clientId] = session;
 
         sceneManager.addScene(clientId);
         Scene* scene = sceneManager.getScene(clientId);
@@ -104,10 +108,11 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     std::to_string(lookZ) + "," + std::to_string(state) + "\n";
                 logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
 
-                for (const auto& [otherId, sock] : clients)
+                for (const auto& [otherId, session] : clients)
                 {
-                    if (otherId == clientId) continue; // 자신에게는 전송 금지
-                    int sendResult = send(sock, response.c_str(), (int)response.size(), 0);
+                    if (otherId == clientId || !session.is_connected) continue;
+
+                    int sendResult = send(session.socket, response.c_str(), (int)response.size(), 0);
                     if (sendResult == SOCKET_ERROR)
                     {
                         logger.Log("[에러] 클라이언트 " + std::to_string(otherId) + "에게 전송 실패: " + std::to_string(WSAGetLastError()));
@@ -123,10 +128,23 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         else if (bytesReceived == 0)
         {
             logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료");
+
+            if (clients.contains(clientId)) 
+            {
+                clients[clientId].is_connected = false;
+                closesocket(clients[clientId].socket);
+            }
+
+            for (auto& [sceneId, scene] : sceneManager.getAllScenes())
+            {
+                scene.removePlayer(clientId);
+            }
+
             std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId);
             BroadcastPacket(leavePacket, clientId);
-            closesocket(clientSocket);
+
             clients.erase(clientId);
+
             break;
         }
         else
@@ -136,21 +154,21 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         }
     }
 }
+
 void Server::BroadcastPacket(const std::string& packet, int senderId)
 {
-    for (const auto& [id, socket] : clients)
+    for (const auto& [id, session] : clients)
     {
-        if (id != senderId)
+        if (!session.is_connected || id == senderId) continue;
+
+        int bytesSent = send(session.socket, packet.c_str(), (int)packet.length(), 0);
+        if (bytesSent == SOCKET_ERROR)
         {
-            int bytesSent = send(socket, packet.c_str(), packet.length(), 0);
-            if (bytesSent == SOCKET_ERROR)
-            {
-                logger.Log("[ERROR] 클라이언트 " + std::to_string(id) + "에게 send() 실패: " + std::to_string(WSAGetLastError()));
-            }
-            else
-            {
-                logger.Log("클라이언트 " + std::to_string(id) + "에게 패킷 전송 완료: " + packet);
-            }
+            logger.Log("[ERROR] 클라이언트 " + std::to_string(id) + "에게 send() 실패: " + std::to_string(WSAGetLastError()));
+        }
+        else
+        {
+            logger.Log("클라이언트 " + std::to_string(id) + "에게 패킷 전송 완료: " + packet);
         }
     }
 }
@@ -199,7 +217,7 @@ void Server::SendInitialStates(int clientId)
         if (!character) continue;
 
         std::string createPacket = "PLAYER_CREATE," + std::to_string(otherId) + "\n";
-        send(clients[clientId], createPacket.c_str(), createPacket.length(), 0);
+        send(clients[clientId].socket, createPacket.c_str(), createPacket.length(), 0);
 
         float safeLookY = (character->lookY == 0.0f) ? 1.0f : character->lookY;
 
@@ -211,14 +229,14 @@ void Server::SendInitialStates(int clientId)
             std::to_string(safeLookY) + "," +
             std::to_string(character->lookZ) + "," +
             std::to_string(static_cast<int>(character->state)) + "\n";
-        send(clients[clientId], updatePacket.c_str(), updatePacket.length(), 0);
+        send(clients[clientId].socket, updatePacket.c_str(), updatePacket.length(), 0);
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 
 
         for (const auto& [monsterId, monster] : scene.getMonsters())
         {
             std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
-            send(clients[clientId], create.c_str(), create.length(), 0);
+            send(clients[clientId].socket, create.c_str(), create.length(), 0);
 
             std::string update = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
                 std::to_string(monster.x) + "," + std::to_string(monster.y) + "," + std::to_string(monster.z) + "," +
@@ -226,7 +244,7 @@ void Server::SendInitialStates(int clientId)
                 std::to_string(monster.hp) + "," + std::to_string(monster.state) + "," + std::to_string((int)monster.type) + "\n";
 
 
-            send(clients[clientId], update.c_str(), update.length(), 0);
+            send(clients[clientId].socket, update.c_str(), update.length(), 0);
 
         }
     }
@@ -257,8 +275,8 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
     {
         if (clientId == newClientId) continue; // 자기 자신 제외
 
-        send(sock, createPacket.c_str(), createPacket.length(), 0);
-        send(sock, packet.c_str(), packet.length(), 0);
+        send(clients[clientId].socket, createPacket.c_str(), createPacket.length(), 0);
+        send(clients[clientId].socket, packet.c_str(), packet.length(), 0);
     }
 
     logger.Log("[서버] 기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
@@ -270,7 +288,7 @@ Server::~Server()
 {
     for (const auto& [id, socket] : clients)
     {
-        closesocket(socket);
+        closesocket(socket.socket);
     }
 
     closesocket(listenSocket);
@@ -280,12 +298,38 @@ Server::~Server()
 void Server::Start()
 {
     std::thread(&Server::AcceptClients, this).detach();
+
+    if (!sceneManager.getScene(0))
+    {
+        sceneManager.addScene(0);
+    }
+
+    Scene* scene = sceneManager.getScene(0);
+    if (!scene) return;
+
+    for (int i = 0; i < 10; ++i)
+    {
+        std::cout << "몬스터 생성됨" << std::endl;
+        int id = i + 100;
+        float x = 10 * i;
+        float y = 0.0f;
+        float z = 5 * i;
+        float lookX = 0.0f, lookY = 1.0f, lookZ = 0.0f;
+        int hp = 100;
+        int state = 0;
+        Monster_Type type = static_cast<Monster_Type>(0);
+
+        scene->addMonster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
+    }
+    BroadcastAllStates();
+
 }
 
 int main()
 {
     Server server(9000);
     server.Start();
+
 
     while (true)
     {

@@ -132,7 +132,9 @@ VS_TRAIL_OUTPUT Trail_VS(VS_TRAIL_INPUT input)
     float offsetY = input.sideTime.w;
     float3 pos = input.position;
     
-    pos.y = centerY + offsetY * ratio * (1.0f + pulse); // ratio로 크기 조절 + pulse 추가
+    pos.y = centerY + offsetY * ratio * (1.0f + pulse); // ratio로 
+    
+    조절 + pulse 추가
 
     float4 worldPos = mul(float4(pos, 1.0f), gmtxGameObject);
     output.positionW = worldPos.xyz;

@@ -10,11 +10,18 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
+
+struct ClientSession
+{
+    SOCKET socket;
+    bool is_connected = true;
+};
+
 class Server
 {
 private:
     SOCKET listenSocket;
-    std::unordered_map<int, SOCKET> clients;
+    std::unordered_map<int, ClientSession> clients;
     Scene_Manager sceneManager;
     //DatabaseManager dbManager;
     Logger logger;

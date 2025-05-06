@@ -1021,10 +1021,23 @@ void CGameFramework::FrameAdvance()
 		if (m_pPlayer)
 			m_pPlayer->Render(Active_CommandList, m_pCamera);
 
-		for (auto& [id, remotePlayer] : m_pRemotePlayers)
 		{
-			if (remotePlayer)
-				remotePlayer->Render(Active_CommandList, m_pCamera);
+			std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
+
+			for (auto& [id, remotePlayer] : m_pRemotePlayers)
+			{
+				if (remotePlayer)
+					remotePlayer->Render(Active_CommandList, m_pCamera);
+			}
+		}
+		auto monsterList = GetSceneManager().Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+		if (monsterList)
+		{
+			for (auto& monster : *monsterList)
+			{
+				if (monster)
+					monster->Render(Active_CommandList, m_pCamera);
+			}
 		}
 
 		//auto objectList = GetSceneManager().Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
@@ -1319,7 +1332,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 		State convertedState = static_cast<State>(state);
 
-		
+
 
 		if (playerId == ClientNum)
 		{
@@ -1376,6 +1389,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			auto remotePlayer = it->second;
 			if (remotePlayer)
 			{
+
+				std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
+
 				auto& syncDataMap = GetSyncManager().GetAllSyncData();
 				if (syncDataMap.find(playerId) != syncDataMap.end())
 				{
@@ -1386,7 +1402,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 				remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
 				remotePlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-				
+
 
 				State convertedState = static_cast<State>(state);
 				if (remotePlayer->GetStateMachine())
@@ -1400,6 +1416,84 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 	}
+	else if (receivedData.rfind("MONSTER_UPDATE,", 0) == 0)
+	{
+		int id, state, hp, type;
+		float x, y, z;
+		float lookX, lookY, lookZ;
+
+		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+		if (!scene) return;
+
+
+		if (sscanf_s(receivedData.c_str(), "MONSTER_UPDATE,%d,%f,%f,%f,%f,%f,%f,%d,%d,%d",
+			&id, &x, &y, &z, &lookX, &lookY, &lookZ, &hp, &state, &type) == 10)
+		{
+			std::lock_guard<std::mutex> lock(monsterDataMutex);
+
+			auto& monsterMap = remoteMonsters;
+
+			if (monsterMap.find(id) == monsterMap.end())
+			{
+				  CLoadedModelInfo* pFishmanModel =   CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), "Model/FishmanLP.bin", NULL);
+				//CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
+
+				  std::shared_ptr<CMonsterObject> pMonster = std::make_shared<CMonsterObject>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), pFishmanModel, 5);
+				//std::shared_ptr<CMonsterObject> m =		   std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pFishmanModel_t, 5);
+
+
+				pMonster->SetPosition(XMFLOAT3(x, y, z));
+				pMonster->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+				pMonster->SetScale(10.0f, 10.0f, 10.0f);
+				std::string name = "monster_" + std::to_string(id);
+				pMonster->Set_Name(name.c_str());
+				pMonster->test_num = id + 1000;
+				pMonster->Set_Active(true);
+								
+				pMonster->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+
+				monsterMap[id] = pMonster;
+
+				CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+				if (!scene) return;
+
+				Object_Manager* renderManager = scene->obj_manager;
+
+				renderManager->Add_Object(pMonster, Object_Type::skinned);
+			}
+			else
+			{
+				// 기존 객체 위치 및 방향 업데이트
+				auto& monster = monsterMap[id];
+				monster->SetPosition(XMFLOAT3(x, y, z));
+				monster->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+				monster->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+			}
+		}
+	}
+	else if (receivedData.rfind("PLAYER_LEAVE,", 0) == 0)
+	{
+		int leaveId;
+		if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &leaveId) == 1)
+		{
+			std::cout << "[디버그] PLAYER_LEAVE 감지됨: " << leaveId << std::endl;
+			{
+				auto it = m_pRemotePlayers.find(leaveId);
+				if (it != m_pRemotePlayers.end())
+				{
+					CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+					if (scene && scene->obj_manager)
+					{
+						//scene->obj_manager->Remove_Object(it->second);  // Remove_Object() 함수 필요
+					}
+
+					m_pRemotePlayers.erase(it);
+					std::cout << "[디버그] remote player 제거됨: " << leaveId << std::endl;
+				}
+			}
+		}
+	}
+	
 }
 
 void CGameFramework::CreateLocalPlayer(int playerId)

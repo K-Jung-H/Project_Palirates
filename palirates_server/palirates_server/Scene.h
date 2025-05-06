@@ -39,6 +39,7 @@ public:
 
     const std::unordered_map<int, Monster>& getMonsters() const { return monsterMap; }
     void addMonster(int id, const Monster& monster);
+    void addMonster(int id, float x, float y, float z, float lookX, float lookY, float lookZ, int hp, int state, Monster_Type type);
 
     void printScene();
     Player* getPlayerById(int id);

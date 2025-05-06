@@ -235,6 +235,9 @@ public:
 	std::unordered_map<int, std::shared_ptr<CPlayer>> m_pRemotePlayers;
 	std::queue<std::string> recvQueue;
 	std::mutex recvQueueMutex;
+	std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
+	std::mutex monsterDataMutex;
+	std::mutex remotePlayerUpdateMutex;
 
 	//=================서버=================
 

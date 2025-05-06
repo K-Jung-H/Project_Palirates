@@ -418,12 +418,13 @@ Object_Manager::~Object_Manager()
 
 void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Type type)
 {
+	//std::cout << "[디버그] Add_Object 내부 실행됨. type = " << static_cast<int>(type) << std::endl;
+
 	switch (type)
 	{
 	case Object_Type::skinned:
 	{
-		if (obj_ptr->m_pSkinnedAnimationController != NULL)
-			skinned_object_list.push_back(obj_ptr);
+		skinned_object_list.push_back(obj_ptr);
 	}	break;
 	case Object_Type::non_skinned:
 		non_skinned_object_list.push_back(obj_ptr);
@@ -732,6 +733,8 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	{
 	case Object_Type::skinned:
 	{
+		//std::cout << "[디버그] 렌더링에서 사용하는 object_manager 주소: " << this << std::endl;
+
 		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
 		{	
 			if (skinned_obj_ptr->Get_Active())
@@ -849,10 +852,13 @@ void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, 
 }
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	//std::cout << "[디버그] skinned 객체 수: " << skinned_object_list.size() << std::endl;
+
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
+	
 }
 
 void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
