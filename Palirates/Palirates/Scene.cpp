@@ -725,6 +725,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj_manager->Add_Object(m, Object_Type::skinned);
 	}
 
+	//obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
+
 	/*name_view = obj_name_8;
 	std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, m_pTerrain.get());
 	humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
