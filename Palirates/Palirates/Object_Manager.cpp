@@ -215,6 +215,9 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 	{
 		XMFLOAT4X4 world_matrix;
 
+		if (!obj->GetbUpdateOBB())
+			continue;
+
 		std::optional<BoundingOrientedBox> obb = Get_OBB_WorldMatrix(obj.get(), &world_matrix);
 
 		if (!obb.has_value())
@@ -392,7 +395,7 @@ std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* 
 	if (!g_obj || !g_obj->Get_Collider())
 		return std::nullopt;
 
-	if (!g_obj->bUpdateOBB)
+	if (!g_obj->GetbUpdateOBB())
 		return std::nullopt;
 
 	CGameObject* target = g_obj;
@@ -412,6 +415,9 @@ std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* 
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
 			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
 
+			if (XMVector3NearEqual(XMLoadFloat3(&obb.Center), XMVectorZero(), XMVectorReplicate(0.001f)) &&
+				XMVector4NearEqual(XMLoadFloat4(&obb.Orientation), XMVectorSet(1, 0, 0, 0), XMVectorReplicate(0.001f)))
+				return std::nullopt;
 			return obb;
 		}
 		else
@@ -438,6 +444,9 @@ std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* 
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
 			XMStoreFloat4x4(&g_obj->WeaponMatrix, obbMatrix);
 
+			if (XMVector3NearEqual(XMLoadFloat3(&worldOBB.Center), XMVectorZero(), XMVectorReplicate(0.001f)) &&
+				XMVector4NearEqual(XMLoadFloat4(&worldOBB.Orientation), XMVectorSet(1, 0, 0, 0), XMVectorReplicate(0.001f)))
+				return std::nullopt;
 			return worldOBB;
 		}
 	}

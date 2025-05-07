@@ -648,9 +648,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 	{
-		string obj_name_1 = "test_obj_name_1";
+		string obj_name_1 = "Anubis";
 		string obj_name_2 = "test_obj_name_2";
-		string obj_name_3 = "test_obj_name_3";
+		string obj_name_3 = "FishMan";
 		string obj_name_4 = "test_palyer2";
 		string obj_name_5 = "test_palyer3";
 		string obj_name_6 = "test_palyer4";
@@ -660,8 +660,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 		std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		//AnubisObject->Add_Collider(10.0f);
-		AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
+		AnubisObject->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
@@ -680,72 +679,47 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
-			//m->Set_Name(obj_name_3);
+			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
 
-		for (int i = 1; i < 6; i++) {
-			std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
-			//player->SetPosition(XMFLOAT3(30.0f, 0.0f, 10.0f + i * 30.0f));
-			player->SetPosition(XMFLOAT3(i * 30.0f, 0.0f, 0.0f));
-			player->Object_type = OBJECT_TPYE_MAIN_PLAYER;
-			player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
-			//player->SetScale(XMFLOAT3(100.0f, 100.0f, 100.0f));
-			obj_manager->Add_Object(player, Object_Type::player);
-		}
-	}
-
-
-	//obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
-
-	/*name_view = obj_name_8;
-	std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, m_pTerrain.get());
-	humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
-	humanObject_8->Set_Name(obj_name_8);
-	humanObject_8->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(humanObject_8));
-	humanObject_8->Object_type = OBJECT_TPYE_PLAYER;
-
-	obj_manager->Add_Object(humanObject_8, Object_Type::player);*/
-
-
-
-	//=====================================================
+		//=====================================================
 #ifdef LOAD_SCENE
 	// Load Scene
 
 	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
 
 
-	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
-	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	test_scene->SetScale({ 10.0f, 10.0f ,10.0f } , true);
-	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+		test_scene->Set_Name("test_scene");
+		test_scene = Test_Scene_Model->m_pModelRootObject;
+		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+		test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+		obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
-	//=====================================================
+		//=====================================================
 
-	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+		unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 
-	// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
+		// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
 
-	for (auto& [mesh_name, instance_info] : *temp_list_map)
-	{
-		m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
-		m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		for (auto& [mesh_name, instance_info] : *temp_list_map)
+		{
+			m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+			m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		}
+
+		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
+		obj_manager->Classify_Objects_By_Tile();
+
+		Object_Manager::Reserve_Update();
+
+		obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+
 	}
-
-	// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
-	obj_manager->Classify_Objects_By_Tile();
-
-	Object_Manager::Reserve_Update();
-
-	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
-	obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
-
-
 	/*if (pGargoyleModel)
 		delete pGargoyleModel;
 	if (pGargoyleModel2)
@@ -1267,7 +1241,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	//obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
+	obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI

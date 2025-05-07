@@ -300,10 +300,6 @@ void PlayerStateMachine::update(float Elapsed_time)
         m_pOwner->bTrailOn();
     }
 
-    if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        m_pOwner->Weapon_ptr->bUpdateOBBOn();
-    }
-
     switch (Get_State()) {
     case State::Idle:
         if (moveX == 0.0f && moveZ == 0.0f) {
@@ -416,6 +412,10 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         }
 
         ResetTrackForState(state, true);
+    }
+
+    if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
 
     switch (state)
@@ -885,9 +885,6 @@ void FishManStateMachine::update(float Elapsed_time)
             stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
         }
     }
-    if (IsInState({ State::Attack1, State::Attack2 })) {
-        m_pOwner->Weapon_ptr->bUpdateOBBOn();
-    }
 
     switch (Get_State()) {
     case State::Idle:
@@ -940,6 +937,11 @@ void FishManStateMachine::enterState(State state, Key_Value key_event)
 
         ResetTrackForState(state, true);
     }
+
+    if (IsInState({ State::Attack1, State::Attack2 })) {
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
+    }
+
     switch (state)
     {
     default:
