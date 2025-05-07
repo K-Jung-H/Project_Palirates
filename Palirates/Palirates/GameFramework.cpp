@@ -481,6 +481,8 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 			if (nMessageID == WM_KEYDOWN && wParam == 'T') {
 				//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 				//if (obj_list && obj_list->size() < 7) {
+				static int modelnum = 1;
+				if (modelnum > 5) modelnum = 0;
 					if (!Active_CommandList) {
 						OutputDebugString(L"Active_CommandList is nullptr!\n");
 						return 0;
@@ -498,12 +500,14 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 					std::string_view name_view = player_name;
 
-					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get(), modelnum);
 					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
 					humanObject_7->Set_Name(player_name);
-					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
+					humanObject_7->Object_type = OBJECT_TPYE_MAIN_PLAYER;
+					humanObject_7->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
 					nPlayer++;
+					modelnum++;
 
 					string message2 = "Player list :";
 					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
@@ -633,7 +637,7 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
 	scene_manager->Register_Scene("In_Stage", in_stage_scene);
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
-	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
+	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 	pPlayer->SetOutlineColor(3);
 
@@ -652,9 +656,9 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
-	scene_manager->Set_Active_Scene("In_Stage");
+	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
-	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
+	m_pPlayer->SetPosition(XMFLOAT3{ 0.0f, 0.0f, 0.0f });
 
 
 	m_pCamera = m_pPlayer->GetCamera();

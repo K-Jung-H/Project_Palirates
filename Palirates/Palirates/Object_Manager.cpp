@@ -257,6 +257,25 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 				sprintf_s(buffer, "OBB 충돌 감지: [%s] <--> [%s]\n", nameA, nameB);
 				OutputDebugStringA(buffer);*/
 
+				if (typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) {
+					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[i].obj);
+					if (p)
+					{
+						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
+							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+					}
+					continue;
+				}
+				if (typeA == OBJECT_TPYE_MONSTER_WEAPON && typeB == OBJECT_TPYE_MAIN_PLAYER) {
+					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[j].obj);
+					if (p)
+					{
+						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
+							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+					}
+					continue;
+				}
+
 				if (typeA == OBJECT_TPYE_MONSTER && typeB == OBJECT_TPYE_PLAYER_WEAPON) {
 					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[i].obj);
 					if (monster)
@@ -264,6 +283,7 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
 							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
 					}
+					continue;
 				}
 				if (typeA == OBJECT_TPYE_PLAYER_WEAPON && typeB == OBJECT_TPYE_MONSTER) {
 					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[j].obj);
@@ -272,6 +292,7 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
 							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
 					}
+					continue;
 				}
 			}
 		}
@@ -1065,7 +1086,7 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 		break;
 
 	case Object_Type::skinned:
-		return &fixed_obj_info_map;
+		//return &fixed_obj_info_map;
 		break;
 	case Object_Type::non_skinned:
 	case Object_Type::etc:
@@ -1108,7 +1129,8 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 			info.fixed_obj_list.clear();
 			info.fixed_obj_list.shrink_to_fit(); 
 
-			info.obj_mesh.reset(); // 강제로 nullptr로 설정
+			if (info.obj_mesh)
+				info.obj_mesh.reset(); // 강제로 nullptr로 설정
 
 			// 수동 할당된 메모리 
 			if (info.Instance_info)
@@ -1138,7 +1160,7 @@ void Object_Manager::Clear_Object_List_All()
 {
 	Clear_Object_List(Object_Type::skinned);
 	Clear_Object_List(Object_Type::non_skinned);
-	Clear_Object_List(Object_Type::fixed);
+	//Clear_Object_List(Object_Type::fixed);
 
 }
 

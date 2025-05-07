@@ -667,13 +667,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
 
-		//std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		//Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
-		//Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-		//XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
-		//Dragon->Rotate(&tt2, 180.0f);
-		//Dragon->test_num = 5;
-		//obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
+		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+		Dragon->Rotate(&tt2, 180.0f);
+		Dragon->test_num = 5;
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
 		for (int i = 0; i < 10; i++)
@@ -683,6 +683,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			//m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
+		}
+
+		for (int i = 1; i < 6; i++) {
+			std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
+			//player->SetPosition(XMFLOAT3(30.0f, 0.0f, 10.0f + i * 30.0f));
+			player->SetPosition(XMFLOAT3(i * 30.0f, 0.0f, 0.0f));
+			player->Object_type = OBJECT_TPYE_MAIN_PLAYER;
+			player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
+			//player->SetScale(XMFLOAT3(100.0f, 100.0f, 100.0f));
+			obj_manager->Add_Object(player, Object_Type::player);
 		}
 	}
 
@@ -980,12 +990,14 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}		break;
 		case 'X':
 		{
-			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'C':
 		{
 			obj_manager->Clear_Object_List(Object_Type::skinned);
+
 		}		break;
 		case 'V':
 		{
@@ -1255,7 +1267,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
+	//obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
@@ -1388,6 +1400,35 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	//=====================================================
 
+	float centerX = 5.0f;
+	float centerZ = 10.0f;
+	float radiusX = 30.0f;
+	float radiusZ = 15.0f; 
+	float minY = -3.0f;
+	float maxY = 0.0f;
+
+	float totalRotationRad = XMConvertToRadians(110.0f);
+
+	for (int i = 0; i < 6; ++i) {
+		float angle = XM_PI * ((float)i / 5.0f);
+		float localX = radiusX * cosf(angle);
+		float localZ = radiusZ * sinf(angle);
+
+		float rotatedX = centerX + (localX * cosf(totalRotationRad) - localZ * sinf(totalRotationRad));
+		float rotatedZ = centerZ + (localX * sinf(totalRotationRad) + localZ * cosf(totalRotationRad));
+
+		float t = (float)i / 5.0f;
+		float y = (maxY - minY) * sinf(t * XM_PI) + minY;
+
+		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(
+			pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i
+		);
+		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
+		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
+		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
+		obj_manager->Add_Object(player, Object_Type::player);
+	}
+
 	CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
 	std::shared_ptr<CGameObject> test_Island = CGameObject::Make_Instance(Test_Island_Model->m_pModelRootObject, true);
 	test_Island->Set_Name("Island");
@@ -1396,20 +1437,42 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	obj_manager->Add_Object(test_Island, Object_Type::fixed);
 
+
 	//=====================================================
 	Object_Manager::Reserve_Update();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 }
 
 void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	m_fElapsedTime = fTimeElapsed;
+	CScene::Animate_Objects(pd3dCommandList, fTimeElapsed);
+	if (!m_pPlayer) return;
+
+	XMFLOAT3 targetPos = m_pPlayer->GetPosition();
+	targetPos.y = 0.0f;
+
+	auto playerList = obj_manager->Get_Object_List(Object_Type::player);
+	for (const auto& obj : *playerList)
+	{
+		XMFLOAT3 objPos = obj->GetPosition();
+		objPos.y = 0.0f;
+
+		XMVECTOR dir = XMVectorSubtract(XMLoadFloat3(&targetPos), XMLoadFloat3(&objPos));
+		dir = XMVector3Normalize(dir);
+
+		XMFLOAT3 lookDir;
+		XMStoreFloat3(&lookDir, dir);
+
+		obj->SetLookDirection(lookDir);
+	}
 }
 
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+	CScene::Render(pd3dDevice, pd3dCommandList, pCamera);
+	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
 //==========================================================================================
