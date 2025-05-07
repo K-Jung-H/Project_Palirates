@@ -904,6 +904,19 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'Q':
 		{
 			test_button = !test_button;
+			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (mon && !mon->empty())
+			{
+				std::shared_ptr<CGameObject> baseObj2 = (*mon)[0];
+
+				CGameObject* base2 = baseObj2.get();
+
+				auto* anu = dynamic_cast<CAnubisObject*>(base2);
+				if (anu)
+				{
+					anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+				}
+			}
 		}	
 		break;
 
@@ -960,8 +973,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}		break;
 		case 'X':
 		{
-			m_pPlayer->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
-			//m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'C':
