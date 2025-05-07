@@ -288,7 +288,7 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
                 p.Velocity = float3(0.0f, 0.0f, 0.0f);
                 p.Acceleration = float3(0.0f, 0.0f, 0.0f);
                 p.Color = float3(0.0f, 0.0f, 1.0f);
-                break; 
+                break;
             }
         }
 

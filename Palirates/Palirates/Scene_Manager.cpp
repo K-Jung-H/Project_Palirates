@@ -335,3 +335,8 @@ CPlayer* Scene_Manager::GetPlayerById(int playerId)
     }
     return nullptr;
 }
+
+void Scene_Manager::RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainPlayer> player)
+{
+    players[playerId] = player.get();
+}

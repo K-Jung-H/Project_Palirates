@@ -607,7 +607,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	{
 		test_sand_storm_info.shader_type = Particle_Type::sand;
 		test_sand_storm_info.particle_type = 3;
-		test_sand_storm_info.max_particles = 10000;
+		test_sand_storm_info.max_particles = 50000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
@@ -664,8 +664,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
-
-
+    
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -683,8 +682,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
-
-		//=====================================================
 #ifdef LOAD_SCENE
 	// Load Scene
 
@@ -728,9 +725,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -1318,41 +1315,37 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 
 	m_pLights[0].m_bEnable = true;
 	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.3f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 00.0f, 0.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[0].m_fRange = 50.0f;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.9f, 0.4f, 0.1f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.9f, 0.4f, 0.1f, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.2f, 0.1f, 0.05f, 0.1f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(-2.0f, 2.0f, -6.0f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.1f, 0.01f);
 
 	m_pLights[1].m_bEnable = true;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 100.0f, 0.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	m_pLights[1].m_nType = POINT_LIGHT;
+	m_pLights[1].m_fRange = 10.0f; 
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 0.5f, 0.1f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.5f, 0.1f, 1.0f); 
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.2f, 0.1f, 0.05f, 0.1f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(-2.0f, 2.0f, -6.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
 
-
-	m_pLights[1].m_bEnable = true;
-	m_pLights[1].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+	m_pLights[2].m_bEnable = true;
+	m_pLights[2].m_nType = POINT_LIGHT;
+	m_pLights[2].m_fRange = 5.0f;
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.1f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(-2.0f, 2.0f, -6.0f);
+	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
 }
 
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
 	m_pLights[0].m_bEnable = true;
-	m_pLights[1].m_bEnable = false;
-	m_pLights[2].m_bEnable = false;
+	m_pLights[1].m_bEnable = true;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1441,6 +1434,30 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 		obj->SetLookDirection(lookDir);
 	}
+	m_fElapsedTime = fTimeElapsed;
+
+	static float m_fAccumulatedTime = 0.0f;
+	m_fAccumulatedTime += fTimeElapsed;
+	m_fAccumulatedTime = fmodf(m_fAccumulatedTime, 10.0f);
+
+	float flicker = 0.6f + 0.4f * sinf(m_fAccumulatedTime * 1.5f);
+	float fillFactor = 0.8f + 0.2f * flicker;
+
+	XMFLOAT3 baseColor = { 0.9f, 0.4f, 0.1f };
+	XMFLOAT3 targetColor = { 1.0f, 0.4f, 0.1f };
+
+	float r = baseColor.x + (targetColor.x - baseColor.x) * (flicker - 0.6f) / 0.4f;
+	float g = baseColor.y + (targetColor.y - baseColor.y) * (flicker - 0.6f) / 0.4f;
+	float b = baseColor.z + (targetColor.z - baseColor.z) * (flicker - 0.6f) / 0.4f;
+	float intensity = 1.0f + 1.5f * (flicker - 0.6f);
+
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(r * intensity, g * intensity, b * intensity, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f * flicker, 0.2f * flicker, 0.1f * flicker, 0.2f);
+	m_pLights[1].m_fRange = 10.0f + 25.0f * flicker;
+
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.05f * fillFactor, 0.03f * fillFactor, 0.02f * fillFactor, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.02f * fillFactor, 0.01f * fillFactor, 0.005f * fillFactor, 0.05f);
+	m_pLights[0].m_fRange = 50.0f + 20.0f * (fillFactor - 0.8f);
 }
 
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1449,76 +1466,85 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
+bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case 'Q':
+		{
+			if (test_button)
+				break;
+
+			test_button = true;
+		}	break;
+
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	return(false);
+}
+
 //==========================================================================================
 
 void Board_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 5;
+	m_nLights = 9;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
 	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
-	m_pLights[0].m_bEnable = false;
-	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	XMFLOAT4 rainbowColors[7] = {
+		XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),  // Red
+		XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f),  // Orange
+		XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f),  // Yellow
+		XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),  // Green
+		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),  // Blue
+		XMFLOAT4(0.29f, 0.0f, 0.51f, 1.0f),// Indigo
+		XMFLOAT4(0.58f, 0.0f, 0.83f, 1.0f) // Violet
+	};
 
-	m_pLights[1].m_bEnable = false;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	for (int i = 0; i < 7; ++i)
+	{
+		m_pLights[i].m_bEnable = true;
+		m_pLights[i].m_nType = POINT_LIGHT;
+		m_pLights[i].m_fRange = 300.0f;
+		m_pLights[i].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // white ambient
+		m_pLights[i].m_xmf4Diffuse = rainbowColors[i];                 // rainbow color diffuse
+		m_pLights[i].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // white specular
+		m_pLights[i].m_xmf3Position = XMFLOAT3(100.0f + 100.0f * i, 50.0f, 100.0f); // position along x-axis
+		m_pLights[i].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f); // attenuation factors
+	}
 
+	m_pLights[7].m_bEnable = true;
+	m_pLights[7].m_nType = POINT_LIGHT;
+	m_pLights[7].m_fRange = 200.0f;
+	m_pLights[7].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[7].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[7].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.3f);
+	m_pLights[7].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
+	m_pLights[7].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[2].m_bEnable = false;
-	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, -0.0f);
-	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-	m_pLights[3].m_bEnable = false;
-	m_pLights[3].m_nType = SPOT_LIGHT;
-	m_pLights[3].m_fRange = 600.0f;
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
-	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
-	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[3].m_fFalloff = 8.0f;
-	m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
-
-	m_pLights[4].m_bEnable = false;
-	m_pLights[4].m_nType = POINT_LIGHT;
-	m_pLights[4].m_fRange = 200.0f;
-	m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
-	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
-	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[8].m_bEnable = true;
+	m_pLights[8].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights[8].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
-
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	m_pLights[8].m_bEnable = true;
+	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1582,12 +1608,28 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 
 		test_Island_0->SetPosition(-1200.0f, 40.0f, -1200.0f);
+		m_pLights[0].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, -1200.0f);
+
 		test_Island_1->SetPosition(-1200.0f, 40.0f, 0.0f);
+		m_pLights[1].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 0.0f);
+
+		
 		test_Island_2->SetPosition(-1200.0f, 40.0f, 1200.0f);
+		m_pLights[2].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 1200.0f);
+
 		test_Island_3->SetPosition(0.0f, 40.0f, 1200.0f);
+		m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 40.0f, 1200.0f);
+
+
 		test_Island_4->SetPosition(1200.0f, 40.0f, 1200.0f);
+		m_pLights[4].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 1200.0f);
+
+
 		test_Island_5->SetPosition(1200.0f, 40.0f, 0.0f);
+		m_pLights[5].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 0.0f);
+
 		test_Island_6->SetPosition(1200.0f, 40.0f, -1200.0f);
+		m_pLights[6].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, -1200.0f);
 
 
 		obj_manager->Add_Object(test_Island_0, Object_Type::fixed);
@@ -1720,9 +1762,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	if (m_pLights)
 	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Position.y += 10.0f;
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+		m_pLights[7].m_xmf3Position = pirate_ship->GetPosition();
+		m_pLights[7].m_xmf3Position.y += 100.0f;
 	}
 
 
@@ -1754,8 +1795,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
 
-	bool isShipMoving = pirate_ship->Is_Moving(); // Check if the ship is moving
-	bool isSailMode = pirate_ship->Get_Sail_Mode(); // Get the current sail mode
+	bool isShipMoving = pirate_ship->Is_Moving(); 
+	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
 
 	if (isShipMoving && !isSailMode)
 	{
@@ -1781,6 +1822,16 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		pirate_ship->GetMarkerWorldPosition(camera_position, new_camera_pos);
 
 		player_camera->UpdateFocusTracking(new_camera_pos);
+	}
+	else
+	{
+		XMFLOAT3 Fixed_Position = { -50.0f, 1400.0f, 1750.0f };
+		m_pPlayer->SetPosition(Fixed_Position);
+		auto pCamera = m_pPlayer->GetCamera();
+		
+		pCamera->SetPosition(Fixed_Position);
+		pCamera->SetLookAtPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+		pCamera->GenerateViewMatrix();
 	}
 
 
@@ -1822,7 +1873,6 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 		focus_button = false;
 	}
 }
-
 
 void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {

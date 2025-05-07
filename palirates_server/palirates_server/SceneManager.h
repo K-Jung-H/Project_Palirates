@@ -10,4 +10,5 @@ private:
 public:
     void addScene(int clientId);
     Scene* getScene(int clientId);
+   std::unordered_map<int, Scene>& getAllScenes() { return scenes; }
 };
