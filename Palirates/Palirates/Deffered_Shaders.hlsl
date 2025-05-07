@@ -89,6 +89,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     
     float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.xyz, materialID);
 
+    
     //================================================================    
     
     // 안개 강도 계산 (카메라와의 거리를 기반)
@@ -157,6 +158,7 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_FullScreen(uint nVertexID : SV_VertexID)
 float4 PS_FullScreen(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
     float3 colorTexture = Screen_Texture.Sample(gssWrap, input.uv).xyz;
+
     return float4(colorTexture, 1.0f);
     
 
