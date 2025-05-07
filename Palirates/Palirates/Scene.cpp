@@ -729,9 +729,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -1309,7 +1309,7 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 3;
+	m_nLights = 2;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
@@ -1318,40 +1318,27 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_bEnable = true;
 	m_pLights[0].m_nType = POINT_LIGHT;
 	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.1f, 0.1f, 0.1f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.3f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 00.0f, 0.0f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 100.0f, 0.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
 	m_pLights[1].m_bEnable = true;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
+	m_pLights[1].m_nType = POINT_LIGHT;
+	m_pLights[1].m_fRange = 50.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 100.0f, 0.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
-
-
-	m_pLights[1].m_bEnable = true;
-	m_pLights[1].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.25f, 0.0f, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.5f, 0.2f, 0.0f, 0.3f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(100.0f, 100.0f, 100.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 }
 
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
 	m_pLights[0].m_bEnable = true;
-	m_pLights[1].m_bEnable = false;
-	m_pLights[2].m_bEnable = false;
+	m_pLights[1].m_bEnable = true;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1395,6 +1382,30 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+}
+
+bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case 'Q':
+		{
+			if (test_button)
+				break;
+
+			test_button = true;
+		}	break;
+
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	return(false);
 }
 
 //==========================================================================================
