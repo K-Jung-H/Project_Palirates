@@ -607,7 +607,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	{
 		test_sand_storm_info.shader_type = Particle_Type::sand;
 		test_sand_storm_info.particle_type = 3;
-		test_sand_storm_info.max_particles = 50000;
+		test_sand_storm_info.max_particles = 10000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
@@ -619,12 +619,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 		test_sand_storm_info.size = 1.0f;
-		test_sand_storm_info.color = XMFLOAT3(0.925f, 0.902f, 0.8f);
+		test_sand_storm_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);//XMFLOAT3(0.925f, 0.902f, 0.8f);
 	}
 
 	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
-	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, test_sand_storm_info);
+	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 
 	
 #endif
@@ -724,9 +724,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+	//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -1096,12 +1096,12 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 			shader_ptr->AnimateObjects(fTimeElapsed);
 
 
-	if (m_pLights)
-	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Position.y += 10.0f;
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
-	}
+	//if (m_pLights)
+	//{
+	//	m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
+	//	m_pLights[1].m_xmf3Position.y += 10.0f;
+	//	m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+	//}
 	
 	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
 	if (list) {
@@ -1318,11 +1318,11 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 3;
+	m_nLights = 4;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 
 	m_pLights[0].m_bEnable = true;
 	m_pLights[0].m_nType = POINT_LIGHT;
@@ -1330,7 +1330,7 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.9f, 0.4f, 0.1f, 1.0f);
 	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.9f, 0.4f, 0.1f, 1.0f);
 	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.2f, 0.1f, 0.05f, 0.1f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(-2.0f, 2.0f, -6.0f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.1f, 0.01f);
 
 	m_pLights[1].m_bEnable = true;
@@ -1339,7 +1339,7 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 0.5f, 0.1f, 1.0f);
 	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.5f, 0.1f, 1.0f); 
 	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.2f, 0.1f, 0.05f, 0.1f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(-2.0f, 2.0f, -6.0f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
 	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
 
 	m_pLights[2].m_bEnable = true;
@@ -1348,8 +1348,19 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.1f);
-	m_pLights[2].m_xmf3Position = XMFLOAT3(-2.0f, 2.0f, -6.0f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
 	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
+
+	m_pLights[3].m_bEnable = false;
+	m_pLights[3].m_nType = POINT_LIGHT;
+	m_pLights[3].m_fRange = 10.0f;
+	m_pLights[3].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.1f);
+	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
+	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
+
+
 }
 
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1357,6 +1368,8 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	BuildDefaultLightsAndMaterials();
 	m_pLights[0].m_bEnable = true;
 	m_pLights[1].m_bEnable = true;
+	m_pLights[2].m_bEnable = true;
+	m_pLights[3].m_bEnable = false;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1426,7 +1439,9 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
 	CScene::Animate_Objects(pd3dCommandList, fTimeElapsed);
-	if (!m_pPlayer) return;
+
+	if (!m_pPlayer) 
+		return;
 
 	XMFLOAT3 targetPos = m_pPlayer->GetPosition();
 	targetPos.y = 0.0f;
@@ -1477,6 +1492,32 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
+void Character_Select_Scene::UpdatePlayerSelection(int new_index)
+{
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	int list_size = static_cast<int>(player_list->size());
+	if (list_size == 0)
+		return;
+
+	int next_index = (new_index + list_size) % list_size;
+
+	if (prev_index >= 0 && prev_index < list_size && prev_index != next_index)
+		(*player_list)[prev_index]->SetOutlineColor(0);
+
+	(*player_list)[next_index]->SetOutlineColor(1);
+
+	prev_index = next_index;
+	select_index = next_index;
+
+	if (select_index != -1)
+	{
+		XMFLOAT3 character_pos = (*player_list)[next_index]->GetPosition();
+		m_pLights[3].m_bEnable = true;
+		m_pLights[3].m_xmf3Position = character_pos;
+		m_pLights[3].m_xmf3Position.y += 15.0f;
+	}
+}
+
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	switch (nMessageID)
@@ -1484,13 +1525,14 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
-		case 'Q':
-		{
-			if (test_button)
-				break;
+		case 'Z':
+			UpdatePlayerSelection(select_index - 1);
+			break;
 
-			test_button = true;
-		}	break;
+		case 'C':
+			UpdatePlayerSelection(select_index + 1);
+			break;
+
 
 		default:
 			break;
@@ -1545,8 +1587,8 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_bEnable = true;
 	m_pLights[8].m_nType = DIRECTIONAL_LIGHT;
 	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[8].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
 
@@ -1555,16 +1597,11 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	BuildDefaultLightsAndMaterials();
 
 	m_pLights[8].m_bEnable = true;
-	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-
-	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 #ifdef RENDER_PARTICLE
@@ -1739,8 +1776,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	{
 		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
 		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.15f;                           // Damping factor for height interpolation
-		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.45f;                            // Minimum wave height
-		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.55f;                            // Maximum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;                            // Minimum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;                            // Maximum wave height
 		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
 		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
 		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
@@ -1811,17 +1848,14 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	if (isShipMoving && !isSailMode)
 	{
-		// Ship is moving but sail mode is OFF
-		pirate_ship->Set_Sail_Mode(true); // Turn ON sail mode
-		pirate_ship->Change_Model(false); // Switch to sailing model
+		pirate_ship->Set_Sail_Mode(true); 
+		pirate_ship->Change_Model(false); 
 	}
 	else if (!isShipMoving && isSailMode)
 	{
-		// Ship is stopped but sail mode is ON
-		pirate_ship->Set_Sail_Mode(false); // Turn OFF sail mode
-		pirate_ship->Change_Model(true);   // Switch to idle model
+		pirate_ship->Set_Sail_Mode(false); 
+		pirate_ship->Change_Model(true); 
 	}
-
 
 
 	if (focus_button)
@@ -1837,14 +1871,15 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	else
 	{
 		XMFLOAT3 Fixed_Position = { -50.0f, 1400.0f, 1750.0f };
+		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
+
 		m_pPlayer->SetPosition(Fixed_Position);
+
 		auto pCamera = m_pPlayer->GetCamera();
-		
 		pCamera->SetPosition(Fixed_Position);
 		pCamera->SetLookAtPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-		pCamera->GenerateViewMatrix();
+		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 0.0f, 0.0f), UpVector); 
 	}
-
 
 }
 
