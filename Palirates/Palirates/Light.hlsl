@@ -123,6 +123,9 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
 
 float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID)
 {
+    if (materialID == 0)
+        return float4(albedoColor, 1.0f);
+    
     Light_Material_Info lightMaterial = Light_Material_Info_List[materialID];
 
     float3 vToCamera = normalize(camera_pos - wPosition);
