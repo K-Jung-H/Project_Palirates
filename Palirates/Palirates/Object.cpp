@@ -676,8 +676,20 @@ CTexture* Light_Material_Manager::material_info_buffer = NULL;
 // Initialize the material manager
 void Light_Material_Manager::Initialize()
 {
-	index = 0;
 	light_material_list.clear();
+	index = 0;
+
+	Light_Material_Info null_pixel_material;
+	null_pixel_material.gEmissive = XMFLOAT4{};
+	null_pixel_material.gSpecular = XMFLOAT4{};
+	null_pixel_material.gMetallic = 0.0f;
+	null_pixel_material.gRoughness = 0.0f;
+	null_pixel_material.padding0 = 0.0f;
+	null_pixel_material.padding1 = 0.0f;
+
+	Add_Material(null_pixel_material);
+
+
 
 }
 

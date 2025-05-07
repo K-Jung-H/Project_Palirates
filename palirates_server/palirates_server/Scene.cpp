@@ -1,16 +1,46 @@
 #include "Scene.h"
+#include "Player.h"
 
-void Scene::updatePlayerPosition(int playerId, float x, float y, float z, int state)
+void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state)
 {
-    if (players.find(playerId) != players.end())
+    Player* player = getPlayerById(clientId);
+
+    if (!player)
     {
-        players[playerId].setPosition(x, y, z);
-        players[playerId].setState(state);
+        player = new Player(clientId, x, y, z, lookX, lookY, lookZ, static_cast<int>(state));
+        //players[clientId] = *player;
+
+        player->setPosition(x, y, z);
+        player->setState(state);
+        player->setLookVec(lookX, lookY, lookZ);
+
+        playerMap[clientId] = player;
+
+        std::cout << "[INFO] [자동 생성] Player 객체 생성 및 등록: ID=" << clientId << std::endl;
     }
     else
     {
-        players[playerId] = GameCharacter(playerId, x, y, z, state);
+        player->setPosition(x, y, z);
+        player->setState(state);
+        player->setLookVec(lookX, lookY, lookZ);
     }
+
+   // std::cout << "[DEBUG] updatePlayerPosition → ID=" << clientId
+   //     << " Pos=(" << x << "," << y << "," << z << ")"
+   //     << " State=" << state << std::endl;
+
+
+}
+
+void Scene::addMonster(int id, float x, float y, float z, float lookX, float lookY, float lookZ, int hp, int state, Monster_Type type)
+{
+    Monster m(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
+    addMonster(id, m);
+}
+
+void Scene::addMonster(int id, const Monster& monster)
+{
+    monsterMap[id] = monster;
 }
 
 void Scene::printScene()
@@ -18,6 +48,16 @@ void Scene::printScene()
     std::cout << "현재 씬의 플레이어 목록:\n";
     for (const auto& [id, player] : players)
     {
-        std::cout << "플레이어 " << id << ": (" << player.x << ", " << player.y << ", " << player.z << ") 상태: " << player.state << std::endl;
+        std::cout << "플레이어 " << id << ": (" << player.x << ", " << player.y << ", " << player.z << ") 상태: " << static_cast<int>(player.state) << std::endl;
     }
+}
+
+Player* Scene::getPlayerById(int id)
+{
+    auto it = playerMap.find(id);
+    if (it != playerMap.end())
+    {
+        return it->second;
+    }
+    return nullptr;
 }

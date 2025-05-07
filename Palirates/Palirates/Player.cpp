@@ -549,8 +549,8 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 			GetStateMachine()->update(fTimeElapsed);
 		}
 		else if (Object_type == OBJECT_TPYE_PLAYER) {
-			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-			//GetStateMachine()->update(fTimeElapsed);
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
 		}
 		else if (Object_type == OBJECT_TPYE_SELECT_PLAYER) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -619,7 +619,7 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 	}
 	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
 }
-
+//º¸·ù
 
 //==================================================================
 
