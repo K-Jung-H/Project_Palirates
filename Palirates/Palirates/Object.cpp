@@ -4562,7 +4562,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetScale(15.0f, 15.0f, 15.0f);
 
 	WeaponName = "Staff_LP";
-	auto model = FindFrame(WeaponName);
+	auto model = FindFrame_v2(WeaponName);
 	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
@@ -4576,6 +4576,8 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4583,25 +4585,17 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
 {
 	RootMotionTrackSet = {
-		TRACK_ANUBIS_IDLE,
-		TRACK_ANUBIS_IDLE_BREAK,
-		TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
-		TRACK_ANUBIS_WALK,
-		TRACK_ANUBIS_BACK_WALK,
-		TRACK_ANUBIS_ATTACK1,
-		TRACK_ANUBIS_ATTACK2,
-		TRACK_ANUBIS_SKILL,
-		TRACK_ANUBIS_GET_HIT,
-		TRACK_ANUBIS_DEAD,
-		10
+		TRACK_DRAGON_ATTACK1,
+		TRACK_DRAGON_RUN,
+		TRACK_DRAGON_GOT_HIT1,
+		TRACK_DRAGON_GOT_HIT2,
+		TRACK_DRAGON_FLY_DIVE,
+		TRACK_DRAGON_DEAD
 	};
 
 	std::unordered_set<int> OnceType = {
-		//TRACK_ANUBIS_ATTACK1,
-		TRACK_ANUBIS_ATTACK2,
-		TRACK_ANUBIS_SKILL,
-		TRACK_ANUBIS_GET_HIT,
-		TRACK_ANUBIS_DEAD,
+		TRACK_DRAGON_ATTACK1,
+		TRACK_DRAGON_DEAD
 	};
 
 	n_Animation = 13;
@@ -4634,7 +4628,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	Set_Name("Dragon");
 
 	WeaponName = "HeadA_LP";
-	auto model = FindFrame(WeaponName);
+	auto model = FindFrame_v2(WeaponName);
 	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
@@ -4652,4 +4646,6 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		XMConvertToRadians(160.0f),
 		XMConvertToRadians(90.0f),
 		XMConvertToRadians(0.0f));
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
 }
