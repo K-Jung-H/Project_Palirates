@@ -666,14 +666,13 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		AnubisObject->test_num = 1;
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
-
-		//std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		//Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
-		//Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-		//XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
-		//Dragon->Rotate(&tt2, 180.0f);
-		//Dragon->test_num = 5;
-		//obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
+		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+		Dragon->Rotate(&tt2, 180.0f);
+		Dragon->test_num = 5;
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
 		for (int i = 0; i < 10; i++)
@@ -685,20 +684,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
 	}
-
-
-	//obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
-
-	/*name_view = obj_name_8;
-	std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, m_pTerrain.get());
-	humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
-	humanObject_8->Set_Name(obj_name_8);
-	humanObject_8->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(humanObject_8));
-	humanObject_8->Object_type = OBJECT_TPYE_PLAYER;
-
-	obj_manager->Add_Object(humanObject_8, Object_Type::player);*/
-
-
 
 	//=====================================================
 #ifdef LOAD_SCENE
@@ -1416,72 +1401,58 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Board_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 5;
+	m_nLights = 9;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
 	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
-	m_pLights[0].m_bEnable = false;
-	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	XMFLOAT4 rainbowColors[7] = {
+		XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),  // Red
+		XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f),  // Orange
+		XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f),  // Yellow
+		XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),  // Green
+		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),  // Blue
+		XMFLOAT4(0.29f, 0.0f, 0.51f, 1.0f),// Indigo
+		XMFLOAT4(0.58f, 0.0f, 0.83f, 1.0f) // Violet
+	};
 
-	m_pLights[1].m_bEnable = false;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	for (int i = 0; i < 7; ++i)
+	{
+		m_pLights[i].m_bEnable = true;
+		m_pLights[i].m_nType = POINT_LIGHT;
+		m_pLights[i].m_fRange = 300.0f;
+		m_pLights[i].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // white ambient
+		m_pLights[i].m_xmf4Diffuse = rainbowColors[i];                 // rainbow color diffuse
+		m_pLights[i].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // white specular
+		m_pLights[i].m_xmf3Position = XMFLOAT3(100.0f + 100.0f * i, 50.0f, 100.0f); // position along x-axis
+		m_pLights[i].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f); // attenuation factors
+	}
 
+	m_pLights[7].m_bEnable = true;
+	m_pLights[7].m_nType = POINT_LIGHT;
+	m_pLights[7].m_fRange = 200.0f;
+	m_pLights[7].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[7].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[7].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[7].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
+	m_pLights[7].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[2].m_bEnable = false;
-	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, -0.0f);
-	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-	m_pLights[3].m_bEnable = false;
-	m_pLights[3].m_nType = SPOT_LIGHT;
-	m_pLights[3].m_fRange = 600.0f;
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
-	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
-	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[3].m_fFalloff = 8.0f;
-	m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
-
-	m_pLights[4].m_bEnable = false;
-	m_pLights[4].m_nType = POINT_LIGHT;
-	m_pLights[4].m_fRange = 200.0f;
-	m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
-	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
-	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[8].m_bEnable = true;
+	m_pLights[8].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[8].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights[8].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, -0.0f);
 }
 
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	m_pLights[8].m_bEnable = false;
+	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1545,12 +1516,28 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 
 		test_Island_0->SetPosition(-1200.0f, 40.0f, -1200.0f);
+		m_pLights[0].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, -1200.0f);
+
 		test_Island_1->SetPosition(-1200.0f, 40.0f, 0.0f);
+		m_pLights[1].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 0.0f);
+
+		
 		test_Island_2->SetPosition(-1200.0f, 40.0f, 1200.0f);
+		m_pLights[2].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 1200.0f);
+
 		test_Island_3->SetPosition(0.0f, 40.0f, 1200.0f);
+		m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 40.0f, 1200.0f);
+
+
 		test_Island_4->SetPosition(1200.0f, 40.0f, 1200.0f);
+		m_pLights[4].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 1200.0f);
+
+
 		test_Island_5->SetPosition(1200.0f, 40.0f, 0.0f);
+		m_pLights[5].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 0.0f);
+
 		test_Island_6->SetPosition(1200.0f, 40.0f, -1200.0f);
+		m_pLights[6].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, -1200.0f);
 
 
 		obj_manager->Add_Object(test_Island_0, Object_Type::fixed);
@@ -1683,9 +1670,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	if (m_pLights)
 	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Position.y += 10.0f;
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+		m_pLights[7].m_xmf3Position = pirate_ship->GetPosition();
+		m_pLights[7].m_xmf3Position.y += 100.0f;
 	}
 
 
