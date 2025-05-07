@@ -1263,7 +1263,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		float totalWeight = 0.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
-			if (m_pAnimationTracks[k].m_fWeight > 0)
+			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 			{
 				totalWeight += m_pAnimationTracks[k].m_fWeight;
 			}
@@ -1273,7 +1273,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
-			if (m_pAnimationTracks[k].m_fWeight > 0.0f)
+			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 			{
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
@@ -1341,7 +1341,7 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 	float totalWeight = 0.0f;
 	for (int k = 0; k < m_nAnimationTracks; k++)
 	{
-		if (m_pAnimationTracks[k].m_fWeight > 0)
+		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 		{
 			totalWeight += m_pAnimationTracks[k].m_fWeight;
 		}
@@ -1349,7 +1349,7 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 
 	for (int k = 0; k < m_nAnimationTracks; k++)
 	{
-		if (m_pAnimationTracks[k].m_fWeight > 0)
+		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 		{
 			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
 			float fPosition = m_pAnimationTracks[k].m_fPosition;
@@ -4503,7 +4503,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 	SetScale(10.0f, 10.0f, 10.0f);
 	WeaponName = "spear_lp";
-	auto model = FindFrame(WeaponName);
+	auto model = FindFrame_v2(WeaponName);
 	//auto model = FindFrame("body_lp");
 	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
@@ -4519,7 +4519,8 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
-
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.8f, 0.0f),  
 		XMFLOAT3(0.4f, 0.8f, 0.4f),  

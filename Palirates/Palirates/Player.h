@@ -11,6 +11,15 @@
 #include "Object.h"
 #include "Camera.h"
 
+enum Player_Model
+{
+	Captain = 0,
+	Deckhand = 1,
+	Female_Pirate = 2,
+	First_Mate = 3,
+	Seaman = 4,
+	Skeleton = 5,
+};
 
 class CPlayer : public CGameObject
 {
@@ -188,7 +197,7 @@ private:
 	bool On_Ground = false;
 
 public:
-	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL, int ModelNum = 0);
 	CTerrainPlayer() {}
 	virtual ~CTerrainPlayer();
 

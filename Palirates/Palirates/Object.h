@@ -500,7 +500,7 @@ public:
 #define OBJECT_TPYE_PLAYER		0x02
 #define OBJECT_TPYE_MONSTER		0x04
 #define OBJECT_TPYE_PLAYER_WEAPON		0x08
-//#define OBJECT_TPYE_PLAYER_BODY		0x10
+#define OBJECT_TPYE_SELECT_PLAYER		0x10
 #define OBJECT_TPYE_MONSTER_WEAPON		0x20
 //#define OBJECT_TPYE_MONSTER_BODY		0x40
 
@@ -776,6 +776,9 @@ public:
 
 	void bUpdateOBBOn() { bUpdateOBB = true; }
 	void bUpdateOBBOff() { bUpdateOBB = false; }
+	bool GetbUpdateOBB() {
+		return bUpdateOBB;
+	}
 
 public:
 	static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
@@ -783,10 +786,6 @@ public:
 	static void ClearMeshCache();
 
 	void AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root);
-
-	int m_nPlayerId = -1;
-	void SetID(int id) { m_nPlayerId = id; }
-	int GetID() const { return m_nPlayerId; }
 };
 
 //==================================================================================

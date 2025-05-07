@@ -215,6 +215,9 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 	{
 		XMFLOAT4X4 world_matrix;
 
+		if (!obj->GetbUpdateOBB())
+			continue;
+
 		std::optional<BoundingOrientedBox> obb = Get_OBB_WorldMatrix(obj.get(), &world_matrix);
 
 		if (!obb.has_value())
@@ -257,6 +260,25 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 				sprintf_s(buffer, "OBB 충돌 감지: [%s] <--> [%s]\n", nameA, nameB);
 				OutputDebugStringA(buffer);*/
 
+				if (typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) {
+					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[i].obj);
+					if (p)
+					{
+						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
+							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+					}
+					continue;
+				}
+				if (typeA == OBJECT_TPYE_MONSTER_WEAPON && typeB == OBJECT_TPYE_MAIN_PLAYER) {
+					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[j].obj);
+					if (p)
+					{
+						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
+							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+					}
+					continue;
+				}
+
 				if (typeA == OBJECT_TPYE_MONSTER && typeB == OBJECT_TPYE_PLAYER_WEAPON) {
 					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[i].obj);
 					if (monster)
@@ -264,6 +286,7 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
 							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
 					}
+					continue;
 				}
 				if (typeA == OBJECT_TPYE_PLAYER_WEAPON && typeB == OBJECT_TPYE_MONSTER) {
 					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[j].obj);
@@ -272,6 +295,7 @@ void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandL
 						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
 							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
 					}
+					continue;
 				}
 			}
 		}
@@ -371,7 +395,7 @@ std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* 
 	if (!g_obj || !g_obj->Get_Collider())
 		return std::nullopt;
 
-	if (!g_obj->bUpdateOBB)
+	if (!g_obj->GetbUpdateOBB())
 		return std::nullopt;
 
 	CGameObject* target = g_obj;
@@ -391,6 +415,9 @@ std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* 
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
 			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
 
+			if (XMVector3NearEqual(XMLoadFloat3(&obb.Center), XMVectorZero(), XMVectorReplicate(0.001f)) &&
+				XMVector4NearEqual(XMLoadFloat4(&obb.Orientation), XMVectorSet(1, 0, 0, 0), XMVectorReplicate(0.001f)))
+				return std::nullopt;
 			return obb;
 		}
 		else
@@ -417,6 +444,9 @@ std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* 
 			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
 			XMStoreFloat4x4(&g_obj->WeaponMatrix, obbMatrix);
 
+			if (XMVector3NearEqual(XMLoadFloat3(&worldOBB.Center), XMVectorZero(), XMVectorReplicate(0.001f)) &&
+				XMVector4NearEqual(XMLoadFloat4(&worldOBB.Orientation), XMVectorSet(1, 0, 0, 0), XMVectorReplicate(0.001f)))
+				return std::nullopt;
 			return worldOBB;
 		}
 	}
@@ -1065,7 +1095,7 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 		break;
 
 	case Object_Type::skinned:
-		return &fixed_obj_info_map;
+		//return &fixed_obj_info_map;
 		break;
 	case Object_Type::non_skinned:
 	case Object_Type::etc:
@@ -1108,7 +1138,8 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 			info.fixed_obj_list.clear();
 			info.fixed_obj_list.shrink_to_fit(); 
 
-			info.obj_mesh.reset(); // 강제로 nullptr로 설정
+			if (info.obj_mesh)
+				info.obj_mesh.reset(); // 강제로 nullptr로 설정
 
 			// 수동 할당된 메모리 
 			if (info.Instance_info)
@@ -1138,7 +1169,7 @@ void Object_Manager::Clear_Object_List_All()
 {
 	Clear_Object_List(Object_Type::skinned);
 	Clear_Object_List(Object_Type::non_skinned);
-	Clear_Object_List(Object_Type::fixed);
+	//Clear_Object_List(Object_Type::fixed);
 
 }
 

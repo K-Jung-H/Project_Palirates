@@ -648,9 +648,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 	{
-		string obj_name_1 = "test_obj_name_1";
+		string obj_name_1 = "Anubis";
 		string obj_name_2 = "test_obj_name_2";
-		string obj_name_3 = "test_obj_name_3";
+		string obj_name_3 = "FishMan";
 		string obj_name_4 = "test_palyer2";
 		string obj_name_5 = "test_palyer3";
 		string obj_name_6 = "test_palyer4";
@@ -660,12 +660,11 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 		std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		//AnubisObject->Add_Collider(10.0f);
-		AnubisObject->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
+		AnubisObject->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
-
+    
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -679,48 +678,45 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
-			//m->Set_Name(obj_name_3);
+			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
-	}
-
-	//=====================================================
 #ifdef LOAD_SCENE
 	// Load Scene
 
 	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
 
 
-	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
-	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	test_scene->SetScale({ 10.0f, 10.0f ,10.0f } , true);
-	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+		test_scene->Set_Name("test_scene");
+		test_scene = Test_Scene_Model->m_pModelRootObject;
+		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+		test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+		obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
-	//=====================================================
+		//=====================================================
 
-	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+		unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 
-	// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
+		// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
 
-	for (auto& [mesh_name, instance_info] : *temp_list_map)
-	{
-		m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
-		m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		for (auto& [mesh_name, instance_info] : *temp_list_map)
+		{
+			m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+			m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		}
+
+		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
+		obj_manager->Classify_Objects_By_Tile();
+
+		Object_Manager::Reserve_Update();
+
+		obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+
 	}
-
-	// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
-	obj_manager->Classify_Objects_By_Tile();
-
-	Object_Manager::Reserve_Update();
-
-	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
-	obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
-
-
 	/*if (pGargoyleModel)
 		delete pGargoyleModel;
 	if (pGargoyleModel2)
@@ -965,12 +961,14 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}		break;
 		case 'X':
 		{
-			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'C':
 		{
 			obj_manager->Clear_Object_List(Object_Type::skinned);
+
 		}		break;
 		case 'V':
 		{
@@ -1369,6 +1367,35 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	//=====================================================
 
+	float centerX = 5.0f;
+	float centerZ = 10.0f;
+	float radiusX = 30.0f;
+	float radiusZ = 15.0f; 
+	float minY = -3.0f;
+	float maxY = 0.0f;
+
+	float totalRotationRad = XMConvertToRadians(110.0f);
+
+	for (int i = 0; i < 6; ++i) {
+		float angle = XM_PI * ((float)i / 5.0f);
+		float localX = radiusX * cosf(angle);
+		float localZ = radiusZ * sinf(angle);
+
+		float rotatedX = centerX + (localX * cosf(totalRotationRad) - localZ * sinf(totalRotationRad));
+		float rotatedZ = centerZ + (localX * sinf(totalRotationRad) + localZ * cosf(totalRotationRad));
+
+		float t = (float)i / 5.0f;
+		float y = (maxY - minY) * sinf(t * XM_PI) + minY;
+
+		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(
+			pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i
+		);
+		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
+		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
+		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
+		obj_manager->Add_Object(player, Object_Type::player);
+	}
+
 	CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
 	std::shared_ptr<CGameObject> test_Island = CGameObject::Make_Instance(Test_Island_Model->m_pModelRootObject, true);
 	test_Island->Set_Name("Island");
@@ -1377,14 +1404,36 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	obj_manager->Add_Object(test_Island, Object_Type::fixed);
 
+
 	//=====================================================
 	Object_Manager::Reserve_Update();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 }
 
 void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	CScene::Animate_Objects(pd3dCommandList, fTimeElapsed);
+	if (!m_pPlayer) return;
+
+	XMFLOAT3 targetPos = m_pPlayer->GetPosition();
+	targetPos.y = 0.0f;
+
+	auto playerList = obj_manager->Get_Object_List(Object_Type::player);
+	for (const auto& obj : *playerList)
+	{
+		XMFLOAT3 objPos = obj->GetPosition();
+		objPos.y = 0.0f;
+
+		XMVECTOR dir = XMVectorSubtract(XMLoadFloat3(&targetPos), XMLoadFloat3(&objPos));
+		dir = XMVector3Normalize(dir);
+
+		XMFLOAT3 lookDir;
+		XMStoreFloat3(&lookDir, dir);
+
+		obj->SetLookDirection(lookDir);
+	}
 	m_fElapsedTime = fTimeElapsed;
 
 	static float m_fAccumulatedTime = 0.0f;
@@ -1413,7 +1462,8 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+	CScene::Render(pd3dDevice, pd3dCommandList, pCamera);
+	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

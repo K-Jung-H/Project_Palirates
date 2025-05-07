@@ -228,6 +228,17 @@ void StateMachine::exitState(State state, Key_Value key_event)
     }
 }
 
+bool StateMachine::IsInState(std::initializer_list<State> states)
+{
+    State current = Get_State();
+    for (State s : states)
+    {
+        if (current == s)
+            return true;
+    }
+    return false;
+}
+
 PlayerStateMachine::PlayerStateMachine(CPlayer* owner)
     : StateMachine(State::Idle), m_pOwner(owner) {
 }
@@ -277,19 +288,16 @@ void PlayerStateMachine::update(float Elapsed_time)
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack1, Key_Value::None);
         m_pOwner->bTrailOn();
-        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
     if (key_state.attack2 && Get_State() != State::Attack2) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack2, Key_Value::None);
         m_pOwner->bTrailOn();
-        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
     if (key_state.attack3 && Get_State() != State::Attack3) {
         m_pOwner->SetStateElapsedTime(0.0f);
         changeState(State::Attack3, Key_Value::None);
         m_pOwner->bTrailOn();
-        m_pOwner->Weapon_ptr->bUpdateOBBOn();
     }
 
     switch (Get_State()) {
@@ -385,6 +393,10 @@ void PlayerStateMachine::update(float Elapsed_time)
         m_pOwner->targetWeights[TRACK_GET_HIT_F2] = 1.0f;
         RootMotionMove(30.0f, true);
         break;
+    case State::Select_Idle:
+        m_pOwner->targetWeights[TRACK_SELECT_IDLE] = 1.0f;
+        //RootMotionMove(30.0f, true);
+        break;
     }
 
     SetWeight();
@@ -402,11 +414,20 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         ResetTrackForState(state, true);
     }
 
+    if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
+    }
+
     switch (state)
     {
     case State::Idle:
         if (m_pOwner != nullptr) {
             m_pOwner->bIsControllable = true;
+        }
+        break;
+    case State::Select_Idle:
+        if (m_pOwner != nullptr) {
+            m_pOwner->Weapon_ptr->Set_Active(false);
         }
         break;
     default:
@@ -426,6 +447,10 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
 
     }
 
+    if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
+        m_pOwner->Weapon_ptr->bUpdateOBBOff();
+    }
+
     switch (state)
     {
     case State::Idle:
@@ -443,23 +468,22 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         key_state.attack1 = false;
         m_pOwner->bTrailOff();
         m_pOwner->GetTrailObj()->Set_Active(false);
-        m_pOwner->Weapon_ptr->bUpdateOBBOff();
         break;
     case State::Attack2:
         key_state.attack2 = false;
         m_pOwner->bTrailOff();
         m_pOwner->GetTrailObj()->Set_Active(false);
-        m_pOwner->Weapon_ptr->bUpdateOBBOff();
         break;
     case State::Attack3:
         key_state.attack3 = false;
         m_pOwner->bTrailOff();
         m_pOwner->GetTrailObj()->Set_Active(false);
-        m_pOwner->Weapon_ptr->bUpdateOBBOff();
         break;
-    case State::Jump:
-        break;
-    case State::Attack_Normal:
+    case State::Select_Idle: 
+        if (m_pOwner != nullptr) {
+            m_pOwner->Weapon_ptr->Set_Active(true);
+        }
+    
         break;
 
     default:
@@ -663,7 +687,8 @@ void MonsterStateMachine::update(float Elapsed_time)
 
     switch (Get_State()) {
     case State::Idle:
-        m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+       // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+        m_pOwner->targetWeights[0] = 1.0f;
         break;
     case State::Run:
         m_pOwner->targetWeights[6] = 1.0f;
@@ -692,7 +717,8 @@ void MonsterStateMachine::OnPrepareUpdate(float blendSpeedOffSet, float Elapsed_
             m_pOwner->prevWeights[i] = 0.0f;
             animController->SetTrackWeight(i, 0.0f);
         }
-        m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+     //   m_pOwner->prevWeights[TRACK_IDLE] = 1.0f;
+        m_pOwner->prevWeights[0] = 1.0f;
         isFirstUpdate = false;
     }
     else {
@@ -911,6 +937,11 @@ void FishManStateMachine::enterState(State state, Key_Value key_event)
 
         ResetTrackForState(state, true);
     }
+
+    if (IsInState({ State::Attack1, State::Attack2 })) {
+        m_pOwner->Weapon_ptr->bUpdateOBBOn();
+    }
+
     switch (state)
     {
     default:
@@ -926,6 +957,10 @@ void FishManStateMachine::exitState(State state, Key_Value key_event)
         }
 
         ResetTrackForState(state, false);
+    }
+
+    if (IsInState({ State::Attack1, State::Attack2 })) {
+        m_pOwner->Weapon_ptr->bUpdateOBBOff();
     }
 }
 
