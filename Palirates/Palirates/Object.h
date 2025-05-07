@@ -783,6 +783,10 @@ public:
 	static void ClearMeshCache();
 
 	void AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root);
+
+	int m_nPlayerId = -1;
+	void SetID(int id) { m_nPlayerId = id; }
+	int GetID() const { return m_nPlayerId; }
 };
 
 //==================================================================================

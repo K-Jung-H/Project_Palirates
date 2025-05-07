@@ -48,7 +48,10 @@ struct RemotePlayer
 {
 	int id = 0;
 	DirectX::XMFLOAT3 position = { 0.f, 0.f, 0.f };
+	DirectX::XMFLOAT3 direction = { 0.f, 1.f, 1.f };
 	int state = 0;
+	int objType = 0;
+	int modelType = 0;
 	std::shared_ptr<CTerrainPlayer> player_obj = nullptr;
 
 	RemotePlayer() = default;
@@ -113,12 +116,19 @@ public:
 	//=================서버=================
 	void ConnectToServer(const std::string& ip, int port);
 	void SendPacket();
-	std::string ReceiveData();
 	void NetworkLoop();
 	void Disconnect();
+	void CreateRemotePlayer(int playerId);
+	void CreateLocalPlayer(int playerId);
+	void ProcessReceivedData(const std::string& receivedData);
+	std::queue<int> pendingPlayerCreates;
+	std::mutex pendingCreateMutex;
+	std::unordered_map<int, std::string> pendingUpdateMap;
+	std::mutex pendingUpdateMutex;
 
 	Scene_Manager sceneManager;
 	std::shared_ptr<Object_Manager> object_manager;
+	bool bClientIdAssigned = false;
 	//=================서버=================
 
 private:
@@ -216,13 +226,19 @@ public:
 	_TCHAR						m_pszFrameRate[70];
 
 	//=================서버=================
-	Scene_Manager& GetSceneManager() { return *scene_manager; } 
-	std::shared_ptr<CPlayer> GetPlayer() { return m_pPlayer; }
-	bool multiMode{ false };
+	Scene_Manager& GetSceneManager() { return *scene_manager; }
+	CPlayer* GetPlayer() { return m_pPlayer.get(); }
+	bool multiMode{ true };
 	int nPlayer{ 0 };
 	int ClientNum{ 0 };
 	ServerSyncManager syncManager;
 	ServerSyncManager& GetSyncManager() { return syncManager; }
+	std::unordered_map<int, std::shared_ptr<CPlayer>> m_pRemotePlayers;
+	std::queue<std::string> recvQueue;
+	std::mutex recvQueueMutex;
+	std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
+	std::mutex monsterDataMutex;
+	std::mutex remotePlayerUpdateMutex;
 
 	//=================서버=================
 
