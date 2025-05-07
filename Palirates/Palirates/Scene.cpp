@@ -607,7 +607,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	{
 		test_sand_storm_info.shader_type = Particle_Type::sand;
 		test_sand_storm_info.particle_type = 3;
-		test_sand_storm_info.max_particles = 10000;
+		test_sand_storm_info.max_particles = 50000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
