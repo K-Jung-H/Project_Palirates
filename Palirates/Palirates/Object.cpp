@@ -4562,7 +4562,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetScale(15.0f, 15.0f, 15.0f);
 
 	WeaponName = "Staff_LP";
-	auto model = FindFrame(WeaponName);
+	auto model = FindFrame_v2(WeaponName);
 	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
@@ -4576,6 +4576,8 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
 	model->Set_Collider(b);
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4626,7 +4628,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	Set_Name("Dragon");
 
 	WeaponName = "HeadA_LP";
-	auto model = FindFrame(WeaponName);
+	auto model = FindFrame_v2(WeaponName);
 	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
 	XMVECTOR scale, rotationQuat, translation;
@@ -4644,4 +4646,6 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		XMConvertToRadians(160.0f),
 		XMConvertToRadians(90.0f),
 		XMConvertToRadians(0.0f));
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
 }
