@@ -2770,31 +2770,6 @@ void CGameObject::ClearMeshCache()
 	MeshCache.clear();
 }
 
-void CGameObject::AttachOBBsToAllSkinnedMeshes(std::shared_ptr<CGameObject> root)
-{
-	//if (!root) return;
-
-	//// 현재 오브젝트에 메쉬가 있고 스킨드메쉬인 경우 처리
-	//if (root->m_pMesh)
-	//{
-	//	CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(root->m_pMesh);
-	//	if (skinnedMesh)
-	//	{
-	//		BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
-	//		BoundingOrientedBox* pCollider = new BoundingOrientedBox(obb);
-	//		root->Set_Collider(pCollider);
-	//	}
-	//}
-
-	//// 재귀적으로 자식도 탐색
-	//if (root->Get_Child())
-	//	AttachOBBsToAllSkinnedMeshes(root->Get_Child());
-
-	//// 형제도 재귀적으로 탐색
-	//if (root->Get_Sibling())
-	//	AttachOBBsToAllSkinnedMeshes(root->Get_Sibling());
-}
-
 void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
