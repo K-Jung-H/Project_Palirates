@@ -380,6 +380,12 @@ void Particle::ReleaseBuffers()
 
 Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
 { 
+	auto RandomOffset = [](float base, float range = 0.03f) -> float {
+		float offset = ((float)rand() / RAND_MAX) * 2.0f * range - range;
+		float result = base + offset;
+		return std::clamp(result, 0.0f, 1.0f); 
+		};
+
 	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
 	{
@@ -394,7 +400,13 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		particle_info[i].Acceleration = particle_format.acceleration;
 		particle_info[i].Rotate_Value = 0.0f;
 
-		particle_info[i].Color = particle_format.color;
+		XMFLOAT3 baseColor = particle_format.color;
+		particle_info[i].Color = XMFLOAT3(
+			RandomOffset(baseColor.x),
+			RandomOffset(baseColor.y),
+			RandomOffset(baseColor.z)
+		);
+		//particle_info[i].Color = particle_format.color;
 		particle_info[i].Size = particle_format.size;
 
 		particle_info[i].EmitFaceIndex = particle_format.EmitFaceIndex;
