@@ -58,6 +58,7 @@ RWStructuredBuffer<uint> debug_buffer : register(u2);
 
 StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 
+
 #define XM_PI 3.14159265359f
 
 #define FACE_LEFT    0 // -X
