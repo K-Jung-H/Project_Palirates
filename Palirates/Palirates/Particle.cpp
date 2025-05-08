@@ -633,7 +633,8 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// 메시기반 인스턴싱 하기
+	if (!Get_Active())
+		return;
 
 	D3D12_VERTEX_BUFFER_VIEW Particle_Instancing_BufferView = particle_data->Update_Render_Instance_VBV();
 	UINT instance_num = particle_data->N_Render_Instance;

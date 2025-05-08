@@ -626,6 +626,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 
+	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	for_demo_dragonfire->Set_Center(XMFLOAT3(645.0f, 10.0f, 1590.0f));
+
 	
 #endif
 	obj_manager = new Object_Manager();
@@ -1012,6 +1016,13 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			bOBBRender = !bOBBRender;
 
 		}		break;
+
+		case 'O':
+		{
+			for_demo_dragonfire_button = !for_demo_dragonfire_button;
+			for_demo_dragonfire->Set_Active(for_demo_dragonfire_button);
+		}		break;
+
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1179,6 +1190,19 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		}
 
 
+	}
+
+
+	if (for_demo_dragonfire_button)
+	{
+		static float totalTime = 0.0f;
+		totalTime += fTimeElapsed;
+
+
+
+		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
+		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
+		for_demo_dragonfire->Set_Center(centerPos);
 	}
 }
 
@@ -1430,9 +1454,10 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		float t = (float)i / 5.0f;
 		float y = (maxY - minY) * sinf(t * XM_PI) + minY;
 
-		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(
-			pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i
-		);
+		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
+		player->Set_Child(player->m_pRootModel);
+		player->SetupWeaponCollider();
+
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
 		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
