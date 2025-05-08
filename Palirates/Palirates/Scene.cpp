@@ -981,6 +981,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			obj_manager->Clear_Object_List(Object_Type::skinned);
 
 		}		break;
+		case 'P':
+		{
+			bOBBRender = !bOBBRender;
+
+		}		break;
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1249,7 +1254,8 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
+	if (bOBBRender)
+		obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
