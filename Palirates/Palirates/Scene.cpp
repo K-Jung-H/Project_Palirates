@@ -922,7 +922,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'E':
 		{
-			particle_test_button = !particle_test_button;
+			//particle_test_button = !particle_test_button;
 			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 			if (mon && !mon->empty())
 			{
@@ -1954,19 +1954,19 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			test_button = true;
 		}	break;
 
-		case 'I':		case 'i':
+		case 'W':		case 'w':
 		{
 			pirate_ship->MoveForward(20);
 		}
 		break;
 
-		case 'J':		case 'j':
+		case 'A':		case 'a':
 		{
 			pirate_ship->Add_Rotate(-10.0f);
 		}
 		break;
 
-		case 'L':		case 'l':
+		case 'D':		case 'd':
 		{
 			pirate_ship->Add_Rotate(10.0f);
 		}
