@@ -4578,6 +4578,13 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	model->Set_Collider(b);
 	model->bUpdateOBBOff();
 	Weapon_ptr = model;
+
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 0.9f, 0.0f),
+		XMFLOAT3(0.3f, 0.9f, 0.3f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
 }
 
 ///////////////////////////////////////////////////////////////////
