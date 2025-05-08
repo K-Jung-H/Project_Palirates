@@ -623,7 +623,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	}
 
 	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
-	//test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 
 	
@@ -981,6 +981,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			obj_manager->Clear_Object_List(Object_Type::skinned);
 
 		}		break;
+		case 'P':
+		{
+			bOBBRender = !bOBBRender;
+
+		}		break;
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1249,7 +1254,8 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
+	if (bOBBRender)
+		obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
