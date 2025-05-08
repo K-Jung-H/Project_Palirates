@@ -594,6 +594,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.gAlbedoColor = m_cAlbedo;
 	material_packet.light_material_ID = m_Material_ID;
 	material_packet.Outline_Color_ID = Outline_Color_ID;
+	material_packet.Blur_Mask = Blur_Mask_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
@@ -1913,6 +1914,21 @@ void CGameObject::SetOutlineColor(int id)
 
 	if (m_pChild)
 		m_pChild->SetOutlineColor(id);
+}
+
+void CGameObject::SetBlurMask(bool value)
+{
+	if (Material_list.size())
+	{
+		for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			material_ptr->Blur_Mask_ID = value;
+	}
+
+	if (m_pSibling)
+		m_pSibling->SetBlurMask(value);
+
+	if (m_pChild)
+		m_pChild->SetBlurMask(value);
 }
 
 void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)

@@ -204,19 +204,28 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         return;
 
     float4 baseColor = gtxtInput[gid.xy];
-    float2 velocity = gtxtVelocity_Mask_Obj_Id[gid.xy].xy;
+    float4 velocityMaskObjId = gtxtVelocity_Mask_Obj_Id[gid.xy];
+    float2 velocity = velocityMaskObjId.xy;
+    float mask = velocityMaskObjId.z;
 
-    // 감도 적용
+    // If mask is 0, skip blur
+    if (mask == 0.0f)
+    {
+        gtxtRWOutput[gid.xy] = baseColor;
+        return;
+    }
+
+    // Apply blur sensitivity
     velocity *= BlurScale;
+
+    // Invert Y axis of velocity
+    velocity.y *= -1.0f;
     
-    // UV 좌표 반전
-    velocity.y *= -1.0f; 
-    
-    // 길이 제한
+    // Limit the length
     float len = length(velocity);
     if (len < VelocityThreshold)
     {
-        gtxtRWOutput[gid.xy] = baseColor; // 블러 생략
+        gtxtRWOutput[gid.xy] = baseColor; // Skip blur if velocity is too low
         return;
     }
     if (len > MaxBlurLength)
@@ -224,7 +233,7 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         velocity = normalize(velocity) * MaxBlurLength;
     }
 
-    // 블러 샘플링
+    // Blur sampling
     const int samples = 5;
     float3 accum = baseColor.rgb;
 
@@ -236,7 +245,6 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         int2 sampleCoord = int2(sampleUV);
         sampleCoord = clamp(sampleCoord, int2(0, 0), int2(texSize - 1));
 
-        
         float3 sampleColor = gtxtInput[sampleCoord].rgb;
         accum += sampleColor;
     }
