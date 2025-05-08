@@ -177,6 +177,16 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         p.Acceleration = float3(0.0f, -9.8f, 0.0f);
         
         Update_Sand(p, index);
+        
+        if (CheckCollisionWithGridOBBs(p.Position))
+        {
+            p.Velocity = float3(0.0f, 0.0f, 0.0f);
+            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+            p.Color = float3(0.0f, 0.0f, 1.0f);
+            ParticleBuffer_Update[index] = p;
+            return;
+        }
+        
         Extract_Instance(p);
     }
 

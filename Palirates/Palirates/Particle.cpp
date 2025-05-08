@@ -325,9 +325,9 @@ void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	CounterResetBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), 0);
 	Debug_Reset_Buffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT) * 4, 0);
 
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, Render_Instance_counterBuffer, 2);
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, nullptr, 3);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 2);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, Render_Instance_counterBuffer, 3);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, nullptr, 4);
 
 	{
 		ID3D12Resource* Init_Buffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), m_nMaxParticles);

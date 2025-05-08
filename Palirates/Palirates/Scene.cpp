@@ -628,8 +628,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	
 #endif
-
-
 	obj_manager = new Object_Manager();
 
 
@@ -730,6 +728,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel2;
 	if (pGargoyleModel3)
 		delete pGargoyleModel3;*/
+
 
 #ifdef RENDER_PARTICLE
 	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
@@ -955,6 +954,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'T':
 		{
+			m_pPlayer->SetBlurMask(true);
+
 			if (test_sand == NULL)
 				break;
 
@@ -1966,19 +1967,19 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			test_button = true;
 		}	break;
 
-		case 'I':		case 'i':
+		case 'W':		case 'w':
 		{
 			pirate_ship->MoveForward(20);
 		}
 		break;
 
-		case 'J':		case 'j':
+		case 'A':		case 'a':
 		{
 			pirate_ship->Add_Rotate(-10.0f);
 		}
 		break;
 
-		case 'L':		case 'l':
+		case 'D':		case 'd':
 		{
 			pirate_ship->Add_Rotate(10.0f);
 		}
