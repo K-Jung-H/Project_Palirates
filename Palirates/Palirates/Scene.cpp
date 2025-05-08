@@ -624,12 +624,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
-	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
+	//test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 
 	
 #endif
-
-
 	obj_manager = new Object_Manager();
 
 
@@ -664,6 +662,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
+
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -724,9 +723,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -922,7 +921,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'E':
 		{
-			//particle_test_button = !particle_test_button;
+			particle_test_button = !particle_test_button;
 			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 			if (mon && !mon->empty())
 			{
@@ -947,6 +946,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'T':
 		{
+			m_pPlayer->SetBlurMask(true);
+
 			if (test_sand == NULL)
 				break;
 
