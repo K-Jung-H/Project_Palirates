@@ -644,6 +644,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
@@ -660,12 +661,17 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 		std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		AnubisObject->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
+		AnubisObject->SetPosition(10.0f + 450.0f, m_pTerrain->Get_Mesh_Height(10.0f + 450.0f, 0.0f), 0.0f + 450.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
+		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
+		AnubisObject->SetupWeaponCollider();
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
+
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		Dragon->SetPosition(120.0f, m_pTerrain->Get_Mesh_Height(120.0f, 120.0f), 120.0f);
+		Dragon->Set_Child(Dragon->m_pRootModel);
+		Dragon->SetupWeaponCollider();
+		Dragon->SetPosition(120.0f + 400.0f, m_pTerrain->Get_Mesh_Height(120.0f + 400.0f, 120.0f + 400.0f), 120.0f + 400.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
 		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
 		Dragon->Rotate(&tt2, 180.0f);
@@ -676,7 +682,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		for (int i = 0; i < 10; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-			m->SetPosition(10.0f * i, m_pTerrain->Get_Mesh_Height(10.0f * i, 10.0f * i), 10.0f * i);
+			m->Set_Child(m->m_pRootModel);
+			m->SetupWeaponCollider();
+			m->SetPosition(10.0f * i + 700.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 700.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
 			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
