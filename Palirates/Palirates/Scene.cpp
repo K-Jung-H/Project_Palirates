@@ -1794,7 +1794,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	{
 		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
-		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.15f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
 		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;                            // Minimum wave height
 		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;                            // Maximum wave height
 		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
@@ -1803,7 +1803,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
 
 		// === Boat Wake Parameters ===
-		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 50.0f;                          // Maximum distance the wake affects
+		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
 		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
 		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
 		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
@@ -1825,7 +1825,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	wave_plane->Animate(pd3dCommandList, fTimeElapsed);
 
 	pirate_ship->Animate(fTimeElapsed);
-
+	pirate_ship->HandleBoundaryReflection(1500.0f);
 
 	if (m_pLights)
 	{
@@ -1889,7 +1889,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 	else
 	{
-		XMFLOAT3 Fixed_Position = { -50.0f, 1400.0f, 1750.0f };
+		XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
 		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
 		m_pPlayer->SetPosition(Fixed_Position);
