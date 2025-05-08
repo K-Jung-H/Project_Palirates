@@ -4576,7 +4576,6 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetScale(15.0f, 15.0f, 15.0f);
 
 	WeaponName = "Staff_LP";
-
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.9f, 0.0f),
 		XMFLOAT3(0.3f, 0.9f, 0.3f),
