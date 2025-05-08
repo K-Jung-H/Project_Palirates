@@ -148,12 +148,16 @@ class Test_Scene : public CScene
 
 class Character_Select_Scene : public CScene
 {
+private:
+	UINT prev_index = -1;
+	UINT select_index = 0;
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	void UpdatePlayerSelection(int new_index);
 };
 
 class Board_Scene : public CScene

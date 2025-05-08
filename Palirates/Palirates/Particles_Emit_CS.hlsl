@@ -186,8 +186,7 @@ void Emit_Water_Splash(inout Particle_Info p, uint index)
 }
 
 void Emit_Sand(inout Particle_Info p, uint index)
-{
-    
+{ 
     p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
     float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
     p.Velocity = normalize(dir) * Init_Velocity_Value;
@@ -212,10 +211,6 @@ void Emit_Sand_Storm(inout Particle_Info p, uint index)
     // initialDir += RandomSpreadDirection(index, baseDir, 0.2f) * 0.2f; // 방향 노이즈 (선택 적용)
     // initialDir = normalize(initialDir);
 
-    float seed = frac(sin(index * 91.91f) * 10000.0f);
-    float delay = lerp(0.0f, 2.0f, seed); // 최대 2초까지 랜덤 딜레이
-    p.Lifetime = -delay;
-    
     p.Velocity = initialDir * Init_Velocity_Value;
 }
 
@@ -236,7 +231,7 @@ void Emit_DragonFire(inout Particle_Info p, uint index)
     p.Size = 0.1f; // start small
 }
 
-//===============================================================
+
 
 #define PARTICLE_TYPE_SNOW     0
 #define PARTICLE_TYPE_SPARK     1
@@ -244,6 +239,38 @@ void Emit_DragonFire(inout Particle_Info p, uint index)
 #define PARTICLE_TYPE_SAND      3
 #define PARTICLE_TYPE_SAND_STORM 4
 #define PARTICLE_TYPE_DRAGON_FIRE 5
+
+//===============================================================
+
+void ApplyDelayByType(inout Particle_Info p, uint index)
+{
+    float seed = frac(sin(index * 97.13f + ElapsedTime * 33.33f) * 31415.9265f);
+
+    if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
+    {
+        float delay = seed * 1.5f; 
+        p.Lifetime = -delay;
+    }
+    else if (p.Type == PARTICLE_TYPE_SAND_STORM)
+    {
+        float delay = 0.5f + seed * 3.0f; 
+        p.Lifetime = -delay;
+    }
+    else if (p.Type == PARTICLE_TYPE_SPLASH)
+    {
+        float delay = seed * 0.3f;
+        p.Lifetime = -delay;
+    }
+    else
+    {
+        p.Lifetime = 0.0f;
+    }
+
+    p.Active = 1;
+}
+
+//===============================================================
+
 
 
 #define THREAD_COUNT 64
@@ -271,21 +298,7 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     else if (p.Type == PARTICLE_TYPE_SPARK)
         Emit_Spark(p, index);
     else if (p.Type == PARTICLE_TYPE_SPLASH)
-    {
-        float seed = frac(sin(index * 91.91f) * 12345.6789f);
-        float startDelay = seed * 0.1f;
-
-        if (ElapsedTime >= startDelay)
-        {
-            p.Active = 1;
-            p.Lifetime = 0.0f;
             Emit_Water_Splash(p, index);
-        }
-        else
-        {
-            return; 
-        }
-    }
     else if (p.Type == PARTICLE_TYPE_SAND)
         Emit_Sand(p, index);
     else if (p.Type == PARTICLE_TYPE_SAND_STORM)
@@ -293,13 +306,7 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
         Emit_DragonFire(p, index);
     
-    
-    
-    float seedDelay = frac(sin(index * 97.13f + ElapsedTime * 33.33f) * 31415.9265f);
-    float randomDelay = seedDelay * p.MaxLifetime;
-    p.Lifetime = -randomDelay; // 음수 Lifetime 설정
-    p.Active = 0; // 초기 비활성 상태
-
-    
+    ApplyDelayByType(p, index);
+        
     ParticleBuffer_Emit[index] = p;
 }
