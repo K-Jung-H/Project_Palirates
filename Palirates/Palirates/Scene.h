@@ -95,6 +95,8 @@ public:
 	//CPlayer								*m_pPlayer = NULL;
 	shared_ptr<CPlayer> m_pPlayer = NULL;
 
+	bool bOBBRender{ false };
+
 protected:
 	ID3D12RootSignature					*m_MRT_GraphicsRootSignature = NULL;
 	ID3D12RootSignature					*m_Transparent_GraphicsRootSignature = NULL;
