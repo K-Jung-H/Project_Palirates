@@ -639,7 +639,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
 	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
-	pPlayer->SetOutlineColor(3);
+	//pPlayer->SetOutlineColor(3);
 
 
 	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
@@ -656,7 +656,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
-	scene_manager->Set_Active_Scene("Character_Select");
+	scene_manager->Set_Active_Scene("In_Stage");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 	m_pPlayer->SetPosition(XMFLOAT3{ 0.0f, 0.0f, 0.0f });
 

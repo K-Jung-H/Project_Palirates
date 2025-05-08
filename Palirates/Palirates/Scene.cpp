@@ -724,9 +724,9 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		delete pGargoyleModel3;*/
 
 #ifdef RENDER_PARTICLE
-	//obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	//obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
-	//particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
