@@ -36,6 +36,12 @@ struct OBB_INFO
     float4 Rotation;
 };
 
+struct CellInfo
+{
+    uint startIndex; // g_OBBIndices[] start index
+    uint count; // OBB num
+};
+
 #define PARTICLE_TYPE_SNOW       0
 #define PARTICLE_TYPE_SPARK      1
 #define PARTICLE_TYPE_SPLASH     2
@@ -64,6 +70,18 @@ RWStructuredBuffer<uint> debug_buffer : register(u2);
 
 StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 
+cbuffer Grid_Info : register(b1)
+{
+    float3 worldMin;
+    float cellSize;
+    int3 gridDim;
+    float padding;
+};
+
+
+StructuredBuffer<CellInfo> g_CellInfos : register(t1);
+StructuredBuffer<uint> g_OBBIndices : register(t2);
+
 //===============================================================
 
 float3 RotateVectorByQuaternion(float3 v, float4 q)
@@ -87,6 +105,33 @@ bool CheckOBBCollision(float3 p_point, OBB_INFO obb)
     // Check AABB bounds in OBB-local space
     return all(abs(localPos) <= obb.Extents);
 }
+
+bool CheckCollisionWithGridOBBs(float3 pos)
+{
+    int3 cell = int3(floor((pos - worldMin) / cellSize));
+    if (any(cell < 0) || any(cell >= gridDim))
+        return false;
+
+    uint flatIndex = cell.x + cell.y * gridDim.x + cell.z * gridDim.x * gridDim.y;
+    CellInfo info = g_CellInfos[flatIndex];
+
+    [loop]
+    for (uint i = 0; i < info.count; ++i)
+    {
+        uint obbIdx = g_OBBIndices[info.startIndex + i];
+        if (obbIdx >= obb_num)
+            continue;
+
+        OBB_INFO obb = OBB_List[obbIdx];
+        if (CheckOBBCollision(pos, obb))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 
 //===============================================================
 
@@ -281,19 +326,15 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
             Update_DragonFire(p, index);
         
-        for (uint i = 0; i < obb_num; ++i)
+        if (CheckCollisionWithGridOBBs(p.Position))
         {
-            if (CheckOBBCollision(p.Position, OBB_List[i]))
-            {
-                p.Velocity = float3(0.0f, 0.0f, 0.0f);
-                p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-                p.Color = float3(0.0f, 0.0f, 1.0f);
-                break;
-            }
+            p.Velocity = float3(0.0f, 0.0f, 0.0f);
+            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+            p.Color = float3(0.0f, 0.0f, 1.0f);
+            ParticleBuffer_Update[index] = p;
+            return;
         }
-
-        
-        
+    
         Extract_Instance(p);
     }
 

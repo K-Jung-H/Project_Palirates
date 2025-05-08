@@ -90,10 +90,13 @@ class Sand_ParticleShader : public ParticleShader
 
 //==============================================================================
 
+class Grid_Builder;
 
 class Particle_Manager
 {
 private:
+	unique_ptr<Grid_Builder> grid_builder;
+
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
 	CTexture* m_OBBBufferTexture = NULL;
 	UINT OBB_num = 0;
@@ -139,3 +142,50 @@ public:
 	void Process_Destroy_Queue();
 };
 
+//==============================================================================
+
+struct GridMeta
+{
+	XMFLOAT3 worldMin;
+	float cellSize;
+	XMINT3 gridDim;
+};
+
+struct CellInfo
+{
+	UINT startIndex;
+	UINT count;
+};
+
+class Grid_Builder
+{
+public:
+	Grid_Builder();
+	~Grid_Builder();
+
+	void BuildGridFromOBBs(const std::vector<GPU_OBB>& obbs, float cellSize = 2.0f);
+
+	const std::vector<CellInfo>& Get_CellInfos() const { return cellInfos; }
+	const std::vector<uint32_t>& Get_OBBIndices() const { return obbIndices; }
+	const GridMeta& Get_GridMeta() const { return meta; }
+
+	void Create_Grid_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_Grid_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Release_Grid_ShaderVariables();
+
+private:
+	void ComputeWorldBounds(const std::vector<GPU_OBB>& obbs);
+	XMINT3 GetCellIndex(const XMFLOAT3& pos) const;
+	int FlattenIndex(const XMINT3& cell) const;
+
+private:
+	CTexture* Obb_Grid_Texture = NULL;
+
+	std::vector<CellInfo> cellInfos;
+	std::vector<UINT> obbIndices;
+
+	std::unordered_map<int, std::vector<UINT>> tempCellMap;
+
+	GridMeta meta;
+
+};
