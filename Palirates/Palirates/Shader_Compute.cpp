@@ -734,7 +734,7 @@ void CS_Wave_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graph
 
 void CS_Wave_Shader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	update_wave_info->g_WakeMaxDist = std::min(update_wave_info->g_WakeMaxDist, 150.0f);
+	update_wave_info->g_WakeMaxDist = std::min(update_wave_info->g_WakeMaxDist, 50.0f);
 
 	::memcpy(m_pcbMappedFrame_Info, update_wave_info, sizeof(WaveParams));
 

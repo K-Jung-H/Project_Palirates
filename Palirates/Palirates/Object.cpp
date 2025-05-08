@@ -4127,11 +4127,11 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 Boat_Object::Boat_Object() : CGameObject(1)
 {
-	m_fMaxVelocityXZ = 500.0f;
-	m_xmf3Velocity.x = 0.0f;
+	m_fMaxVelocityXZ = 200.0f;
+	m_xmf3Velocity.x = 300.0f;
 	m_xmf3Velocity.y = 0.0f;
 	m_xmf3Velocity.z = 0.0f;
-	m_fFriction = 100.0f;
+	m_fFriction = 50.0f;
 }
 
 Boat_Object::~Boat_Object()
@@ -4255,6 +4255,29 @@ void Boat_Object::Animate(float fTimeElapsed)
 		Boat_Frames_Marker["Captain_Wheel"]->Rotate(&localFixedZAxis, rotationDirection * (15.0f + effectiveSpeed) * fTimeElapsed);
 	}
 
+}
+
+void Boat_Object::HandleBoundaryReflection(float boundary)
+{
+	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 velocity = Get_Velocity();
+
+	bool bounced = false;
+
+	if (pos.x > boundary || pos.x < -boundary) {
+		velocity.x *= -1.0f;
+		bounced = true;
+	}
+	if (pos.z > boundary || pos.z < -boundary) {
+		velocity.z *= -1.0f;
+		bounced = true;
+	}
+
+	if (bounced) {
+		Set_Velocity(velocity);
+		XMFLOAT3 new_dir = Vector3::Normalize(velocity);
+		Set_LookDirection_LookAt(new_dir);
+	}
 }
 
 bool Boat_Object::GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos)
