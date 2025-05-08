@@ -1,0 +1,1081 @@
+//------------------------------------------------------- ----------------------
+// File: Object.h
+//-----------------------------------------------------------------------------
+
+#pragma once
+
+#include "Mesh.h"
+#include "Camera.h"
+#include "Object_StateMachine.h"
+
+#define DIR_FORWARD               0x01
+#define DIR_BACKWARD            0x02
+#define DIR_LEFT               0x04
+#define DIR_RIGHT               0x08
+#define DIR_UP                  0x10
+#define DIR_DOWN               0x20
+
+class CShader;
+class CTerrainShader;
+class CStandardShader;
+
+class Deferred_CTerrainShader;
+class Deferred_Plane_Shader;
+class CS_Wave_Shader;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+#define RESOURCE_TEXTURE1D         0x01
+#define RESOURCE_TEXTURE2D         0x02
+#define RESOURCE_TEXTURE2D_ARRAY   0x03   
+#define RESOURCE_TEXTURE2DARRAY      0x04
+#define RESOURCE_TEXTURE_CUBE      0x05
+#define RESOURCE_BUFFER            0x06
+#define RESOURCE_STRUCTURED_BUFFER 0x07
+
+struct ServerAnimationSyncData
+{
+    XMFLOAT3 position;
+    XMFLOAT3 lookVector;
+    State currentState;
+    std::vector<float> Weights;
+    std::vector<float> trackPositions;
+};
+
+
+class CTexture
+{
+public:
+    CTexture(int nTextures, UINT nTextureType,
+        int nSamplers,
+        int nGraphicsSrvRootParameters,
+        int nComputeUavRootParameters,
+        int nComputeSrvRootParameters,
+        int nGraphicsSrvGpuHandles,
+        int nComputeUavGpuHandles,
+        int nComputeSrvGpuHandles);
+
+    virtual ~CTexture();
+
+public:
+    void AddRef() { ++m_nReferences; }
+    void Release() { if (--m_nReferences <= 0) delete this; }
+
+    ID3D12Resource* GetResource(int index) const { return m_ppd3dTextures[index]; }
+    void SetResource(ID3D12Resource* resource, int index) { m_ppd3dTextures[index] = resource; }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetGpuDescriptorHandle(int index) const { return m_GraphicsRootParameter_Srv_GpuDescriptorHandles[index]; }
+    UINT GetTextureType() const { return m_nTextureType; }
+    UINT GetTextureType(int index) const { return m_pnResourceTypes[index]; }
+
+    int GetTextures() const { return static_cast<int>(m_ppd3dTextures.size()); }
+    int GetGraphicsSrvRootParameters() const { return static_cast<int>(m_pnGraphicsSrvRootParameterIndices.size()); }
+    int GetComputeSrvRootParameters() const { return static_cast<int>(m_pnComputeSrvRootParameterIndices.size()); }
+    int GetComputeUavRootParameters() const { return static_cast<int>(m_pnComputeUavRootParameterIndices.size()); }
+
+    D3D12_GPU_DESCRIPTOR_HANDLE GetGraphicsSrvGpuDescriptorHandle(int index) const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetComputeUavGpuDescriptorHandle(int index) const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetComputeSrvGpuDescriptorHandle(int index) const;
+
+    void SetGraphicsSrvGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
+    void SetComputeUavGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
+    void SetComputeSrvGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
+
+    void SetGraphicsSrvRootParameter(int index, int rootParamIndex, int gpuHandleIndex, int srvDescriptors);
+    void SetComputeSrvRootParameter(int index, int rootParamIndex, int gpuHandleIndex, int srvDescriptors);
+    void SetComputeUavRootParameter(int index, int rootParamIndex, int gpuHandleIndex, int uavDescriptors);
+
+    int GetGraphicsSrvRootParameterIndex(int index) const;
+    int GetComputeSrvRootParameterIndex(int index) const;
+    int GetComputeUavRootParameterIndex(int index) const;
+
+    void UpdateGraphicsSrvShaderVariables(ID3D12GraphicsCommandList* commandList);
+    void UpdateGraphicsSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+    void BindGraphicsSrvToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
+
+    void UpdateComputeSrvShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+    void UpdateComputeSrvShaderVariable(ID3D12GraphicsCommandList* commandList, int parameterIndex, int textureIndex);
+    void BindComputeSrvToRootParameter(ID3D12GraphicsCommandList* commandList, int rootParamIndex, int textureIndex);
+
+
+    void UpdateComputeUavShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+    void UpdateComputeUavShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, int paramIndex, int textureIndex);
+    void BindComputeUavToRootParameter(ID3D12GraphicsCommandList* pd3dCommandList, int rootParamIndex, int textureIndex);
+
+    void ReleaseShaderVariables();
+    void ReleaseUploadBuffers();
+
+    void SetSampler(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
+
+    void LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, wchar_t* filename, UINT resourceType, UINT index);
+    void LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index);
+
+    void CreateBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, DXGI_FORMAT format, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
+    void CreateStructuredBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, void* data, UINT elements, UINT stride, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES state);
+
+    ID3D12Resource* CreateTexture(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, UINT index, UINT resourceType, UINT width, UINT height, UINT elements, UINT mips, DXGI_FORMAT format, D3D12_RESOURCE_FLAGS flags, D3D12_RESOURCE_STATES state, D3D12_CLEAR_VALUE* clearValue);
+
+    void SetRootParameterIndex(int index, UINT rootParameterIndex);
+
+    DXGI_FORMAT GetBufferFormat(int index) const;
+    int GetBufferElements(int index) const;
+    int GetBufferStrides(int index) const;
+
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
+    D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);
+
+private:
+    int m_nReferences = 0;
+    char m_pstrTextureName[64] = {};
+
+    UINT m_nTextureType = 0;
+
+    std::vector<UINT>                        m_pnResourceTypes;
+    std::vector<ID3D12Resource*>             m_ppd3dTextures;
+    std::vector<ID3D12Resource*>             m_ppd3dTextureUploadBuffers;
+
+    std::vector<DXGI_FORMAT>                 m_pdxgiBufferFormats;
+    std::vector<int>                         m_pnBufferElements;
+    std::vector<int>                         m_pnBufferStrides;
+
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dGraphicsSrvGpuDescriptorHandles;
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dComputeUavGpuDescriptorHandles;
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dComputeSrvGpuDescriptorHandles;
+
+    std::vector<int>                         m_pnGraphicsSrvRootParameterIndices;
+    std::vector<int>                         m_pnGraphicsSrvRootParameterDescriptors;
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_GraphicsRootParameter_Srv_GpuDescriptorHandles;
+
+    std::vector<int>                         m_pnComputeUavRootParameterIndices;
+    std::vector<int>                         m_pnComputeUavRootParameterDescriptors;
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dComputeUavRootParameterGpuDescriptorHandles;
+
+    std::vector<int>                         m_pnComputeSrvRootParameterIndices;
+    std::vector<int>                         m_pnComputeSrvRootParameterDescriptors;
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dComputeSrvRootParameterGpuDescriptorHandles;
+
+    std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dSamplerGpuDescriptorHandles;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+#define MATERIAL_ALBEDO_MAP            0x01
+#define MATERIAL_SPECULAR_MAP         0x02
+#define MATERIAL_NORMAL_MAP            0x04
+#define MATERIAL_METALLIC_MAP         0x08
+#define MATERIAL_EMISSION_MAP         0x10
+#define MATERIAL_DETAIL_ALBEDO_MAP      0x20
+#define MATERIAL_DETAIL_NORMAL_MAP      0x40
+
+class CGameObject;
+
+struct Light_Material_Info
+{
+    float gRoughness;
+    float gMetallic;
+    float padding0;
+    float padding1;
+
+    XMFLOAT4 gSpecular;    // Specular: rgb + intensity
+    XMFLOAT4 gEmissive;    // Emissive: rgb + intensity
+
+    Light_Material_Info()
+        : gRoughness(0.5f),
+        gMetallic(0.0f),
+        gSpecular(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)),
+        gEmissive(XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)),
+        padding0(0.0f),
+        padding1(0.0f)
+    {
+    }
+};
+
+struct Material_GPU_Packet
+{
+    XMFLOAT4 gAlbedoColor;
+    UINT light_material_ID;
+    UINT Outline_Color_ID;
+    UINT Blur_Mask;
+    UINT padding0;
+};
+
+class CMaterial
+{
+public:
+    CMaterial(int nTextures);
+    CMaterial(const CMaterial& other);
+    virtual ~CMaterial();
+
+    ::shared_ptr<CMaterial> CloneWithSharedTextures() const;
+public:
+    XMFLOAT4 m_cAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
+    UINT m_Material_ID = 0;
+    UINT Outline_Color_ID = 0;
+    UINT Blur_Mask_ID = 0;
+
+public:
+    // not use
+    float m_fGlossiness = 0.0f;
+    float m_fGlossyReflection = 0.0f;
+
+public:
+    // Don't apply Shared_ptr
+    CShader* m_pShader = NULL;
+
+
+    UINT                     m_nType = 0x00; // Texture Map Type
+
+    int                      m_nTextures = 0;
+    _TCHAR(*m_ppstrTextureNames)[64] = NULL;
+    CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+
+    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+
+    void SetShader(CShader* pShader);
+    void SetMaterialType(UINT nType) { m_nType |= nType; }
+    void SetTexture(CTexture* pTexture, UINT nTexture = 0);
+
+    virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void ReleaseUploadBuffers();
+
+
+public:
+    static CShader* m_pStandardShader;
+    static CShader* m_pSkinnedAnimationShader;
+
+    static void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+    void SetStandardShader() { CMaterial::SetShader(m_pStandardShader); }
+    void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); }
+};
+
+class Light_Material_Manager
+{
+private:
+    static UINT index; // Max : 255
+    static std::vector<Light_Material_Info> light_material_list;
+    static bool reserved_update;
+    static CTexture* material_info_buffer;
+public:
+    static void Initialize();
+    static UINT Add_Material(const Light_Material_Info& material);
+    static void Update_Material_Info(UINT idx, const Light_Material_Info& material);
+
+    static void CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    static void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    static void UpdateGraphicsShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
+
+
+    static const Light_Material_Info& Get_Material(UINT idx);
+    static size_t Get_Material_Count();
+    static void Release();
+
+    // New: Find similar material
+    static int Find_Similar_Material(const Light_Material_Info& material, float tolerance = 0.01f);
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+
+struct CALLBACKKEY
+{
+    float                       m_fTime = 0.0f;
+    void* m_pCallbackData = NULL;
+};
+
+#define _WITH_ANIMATION_INTERPOLATION
+
+class CAnimationCallbackHandler
+{
+public:
+    CAnimationCallbackHandler() {}
+    ~CAnimationCallbackHandler() {}
+
+public:
+    virtual void HandleCallback(void* pCallbackData, float fTrackPosition) {}
+};
+
+class CRootMotionCallbackHandler : public CAnimationCallbackHandler
+{
+public:
+    CRootMotionCallbackHandler() {}
+    ~CRootMotionCallbackHandler() {}
+
+public:
+    virtual void HandleCallback(void* pCallbackData, float fTrackPosition);
+};
+
+
+//#define _WITH_ANIMATION_SRT
+
+class CAnimationSet
+{
+public:
+    CAnimationSet(float fLength, int nFramesPerSecond, int nKeyFrameTransforms, int nSkinningBones, char* pstrName);
+    ~CAnimationSet();
+
+public:
+    char                     m_pstrAnimationSetName[64];
+
+    float                     m_fLength = 0.0f;
+    int                        m_nFramesPerSecond = 0; //m_fTicksPerSecond
+
+    int                        m_nKeyFrames = 0;
+    float* m_pfKeyFrameTimes = NULL;
+    XMFLOAT4X4** m_ppxmf4x4KeyFrameTransforms = NULL;
+
+#ifdef _WITH_ANIMATION_SRT
+    int                        m_nKeyFrameScales = 0;
+    float* m_pfKeyFrameScaleTimes = NULL;
+    XMFLOAT3** m_ppxmf3KeyFrameScales = NULL;
+    int                        m_nKeyFrameRotations = 0;
+    float* m_pfKeyFrameRotationTimes = NULL;
+    XMFLOAT4** m_ppxmf4KeyFrameRotations = NULL;
+    int                        m_nKeyFrameTranslations = 0;
+    float* m_pfKeyFrameTranslationTimes = NULL;
+    XMFLOAT3** m_ppxmf3KeyFrameTranslations = NULL;
+#endif
+
+public:
+    XMFLOAT4X4 GetSRT(int nBone, float fPosition);
+};
+
+class CAnimationSets
+{
+public:
+    CAnimationSets(int nAnimationSets);
+    ~CAnimationSets();
+
+private:
+    int                        m_nReferences = 0;
+
+public:
+    void AddRef() { m_nReferences++; }
+    void Release() { if (--m_nReferences <= 0) delete this; }
+
+public:
+    int                        m_nAnimationSets = 0;
+    CAnimationSet** m_pAnimationSet_list = NULL;
+
+    std::vector<int> m_vecUpperBodyBoneIndices;  // 상체
+    std::vector<int> m_vecLowerBodyBoneIndices;  // 하체
+
+    int                        m_nBoneFrames = 0;
+    std::vector< CGameObject*>   m_ppBoneFrameCaches;
+    void Bone_Info();
+    std::string CAnimationSets::GetBoneName(int index);
+    void ClassifyBones();
+};
+
+class CAnimationTrack
+{
+public:
+    CAnimationTrack() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dist(0.0f, 3.0f);
+
+        m_fPosition = dist(gen);
+    }
+    ~CAnimationTrack();
+
+public:
+    BOOL                      m_bEnable = true;
+    float                      m_fSpeed = 1.0f;
+    float                      m_fPosition = -ANIMATION_CALLBACK_EPSILON;
+    float                      m_fWeight = 1.0f;
+    bool m_bFinished{ false };
+
+    int                      m_nAnimationSet = 0; //AnimationSet Index
+
+    int                      m_nType = ANIMATION_TYPE_LOOP; //Once, Loop, PingPong
+
+    int                      m_nCallbackKeys = 0;
+    CALLBACKKEY* m_pCallbackKeys = NULL;
+
+    CAnimationCallbackHandler* m_pAnimationCallbackHandler = NULL;
+
+public:
+    void SetAnimationSet(int nAnimationSet) { m_nAnimationSet = nAnimationSet; }
+
+    void SetEnable(bool bEnable) { m_bEnable = bEnable; }
+    void SetSpeed(float fSpeed) { m_fSpeed = fSpeed; }
+    void SetWeight(float fWeight) { m_fWeight = fWeight; }
+
+    void SetPosition(float fPosition) { m_fPosition = fPosition; }
+    float UpdatePosition(float fTrackPosition, float fTrackElapsedTime, float fAnimationLength);
+
+    void SetCallbackKeys(int nCallbackKeys);
+    void SetCallbackKey(int nKeyIndex, float fTime, void* pData);
+    void SetAnimationCallbackHandler(CAnimationCallbackHandler* pCallbackHandler);
+
+    void HandleCallback();
+};
+
+class CLoadedModelInfo
+{
+public:
+    CLoadedModelInfo() {}
+    ~CLoadedModelInfo();
+
+    std::shared_ptr<CGameObject>                  m_pModelRootObject = NULL;
+
+    int                      m_nSkinnedMeshes = 0;
+    CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+
+    CAnimationSets* m_pAnimationSets = NULL;
+
+public:
+    void PrepareSkinning();
+};
+
+
+class CAnimationController
+{
+public:
+    CAnimationController(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int nAnimationTracks, CLoadedModelInfo* pModel);
+    ~CAnimationController();
+
+public:
+    float                      m_fTime = 0.0f;
+
+    int                      m_nAnimationTracks = 0;
+    CAnimationTrack* m_pAnimationTracks = NULL;
+
+    CAnimationSets* m_pAnimationSets = NULL;
+
+    int                      m_nSkinnedMeshes = 0;
+    CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+
+    ID3D12Resource** m_ppd3dcbSkinningBoneTransforms = NULL; //[SkinnedMeshes]
+    //Microsoft::WRL::ComPtr<ID3D12Resource> m_ppd3dcbSkinningBoneTransforms = NULL;
+    XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
+
+    int RootIndex{ 0 };
+
+public:
+    void Bone_Info();
+
+    void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
+    void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
+
+    void SetTrackEnable(int nAnimationTrack, bool bEnable);
+    void SetTrackPosition(int nAnimationTrack, float fPosition);
+    void SetTrackSpeed(int nAnimationTrack, float fSpeed);
+    void SetTrackWeight(int nAnimationTrack, float fWeight);
+
+    void SetCallbackKeys(int nAnimationTrack, int nCallbackKeys);
+    void SetCallbackKey(int nAnimationTrack, int nKeyIndex, float fTime, void* pData);
+    void SetAnimationCallbackHandler(int nAnimationTrack, CAnimationCallbackHandler* pCallbackHandler);
+
+    void AdvanceTime(float fElapsedTime, CGameObject* pRootGameObject);
+    void AdvanceTime2(float fElapsedTime, CGameObject* pRootGameObject);
+
+    void ApplyCurrentAnimationPose(CGameObject* pRootGameObject);
+    void ServerAdvanceTime(const ServerAnimationSyncData& syncData);
+
+public:
+    bool                     m_bRootMotion = false;
+    std::shared_ptr<CGameObject>            m_pModelRootObject = NULL;
+
+    std::shared_ptr<CGameObject>            m_pRootMotionObject = NULL;
+    XMFLOAT3                  m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+    void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
+
+    virtual void OnRootMotion(CGameObject* pRootGameObject) {}
+    virtual void OnAnimationIK(CGameObject* pRootGameObject) {}
+
+    XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 m_xmf3PrevHipsPosition{ 0.0f, 0.0f, 0.0f };
+};
+
+
+//==================================================================================
+#define OBJECT_TPYE_MAIN_PLAYER      0x01
+#define OBJECT_TPYE_PLAYER      0x02
+#define OBJECT_TPYE_MONSTER      0x04
+#define OBJECT_TPYE_PLAYER_WEAPON      0x08
+#define OBJECT_TPYE_SELECT_PLAYER      0x10
+#define OBJECT_TPYE_MONSTER_WEAPON      0x20
+//#define OBJECT_TPYE_MONSTER_BODY      0x40
+
+class CHeightMapTerrain;
+
+class WeaponObject
+{
+public:
+    WeaponObject() {};
+    ~WeaponObject() {};
+    std::vector<std::shared_ptr<CGameObject>> pWeapon;
+    XMVECTOR target_dir{};
+
+    XMVECTOR m_vVelocity = XMVectorZero();  // 현재 속도
+    bool    m_bInAir = false;           // 공중에 떠 있는 중인지
+    float   m_fGravity = 9.8f;            // 중력 가속도
+    float   m_fInitialUpSpeed = 5.0f;            // 점프 초기 속도
+    float   m_fMoveSpeed = 3.0f;
+
+    void Launch(const XMVECTOR& target_dir)
+    {
+        XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+        // X/Y/Z 속도를 한꺼번에 세팅 (w는 0)
+        m_vVelocity = XMVectorSet(
+            XMVectorGetX(dirNorm) * m_fMoveSpeed,
+            m_fInitialUpSpeed,
+            XMVectorGetZ(dirNorm) * m_fMoveSpeed,
+            0.0f
+        );
+        m_bInAir = true;
+    }
+};
+
+class CGameObject : public std::enable_shared_from_this<CGameObject>
+{
+private:
+    std::shared_ptr<CGameObject> m_pChild = nullptr;
+    std::shared_ptr<CGameObject> m_pSibling = nullptr;
+
+
+
+    bool Active = true;
+
+    XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
+public:
+    char                     m_pstrFrameName[64];
+    int Object_type = 0;
+
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+    int n_Animation = 0;
+
+    CMesh* m_pMesh = NULL;
+    std::vector<std::shared_ptr<CMaterial>>  Material_list;
+
+
+    std::shared_ptr<CGameObject> m_pParent = NULL;
+    std::shared_ptr<CGameObject> m_pRootModel = NULL;
+    XMFLOAT4X4            m_xmf4x4Parent{};
+    XMFLOAT4X4            m_xmf4x4World{};
+
+    XMFLOAT3 m_xmf3RotationAxis;
+
+    XMVECTOR target_dir{};
+    bool     m_bInAir = false;
+    XMVECTOR m_vVelocity = XMVectorZero();
+
+    float    m_fMoveSpeed = 5.0f;
+    float    m_fRotationSpeed = 360.0f;
+    float    m_fInitialUpSpeed = 10.0f;
+    float    m_fGravity = 9.8f;
+
+    void SetMoveSpeed(float s) { m_fMoveSpeed = s; }
+    void SetRotationSpeed2(float s) { m_fRotationSpeed = s; }
+    void SetInitialUpSpeed(float s) { m_fInitialUpSpeed = s; }
+    void Launch(const XMVECTOR& target_dir)
+    {
+        m_fRotationSpeed = 720.0f;
+        if (m_bInAir) return;
+        m_bInAir = true;
+        XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+        m_vVelocity = XMVectorSet(
+            XMVectorGetX(dirNorm) * m_fMoveSpeed,
+            m_fInitialUpSpeed,
+            XMVectorGetZ(dirNorm) * m_fMoveSpeed,
+            0.0f
+        );
+    }
+    WeaponObject* pWeapon;
+
+    bool bIsControllable{ true };
+
+    std::unordered_set<int> RootMotionTrackSet;
+
+    int RootIndex{ 0 };
+
+    char* WeaponName = "";
+    BoundingOrientedBox m_WorldOBB;
+    XMMATRIX customRotation = XMMatrixIdentity();
+    XMFLOAT4X4 WeaponMatrix = []() {
+        XMFLOAT4X4 m;
+        XMStoreFloat4x4(&m, XMMatrixIdentity());
+        return m;
+        }();
+
+    XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
+
+    bool bUpdateOBB{ true };
+    std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
+
+public:
+    CGameObject(const std::string_view& name = "No_name");
+    CGameObject(int nMaterials, const std::string_view& name = "No_name");
+
+    CGameObject(const CGameObject& other);
+    CGameObject& operator=(const CGameObject& other);
+
+
+    // Deep Copy
+    std::shared_ptr<CGameObject> Clone(bool withHierarchy = true);
+    std::shared_ptr<CGameObject> GetWeapon(bool withHierarchy);
+
+    // Deep Copy Hierarchy & Shallow Copy Resource
+    static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);
+
+
+    virtual ~CGameObject();
+
+
+
+    std::shared_ptr<CGameObject> Get_Child();
+    std::shared_ptr<CGameObject> Get_Sibling();
+
+    void Set_Active(bool active, bool bIsRoot = true);
+    bool Get_Active() { return Active; }
+
+    void SetMesh(CMesh* pMesh);
+    void SetShader(CShader* pShader);
+    void SetShader(int nMaterial, CShader* pShader);
+    void SetMaterial(int nMaterial, CMaterial* pMaterial);
+    void SetOutlineColor(int id);
+    void SetBlurMask(bool value);
+
+
+    void Set_Child(std::shared_ptr<CGameObject> pChild);
+
+    void Obj_Info(int depth = 0);
+    void Set_Name(std::string_view name);
+
+    const char* Get_Name() const { return m_pstrFrameName; }
+
+    virtual void BuildMaterials(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
+
+    virtual void OnPrepareAnimate() {}
+    virtual void Animate(float fTimeElapsed);
+
+    virtual bool IsVisible(CCamera* pCamera);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+    virtual void OnLateUpdate() {}
+
+    virtual void Set_Last_Pos(XMFLOAT3 pos);
+    virtual void Record_Last_Pos();
+
+    virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void ReleaseShaderVariables();
+
+    virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* pxmf4x4World);
+    virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, CMaterial* pMaterial);
+
+    virtual void ReleaseUploadBuffers();
+
+    XMFLOAT3 GetPosition();
+    XMFLOAT3 GetLook();
+    XMFLOAT3 GetUp();
+    XMFLOAT3 GetRight();
+
+    XMFLOAT3 GetToParentPosition();
+    XMFLOAT3 Get_World_Position();
+
+    std::shared_ptr<CGameObject> Get_Root_Object();
+    XMFLOAT3 Get_Root_WorldPosition();
+    XMFLOAT3 Get_Root_Obj_Displacement();
+
+    void Move(XMFLOAT3 xmf3Offset);
+
+    void Modify_World_Position(XMFLOAT3 newPosition);
+    void Modify_World_Up_Vector(XMFLOAT3 newUpvector);
+
+    virtual void SetPosition(float x, float y, float z);
+    virtual void SetPosition(XMFLOAT3 xmf3Position);
+    void SetScale(float x, float y, float z, bool keep_pos = false);
+    void SetScale(XMFLOAT3 scale, bool keepPosition = false);
+    void MoveStrafe(float fDistance = 1.0f);
+    void MoveUp(float fDistance = 1.0f);
+    void MoveForward(float fDistance = 1.0f);
+
+    void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
+    void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
+
+    void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
+    void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
+    void Rotate(XMFLOAT4* pxmf4Quaternion);
+
+    void RotateInWorldAroundUp(float fAngle);
+    void RotateInWorld(XMFLOAT3* pxmf3WorldAxis, float fAngle);
+
+    void SetLookDirection(float x, float y, float z);
+    virtual void SetLookDirection(const XMFLOAT3& look);
+
+    void Set_LookDirection_LookAt(float x, float y, float z);
+    void Set_LookDirection_LookAt(const XMFLOAT3& lookDir);
+
+    virtual void AlignWithNormal(XMFLOAT3& newNormal);
+
+
+    //CGameObject* GetParent() { return(m_pParent); }
+    std::shared_ptr<CGameObject> GetParent_v2() { return(m_pParent); }
+    void UpdateTransform(XMFLOAT4X4* pxmf4x4Parent = NULL);
+
+    CGameObject* FindFrame(char* pstrFrameName);
+    std::shared_ptr<CGameObject> FindFrame_v2(const char* pstrFrameName);
+
+    CTexture* FindReplicatedTexture(_TCHAR* pstrTextureName);
+
+    UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
+
+public:
+    void FindAndSetSkinnedMesh(CSkinnedMesh** ppSkinnedMeshes, int* pnSkinnedMesh);
+
+    void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
+    void SetTrackAnimationPosition(int nAnimationTrack, float fPosition);
+
+    void SetRootMotion(bool bRootMotion)
+    {
+        if (m_pSkinnedAnimationController)
+            m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
+    }
+
+    void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel);
+    static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes);
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
+
+    static std::shared_ptr<CGameObject> Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+    static CLoadedModelInfo* Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
+
+    static void PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent);
+
+    virtual std::string  Get_Mesh_Name();
+
+
+    virtual BoundingOrientedBox* Get_Collider();
+    virtual void Add_Collider(float cube_length);
+    virtual void Set_Collider(BoundingOrientedBox* ptr = NULL);
+
+
+    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
+
+public:
+    // Using CHeightMapTerrain
+    virtual int Get_Tile(float x, float z) { return -1; };
+    virtual void Get_Active_TileNum_List(std::vector<int>& tile_list) {};
+    virtual void Check_Culling(CCamera* pCamera) {};
+
+public:
+    virtual ServerAnimationSyncData MakeSyncData();
+    virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+
+    virtual std::shared_ptr<CGameObject> DropWeapon(const char* targetName);
+    virtual void RestoreWeapon(const char* targetName);
+
+    std::vector<float> prevWeights;
+    std::vector<float> targetWeights;
+
+    void bUpdateOBBOn() { bUpdateOBB = true; }
+    void bUpdateOBBOff() { bUpdateOBB = false; }
+    bool GetbUpdateOBB() {
+        return bUpdateOBB;
+    }
+    virtual void SetupWeaponCollider() {};
+
+public:
+    static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
+    static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+    static void ClearMeshCache();
+
+    //==================
+
+    int m_nPlayerId = -1;
+    void SetID(int id) { m_nPlayerId = id; }
+    int GetID() const { return m_nPlayerId; }
+};
+
+//==================================================================================
+
+
+class CHeightMapTerrain : public CGameObject
+{
+private:
+    static CTexture* pTerrainBaseTexture;
+    static CTexture* pTerrainDetailTexture;
+    static Deferred_CTerrainShader* pTerrainShader;
+    static CMaterial* pTerrainMaterial;
+
+    static CHeightMapImage* m_pHeightMapImage;  // link height map image for each terrain tile object
+
+private:
+    int                     m_nWidth;
+    int                     m_nLength;
+    int                     m_nDepth;
+    XMFLOAT3               m_xmf3Scale;
+
+
+    int         tile_number = 0;
+    XMFLOAT2 Tile_Start_Pos{};
+    XMFLOAT2 Area_LT{};
+    XMFLOAT2 Area_RB{};
+
+public:
+    CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName,
+        int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1);
+    virtual ~CHeightMapTerrain();
+
+    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+        LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
+    void Set_Tile(int n);
+
+    float Get_Height(float x, float z, bool bReverseQuad = false);
+    float Get_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
+    float Get_Mesh_Height(float x, float z, bool bReverseQuad = false);
+    float Get_Mesh_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
+
+    XMFLOAT3 Get_Mesh_Normal(float x, float z);
+    XMFLOAT3  Get_Mesh_Normal(float x, float z, CHeightMapTerrain*& last_tile_ptr);
+
+    int Get_Tile(float x, float z);
+    int Get_Tile(float x, float z, CHeightMapTerrain*& last_tile_ptr);
+
+    int Get_TileNum() { return tile_number; }
+    virtual void Get_Active_TileNum_List(std::vector<int>& tile_list);
+    virtual BoundingOrientedBox* Get_Collider();
+
+
+    int GetHeightMapWidth() { return(m_pHeightMapImage->GetHeightMapWidth()); }
+    int GetHeightMapLength() { return(m_pHeightMapImage->GetHeightMapLength()); }
+
+    XMFLOAT3 GetScale() { return(m_xmf3Scale); }
+    float GetWidth() { return(m_nWidth * m_xmf3Scale.x); }
+    float GetLength() { return(m_nLength * m_xmf3Scale.z); }
+
+    void Check_Culling(CCamera* pCamera);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+    void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);
+    void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
+};
+
+class Boat_Object : public CGameObject
+{
+private:
+
+    XMFLOAT3 wave_normal_vector{};
+    float wave_height = 0.0f;
+    float smoothedHeight = 0.0f;
+
+    XMFLOAT3 boat_up_vector{};
+    XMFLOAT3 m_xmf3Velocity{};
+
+    float                    m_fMaxVelocityXZ = 0.0f;
+    float                    m_fFriction = 0.0f;
+
+    bool Sail_Mode = true; // false == Stay_Mode
+public:
+    std::unordered_map<std::string, CGameObject*> Boat_Frames_Marker;
+
+
+    Boat_Object();
+    virtual ~Boat_Object();
+
+    virtual void Move(float fSpeed, bool bUpdateVelocity);
+    virtual void MoveForward(float speed);
+    void Yaw(float angle);
+
+    void UpdateRotationFromWave(float fTimeElapsed);
+    void UpdateMovementOnWave(float fTimeElapsed);
+    void Set_Wave_Normal(XMFLOAT3& normal) { wave_normal_vector = normal; }
+    void Set_Wave_Height(float height) { wave_height = height; }
+
+    void SetRotationSpeed(float fRotationSpeed) { m_fRotationSpeed = fRotationSpeed; }
+    void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
+    void Add_Rotate(float angleDelta);
+
+    void Set_Velocity(XMFLOAT3 new_velo) { m_xmf3Velocity = new_velo; }
+
+
+    virtual void Animate(float fTimeElapsed);
+    void HandleBoundaryReflection(float boundary);
+
+    XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
+    float Get_RotationSpeed() { return m_fRotationSpeed; }
+
+    void RegisterMarker(const std::string& name, CGameObject* node) { Boat_Frames_Marker[name] = node; }
+
+    bool GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos);
+
+    bool Is_Moving();
+    bool Get_Sail_Mode() { return Sail_Mode; }
+    void Set_Sail_Mode(bool mode) { Sail_Mode = mode; }
+    void Change_Model(bool is_stay_mode);
+
+};
+
+class Plane_Object : public CGameObject
+{
+private:
+    CTexture* Plane_BaseTexture = NULL;
+    CTexture* Plane_DetailTexture = NULL;
+
+public:
+    static Deferred_Plane_Shader* plane_shader;
+    CMaterial* Plane_Material = NULL;
+
+    Plane_Object() {}
+    Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    virtual ~Plane_Object();
+
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+    void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+    void Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+
+};
+
+class Wave_Object : public Plane_Object
+{
+private:
+    static CS_Wave_Shader* cs_wave_shader;
+    CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+    ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
+
+    UINT desiredTexelSize = 0;
+    UINT Tex_Length = 0;
+    float Side_Length = 0.0f;
+    bool bPingPongToggle = false;
+
+
+    XMFLOAT3 World_Boat_Pos = { 0.0f, 0.0f, 0.0f };
+    XMFLOAT3 World_Boat_Dir = { 0.0f,1.0f, 0.0f };
+    float World_Boat_Velocity = 0.0f;
+
+    XMFLOAT3 BoatPos_WaveNormal = { 0.0f, 0.0f, 0.0f };
+    float BoatPos_WaveHeight = 0.0f;
+
+public:
+    Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100);
+    virtual ~Wave_Object();
+
+    void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
+    XMFLOAT3 Readback_Buffer_Data();
+
+    void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+
+    void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
+
+
+};
+
+
+
+class CSkyBox : public CGameObject
+{
+public:
+    CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    virtual ~CSkyBox();
+
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+};
+
+class Trail_Object : public CGameObject
+{
+private:
+    Trail_Mesh* trail_mesh = NULL;
+    float m_fAccumulatedTime = 0.0f;
+
+    CGameObject* m_pTargetObject = nullptr;
+    bool m_bUseTargetScale = true;
+
+    XMFLOAT3 m_vLocalTop = {};
+    XMFLOAT3 m_vLocalBottom = {};
+
+    // Minimum segment creation interval N/s
+    float m_fSegmentInterval = 0.001f;
+    float m_fSegmentTimer = 0.0f;
+
+public:
+    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual ~Trail_Object();
+
+    void Set_Trail_Target(CGameObject* target, bool bUseScale = true)
+    {
+        m_pTargetObject = target;
+        m_bUseTargetScale = bUseScale;
+    }
+
+    void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom)
+    {
+        m_vLocalTop = top;
+        m_vLocalBottom = bottom;
+    }
+
+    virtual void Animate(float fTimeElapsed);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    Trail_Mesh* GetTrailMesh() {
+        return trail_mesh;
+    }
+
+};
+
+
+//==================================================================================
+
+
+//==================================================================================
+
+
+
+class CMonsterObject : public CGameObject
+{
+public:
+    //CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
+    CMonsterObject() {};
+    virtual ~CMonsterObject();
+    virtual void Animate(float fTimeElapsed);
+    //std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
+    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+    int test_num{ 0 };
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void SetupWeaponCollider();
+protected:
+    std::unique_ptr<MonsterStateMachine> m_StateMachine;
+};
+
+class CFishManObject : public CMonsterObject
+{
+public:
+    CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    virtual ~CFishManObject() {};
+
+    FishManStateMachine* GetStateMachine() override {
+        return static_cast<FishManStateMachine*>(m_StateMachine.get());
+    }
+};
+
+class CAnubisObject : public CMonsterObject
+{
+public:
+    CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    virtual ~CAnubisObject() {};
+
+    AnubisStateMachine* GetStateMachine() override {
+        return static_cast<AnubisStateMachine*>(m_StateMachine.get());
+    }
+};
+
+class CDragonObject : public CMonsterObject
+{
+public:
+    CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    virtual ~CDragonObject() {};
+
+    DragonStateMachine* GetStateMachine() override {
+        return static_cast<DragonStateMachine*>(m_StateMachine.get());
+    }
+};
