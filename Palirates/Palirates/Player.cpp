@@ -287,6 +287,34 @@ void CPlayer::SetLookDirection(const XMFLOAT3& look)
 
 }
 
+void CPlayer::SetupWeaponCollider()
+{
+	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+
+	if (!model || !model->m_pMesh) return;
+
+	model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+		XMStoreFloat4(&quaternion, rotationQuat);
+	else
+		quaternion = XMFLOAT4(0, 0, 0, 1);
+
+	BoundingOrientedBox* obb = new BoundingOrientedBox(
+		model->m_pMesh->GetAABBCenter(),
+		model->m_pMesh->GetAABBExtents(),
+		quaternion
+	);
+
+	model->Set_Collider(obb);
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 #define _WITH_DEBUG_CALLBACK_DATA
@@ -325,7 +353,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		ModelNum = 0; 
 	CLoadedModelInfo* pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(
 		pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelPaths[ModelNum], NULL);
-	Set_Child(pAngrybotModel->m_pModelRootObject);
+	//Set_Child(pAngrybotModel->m_pModelRootObject);
+	m_pRootModel = pAngrybotModel->m_pModelRootObject;
 
 	n_Animation = 17;
 	RootIndex = 2;
@@ -385,23 +414,24 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
-	auto model = FindFrame_v2("SM_Wep_Cutlass_01");
-	//auto model = FindFrame("body_lp");
-	model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
-	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
-	XMVECTOR scale, rotationQuat, translation;
-	XMFLOAT4 quaternion;
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+	WeaponName = "SM_Wep_Cutlass_01";
+	//auto model = FindFrame_v2("SM_Wep_Cutlass_01");
+	////auto model = FindFrame("body_lp");
+	//model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+	//XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	//XMVECTOR scale, rotationQuat, translation;
+	//XMFLOAT4 quaternion;
+	//XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
 
-	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
-	{
+	//if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	//{
 
-		XMStoreFloat4(&quaternion, rotationQuat);
-	}
-	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
-	model->Set_Collider(b);
-	model->bUpdateOBBOff();
-	Weapon_ptr = model;
+	//	XMStoreFloat4(&quaternion, rotationQuat);
+	//}
+	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	//model->Set_Collider(b);
+	//model->bUpdateOBBOff();
+	//Weapon_ptr = model;
 
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.8f, 0.0f),
