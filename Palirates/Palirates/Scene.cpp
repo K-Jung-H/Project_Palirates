@@ -611,15 +611,15 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
-		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.area_xyz = XMFLOAT3(125.0f, 100.0f, 125.0f);
 		test_sand_storm_info.EmitFaceIndex = 5;
 
 		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 		test_sand_storm_info.init_velocity_value = 100.0f;
 		test_sand_storm_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-		test_sand_storm_info.size = 1.0f;
-		test_sand_storm_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);//XMFLOAT3(0.925f, 0.902f, 0.8f);
+		test_sand_storm_info.size = 0.3f;
+		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
 	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
@@ -932,22 +932,22 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 			particle_test_button = !particle_test_button;
 			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
-			if (mon && !mon->empty())
+			if (mon)
 			{
-				std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
-
-				CGameObject* base2 = baseObj2.get();
-
-				auto* dra = dynamic_cast<CDragonObject*>(base2);
-				if (dra)
+				for (const auto& obj : *mon)
 				{
-					if (particle_test_button) {
-						dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+					if (!obj) continue;
+
+					if (auto* dragon = dynamic_cast<CDragonObject*>(obj.get()))
+					{
+						if (particle_test_button) {
+							dragon->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+						}
+						else {
+							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
+						}
+						break; 
 					}
-					else {
-						dra->GetStateMachine()->changeState(State::Idle, Key_Value::None);
-					}
-					//dra->MoveUp(30.0f);
 				}
 			}
 		}
@@ -967,6 +967,23 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			}
 			else
 			{
+				auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+				if (mon)
+				{
+					for (const auto& obj : *mon)
+					{
+						if (!obj) continue;
+
+						if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
+						{
+							anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+							XMFLOAT3 pos = anu->GetPosition();
+							pos.y += test_sand->Get_Area().y;
+							test_sand->Set_Center(pos);
+						}
+					}
+				}
+				
 				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
 
 			}
@@ -1194,19 +1211,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			m_pPlayer->GetTrailObj()->Set_Active(true);
 		}
 	}
-
-
-#ifdef RENDER_PARTICLE
-	if (particle_test_button)
-	{
-		XMFLOAT3 position = m_pPlayer->GetPosition();
-		XMFLOAT3 look = m_pPlayer->GetLook();
-
-		test_dragonfire->Set_Main_Direction(look);
-		test_dragonfire->Set_Center(position);
-	}
-#endif
-
 }
 
 void CScene::After_Update_Objects()

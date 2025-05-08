@@ -45,37 +45,92 @@ float easeOutExpo(float t)
 
 void Update_Sand_Storm(inout Particle_Info p, uint index)
 {
+    //float3 center = GetEmitFaceCenter(p.EmitFaceIndex, EmitRegionMin, EmitRegionMax);
+    //float3 up = normalize(Main_Direction);
+    //float t = saturate(p.Lifetime / p.MaxLifetime);
+    //float seed = frac(sin(index * 91.91f) * 10000.0f);
+
+    //float3 toCenter = center - p.Position;
+    //float3 tangent = normalize(cross(up, toCenter));
+
+    //float verticalBase = 1.0f + 3.0f * easeOutExpo(t);
+    //float verticalNoise = lerp(0.5f, 2.5f, frac(sin(index * 23.23f) * 4567.89f));
+    //float verticalSpeed = verticalBase * verticalNoise;
+    //if (t < 0.5f)
+    //    verticalSpeed *= 0.1f;
+
+    //float rotationBase = 60.0f;
+    //float rotationNoise = lerp(0.8f, 2.5f, frac(cos(index * 57.57f) * 6789.01f));
+    //float rotationSpeed = rotationBase * rotationNoise;
+    //if (t > 0.5f)
+    //    rotationSpeed *= 2.0f;
+
+    //float3 spiralAccel = tangent * rotationSpeed + up * verticalSpeed;
+    //p.Velocity += spiralAccel * ElapsedTime;
+
+    //float radialOsc = sin(p.Lifetime * 15.0f + seed * 3.14f) * 2.0f;
+    //float verticalOsc = sin(p.Lifetime * 12.0f + seed * 6.28f) * 1.5f;
+
+    //float3 radial = toCenter - dot(toCenter, up) * up;
+    //float3 radialDir = (length(radial) > 0.001f) ? normalize(radial) : float3(1, 0, 0);
+    //float3 shake = radialDir * radialOsc + up * verticalOsc;
+    //p.Velocity += shake * ElapsedTime;
+
+    //p.Position += p.Velocity * ElapsedTime;
+    //p.Rotate_Value += (4.0f + seed * 3.0f) * ElapsedTime;
+    //p.Lifetime += ElapsedTime;
+
+    //if (p.Lifetime >= p.MaxLifetime)
+    //    p.Active = 0;
+    
     float3 center = GetEmitFaceCenter(p.EmitFaceIndex, EmitRegionMin, EmitRegionMax);
     float3 up = normalize(Main_Direction);
     float t = saturate(p.Lifetime / p.MaxLifetime);
-    float seed = frac(sin(index * 91.91f) * 10000.0f);
 
     float3 toCenter = center - p.Position;
     float3 tangent = normalize(cross(up, toCenter));
-
-    float verticalBase = 1.0f + 3.0f * easeOutExpo(t);
-    float verticalNoise = lerp(0.5f, 2.5f, frac(sin(index * 23.23f) * 4567.89f));
-    float verticalSpeed = verticalBase * verticalNoise;
-    if (t < 0.5f)
-        verticalSpeed *= 0.1f;
-
-    float rotationBase = 60.0f;
-    float rotationNoise = lerp(0.8f, 2.5f, frac(cos(index * 57.57f) * 6789.01f));
-    float rotationSpeed = rotationBase * rotationNoise;
-    if (t > 0.5f)
-        rotationSpeed *= 2.0f;
-
-    float3 spiralAccel = tangent * rotationSpeed + up * verticalSpeed;
-    p.Velocity += spiralAccel * ElapsedTime;
-
-    float radialOsc = sin(p.Lifetime * 15.0f + seed * 3.14f) * 2.0f;
-    float verticalOsc = sin(p.Lifetime * 12.0f + seed * 6.28f) * 1.5f;
-
     float3 radial = toCenter - dot(toCenter, up) * up;
     float3 radialDir = (length(radial) > 0.001f) ? normalize(radial) : float3(1, 0, 0);
-    float3 shake = radialDir * radialOsc + up * verticalOsc;
-    p.Velocity += shake * ElapsedTime;
+    
+    float seed = frac(sin(index * 91.91f) * 10000.0f);
+    
+    if (t < 0.3f)
+    {
+    // 중심으로 향하게
+        float speed = lerp(70.0f, 2.0f, t / 0.3f); // 점점 느려짐
+        p.Velocity = normalize(toCenter) * speed;
 
+    // 회전 약간
+        p.Velocity += tangent * 2.0f;
+    
+    // 수직 상승 적게
+        p.Velocity += up * 0.5f;
+    }
+    else 
+    {
+        float verticalBase = 1.0f + 3.0f * easeOutExpo(t);
+        float verticalNoise = lerp(0.5f, 2.5f, frac(sin(index * 23.23f) * 4567.89f));
+        float verticalSpeed = verticalBase * verticalNoise;
+        if (t < 0.5f)
+            verticalSpeed *= 0.1f;
+
+        float rotationBase = 60.0f;
+        float rotationNoise = lerp(0.8f, 2.5f, frac(cos(index * 57.57f) * 6789.01f));
+        float rotationSpeed = rotationBase * rotationNoise;
+        if (t > 0.5f)
+            rotationSpeed *= 2.0f;
+
+        float3 spiralAccel = tangent * rotationSpeed + up * verticalSpeed;
+        p.Velocity += spiralAccel * ElapsedTime;
+
+    // 흔들림
+        float radialOsc = sin(p.Lifetime * 15.0f + seed * 3.14f) * 2.0f;
+        float verticalOsc = sin(p.Lifetime * 12.0f + seed * 6.28f) * 1.5f;
+        float3 shake = radialDir * radialOsc + up * verticalOsc;
+        p.Velocity += shake * ElapsedTime;
+    }
+
+// 공통 처리
     p.Position += p.Velocity * ElapsedTime;
     p.Rotate_Value += (4.0f + seed * 3.0f) * ElapsedTime;
     p.Lifetime += ElapsedTime;
@@ -202,6 +257,9 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
         p.Type = PARTICLE_TYPE_SAND_STORM;
         p.EmitFaceIndex = 2;
         p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+        
+        p.Active = 0;
+
         ParticleBuffer_Update[index] = p;
         return;
     }

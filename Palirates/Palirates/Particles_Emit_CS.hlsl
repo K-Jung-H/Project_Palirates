@@ -199,17 +199,15 @@ void Emit_Sand_Storm(inout Particle_Info p, uint index)
     float3 realMin = min(EmitRegionMin, EmitRegionMax);
     float3 realMax = max(EmitRegionMin, EmitRegionMax);
     float3 emitCenter = GetEmitFaceCenter(p.EmitFaceIndex, realMin, realMax);
-
-    float3 offset = RandomSpreadDirection(index * (p.Type + 1), baseDir, 1.0f);
-    float startRadius = 5.0f + frac(sin(index * 17.17f) * 1234.5678f) * 10.0f;
-    p.Position = emitCenter + offset * startRadius;
-
-    float3 tangent = normalize(cross(baseDir, offset));
-    float3 initialDir = normalize(baseDir * 0.7f + tangent * 0.3f);
-
-    // float noise = frac(sin(index * 31.31f) * 6789.1234f); 
-    // initialDir += RandomSpreadDirection(index, baseDir, 0.2f) * 0.2f; // 방향 노이즈 (선택 적용)
-    // initialDir = normalize(initialDir);
+    
+    float angle = frac(sin(index * 17.17f) * 10000.0f) * 2.0f * XM_PI;
+    float radius = 100.0f; 
+    float3 radialOffset = float3(cos(angle), 0.0f, sin(angle)) * radius;
+    p.Position = emitCenter + radialOffset;
+    
+    float3 toCenter = normalize(-radialOffset); 
+    float3 tangent = normalize(cross(baseDir, toCenter)); 
+    float3 initialDir = normalize(toCenter * 0.8f + tangent * 0.2f); 
 
     p.Velocity = initialDir * Init_Velocity_Value;
 }
@@ -253,7 +251,7 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     }
     else if (p.Type == PARTICLE_TYPE_SAND_STORM)
     {
-        float delay = 0.5f + seed * 3.0f; 
+        float delay = 0.0f + seed * 10.0f; 
         p.Lifetime = -delay;
     }
     else if (p.Type == PARTICLE_TYPE_SPLASH)
