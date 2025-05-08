@@ -178,6 +178,7 @@ public:
 	void SetState(int newState) { state = newState; }
 
 	std::string Serialize();
+	virtual void SetupWeaponCollider();
 };
 
 

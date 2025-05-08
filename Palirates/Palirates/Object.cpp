@@ -606,7 +606,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 }
 
-void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, CGameObject* pParent, FILE* pInFile, CShader* pShader)
+void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrTextureName[64] = { '\0' };
 
@@ -659,7 +659,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 					if (!pParent->m_pParent) break;
 					pParent = pParent->m_pParent;
 				}
-				CGameObject* pRootGameObject = pParent;
+				std::shared_ptr<CGameObject> pRootGameObject = pParent;
 				*ppTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
 				if (*ppTexture) (*ppTexture)->AddRef();
 			}
@@ -1726,7 +1726,7 @@ std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 	{
 		// 3) 첫 번째 자식부터 재귀 복제
 		clone->m_pChild = this->m_pChild->Clone(true);
-		clone->m_pChild->m_pParent = clone.get();
+		clone->m_pChild->m_pParent = clone;
 
 		// 4) 나머지 형제들도 순차적으로 복제하여 링크
 		auto srcSibling = this->m_pChild->m_pSibling;
@@ -1734,7 +1734,7 @@ std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 		while (srcSibling)
 		{
 			dstSibling->m_pSibling = srcSibling->Clone(true);
-			dstSibling->m_pSibling->m_pParent = clone.get();
+			dstSibling->m_pSibling->m_pParent = clone;
 
 			// 다음 형제
 			dstSibling = dstSibling->m_pSibling;
@@ -1777,7 +1777,7 @@ std::shared_ptr<CGameObject> CGameObject::Make_Instance(std::shared_ptr<CGameObj
 	{
 		instance->m_pChild = Make_Instance(modelRoot->m_pChild, true);
 		if (instance->m_pChild)
-			instance->m_pChild->m_pParent = instance.get(); // Set proper parent linkage
+			instance->m_pChild->m_pParent = instance; // Set proper parent linkage
 	}
 
 	if (withHierarchy && modelRoot->m_pSibling)
@@ -1846,7 +1846,7 @@ void CGameObject::Set_Name(std::string_view name)
 void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild)
 {
 	if (pChild)
-		pChild->m_pParent = this;
+		pChild->m_pParent = shared_from_this();
 
 
 	if (m_pChild)
@@ -1858,7 +1858,6 @@ void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild)
 	}
 	else
 		m_pChild = pChild;
-
 }
 
 void CGameObject::Set_Active(bool active, bool IsRoot)
@@ -2507,9 +2506,9 @@ XMFLOAT3 CGameObject::Get_World_Position()
 	return XMFLOAT3(obj_pos.x + parent_pos.x, obj_pos.y + parent_pos.y, obj_pos.z + parent_pos.z);
 }
 
-CGameObject* CGameObject::Get_Root_Object()
+std::shared_ptr<CGameObject> CGameObject::Get_Root_Object()
 {
-	CGameObject* root = this;
+	std::shared_ptr<CGameObject> root = shared_from_this();
 	while (root->m_pParent != nullptr)
 	{
 		root = root->m_pParent;
@@ -2786,7 +2785,7 @@ void CGameObject::ClearMeshCache()
 	MeshCache.clear();
 }
 
-void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CGameObject* pParent, FILE* pInFile, CShader* pShader)
+void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	int nMaterial = 0;
@@ -2923,14 +2922,14 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	}
 }
 
-CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
+std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
 
 	int nFrame = 0, nTextures = 0;
 
-	CGameObject* pGameObject = new CGameObject();
+	std::shared_ptr<CGameObject> pGameObject = std::make_shared<CGameObject>();
 
 	for (; ; )
 	{
@@ -2987,7 +2986,7 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 			{
 				for (int i = 0; i < nChilds; i++)
 				{
-					CGameObject* pChild_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
+					std::shared_ptr<CGameObject> pChild_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader, pnSkinnedMeshes);
 
 					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr);
 					if (pChild)
@@ -3003,14 +3002,14 @@ CGameObject* CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, I
 	return(pGameObject);
 }
 
-CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CGameObject* pParent, FILE* pInFile, CShader* pShader)
+std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
 
 	int nFrame = 0, nTextures = 0;
 
-	CGameObject* pGameObject = new CGameObject();
+	std::shared_ptr<CGameObject> pGameObject = std::make_shared<CGameObject>();
 
 	for (; ; )
 	{
@@ -3059,7 +3058,7 @@ CGameObject* CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice,
 			{
 				for (int i = 0; i < nChilds; i++)
 				{
-					CGameObject* pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader);
+					std::shared_ptr<CGameObject> pChild_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pGameObject, pInFile, pShader);
 
 					std::shared_ptr<CGameObject> pChild(pChild_raw_ptr); // 소유권 이전
 					if (pChild)
@@ -3091,7 +3090,7 @@ CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12G
 		{
 			if (!strcmp(pstrToken, "<Hierarchy>:"))
 			{
-				CGameObject* ModelRootObject_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader);
+				std::shared_ptr<CGameObject> ModelRootObject_raw_ptr = CGameObject::Load_Scene_HierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader);
 
 				std::shared_ptr<CGameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
 				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
@@ -3231,7 +3230,7 @@ CLoadedModelInfo* CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device* pd
 		{
 			if (!strcmp(pstrToken, "<Hierarchy>:"))
 			{
-				CGameObject* ModelRootObject_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes);
+				std::shared_ptr<CGameObject> ModelRootObject_raw_ptr = CGameObject::LoadFrameHierarchyFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, NULL, pInFile, pShader, &pLoadedModel->m_nSkinnedMeshes);
 
 				std::shared_ptr<CGameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
 				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
@@ -3332,18 +3331,18 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 }
 
 std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
-	CGameObject* root = Get_Root_Object();
+	std::shared_ptr<CGameObject> root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
 
-	CGameObject* target = FindFrame(const_cast<char*>(targetName));
+	std::shared_ptr<CGameObject> target = FindFrame_v2(const_cast<char*>(targetName));
 	if (!target || !target->m_pParent)
 		return nullptr;
 	target->Set_Active(false);
-	CGameObject* parentRaw = target->m_pParent;
+	std::shared_ptr<CGameObject> parentRaw = target->GetParent_v2();
 
 	std::shared_ptr<CGameObject> prev;
 	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
-	while (curr && curr.get() != target) {
+	while (curr && curr.get() != target.get()) {
 		prev = curr;
 		curr = curr->m_pSibling;
 	}
@@ -3391,10 +3390,8 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 {
 	static int tile_map_number = 0;
 
-
 	if (pTerrainBaseTexture == nullptr)
 	{
-
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
@@ -3403,18 +3400,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
 
-
 		pTerrainShader = new Deferred_CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-
-
-
 		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
 		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
-
-
 
 		pTerrainMaterial = new CMaterial(2);
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
@@ -3423,7 +3414,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
-
 		tile_map_number = 0;
 		Set_Name("Root_Tile_Map");
 	}
@@ -3431,8 +3421,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	{
 		Set_Tile(tile_map_number++);
 	}
-
-	// ============================================================
 
 	Vertex_gap = (Vertex_gap % 2) ? Vertex_gap + 1 : Vertex_gap;
 
@@ -3443,7 +3431,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	Area_LT.x = start_x_pos * xmf3Scale.x;
 	Area_LT.y = start_z_pos * xmf3Scale.z;
-
 	Area_RB.x = (start_x_pos + m_nWidth) * xmf3Scale.x;
 	Area_RB.y = (start_z_pos + m_nLength) * xmf3Scale.z;
 
@@ -3454,46 +3441,38 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);
 	}
-	else
+}
+
+void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+	LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
+{
+	if (m_nDepth <= 0) return;
+
+	int Cell_num = 2;
+	long blocks_x_size[2] = { m_nWidth / 2, m_nWidth - m_nWidth / 2 };
+	long blocks_z_size[2] = { m_nLength / 2, m_nLength - m_nLength / 2 };
+
+	for (int z = 0; z < Cell_num; ++z)
 	{
-		int Cell_num = 2;
-		long blocks_x_size[2];
-		long blocks_z_size[2];
-
-		blocks_x_size[0] = m_nWidth / 2;
-		blocks_x_size[1] = m_nWidth - blocks_x_size[0];
-
-
-		blocks_z_size[0] = m_nLength / 2;
-		blocks_z_size[1] = m_nLength - blocks_z_size[0];
-
-
-		if (nMaxDepth > 0)
+		for (int x = 0; x < Cell_num; ++x)
 		{
-			for (int z = 0; z < Cell_num; ++z)
-			{
-				for (int x = 0; x < Cell_num; ++x)
-				{
+			XMFLOAT4 tile_color = Get_Random_Color(1.0f);
 
-					XMFLOAT4 tile_color = Get_Random_Color(1.0f);
+			int xStart = (int)Tile_Start_Pos.x + x * blocks_x_size[0];
+			int zStart = (int)Tile_Start_Pos.y + z * blocks_z_size[0];
 
-					int xStart = start_x_pos + x * blocks_x_size[0];
-					int zStart = start_z_pos + z * blocks_z_size[0];
+			std::shared_ptr<CHeightMapTerrain> child = std::make_shared<CHeightMapTerrain>(
+				pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName,
+				xStart, zStart, blocks_x_size[x], blocks_z_size[z],
+				xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1
+			);
 
-					CHeightMapTerrain* part_map_raw_ptr =
-						new CHeightMapTerrain(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, nMaxDepth - 1);
+			Set_Child(child);
 
-					std::shared_ptr<CGameObject> part_map(part_map_raw_ptr);
-					Set_Child(part_map);
-
-				}
-			}
+			// 재귀 분할
+			child->DivideIntoChildren(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xmf3Scale, Vertex_gap);
 		}
 	}
-
-	//if (!strncmp(m_pstrFrameName, "Root_Tile_Map", strlen("Root_Tile_Map")))
-	//	PrintFrameInfo(this, NULL);
-
 }
 
 
@@ -4472,6 +4451,49 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
+void CMonsterObject::SetupWeaponCollider()
+{
+	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+
+	if (!model || !model->m_pMesh) return;
+
+	if (WeaponName == "HeadA_LP") {
+		model->customRotation = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(160.0f),
+			XMConvertToRadians(90.0f),
+			XMConvertToRadians(0.0f));
+	}
+	if (WeaponName == "spear_lp") {
+		model->customRotation = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(45.0f),
+			XMConvertToRadians(30.0f),
+			XMConvertToRadians(0.0f));
+	}
+
+	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
+
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+		XMStoreFloat4(&quaternion, rotationQuat);
+	else
+		quaternion = XMFLOAT4(0, 0, 0, 1);
+
+	BoundingOrientedBox* obb = new BoundingOrientedBox(
+		model->m_pMesh->GetAABBCenter(),
+		model->m_pMesh->GetAABBExtents(),
+		quaternion
+	);
+
+	model->Set_Collider(obb);
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
+
+}
+
 ///////////////////////////////////////////////////////////////////
 
 CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
@@ -4502,8 +4524,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	RootIndex = 0;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
-
-	Set_Child(pFishManModel->m_pModelRootObject);
+	m_pRootModel = pFishManModel->m_pModelRootObject;
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pFishManModel);
 	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	for (int i = 0; i < n_Animation; ++i) {
@@ -4517,35 +4538,12 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 	SetScale(10.0f, 10.0f, 10.0f);
 	WeaponName = "spear_lp";
-	auto model = FindFrame_v2(WeaponName);
-	//auto model = FindFrame("body_lp");
-	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
-	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
-	XMVECTOR scale, rotationQuat, translation;
-	XMFLOAT4 quaternion;
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
-
-	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
-	{
-
-		XMStoreFloat4(&quaternion, rotationQuat);
-	}
-	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
-	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
-	model->Set_Collider(b);
-	model->bUpdateOBBOff();
-	Weapon_ptr = model;
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.8f, 0.0f),  
 		XMFLOAT3(0.4f, 0.8f, 0.4f),  
 		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
 	);
 	Set_Collider(body);
-
-	model->customRotation = XMMatrixRotationRollPitchYaw(
-		XMConvertToRadians(45.0f),
-		XMConvertToRadians(30.0f),
-		XMConvertToRadians(0.0f));
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4585,7 +4583,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 
-	Set_Child(pAnubisModel->m_pModelRootObject);
+	m_pRootModel = pAnubisModel->m_pModelRootObject;
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAnubisModel);
 	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	for (int i = 0; i < n_Animation; ++i) {
@@ -4601,23 +4599,6 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	SetScale(15.0f, 15.0f, 15.0f);
 
 	WeaponName = "Staff_LP";
-	auto model = FindFrame_v2(WeaponName);
-	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
-	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
-	XMVECTOR scale, rotationQuat, translation;
-	XMFLOAT4 quaternion;
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
-
-	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
-	{
-
-		XMStoreFloat4(&quaternion, rotationQuat);
-	}
-	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
-	model->Set_Collider(b);
-	model->bUpdateOBBOff();
-	Weapon_ptr = model;
-
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.9f, 0.0f),
 		XMFLOAT3(0.3f, 0.9f, 0.3f),
@@ -4655,8 +4636,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
-
-	Set_Child(pDragonModel->m_pModelRootObject);
+	m_pRootModel = pDragonModel->m_pModelRootObject;
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pDragonModel);
 	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	for (int i = 0; i < n_Animation; ++i) {
@@ -4674,24 +4654,4 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	Set_Name("Dragon");
 
 	WeaponName = "HeadA_LP";
-	auto model = FindFrame_v2(WeaponName);
-	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
-	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
-	XMVECTOR scale, rotationQuat, translation;
-	XMFLOAT4 quaternion;
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
-
-	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
-	{
-
-		XMStoreFloat4(&quaternion, rotationQuat);
-	}
-	BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
-	model->Set_Collider(b);
-	model->customRotation = XMMatrixRotationRollPitchYaw(
-		XMConvertToRadians(160.0f),
-		XMConvertToRadians(90.0f),
-		XMConvertToRadians(0.0f));
-	model->bUpdateOBBOff();
-	Weapon_ptr = model;
 }
