@@ -280,7 +280,7 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
         p.Lifetime += ElapsedTime;
     if (p.Lifetime >= p.MaxLifetime)
     {
-        p.Active = 2;
+        p.Active = 0;
     }
     else
     {
