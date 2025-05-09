@@ -384,6 +384,38 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 				}
 				break;
+
+				case 0x38:
+				{
+					// Set scene_index to 0 when key 8 is pressed
+					scene_index = 0;
+					scene_manager->Set_Active_Scene("Character_Select");
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+				}
+					break;
+				case 0x39:
+				{
+					// Set scene_index to 1 when key 9 is pressed
+					scene_index = 1;
+					scene_manager->Set_Active_Scene("Game_Board");
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+				}
+					break;
+				case 0x30:
+				{
+					// Set scene_index to 2 when key 0 is pressed
+					scene_index = 2;
+					scene_manager->Set_Active_Scene("In_Stage");
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+				}
+					break;
+
 				case VK_RETURN:
 					break;
 				case VK_F1:
@@ -391,6 +423,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F3:
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
 					break;
+
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
@@ -659,11 +692,9 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
-	scene_manager->Set_Active_Scene("In_Stage");
+	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
-	m_pPlayer->SetPosition(XMFLOAT3{ 0.0f, 0.0f, 0.0f });
-	m_pPlayer->SetPosition(XMFLOAT3{ 500.0f, 0.0f, 500.0f });
-
+	m_pPlayer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
 
 	m_pCamera = m_pPlayer->GetCamera();
 	
