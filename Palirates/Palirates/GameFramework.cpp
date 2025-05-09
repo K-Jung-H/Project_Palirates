@@ -71,7 +71,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
 	Build_Scenes();
-	scene_manager->Get_Active_Scene()->obj_manager->Add_Object(m_pPlayer, Object_Type::skinned);
 	return(true);
 }
 
@@ -674,8 +673,8 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
 	pPlayer->Set_Child(pPlayer->m_pRootModel);
 	pPlayer->SetupWeaponCollider();
+	in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
-	//pPlayer->SetOutlineColor(3);
 
 
 	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
@@ -689,12 +688,12 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Register_Scene("Character_Select", character_select_scene);
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
 	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	select_scene_observer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
-	m_pPlayer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
 
 	m_pCamera = m_pPlayer->GetCamera();
 	
