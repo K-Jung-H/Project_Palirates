@@ -954,6 +954,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
+							dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}
 						break; 
