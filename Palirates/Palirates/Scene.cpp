@@ -611,7 +611,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
-		test_sand_storm_info.area_xyz = XMFLOAT3(125.0f, 100.0f, 125.0f);
+		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
 		test_sand_storm_info.EmitFaceIndex = 5;
 
 		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
@@ -624,6 +624,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	test_dragonfire->Set_Active(false);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 
 	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
@@ -914,23 +915,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		switch (wParam)
 		{
 		case 'Q':
-		{
 			test_button = !test_button;
-			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
-			if (mon && !mon->empty())
 			{
-				std::shared_ptr<CGameObject> baseObj2 = (*mon)[0];
+				m_pPlayer->SetBlurMask(test_button);
 
-				CGameObject* base2 = baseObj2.get();
-
-				auto* anu = dynamic_cast<CAnubisObject*>(base2);
-				if (anu)
-				{
-					anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				}
-			}
-		}	
-		break;
+			}		break;
 
 		case 'E':
 		{
@@ -976,6 +965,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand->Update_Func_Index != 2)
 			{
 				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+				test_sand->Set_Center(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
+				test_sand->Set_Area(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
 			}
 			else
 			{
@@ -1210,51 +1201,11 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		}
 	}
 	// Sand
-	if (test_sand != NULL) {
-		if (test_sand->Update_Func_Index == 2) {
-			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
-			if (mon)
-			{
-				for (const auto& obj : *mon)
-				{
-					if (!obj) continue;
-
-					if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
-					{
-						//if (anu->GetStateMachine()->Skill1_ElapsedTime > anu->GetStateMachine()->Skill1_EndTime) {
-						/*XMFLOAT3 pos = test_sand->Get_Center();
-						XMFLOAT3 dir_f3 = test_sand->Get_Main_Direction();
-
-						XMVECTOR dir = XMVector3Normalize(XMLoadFloat3(&dir_f3));
-						XMVECTOR currPos = XMLoadFloat3(&pos);
-
-						float speed = 100.0f;
-						XMVECTOR moved = XMVectorScale(dir, speed * fTimeElapsed);
-
-						currPos = XMVectorAdd(currPos, moved);
-						XMStoreFloat3(&pos, currPos);
-
-						test_sand->Set_Center(pos);*/
-
-						//float speed = 100.0f;
-						//XMFLOAT3 pos = test_sand->Get_Center();
-						//pos.x += speed * fTimeElapsed;
-						//test_sand->Set_Center(pos);
-
-						//}
-					}
-				}
-			}
-		}
-	}
-
 
 	if (for_demo_dragonfire_button)
 	{
 		static float totalTime = 0.0f;
 		totalTime += fTimeElapsed;
-
-
 
 		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
 		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
@@ -1292,6 +1243,25 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			m_pPlayer->GetTrailObj()->Set_Active(true);
 		}
 	}
+
+
+	if (test_sand && test_sand->Update_Func_Index == 1)
+	{
+		auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (mon)
+		{
+			for (const auto& obj : *mon)
+			{
+				if (!obj) continue;
+
+				if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
+				{
+					test_sand->Set_Center(anu->GetPosition());
+				}
+			}
+		}
+	}
+
 }
 
 void CScene::After_Update_Objects()
