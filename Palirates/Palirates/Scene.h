@@ -109,7 +109,9 @@ public:
 	Particle_Manager* particle_manager = NULL;
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
-
+	std::shared_ptr<ParticleObject> for_demo_dragonfire = NULL;
+	bool for_demo_dragonfire_button = false;
+	
 	Object_Manager* obj_manager = NULL;
 
 
