@@ -983,13 +983,22 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						{
 							anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 							XMFLOAT3 pos = anu->GetPosition();
+							XMFLOAT3 dir = anu->GetLook();
 							pos.y += test_sand->Get_Area().y;
+							float speed = 30.0f;
+							XMVECTOR vPos = XMLoadFloat3(&pos);
+							XMVECTOR vDir = XMLoadFloat3(&dir);
+							XMVECTOR vMove = XMVectorScale(vDir, speed);
+							XMVECTOR vResult = XMVectorAdd(vPos, vMove);
+							XMStoreFloat3(&pos, vResult);
 							test_sand->Set_Center(pos);
+							//test_sand->Set_Main_Direction(anu->GetLook());
+							//test_sand->target_dir = XMLoadFloat3(&anu->GetLook());
+							test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
 						}
 					}
 				}
 				
-				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
 
 			}
 		}
@@ -1154,7 +1163,7 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 			}
 		}
 	}
-
+	// Dragon
 	if (particle_test_button)
 	{
 		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1188,8 +1197,44 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 				}
 			}
 		}
+	}
+	// Sand
+	if (test_sand != NULL) {
+		if (test_sand->Update_Func_Index == 2) {
+			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (mon)
+			{
+				for (const auto& obj : *mon)
+				{
+					if (!obj) continue;
 
+					if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
+					{
+						//if (anu->GetStateMachine()->Skill1_ElapsedTime > anu->GetStateMachine()->Skill1_EndTime) {
+						/*XMFLOAT3 pos = test_sand->Get_Center();
+						XMFLOAT3 dir_f3 = test_sand->Get_Main_Direction();
 
+						XMVECTOR dir = XMVector3Normalize(XMLoadFloat3(&dir_f3));
+						XMVECTOR currPos = XMLoadFloat3(&pos);
+
+						float speed = 100.0f;
+						XMVECTOR moved = XMVectorScale(dir, speed * fTimeElapsed);
+
+						currPos = XMVectorAdd(currPos, moved);
+						XMStoreFloat3(&pos, currPos);
+
+						test_sand->Set_Center(pos);*/
+
+						//float speed = 100.0f;
+						//XMFLOAT3 pos = test_sand->Get_Center();
+						//pos.x += speed * fTimeElapsed;
+						//test_sand->Set_Center(pos);
+
+						//}
+					}
+				}
+			}
+		}
 	}
 
 
