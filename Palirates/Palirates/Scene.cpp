@@ -934,6 +934,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
+			test_dragonfire->Set_Active(particle_test_button);
 			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 			if (mon)
 			{
@@ -944,7 +945,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 					if (auto* dragon = dynamic_cast<CDragonObject*>(obj.get()))
 					{
 						if (particle_test_button) {
-							dragon->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+							dragon->Test_Mode = true;
+							float centerZ = 1590.0f;
+							XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
+							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+							dragon->SetPosition(centerPos);
+							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
@@ -1172,24 +1178,28 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 			for (auto& obj : *list) {
 				const char* objName = obj->Get_Name();
 				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
-				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack2) {
+				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack3) {
 					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
 
 					if (weapon) {
 						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
 
 						XMVECTOR scale, rotQuat, trans;
-						if (!XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix)) {
-							trans = XMVectorZero();
-						}
-
-						XMFLOAT3 position;
-						XMStoreFloat3(&position, trans);
-						position.y -= 5.0f;
-						position.z -= 5.0f;
-						test_dragonfire->Set_Center(position);
+						XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix);
 
 						XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
+
+						float forwardOffset = 10.0f;  
+						float heightOffset = -5.0f;  
+
+						XMVECTOR offsetVec = forward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
+
+						XMVECTOR finalPos = trans + offsetVec;
+
+						XMFLOAT3 position;
+						XMStoreFloat3(&position, finalPos);
+						test_dragonfire->Set_Center(position);
+
 						XMFLOAT3 look;
 						XMStoreFloat3(&look, forward);
 						test_dragonfire->Set_Main_Direction(look);

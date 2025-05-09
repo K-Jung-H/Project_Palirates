@@ -610,6 +610,8 @@ public:
     bool bUpdateOBB{ true };
     std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
 
+    bool Test_Mode{ false };
+
 public:
     CGameObject(const std::string_view& name = "No_name");
     CGameObject(int nMaterials, const std::string_view& name = "No_name");
