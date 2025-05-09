@@ -626,6 +626,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 
+	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	for_demo_dragonfire->Set_Center(XMFLOAT3(645.0f, 10.0f, 1590.0f));
+
 	
 #endif
 	obj_manager = new Object_Manager();
@@ -1021,6 +1025,13 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			bOBBRender = !bOBBRender;
 
 		}		break;
+
+		case 'O':
+		{
+			for_demo_dragonfire_button = !for_demo_dragonfire_button;
+			for_demo_dragonfire->Set_Active(for_demo_dragonfire_button);
+		}		break;
+
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1224,6 +1235,19 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 				}
 			}
 		}
+	}
+
+
+	if (for_demo_dragonfire_button)
+	{
+		static float totalTime = 0.0f;
+		totalTime += fTimeElapsed;
+
+
+
+		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
+		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
+		for_demo_dragonfire->Set_Center(centerPos);
 	}
 }
 
@@ -1475,11 +1499,10 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		float t = (float)i / 5.0f;
 		float y = (maxY - minY) * sinf(t * XM_PI) + minY;
 
-		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(
-			pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i
-		);
+		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
 		player->Set_Child(player->m_pRootModel);
 		player->SetupWeaponCollider();
+
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
 		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
@@ -1841,7 +1864,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	{
 		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
-		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.15f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
 		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;                            // Minimum wave height
 		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;                            // Maximum wave height
 		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
@@ -1850,7 +1873,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
 
 		// === Boat Wake Parameters ===
-		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 50.0f;                          // Maximum distance the wake affects
+		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
 		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
 		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
 		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
@@ -1872,7 +1895,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	wave_plane->Animate(pd3dCommandList, fTimeElapsed);
 
 	pirate_ship->Animate(fTimeElapsed);
-
+	pirate_ship->HandleBoundaryReflection(1500.0f);
 
 	if (m_pLights)
 	{
@@ -1936,7 +1959,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 	else
 	{
-		XMFLOAT3 Fixed_Position = { -50.0f, 1400.0f, 1750.0f };
+		XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
 		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
 		m_pPlayer->SetPosition(Fixed_Position);

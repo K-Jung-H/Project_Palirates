@@ -1,12 +1,3 @@
-//cbuffer Frame_Info : register(b0)
-//{
-//    float3 boat_pos;
-//    float ElapsedTime;
-
-//    float3 boat_dir;
-//    float TotalTime;
-//};
-
 cbuffer WaveParams : register(b0)
 {
      float g_WaveSpeed; // 파도 진행 속도
