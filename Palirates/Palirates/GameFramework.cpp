@@ -606,8 +606,21 @@ void CGameFramework::Build_Scenes()
 	//scene_manager->Build_Scene("Scene_2", m_pd3dDevice, Active_CommandList);
 
 
+<<<<<<< Updated upstream
 	CScene* test_scene_ptr = scene_manager->Load_Scene("Scene_1").get();
 	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, test_scene_ptr->GetGraphicsRootSignature(), test_scene_ptr->m_pTerrain.get());
+=======
+	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
+	scene_manager->Register_Scene("Character_Select", character_select_scene);
+	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
+	Observer* select_scene_observer = new Observer(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
+	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
+
+
+	scene_manager->Set_Active_Scene("Game_Board");
+	m_pPlayer = scene_manager->Get_Active_Scene_Player();
+	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
+>>>>>>> Stashed changes
 
 	m_pPlayer = pPlayer;
 	scene_manager->Set_Scene_Player("Scene_1", m_pPlayer);
