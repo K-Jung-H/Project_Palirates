@@ -44,8 +44,7 @@ std::shared_ptr<CScene> Scene_Manager::Load_Scene(std::string_view sceneName)
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
     {
-        activeScene = it->second;  // 기존 씬을 활성화
-        return activeScene;
+        return it->second;
     }
 
     DebugOutput("[Scene_Manager] ERROR: Scene '" + std::string(sceneName) + "' not found.");
@@ -73,8 +72,6 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
     {
         it->second->BuildObjects(pd3dDevice, pd3dCommandList);
 
-//        material_reflectance_data_manager->Create_ShaderVariables(pd3dDevice, pd3dCommandList);
-
 #ifdef WRITE_TEXT_UI
         it->second->Build_Text_UI(text_ui_renderer.get());
 #endif
@@ -85,7 +82,7 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
 
 }
 
-bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player_ptr)
+bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPlayer> player_ptr)
 {
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
@@ -98,24 +95,106 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player
     return false;
 }
 
-void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+shared_ptr<CPlayer> Scene_Manager::Get_Active_Scene_Player()
+{
+    if (activeScene)
+        return activeScene->m_pPlayer;
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
+    return NULL;
+
+}
+
+void Scene_Manager::Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
     if (activeScene) 
+        activeScene->Animate_Objects(pd3dCommandList, fTimeElapsed);     
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+#ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
+    if (activeScene)
+        particle_manager = activeScene->Get_Particle_Manager();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
+#endif
+}
+
+void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+    if (activeScene)
     {
-        activeScene->Animate_Objects(pd3dCommandList, fTimeElapsed);
         activeScene->Update_Objects(pd3dDevice, pd3dCommandList);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
-}
 
-void Scene_Manager::Update_Active_Particles(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
-{
 #ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
     if (activeScene)
-        activeScene->Animate_Particles(pd3dCommandList, fTimeElapsed);    
+        particle_manager = activeScene->Get_Particle_Manager();
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->Copy_CounterBuffer(pd3dCommandList);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
+#endif
+}
+
+void Scene_Manager::After_Update_Active_Objects()
+{
+    if (activeScene)
+    {
+        activeScene->After_Update_Objects();
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+#ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
+    if (activeScene)
+        particle_manager = activeScene->Get_Particle_Manager();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->Sync_AfterAnimateObjects();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
+#endif
+
+}
+
+
+void Scene_Manager::Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+#ifdef RENDER_PARTICLE
+    Particle_Manager* particle_manager = NULL;
+
+    if (activeScene)
+        particle_manager = activeScene->Get_Particle_Manager();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    if (particle_manager)
+        particle_manager->Clear_CounterBuffer(pd3dCommandList);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
+
 #endif
 }
 
@@ -138,7 +217,7 @@ void Scene_Manager::Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandL
     if (MRT_shader)
     {
         // Connect Multi_RenderTarget
-        // nRenderTarget = 0 -> Not use BackBuffer in this time, 
+        // nRenderTarget = 0 -> Not use BackBuffer in this time
         MRT_shader->Prepare_Multi_RenderTarget(pd3dCommandList, 0, pd3dRtvCPUHandles, pd3dDsvCPUHandle);
     }
     else
@@ -158,10 +237,32 @@ void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphic
 }
 
 
-void Scene_Manager::Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
     if (activeScene)
         activeScene->Render(pd3dDevice, pd3dCommandList, pCamera);
+
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
+void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)
+    {
+        activeScene->Prepare_Transparent_Render(pd3dDevice, pd3dCommandList, pCamera);
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
+
+void Scene_Manager::Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+    if (activeScene)
+        activeScene->Transparent_Render(pd3dDevice, pd3dCommandList, pCamera);
 
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -184,9 +285,10 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
     if (activeScene)
         activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
 
+    Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
 
     if (pCamera)
-        pCamera->Update_PostRender_ShaderVariables(pd3dCommandList);
+        pCamera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
     
 
     if(MRT_shader)
@@ -194,22 +296,11 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 }
 
-void Scene_Manager::Prepare_Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-    
-}
 
-void Scene_Manager::Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-
-}
-
-// 렌더링이 모두 끝나면, 데이터  처리 작업
-void Scene_Manager::Finalize_Frame_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
-{
-    if (activeScene)  
-        activeScene->Finalize_Frame(pd3dDevice, pd3dCommandList, pCamera);
-    
+    if (activeScene)    
+        activeScene->Post_Update(pd3dDevice, pd3dCommandList, pCamera);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
@@ -243,4 +334,9 @@ CPlayer* Scene_Manager::GetPlayerById(int playerId)
         return it->second;
     }
     return nullptr;
+}
+
+void Scene_Manager::RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainPlayer> player)
+{
+    players[playerId] = player.get();
 }

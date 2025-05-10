@@ -1,6 +1,8 @@
 #pragma once
 
-#define WIN32_LEAN_AND_MEAN     
+#define WIN32_LEAN_AND_MEAN  
+#define NOMINMAX
+
 #include <windows.h>
 
 #include <stdlib.h>
@@ -21,12 +23,24 @@
 #include <cwchar>  
 #include <cstring> 
 #include <cstdio>
-#include <unordered_set>
 
+#include <algorithm>
+#include <unordered_set>
 #include <unordered_map>
+#include<queue>
 #include <map>
 #include <array>
 #include <random>
+#include <optional>
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <thread>
+#include <mutex>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+#pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
 
@@ -74,8 +88,10 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
-#define FRAME_BUFFER_WIDTH				840
-#define FRAME_BUFFER_HEIGHT				480
+#define FRAME_BUFFER_WIDTH				1280
+#define FRAME_BUFFER_HEIGHT				720
+//#define FRAME_BUFFER_WIDTH				840
+//#define FRAME_BUFFER_HEIGHT				480
 
 #define ANIMATION_TYPE_ONCE				0
 #define ANIMATION_TYPE_LOOP				1
@@ -86,33 +102,28 @@ extern HINSTANCE						ghAppInstance;
 //=====================================
 #define ROOT_PARAMETER_FRAME_CBV_INDEX 0 
 #define ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX 1
-#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 2
-#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 3
-#define ROOT_PARAMETER_CAMERA_CBV_INDEX 4
-
+#define ROOT_PARAMETER_CAMERA_CBV_INDEX 2
+#define ROOT_PARAMETER_PREV_CAMERA_CBV_INDEX 3
+#define ROOT_PARAMETER_BONE_OFFSET_CBV_INDEX 4
+#define ROOT_PARAMETER_BONE_TRANSFORM_CBV_INDEX 5
 //=====================================
-#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 5
-#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 6
-#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 7
-#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 8
-#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX 6
+#define ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX 7
+#define ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX 8
+#define ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX 9
+#define ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX 10
 
-#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 10
-#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 11
-#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 12
-#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 13
+#define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 11
+#define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 12
+#define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
+#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 14
 //=====================================
-#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 14
+#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 15
 
 #define ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX 0
 #define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 1
 #define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 2
 #define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 3
-
-//#define ROOT_PARAMETER_DETAIL_ALBEDO_TEXTURE_SRV_INDEX 11
-//#define ROOT_PARAMETER_DETAIL_NORMAL_TEXTURE_SRV_INDEX 12
-#define PARAMETER_TEST 3
-
 
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
@@ -123,15 +134,10 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-#define WRITE_TEXT_UI
-//#define RENDER_OBB
-//#define LOAD_SCENE
-<<<<<<< Updated upstream
-//#define RENDER_PARTICLE
-=======
-//#define RENDER_OBB
+//#define WRITE_TEXT_UI
+#define LOAD_SCENE
+#define RENDER_OBB
 #define RENDER_PARTICLE
->>>>>>> Stashed changes
 
 
 //#define DEBUG_MESSAGE
@@ -153,13 +159,32 @@ struct RenderTarget_Config
 	static  DXGI_FORMAT DSV_FORMAT;
 };
 
+enum Control_BufferType
+{
+	BUFFER_COUNTER = 0,
+	BUFFER_READBACK = 1,
+	BUFFER_COUNTER_RESET = 2
+};
+
+struct GPU_OBB
+{
+	XMFLOAT3 Center;
+	UINT Active;
+
+	XMFLOAT3 Extents;
+	UINT Type;
+
+	XMFLOAT4 Rotation;
+};
+
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);
-extern void WaitForGpuComplete(ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
-extern void ExecuteCommandList(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Fence* pd3dFence, UINT64 nFenceValue, HANDLE hFenceEvent);
 
-extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
-extern ID3D12Resource* CreateStructuredBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nStride, UINT nElements, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+extern ID3D12Resource* CreateBufferResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, void* pData, UINT nBytes, D3D12_HEAP_TYPE d3dHeapType = D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAGS d3dResourceFlags = D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, ID3D12Resource** ppd3dUploadBuffer = NULL);
+
+extern ID3D12Resource* Create_Control_Buffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
+
+
 
 extern ID3D12Resource* CreateTextureResourceFromDDSFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* pszFileName, ID3D12Resource** ppd3dUploadBuffer, D3D12_RESOURCE_STATES d3dResourceStates = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 extern ID3D12Resource* CreateTexture2DResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nWidth, UINT nHeight, UINT nElements, UINT nMipLevels, DXGI_FORMAT dxgiFormat, D3D12_RESOURCE_FLAGS d3dResourceFlags, D3D12_RESOURCE_STATES d3dResourceStates, D3D12_CLEAR_VALUE* pd3dClearValue);
@@ -175,11 +200,13 @@ extern void DebugOutput(const std::wstring& message);
 extern void DebugOutput(const std::string& message1, const char message2[]);
 extern void DebugOutput(const std::string& message1, const std::string& message2);
 extern void DebugOutput(const std::string& message1, const std::wstring& message2);
+extern void DebugPrintMatrix(const XMMATRIX& m);
 
 extern void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, size_t bufferSize = STR_LENGTH);
 
 
 extern XMFLOAT4 Get_Random_Color(float w);
+extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area);
 #define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 
 
@@ -192,8 +219,14 @@ inline bool IsZero(float fValue, float fEpsilon) { return((fabsf(fValue) < fEpsi
 inline bool IsEqual(float fA, float fB, float fEpsilon) { return(::IsZero(fA - fB, fEpsilon)); }
 inline float InverseSqrt(float fValue) { return 1.0f / sqrtf(fValue); }
 inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT = fTemp; }
+inline bool IsZeroVector(const XMFLOAT3& v) { return (fabs(v.x) < EPSILON && fabs(v.y) < EPSILON && fabs(v.z) < EPSILON); }
+inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
+inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs, float tolerance = 0.001f)
+{
+	return (fabs(lhs.x - rhs.x) < tolerance && fabs(lhs.y - rhs.y) < tolerance && fabs(lhs.z - rhs.z) < tolerance && fabs(lhs.w - rhs.w) < tolerance);
+}
 
 
 namespace Vector3
@@ -260,6 +293,15 @@ namespace Vector3
 		return(m_xmf3Normal);
 	}
 
+	inline XMFLOAT3 Scale(const XMFLOAT3& v, float s)
+	{
+		XMVECTOR vv = XMLoadFloat3(&v);
+		XMVECTOR vs = XMVectorScale(vv, s);
+		XMFLOAT3 result;
+		XMStoreFloat3(&result, vs);
+		return result;
+	}
+
 	inline float Length(XMFLOAT3& xmf3Vector)
 	{
 		XMFLOAT3 xmf3Result;
@@ -267,7 +309,7 @@ namespace Vector3
 		return(xmf3Result.x);
 	}
 
-	inline float Distance(XMFLOAT3& xmf3Vector1, XMFLOAT3& xmf3Vector2)
+	inline float Distance(const XMFLOAT3& xmf3Vector1, const XMFLOAT3& xmf3Vector2)
 	{
 		XMFLOAT3 xmf3Result;
 		XMStoreFloat3(&xmf3Result, XMVector3Length(XMLoadFloat3(&xmf3Vector1) - XMLoadFloat3(&xmf3Vector2)));

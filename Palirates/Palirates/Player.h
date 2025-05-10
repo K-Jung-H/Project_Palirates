@@ -11,20 +11,14 @@
 #include "Object.h"
 #include "Camera.h"
 
-enum AnimationTrack
+enum Player_Model
 {
-	TRACK_IDLE = 0,
-	TRACK_RUN_FORWARD_LEFT = 1,
-	TRACK_RUN_FORWARD = 2,
-	TRACK_RUN_FORWARD_RIGHT = 3,
-	TRACK_RUN_BACKWARD_LEFT = 4,
-	TRACK_RUN_BACKWARD = 5,
-	TRACK_RUN_BACKWARD_RIGHT = 6,
-	TRACK_RUN_LEFT = 7, 
-	TRACK_RUN_RIGHT = 8, 
-	TRACK_DIVEROLL_FORWARD = 9,
-	TRACK_KNOCK_DOWN = 10,
-	TRACK_GET_UP = 11
+	Captain = 0,
+	Deckhand = 1,
+	Female_Pirate = 2,
+	First_Mate = 3,
+	Seaman = 4,
+	Skeleton = 5,
 };
 
 class CPlayer : public CGameObject
@@ -63,6 +57,11 @@ protected:
 	float moveZ{ 0.0f };
 
 	bool MultiMode{ false };
+
+	std::shared_ptr<Trail_Object> trail_obj;
+	bool TrailOn{ false };
+	bool TrailStart{ false };
+
 	//=================¼­¹ö=================
 	int id;  
 	int state;
@@ -84,7 +83,14 @@ public:
 	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
-	void SetPosition(const XMFLOAT3& xmf3Position) { Move(XMFLOAT3(xmf3Position.x - m_xmf3Position.x, xmf3Position.y - m_xmf3Position.y, xmf3Position.z - m_xmf3Position.z), false); }
+	void SetPosition(const XMFLOAT3& xmf3Position) 
+	{ 
+		Move(XMFLOAT3(
+			xmf3Position.x - m_xmf3Position.x, 
+			xmf3Position.y - m_xmf3Position.y, 
+			xmf3Position.z - m_xmf3Position.z), 
+			false); 
+	}
 
 	void SetScale(XMFLOAT3& xmf3Scale) { m_xmf3Scale = xmf3Scale; }
 
@@ -123,7 +129,7 @@ public:
 	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
 	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
-	virtual void OnPrepareRender();
+	virtual void OnPrepareAnimate();
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
@@ -146,6 +152,14 @@ public:
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
 
+	void SetTrailObj(std::shared_ptr<Trail_Object> obj) { trail_obj = obj; }
+	std::shared_ptr<Trail_Object> GetTrailObj() { return trail_obj; }
+	void bTrailOn() { TrailOn = true; }
+	void bTrailOff() { TrailOn = false; }
+	bool GetTrailOn() { return TrailOn; }
+	void Trail_Start() { TrailStart = true; }
+	bool GetTrailStart() { return TrailStart; }
+
 	void MultiModeOn() { MultiMode = true; }
 	void MultiModeOff() { MultiMode = false; }
 	bool CheckMultiMode() { return MultiMode; }
@@ -164,6 +178,7 @@ public:
 	void SetState(int newState) { state = newState; }
 
 	std::string Serialize();
+	virtual void SetupWeaponCollider();
 };
 
 
@@ -183,7 +198,8 @@ private:
 	bool On_Ground = false;
 
 public:
-	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL, int ModelNum = 0);
+	CTerrainPlayer() {}
 	virtual ~CTerrainPlayer();
 
 public:
@@ -197,10 +213,30 @@ public:
 	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
 
-	void AlignWithNormal(XMFLOAT3 normal);
+	virtual void AlignWithNormal(XMFLOAT3& normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
 	virtual ServerAnimationSyncData MakeSyncData();
 	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
 };
 
+class Observer : public CPlayer
+{
+public:
+	Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	virtual ~Observer();
+
+public:
+	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+
+	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
+	virtual void OnCameraUpdateCallback(float fTimeElapsed);
+
+	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+
+	virtual void Animate(float fTimeElapsed);
+	virtual void Update(float fTimeElapsed);
+
+	virtual ServerAnimationSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+};

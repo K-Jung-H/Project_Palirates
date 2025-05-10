@@ -69,6 +69,12 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		if (dwDirection & DIR_UP) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, fDistance);
 		if (dwDirection & DIR_DOWN) xmf3Shift = Vector3::Add(xmf3Shift, m_xmf3Up, -fDistance);
 
+		if (Vector3::Length(xmf3Shift) > 0.0f)
+		{
+			xmf3Shift = Vector3::Normalize(xmf3Shift);
+			xmf3Shift = Vector3::Scale(xmf3Shift, fDistance);
+		}
+
 		Move(xmf3Shift, bUpdateVelocity);
 	}
 }
@@ -154,6 +160,7 @@ void CPlayer::Animate_test()
 
 void CPlayer::Update(float fTimeElapsed)
 {
+	CPlayer* a = this;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
 
 	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
@@ -253,7 +260,7 @@ CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
 	return(pNewCamera);
 }
 
-void CPlayer::OnPrepareRender()
+void CPlayer::OnPrepareAnimate()
 {
 	m_xmf4x4Parent._11 = m_xmf3Right.x; m_xmf4x4Parent._12 = m_xmf3Right.y; m_xmf4x4Parent._13 = m_xmf3Right.z;
 	m_xmf4x4Parent._21 = m_xmf3Up.x; m_xmf4x4Parent._22 = m_xmf3Up.y; m_xmf4x4Parent._23 = m_xmf3Up.z;
@@ -266,7 +273,8 @@ void CPlayer::OnPrepareRender()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA) CGameObject::Render(pd3dCommandList, pCamera);
+	if (nCameraMode == THIRD_PERSON_CAMERA || Object_type == OBJECT_TPYE_SELECT_PLAYER)
+		CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 
@@ -279,6 +287,34 @@ void CPlayer::SetLookDirection(const XMFLOAT3& look)
 
 }
 
+void CPlayer::SetupWeaponCollider()
+{
+	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+
+	if (!model || !model->m_pMesh) return;
+
+	model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+		XMStoreFloat4(&quaternion, rotationQuat);
+	else
+		quaternion = XMFLOAT4(0, 0, 0, 1);
+
+	BoundingOrientedBox* obb = new BoundingOrientedBox(
+		model->m_pMesh->GetAABBCenter(),
+		model->m_pMesh->GetAABBExtents(),
+		quaternion
+	);
+
+	model->Set_Collider(obb);
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 #define _WITH_DEBUG_CALLBACK_DATA
@@ -298,23 +334,34 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 #endif
 }
 
-CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext) : CPlayer()
+CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext, int ModelNum) : CPlayer()
 {
 	Object_type = OBJECT_TPYE_MAIN_PLAYER;
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
-	  
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Wench_v12.bin", NULL);
-	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Captain_v12.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
-	Set_Child(pAngrybotModel->m_pModelRootObject);
+	char* modelPaths[] = {
+	"Model/Captain_v17.bin",
+	"Model/Deckhand_v17.bin",
+	"Model/Female_Pirate_v17.bin",
+	"Model/First_Mate_v17.bin",
+	"Model/Seaman_v17.bin",
+	"Model/Skeleton_v17.bin"
+	};
 
-	n_Animation = 12;
+	const int modelCount = sizeof(modelPaths) / sizeof(modelPaths[0]);
+	if (ModelNum < 0 || ModelNum >= modelCount)
+		ModelNum = 0; 
+	CLoadedModelInfo* pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(
+		pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelPaths[ModelNum], NULL);
+	//Set_Child(pAngrybotModel->m_pModelRootObject);
+	m_pRootModel = pAngrybotModel->m_pModelRootObject;
+
+	n_Animation = 17;
+	RootIndex = 2;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
@@ -329,11 +376,19 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
-
+	//m_pSkinnedAnimationController->Bone_Info();
 	// Once type Setting
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
+	for (int i = 0; i < n_Animation; ++i) {
+		if (GetUpdateHipsTracks().contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK1].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK2].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK3].m_nType = ANIMATION_TYPE_ONCE;
 
 	m_pSkinnedAnimationController->SetCallbackKeys(1, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -354,8 +409,36 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetCameraUpdatedContext(pContext);
 
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)pContext;
-	SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
+	if (pTerrain != NULL)
+		SetPosition(XMFLOAT3(25.0f, pTerrain->Get_Height(25.0f, 25.0f, true, last_tile_ptr), 25.0f));
+	
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
+
+	WeaponName = "SM_Wep_Cutlass_01";
+	//auto model = FindFrame_v2("SM_Wep_Cutlass_01");
+	////auto model = FindFrame("body_lp");
+	//model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+	//XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	//XMVECTOR scale, rotationQuat, translation;
+	//XMFLOAT4 quaternion;
+	//XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	//if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	//{
+
+	//	XMStoreFloat4(&quaternion, rotationQuat);
+	//}
+	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	//model->Set_Collider(b);
+	//model->bUpdateOBBOff();
+	//Weapon_ptr = model;
+
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 0.8f, 0.0f),
+		XMFLOAT3(0.4f, 0.8f, 0.4f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
 
 	if (pAngrybotModel) delete pAngrybotModel;
 }
@@ -372,7 +455,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 	{
 		case FIRST_PERSON_CAMERA:
 			SetFriction(250.0f);
-			SetGravity(XMFLOAT3(0.0f, -400.0f, 0.0f));
+			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
@@ -383,7 +466,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case SPACESHIP_CAMERA:
-			SetFriction(5000.0f);
+			SetFriction(50.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(1000.0f);
 			SetMaxVelocityY(400.0f);
@@ -395,7 +478,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case THIRD_PERSON_CAMERA:
-			SetFriction(450.0f);
+			SetFriction(800.0f);
 			SetGravity(XMFLOAT3(0.0f, -250.0f, 0.0f));
 			SetMaxVelocityXZ(500.0f);
 			SetMaxVelocityY(400.0f);
@@ -418,24 +501,26 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 {
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)m_pPlayerUpdatedContext;
-	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
-	XMFLOAT3 xmf3PlayerPosition = GetPosition();
-	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
-	bool bReverseQuad = ((z % 2) != 0);
+	if (pTerrain) {
+		XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+		int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
+		bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
+		float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
 
-	if (xmf3PlayerPosition.y < fHeight)
-	{
-		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
-		xmf3PlayerVelocity.y = 0.0f;
-		SetVelocity(xmf3PlayerVelocity);
-		xmf3PlayerPosition.y = fHeight;
-		SetPosition(xmf3PlayerPosition);
-		On_Ground = true;
+		if (xmf3PlayerPosition.y < fHeight)
+		{
+			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+			xmf3PlayerVelocity.y = 0.0f;
+			SetVelocity(xmf3PlayerVelocity);
+			xmf3PlayerPosition.y = fHeight;
+			SetPosition(xmf3PlayerPosition);
+			On_Ground = true;
+		}
+		else
+			On_Ground = false;
 	}
-	else
-		On_Ground = false;
 
 #ifdef DEBUG_MESSAGE
 #ifdef DEBUG_MESSAGE_TILE_MAP
@@ -480,10 +565,9 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
 }
 
-
 void CTerrainPlayer::Animate(float fTimeElapsed)
 {
-	OnPrepareRender();
+	OnPrepareAnimate();
 
 	if (m_pSkinnedAnimationController)
 	{
@@ -495,17 +579,23 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 			GetStateMachine()->update(fTimeElapsed);
 		}
 		else if (Object_type == OBJECT_TPYE_PLAYER) {
-			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-			//GetStateMachine()->update(fTimeElapsed);
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
+		}
+		else if (Object_type == OBJECT_TPYE_SELECT_PLAYER) {
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
 		}
 	}
 
 	if (On_Ground)
 	{
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
-		XMFLOAT3 xmf3PlayerPosition = GetPosition();
-		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
-		AlignWithNormal(world_normal);
+		if (pTerrain) {
+			XMFLOAT3 xmf3PlayerPosition = GetPosition();
+			XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
+			AlignWithNormal(world_normal);
+		}
 	}
 
 	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
@@ -519,53 +609,12 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	
 }
 
-
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
-
-
-	if (m_pSkinnedAnimationController)
-	{
-
-		if (Anime_test_FallingLoop) {
-			if (m_fFallingTimer < 0.0f) {
-
-				m_fFallingTimer += fTimeElapsed;
-
-				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); 
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
-
-	
-				float weight2 = m_fFallingTimer / 1.0f; 
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight2);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-			}
-			else {
-
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, 0.5f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_BACKWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, 0.5f);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-
-				
-			}
-		}
-		else {
-		
-		}
-	}
-
 }
 
-void CTerrainPlayer::AlignWithNormal(XMFLOAT3 normal)
+void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
 {
 	m_xmf3Up = Vector3::Normalize(normal);
 
@@ -595,6 +644,112 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 	GetStateMachine()->SetState(syncData.currentState);
 	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
 	for (int i = 0; i < n_Animation; i++) {
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+	}
+	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
+}
+//보류
+
+//==================================================================
+
+
+Observer::Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+	: CPlayer()
+{
+	Object_type = OBJECT_TPYE_MAIN_PLAYER;
+	n_Animation = 0;
+
+	m_pCamera = ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	SetPlayerUpdatedContext(pContext);
+	SetCameraUpdatedContext(pContext);
+
+	SetPosition(XMFLOAT3(0.0f, 50.0f, 0.0f));
+
+}
+
+Observer::~Observer()
+{
+}
+
+CCamera* Observer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
+{
+	DWORD nCurrentCameraMode = (m_pCamera) ? m_pCamera->GetMode() : 0x00;
+	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
+	switch (nNewCameraMode)
+	{
+	case FIRST_PERSON_CAMERA:
+		SetFriction(250.0f);
+		SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+		SetMaxVelocityXZ(300.0f);
+		SetMaxVelocityY(400.0f);
+		m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
+		m_pCamera->SetTimeLag(0.0f);
+		m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, 0.0f));
+		m_pCamera->GenerateProjectionMatrix(1.01f, 5000.0f, ASPECT_RATIO, 60.0f);
+		m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
+		m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
+		break;
+
+	default:
+		ChangeCamera(FIRST_PERSON_CAMERA, fTimeElapsed);		
+		return(m_pCamera);
+
+	}
+	m_pCamera->SetPosition(Vector3::Add(m_xmf3Position, m_pCamera->GetOffset()));
+	Update(fTimeElapsed);
+
+	return(m_pCamera);
+}
+
+void Observer::OnPlayerUpdateCallback(float fTimeElapsed)
+{
+}
+
+void Observer::OnCameraUpdateCallback(float fTimeElapsed)
+{
+
+}
+
+void Observer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
+{
+	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
+}
+
+void Observer::Animate(float fTimeElapsed)
+{
+	OnPrepareAnimate();
+	CGameObject::Animate(fTimeElapsed);
+}
+
+void Observer::Update(float fTimeElapsed)
+{
+	CPlayer::Update(fTimeElapsed);
+}
+
+
+ServerAnimationSyncData Observer::MakeSyncData()
+{
+	ServerAnimationSyncData data = CGameObject::MakeSyncData();
+	data.currentState = GetStateMachine()->Get_State();
+	for (int i = 0; i < n_Animation; i++) 
+	{
+		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
+		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
+	}
+
+	return data;
+}
+
+void Observer::ApplySyncData(const ServerAnimationSyncData& syncData)
+{
+	CGameObject::ApplySyncData(syncData);
+	SetPosition(syncData.position);
+	GetStateMachine()->SetState(syncData.currentState);
+	for (int i = 0; i < n_Animation; i++) 
+	{
 		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
 		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
 	}

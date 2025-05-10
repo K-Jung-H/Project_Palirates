@@ -19,7 +19,7 @@
 #define DIRECTIONAL_LIGHT				3
 
 class Particle_Manager;
-
+class ParticleObject;
 
 
 struct LIGHT
@@ -53,8 +53,8 @@ public:
     CScene();
     ~CScene();
 
-	bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
-	bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
@@ -62,36 +62,56 @@ public:
 	
 	virtual void ReleaseShaderVariables();
 
-	void BuildDefaultLightsAndMaterials();
+	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	void ReleaseObjects();
 
-	ID3D12RootSignature *CreateGraphicsRootSignature(ID3D12Device *pd3dDevice);
-	ID3D12RootSignature *GetGraphicsRootSignature() { return(m_pd3dGraphicsRootSignature); }
-
-	bool ProcessInput(UCHAR *pKeysBuffer);
-	void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
+	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
+	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 
 	
-	void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	ID3D12RootSignature *Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
+
+	bool ProcessInput(UCHAR *pKeysBuffer);
+
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);	
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void After_Update_Objects();
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-    void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
-	void Finalize_Frame(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+
+	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+
+	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
 	void ReleaseUploadBuffers();
 
-	CPlayer								*m_pPlayer = NULL;
+	Particle_Manager* Get_Particle_Manager() { return particle_manager; }
+
+	//CPlayer								*m_pPlayer = NULL;
+	shared_ptr<CPlayer> m_pPlayer = NULL;
+
+	bool bOBBRender{ false };
 
 protected:
-	ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
+	ID3D12RootSignature					*m_MRT_GraphicsRootSignature = NULL;
+	ID3D12RootSignature					*m_Transparent_GraphicsRootSignature = NULL;
+	ID3D12RootSignature					*m_Plane_GraphicsRootSignature = NULL;
 
 public:
 	float								m_fElapsedTime = 0.0f;
 
 
 	Particle_Manager* particle_manager = NULL;
+	std::shared_ptr<ParticleObject> test_sand = NULL;
+	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
+	std::shared_ptr<ParticleObject> for_demo_dragonfire = NULL;
+	bool for_demo_dragonfire_button = false;
+	
 	Object_Manager* obj_manager = NULL;
 
 
@@ -110,6 +130,7 @@ public:
 	LIGHTS								*m_pcbMappedLights = NULL;
 
 	bool test_button = false;
+	bool particle_test_button = false;
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Manager* text_ui_manager = NULL;
@@ -122,9 +143,56 @@ public:
 class Test_Scene : public CScene
 {
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+};
+
+class Character_Select_Scene : public CScene
+{
+private:
+	UINT prev_index = -1;
+	UINT select_index = 0;
+	virtual void BuildDefaultLightsAndMaterials();
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	void UpdatePlayerSelection(int new_index);
+};
+
+class Board_Scene : public CScene
+{
+private:
+	std::shared_ptr<Boat_Object> pirate_ship;
+	std::shared_ptr<Wave_Object> wave_plane;
+	std::shared_ptr<ParticleObject> water_particle_1;
+	std::shared_ptr<ParticleObject> water_particle_2;
+
+	string camera_position = "";
+	bool focus_button = false;
+public:
+	virtual void BuildDefaultLightsAndMaterials();
+
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void After_Update_Objects();
+
+	void SetCameraTarget(std::string_view target);
+
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 };
 
 class Weapon_Select_Scene : public CScene
 {
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 };

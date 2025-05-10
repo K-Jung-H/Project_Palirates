@@ -3,81 +3,160 @@
 #include "stdafx.h"
 #include "Object.h"
 #include "Mesh.h"
-
+#include "Descriptor_Heap.h"
 
 //==============================================================================
-class ParticleVertex
-{
-public:
-	XMFLOAT3						m_xmf3Position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3						m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	float							m_fLifetime = 0.0f;
-	UINT							m_nType = 0;
+#define MAX_PARTICLES				900 * 64
 
-public:
-	ParticleVertex() { }
-	~ParticleVertex() { }
+enum class Particle_Type
+{
+	spread,
+	sand,
+	dragon_fire,
+	sample_1,
+	sample_2,
+	boss_skill,
+	etc
 };
+
+#define FACE_LEFT    0 // -X
+#define FACE_RIGHT   1 // +X
+#define FACE_BOTTOM  2 // -Y
+#define FACE_TOP     3 // +Y
+#define FACE_BACK    4 // -Z
+#define FACE_FRONT   5 // +Z
+
+struct Particle_Format
+{
+	Particle_Type shader_type = Particle_Type::etc;
+	UINT particle_type;
+	UINT max_particles = MAX_PARTICLES;
+
+	XMFLOAT3 center{};
+	XMFLOAT3 area_xyz{};
+	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
+
+	float MaxLifetime;
+
+	XMFLOAT3 main_direction {};
+	int init_velocity_value {};
+	XMFLOAT3 acceleration {};
+
+	XMFLOAT3 color{};
+	float size;
+};
+
+struct Render_Instance
+{
+	XMFLOAT4 Position_and_Scale;        // xyz = Position, w = Scale
+	XMFLOAT4 Velocity_and_Rotate;       // xyz = axis, w = angle
+	XMFLOAT4 Color;                     // rgba
+};
+
+struct Particle_Info
+{
+	XMFLOAT3 Position;
+	float Lifetime;
+
+	XMFLOAT3 Velocity;
+	float MaxLifetime;
+
+	XMFLOAT3 Acceleration;
+	float Rotate_Value;
+
+	XMFLOAT3 Color;
+	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
+
+	float Size;            
+	UINT Type;
+	UINT Active;
+	float Padding;
+};
+
 //==============================================================================
 
-#define _WITH_QUERY_DATA_SO_STATISTICS
-#define PARTICLE_TYPE_EMITTER		0
-#define PARTICLE_TYPE_SHELL			1
-#define PARTICLE_TYPE_FLARE01		2
-#define PARTICLE_TYPE_FLARE02		3
-#define PARTICLE_TYPE_FLARE03		4
-
-#define MAX_PARTICLES				90000
-
-class ParticleMesh : public CMesh
+class Particle
 {
 public:
-	ParticleMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size, UINT nMaxParticles);
-	virtual ~ParticleMesh();
+	Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
+	virtual ~Particle();
 
-	bool								b_reset = true;
-	UINT								m_nStride = 0;
-	UINT								m_nMaxParticles = MAX_PARTICLES;
-	UINT								m_nCurrentParticles = 0;
+private:
+	// 주요 리소스
+	// RWStructuredBuffer<Particle_Info> 0
+	// RWStructuredBuffer<RenderInstance> 1
 
-	ID3D12Resource* CS_UAV_Buffer = NULL;
+	CTexture* particle_buffer_texture = NULL;
 
-	ID3D12Resource* Particle_Init_Buffer = NULL;
-	ID3D12Resource* Particle_Draw_Buffer = NULL;
-	ID3D12Resource* ParticleUploadBuffer = NULL;
-	D3D12_VERTEX_BUFFER_VIEW		Particle_Info_Buffer_View;
+	ID3D12Resource* Particle_Info_List_counterBuffer = NULL;
+	ID3D12Resource* Particle_Info_List_readbackBuffer = NULL;
 
-	ID3D12Resource* StreamOutputBuffer = NULL;
-	D3D12_STREAM_OUTPUT_BUFFER_VIEW		StreamOutputBuffer_View;
+	ID3D12Resource* Render_Instance_counterBuffer = NULL;
+	ID3D12Resource* Render_Instance_readbackBuffer = NULL;
+
+	ID3D12Resource* CounterResetBuffer = NULL;
+
+	ID3D12Resource* Debug_buffer = NULL;
+	ID3D12Resource* Debug_ReadBack_buffer = NULL;
+	ID3D12Resource* Debug_Reset_Buffer = NULL;
+
+	// 버퍼 뷰
+	D3D12_VERTEX_BUFFER_VIEW m_RenderInstanceVBV = {};
+
+	// 기타
+	UINT m_nMaxParticles = MAX_PARTICLES;
+
+public:
+	UINT N_Particle_Info_List = 0;
+	UINT N_Render_Instance = 0;
 
 
-	ID3D12Resource* Default_BufferFilled_Size = NULL;
-	ID3D12Resource* Upload_BufferFilled_Size = NULL;
-	UINT64* Upload_BufferFilled_Size_N = NULL;
+public:
 
 
-#ifdef _WITH_QUERY_DATA_SO_STATISTICS
-	ID3D12QueryHeap* m_pd3dSOQueryHeap = NULL;
-	ID3D12Resource* m_pd3dSOQueryBuffer = NULL;
-	D3D12_QUERY_DATA_SO_STATISTICS* m_pd3dSOQueryDataStatistics = NULL;
-#else
-	ID3D12Resource* ReadBack_BufferFilled_Size = NULL;
-#endif
+	// 버퍼 생성 및 해제
+	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
+
+	//ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
+	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReleaseBuffers();
+
+	Particle_Info* Init_Particle_Data(const Particle_Format& particle_info);
+
+	// 렌더링용 VBV 업데이트
+	D3D12_VERTEX_BUFFER_VIEW Update_Render_Instance_VBV();
+
+	UINT Get_Particle_Max_Num() const { return m_nMaxParticles; }
+
+	void Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Copy_DebugBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 
 
-	virtual void CreateVertexBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT3 xmf3Position, XMFLOAT3 xmf3Velocity, float fLifetime, XMFLOAT3 xmf3Acceleration, XMFLOAT3 xmf3Color, XMFLOAT2 xmf2Size);
-	virtual void CreateStreamOutputBuffer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nMaxParticles);
+	void Copy_CounterBuffer_All(ID3D12GraphicsCommandList* pd3dCommandList)
+	{
+		Copy_CounterBuffer_Particle_Info(pd3dCommandList);
+		Copy_CounterBuffer_Render_Instance(pd3dCommandList);
+//		Copy_DebugBuffer(pd3dCommandList);
+	}
 
-	virtual void PreRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
-	virtual void PostRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState);
+	UINT Readback_CounterBuffer_Particle_Info_List();
+	UINT Readback_CounterBuffer_Render_Instance();
+	UINT Readback_DebugBuffer();
 
-	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num) {}
-	virtual void OnPostRender(int nPipelineState);
+	void Readback_All()
+	{
+		Readback_CounterBuffer_Particle_Info_List();
+		Readback_CounterBuffer_Render_Instance();
+//		Readback_DebugBuffer();
 
-	ID3D12Resource* CreateUAVBuffer(ID3D12Device* pd3dDevice, size_t bufferSize);
+	}
 
-	UINT Get_Num() { return m_nVertices; }
+	void ResetCounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* counterBuffer);
+
+	void Reset_Particle_Info_List_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Reset_Instance_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
+	void Reset_Debug_Buffer(ID3D12GraphicsCommandList* pd3dCommandList);
 
 };
 
@@ -117,30 +196,62 @@ public:
 };
 //==============================================================================
 
+class Particle_Manager;
+
 class ParticleObject : public CGameObject
 {
 private:
 	Particle_Shape_Mesh* shape_mesh = NULL;
-	ParticleMesh* particle_mesh = NULL;
+	Particle* particle_data = NULL;
 	CMaterial* particle_Material = NULL;
+	
+	XMFLOAT3 area_xyz {};
+	XMFLOAT3 center {};
+	XMFLOAT3 direction {};
+	int Init_Velocity_Value {};
+	
+
+	Particle_Manager* owner_manager = nullptr; 
 
 public:
+	UINT Update_Func_Index = 0;
 	ParticleObject();
 	virtual ~ParticleObject();
 
 	void ReleaseUploadBuffers();
 
 	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
-	void Set_Particle_Mesh(ParticleMesh* new_particle_mesh = NULL) { particle_mesh = new_particle_mesh; }
+	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
+	void Init_Info(Particle_Format particle_info);
+
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
 
-
+	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, int progress_n = 0);
-	virtual void OnPostRender();
 
-	UINT Get_Particle_Num() { return particle_mesh->Get_Num(); }
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
+	Particle* Get_Particle_Data() { return particle_data; }
+	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
+	
+	void Set_Area(XMFLOAT3 new_area) { area_xyz = new_area; }
+	void Set_Center(XMFLOAT3 new_center) { center = new_center; }
+	XMFLOAT3 Get_Area() { return area_xyz; }
+	XMFLOAT3 Get_Center() { return center; };
+
+	void Set_Main_Direction(const XMFLOAT3& input);
+	XMFLOAT3 Get_Main_Direction();
+
+	int Get_Init_Velocity_Value() { return Init_Velocity_Value; }
+
+	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(center, area_xyz); }
+	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }
+	UINT Get_Size_Render_Instance() { return particle_data->N_Render_Instance; }
+
+
+	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
+
+	void Add_Destroy_Queue();
 
 };

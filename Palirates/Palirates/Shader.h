@@ -62,11 +62,11 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed) { }
 	virtual void ReleaseObjects() { }
 
-	int Get_Num_PipelineState() { return m_nPipelineStates; };
+	int Get_Num_PipelineState() { return m_ngraphicsPipelineStates; };
 protected:
 
-	int															m_nPipelineStates = 0;
-	ID3D12PipelineState					**m_ppd3dPipelineStates = NULL;
+	int															m_ngraphicsPipelineStates = 0;
+	ID3D12PipelineState					**m_ppd3dgraphicsPipelineStates = NULL;
 
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC	m_d3dPipelineStateDesc;
@@ -141,11 +141,34 @@ public:
 
 };
 
+
+class Trail_Shader : public CStandardShader
+{
+public:
+	Trail_Shader();
+	virtual ~Trail_Shader();
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
+
+};
+
+
 //===========================================================================================================
 
 class PostProcessBaseShader : public CStandardShader
 {
 protected:
+	static UINT Frame_Buffer_Width;
+	static UINT Frame_Buffer_Height;
+
 	ID3D12RootSignature* m_pd3dGraphicsRootSignature = NULL;
 	D3D12_CPU_DESCRIPTOR_HANDLE* m_pd3dRtvCPUDescriptorHandles = NULL;
 	CTexture* m_pTexture = NULL;
@@ -166,6 +189,7 @@ public:
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
 	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState);
 
+	D3D12_CLEAR_VALUE Get_ClearValue_For_RTVFormat(DXGI_FORMAT format);
 	virtual void CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle);
 
 	virtual void Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle);
@@ -179,6 +203,9 @@ public:
 	ID3D12Resource* GetTextureResource(UINT nIndex) { return(m_pTexture->GetResource(nIndex)); }
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRtvCPUDescriptorHandle(UINT nIndex) { return(m_pd3dRtvCPUDescriptorHandles[nIndex]); }
+
+	static void Set_ScreenSize(UINT new_width, UINT new_height);
+
 };
 
 class G_BufferMerger_Shader : public PostProcessBaseShader
@@ -265,6 +292,44 @@ public:
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
+struct CB_Plane_Frame_INFO
+{
+	float m_fCurrentTime;
+	float m_fElapsedTime;
+};
+
+class Deferred_Plane_Shader : public Deferred_CStandard_Shader
+{
+private:
+	ID3D12Resource* Frame_Info = NULL;
+	CB_Plane_Frame_INFO* m_pcbMappedFrame_Info = NULL;
+
+public:
+	static float Current_Time;
+	static float Elapsed_Time;
+
+	
+	Deferred_Plane_Shader();
+	virtual ~Deferred_Plane_Shader();
+
+	virtual ID3D12RootSignature* CreateGraphicsRootSignature(ID3D12Device* pd3dDevice) { return NULL; }
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
+
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void ReleaseShaderVariables();
+
+	static void Update(float ElapsedTime);
+
+};
+
 
 class Deferred_CSkyBoxShader : public Deferred_CStandard_Shader
 {
@@ -296,3 +361,5 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 };
+
+//============================================================================
