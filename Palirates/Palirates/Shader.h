@@ -166,6 +166,9 @@ public:
 class PostProcessBaseShader : public CStandardShader
 {
 protected:
+	static UINT Frame_Buffer_Width;
+	static UINT Frame_Buffer_Height;
+
 	ID3D12RootSignature* m_pd3dGraphicsRootSignature = NULL;
 	D3D12_CPU_DESCRIPTOR_HANDLE* m_pd3dRtvCPUDescriptorHandles = NULL;
 	CTexture* m_pTexture = NULL;
@@ -200,6 +203,9 @@ public:
 	ID3D12Resource* GetTextureResource(UINT nIndex) { return(m_pTexture->GetResource(nIndex)); }
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRtvCPUDescriptorHandle(UINT nIndex) { return(m_pd3dRtvCPUDescriptorHandles[nIndex]); }
+
+	static void Set_ScreenSize(UINT new_width, UINT new_height);
+
 };
 
 class G_BufferMerger_Shader : public PostProcessBaseShader

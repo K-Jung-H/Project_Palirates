@@ -130,8 +130,10 @@ struct ReservedEffect
 class Post_Effect_Manager
 {
 private:
-	std::unordered_map<Effect_Type, Post_ComputeShader*> m_EffectMap;
+	static UINT Frame_Buffer_Width;
+	static UINT Frame_Buffer_Height;
 
+	std::unordered_map<Effect_Type, Post_ComputeShader*> m_EffectMap;
 	std::vector<ReservedEffect> m_ActiveEffects;
 
 
@@ -143,6 +145,7 @@ public:
 	void Add_Effect(Effect_Type type, UINT rootIndex, D3D12_GPU_DESCRIPTOR_HANDLE* srvHandle);
 	void Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index);
 
+	void Resize_Screen_Size(UINT new_width, UINT new_height);
 };
 
 //========================================================================

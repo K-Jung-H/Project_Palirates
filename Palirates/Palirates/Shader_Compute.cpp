@@ -460,6 +460,9 @@ void CTextureToFullScreenShader::Set_SRV_ScreenTexture(ID3D12GraphicsCommandList
 }
 
 //=====================================================================
+UINT Post_Effect_Manager::Frame_Buffer_Width = FRAME_BUFFER_WIDTH;
+UINT Post_Effect_Manager::Frame_Buffer_Height = FRAME_BUFFER_HEIGHT;
+
 
 Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 {
@@ -537,6 +540,13 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 
 }
 
+void Post_Effect_Manager::Resize_Screen_Size(UINT new_width, UINT new_height)
+{
+	Frame_Buffer_Width = new_width;
+	Frame_Buffer_Height = new_height;
+
+
+}
 //=====================================================================
 float CS_Wave_Shader::total_time = 0.0f;
 WaveParams* CS_Wave_Shader::update_wave_info = NULL;

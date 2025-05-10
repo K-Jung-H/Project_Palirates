@@ -217,7 +217,7 @@ void Scene_Manager::Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandL
     if (MRT_shader)
     {
         // Connect Multi_RenderTarget
-        // nRenderTarget = 0 -> Not use BackBuffer in this time, 
+        // nRenderTarget = 0 -> Not use BackBuffer in this time
         MRT_shader->Prepare_Multi_RenderTarget(pd3dCommandList, 0, pd3dRtvCPUHandles, pd3dDsvCPUHandle);
     }
     else
