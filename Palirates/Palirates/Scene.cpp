@@ -556,7 +556,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	{
 		in_game_wave = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
 		in_game_wave->Set_Name("wave_1");
-		in_game_wave->SetPosition(XMFLOAT3(1500.0f, 10.0f, 1500.0f));
+		in_game_wave->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
 
 		in_game_wave->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
 		in_game_wave->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
@@ -640,7 +640,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	for_demo_dragonfire->SetPosition(XMFLOAT3(645.0f, 10.0f, 1590.0f));
+	for_demo_dragonfire->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
 	for_demo_dragonfire->Set_Active(false);
 	
 #endif
@@ -671,7 +671,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 		std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		AnubisObject->SetPosition(10.0f + 450.0f, m_pTerrain->Get_Mesh_Height(10.0f + 450.0f, 0.0f), 0.0f + 450.0f);
+		AnubisObject->SetPosition(1450.0f, m_pTerrain->Get_Mesh_Height(1450.0f, 650.0f), 650.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
@@ -681,7 +681,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
 		Dragon->SetupWeaponCollider();
-		Dragon->SetPosition(120.0f + 400.0f, m_pTerrain->Get_Mesh_Height(120.0f + 400.0f, 120.0f + 400.0f), 120.0f + 400.0f);
+		Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
 		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
 		Dragon->Rotate(&tt2, 180.0f);
@@ -689,12 +689,12 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 5; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
 			m->SetupWeaponCollider();
-			m->SetPosition(10.0f * i + 700.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 700.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
+			m->SetPosition(10.0f * i + 1450.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 1450.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
 			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
@@ -710,7 +710,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 		test_scene->Set_Name("test_scene");
 		test_scene = Test_Scene_Model->m_pModelRootObject;
-		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) - 27.0f , 800.0f);
 		test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 		obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
@@ -722,8 +722,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 		for (auto& [mesh_name, instance_info] : *temp_list_map)
 		{
-			m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
-			m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+			//m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+			//m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
 		}
 
 		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
@@ -801,8 +801,13 @@ void CScene::Update_UI()
 	if (text_ui_manager)
 	{
 		XMFLOAT3 xmf3Position = m_pPlayer->GetPosition();
-		int tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
-		XMFLOAT3 tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
+		int tile_n = 0;
+		XMFLOAT3 tile_normal{};
+		if (m_pTerrain) {
+			tile_n = m_pTerrain->Get_Tile(xmf3Position.x, xmf3Position.z, m_pPlayer->Get_Last_Tile());
+			tile_normal = m_pTerrain->Get_Mesh_Normal(xmf3Position.x, xmf3Position.z);
+		}
+			
 		float player_x = m_pPlayer->GetMoveX();
 		float player_z = m_pPlayer->GetMoveZ();
 		State currentState = m_pPlayer->GetStateMachine()->Get_State();
@@ -942,13 +947,15 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						if (particle_test_button) {
 							dragon->Test_Mode = true;
 							float centerZ = 1590.0f;
-							XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
+							//XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
+							XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 35.0f, 831.0f);
 							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 							dragon->SetPosition(centerPos);
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
-							dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
+							//dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
+							dragon->SetPosition(XMFLOAT3(1723.0f, 35.0f, 831.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}
 						break; 
@@ -1215,11 +1222,10 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		static float totalTime = 0.0f;
 		totalTime += fTimeElapsed;
 
-		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
-		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
+		float centerZ = 741.0f + 100.0f * sinf(totalTime * 1.0f);
+		XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 10.0f, centerZ);
 		//for_demo_dragonfire->Set_Center(centerPos);
 		for_demo_dragonfire->SetPosition(centerPos);
-
 	}
 
 
