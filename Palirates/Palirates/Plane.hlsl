@@ -82,7 +82,7 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
     //if (height < 0.0f)
     //    height *= 10.0f;
     
-        output.positionW.y += (height * 50.0f);
+    output.positionW.y += (height * 100.0f);
     
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
     output.position = mul(positionV, gmtxProjection);
@@ -94,7 +94,26 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
 }
 
 
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
+float4 PS_Plane(VS_TERRAIN_OUTPUT input) : SV_Target
+{
+    float4 Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+    float2 animatedUV1 = input.uv1 + float2(0.0, gfCurrentTime * 0.1f); // xÃà Èå¸§
+
+    float4 cBaseTexColor = Plane_BaseTexture.Sample(gssWrap, input.uv0);
+    float4 cDetailTexColor = Plane_DetailTexture.Sample(gssWrap, animatedUV1);
+
+    Albedo_Color.xyz = (input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f))).xyz;
+    Albedo_Color.a = 0.5f;
+
+
+    //float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0).xyz;
+    //Albedo_Color = Plane_Normal_Map.Sample(gssWrap, input.uv0); // For Debug    
+   // Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
+    return Albedo_Color;
+
+}
+
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_Plane(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
@@ -126,3 +145,5 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Plane(VS_TERRAIN_OUTPUT input)
     
     return (output);
 }
+
+

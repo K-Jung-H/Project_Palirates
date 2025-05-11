@@ -700,7 +700,7 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
 	scene_manager->Register_Scene("Character_Select", character_select_scene);
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
-	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
 	select_scene_observer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	

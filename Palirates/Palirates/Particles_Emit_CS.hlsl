@@ -39,18 +39,23 @@ struct OBB_INFO
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
-    float3 EmitRegionMin; 
-    float ElapsedTime; 
+    matrix gWorldMatrix;
 
-    float3 EmitRegionMax; 
+    float3 EmitRegionMin;
+    float ElapsedTime;
+
+    float3 EmitRegionMax;
     uint Max_Particle_N;
 
-    float3 Main_Direction; 
+    float3 Main_Direction;
     float Init_Velocity_Value;
-    
+
+    float3 focus_point; 
+    float focus_strength; 
+
     uint obb_num;
     float3 padding0;
-}
+};
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
@@ -197,13 +202,9 @@ void Emit_Sand(inout Particle_Info p, uint index)
 void Emit_Sand_Storm(inout Particle_Info p, uint index)
 {
     float3 baseDir = normalize(Main_Direction);
-    float3 realMin = min(EmitRegionMin, EmitRegionMax);
-    float3 realMax = max(EmitRegionMin, EmitRegionMax);
-    float3 emitCenter = GetEmitFaceCenter(p.EmitFaceIndex, realMin, realMax);
-
     float3 offset = RandomSpreadDirection(index * (p.Type + 1), baseDir, 1.0f);
     float startRadius = 5.0f + frac(sin(index * 17.17f) * 1234.5678f) * 10.0f;
-    p.Position = emitCenter + offset * startRadius;
+    p.Position = focus_point + offset * startRadius;
 
     float3 tangent = normalize(cross(baseDir, offset));
     float3 initialDir = normalize(baseDir * 0.7f + tangent * 0.3f);
@@ -213,24 +214,8 @@ void Emit_Sand_Storm(inout Particle_Info p, uint index)
     // initialDir = normalize(initialDir);
     
     p.Velocity = initialDir * Init_Velocity_Value;
-    
-    ////float3 baseDir = normalize(Main_Direction);
-    //float3 baseDir = float3(0.0f, 1.0f, 0.0f);
-    //float3 realMin = min(EmitRegionMin, EmitRegionMax);
-    //float3 realMax = max(EmitRegionMin, EmitRegionMax);
-    ////float3 emitCenter = GetEmitFaceCenter(p.EmitFaceIndex, realMin, realMax);
-    //float3 emitCenter = EmitRegionMin;
-    
-    //float angle = frac(sin(index * 17.17f) * 10000.0f) * 2.0f * XM_PI;
-    //float radius = 10.0f; 
-    //float3 radialOffset = float3(cos(angle), 0.0f, sin(angle)) * radius;
-    //p.Position = emitCenter + radialOffset;
-    
-    //float3 toCenter = normalize(-radialOffset); 
-    //float3 tangent = normalize(cross(baseDir, toCenter)); 
-    //float3 initialDir = normalize(toCenter * 0.8f + tangent * 0.2f); 
+    p.Color = float3(0.761f, 0.698f, 0.502f);
 
-    //p.Velocity = initialDir * Init_Velocity_Value;
 }
 
 void Emit_DragonFire(inout Particle_Info p, uint index)

@@ -36,30 +36,67 @@ float3x3 AxisAngleToMatrix(float3 axis, float angle)
     );
 }
 
+//VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT input)
+//{
+//    VS_INSTANCE_PARTICLE_DRAW_OUTPUT output = (VS_INSTANCE_PARTICLE_DRAW_OUTPUT) 0;
+
+    
+//    float3 axis = normalize(input.velocity_and_Rotate.xyz); // rotation axis
+//    float angle = input.velocity_and_Rotate.w; // rotation angle
+//    float3x3 rotation = AxisAngleToMatrix(axis, angle);
+
+//    float scale = input.Position_and_Scale.w;
+//    float3 scaledPos = input.position * scale;
+//    float3 rotatedPos = mul(rotation, scaledPos);
+//    float3 worldPos = rotatedPos + input.Position_and_Scale.xyz;
+
+//    float4 worldPos4 = mul(float4(worldPos, 1.0f), gmtxGameObject);
+//    output.positionW = worldPos4.xyz;
+//    output.position = mul(mul(worldPos4, gmtxView), gmtxProjection);
+//    output.color = input.color;
+
+//    float4 velocityViewProj = mul(mul(float4(input.velocity_and_Rotate.xyz, 0.0f), gmtxView), gmtxProjection);
+//    float2 velocityNDC = velocityViewProj.xy / output.position.w;
+//    output.velocity = velocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
+
+//    return output;
+//}
+
 VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT input)
 {
     VS_INSTANCE_PARTICLE_DRAW_OUTPUT output = (VS_INSTANCE_PARTICLE_DRAW_OUTPUT) 0;
 
-    float3 axis = normalize(input.velocity_and_Rotate.xyz); // rotation axis
-    float angle = input.velocity_and_Rotate.w; // rotation angle
-    float3x3 rotation = AxisAngleToMatrix(axis, angle);
+    // 1. 회전 행렬 생성 (Axis-Angle → Matrix)
+    float3 axis = normalize(input.velocity_and_Rotate.xyz); // 회전 축
+    float angle = input.velocity_and_Rotate.w; // 회전 각도
+    float3x3 rotation = AxisAngleToMatrix(axis, angle); // 회전 행렬
 
-    float scale = input.Position_and_Scale.w;
-    float3 scaledPos = input.position * scale;
-    float3 rotatedPos = mul(rotation, scaledPos);
-    float3 worldPos = rotatedPos + input.Position_and_Scale.xyz;
+    // 2. 크기 적용 및 회전
+    float scale = input.Position_and_Scale.w; // 입자 크기
+    float3 localPos = input.position * scale; // 스케일 적용
+    float3 rotatedPos = mul(rotation, localPos); // 회전 적용
 
-    float4 worldPos4 = mul(float4(worldPos, 1.0f), gmtxGameObject);
+    // 3. 로컬 위치 + 입자 오프셋 (Position_and_Scale.xyz는 로컬 위치)
+    float3 particleLocalPos = rotatedPos + input.Position_and_Scale.xyz;
+
+    // 4. 파티클 오브젝트의 월드 변환 적용
+    float4 worldPos4 = mul(float4(particleLocalPos, 1.0f), gmtxGameObject);
     output.positionW = worldPos4.xyz;
+
+    // 5. View → Projection까지 최종 위치
     output.position = mul(mul(worldPos4, gmtxView), gmtxProjection);
+
+    // 6. 컬러 전달
     output.color = input.color;
 
+    // 7. 속도 (뷰 공간 기준으로 투영) → 모션 블러, 충돌 시각화 등에 활용 가능
     float4 velocityViewProj = mul(mul(float4(input.velocity_and_Rotate.xyz, 0.0f), gmtxView), gmtxProjection);
     float2 velocityNDC = velocityViewProj.xy / output.position.w;
     output.velocity = velocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 
     return output;
 }
+
 
 float4 PS_Transparent_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_Target
 {
