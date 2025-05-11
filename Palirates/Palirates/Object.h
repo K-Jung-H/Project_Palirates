@@ -18,6 +18,7 @@
 class CShader;
 class CTerrainShader;
 class CStandardShader;
+class Plane_Shader;
 
 class Deferred_CTerrainShader;
 class Deferred_Plane_Shader;
@@ -925,7 +926,9 @@ private:
     CTexture* Plane_DetailTexture = NULL;
 
 public:
-    static Deferred_Plane_Shader* plane_shader;
+    static Plane_Shader* plane_shader;
+    static Deferred_Plane_Shader* deferred_plane_shader;
+
     CMaterial* Plane_Material = NULL;
 
     Plane_Object() {}
@@ -960,7 +963,7 @@ private:
     float BoatPos_WaveHeight = 0.0f;
 
 public:
-    Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100);
+    Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100, bool use_deferred_shader = true);
     virtual ~Wave_Object();
 
     void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
