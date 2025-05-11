@@ -362,10 +362,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					scene_index = (scene_index + 1) % 3;
 
-					std::shared_ptr<CScene> activeScene;
-
-					std::shared_ptr<CScene> prevSceneName = scene_manager->Get_Active_Scene();
-
 					switch (scene_index)
 					{
 					case 0:
@@ -376,46 +372,11 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 						break;
 					case 2:
 						scene_manager->Set_Active_Scene("In_Stage");
+						ConnectToServer(SERVER_IP, SERVER_PORT);
 						break;
 					default:
 						break;
 					}
-
-					//auto activeScene = scene_manager->Get_Active_Scene();
-					//if (!activeScene) return;  // 유효하지 않으면 종료
-					//
-					//
-					//std::string newSceneName = activeScene->Get_Name();  // 또는 activeScene->GetSceneName();
-					//std::cout << "[Debug] 현재 씬 이름: " << newSceneName << std::endl;
-					//
-					//// 씬이 변경되었는지 확인
-					//if (prevSceneName != newSceneName)
-					//{
-					//	std::cout << "[Debug] 씬 변경 감지: " << prevSceneName << " -> " << newSceneName << std::endl;
-					//
-					//	// In_Stage 씬일 때만 네트워크 연결
-					//	if (newSceneName == "In_Stage")
-					//	{
-					//		if (!isRunning)
-					//		{
-					//			ConnectToServer("127.0.0.1", 9000);  // IP와 포트는 필요에 따라 수정
-					//			std::cout << "[Debug] In_Stage로 전환됨 - 네트워크 연결 시도" << std::endl;
-					//		}
-					//	}
-					//	else
-					//	{
-					//		if (isRunning)
-					//		{
-					//			Disconnect();
-					//			std::cout << "[Debug] In_Stage에서 벗어남 - 네트워크 연결 해제" << std::endl;
-					//		}
-					//	}
-					//
-					//	// 이전 씬 이름 갱신
-					//	prevSceneName = newSceneName;
-					//}
-
-		
 
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
 					m_pCamera = m_pPlayer->GetCamera();
@@ -732,7 +693,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
-	scene_manager->Set_Active_Scene("In_Stage");
+	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
 	m_pCamera = m_pPlayer->GetCamera();
@@ -1712,6 +1673,14 @@ void CGameFramework::NetworkLoop()
 
 	while (isRunning)
 	{
+		auto activeScene = scene_manager->Get_Active_Scene();
+		if (!activeScene || activeScene != scene_manager->Load_Scene("In_Stage")) 
+		{
+			std::cout << "인스테이지 아님" << std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
+		}
+
 		char buffer[1024 + 1]; // null terminator 공간 확보
 		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
 		std::cout << "[recv] 수신 성공: " << bytesReceived << std::endl;
@@ -1747,22 +1716,5 @@ void CGameFramework::NetworkLoop()
 				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << ", LookVec : (" << lookVec.x << ", " << lookVec.y << ", " << lookVec.z << ")"
 				<< std::endl;
 		}
-	}
-}
-
-void CGameFramework::OnSceneChange(const std::string& newSceneName)
-{
-	std::cout << "[Debug] 씬 전환: " << newSceneName << std::endl;
-
-	// In_Stage 씬으로 전환 시 네트워크 연결
-	if (newSceneName == "In_Stage")
-	{
-		ConnectToServer("127.0.0.1", 9000);  // IP와 포트는 필요에 따라 수정
-		std::cout << "[Debug] In_Stage로 전환됨 - 네트워크 연결 시도" << std::endl;
-	}
-	else
-	{
-		Disconnect();
-		std::cout << "[Debug] In_Stage에서 벗어남 - 네트워크 연결 해제" << std::endl;
 	}
 }
