@@ -6,8 +6,7 @@
 struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 {
     float3 position : POSITION;
-
-    float3 instancePos : INSTANCE_POSITION;
+    float4 Position_and_Scale : INSTANCE_POS_SCALE;
     float4 velocity_and_Rotate : INSTANCE_VELOCITY; // xyz = 회전축, w = 회전각
     float4 color : INSTANCE_COLOR;
 };
@@ -41,28 +40,20 @@ VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT 
 {
     VS_INSTANCE_PARTICLE_DRAW_OUTPUT output = (VS_INSTANCE_PARTICLE_DRAW_OUTPUT) 0;
 
-    // 1. 회전 행렬 생성
-    float3 axis = normalize(input.velocity_and_Rotate.xyz);
-    float angle = input.velocity_and_Rotate.w;
+    float3 axis = normalize(input.velocity_and_Rotate.xyz); // rotation axis
+    float angle = input.velocity_and_Rotate.w; // rotation angle
     float3x3 rotation = AxisAngleToMatrix(axis, angle);
 
-    // 2. 로컬 정점 회전 적용
-    float3 rotatedPos = mul(rotation, input.position);
+    float scale = input.Position_and_Scale.w;
+    float3 scaledPos = input.position * scale;
+    float3 rotatedPos = mul(rotation, scaledPos);
+    float3 worldPos = rotatedPos + input.Position_and_Scale.xyz;
 
-    // 3. 인스턴스 위치 적용
-    float3 worldPos = rotatedPos + input.instancePos;
-
-    // 4. 월드 변환
     float4 worldPos4 = mul(float4(worldPos, 1.0f), gmtxGameObject);
     output.positionW = worldPos4.xyz;
-
-    // 5. 뷰-투영
     output.position = mul(mul(worldPos4, gmtxView), gmtxProjection);
-
-    // 6. 색상 전달
     output.color = input.color;
 
-    // 7. 속도 계산 (월드 이동 방향 → 화면 픽셀 방향)
     float4 velocityViewProj = mul(mul(float4(input.velocity_and_Rotate.xyz, 0.0f), gmtxView), gmtxProjection);
     float2 velocityNDC = velocityViewProj.xy / output.position.w;
     output.velocity = velocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
@@ -132,9 +123,7 @@ VS_TRAIL_OUTPUT Trail_VS(VS_TRAIL_INPUT input)
     float offsetY = input.sideTime.w;
     float3 pos = input.position;
     
-    pos.y = centerY + offsetY * ratio * (1.0f + pulse); // ratio로 
-    
-    조절 + pulse 추가
+    pos.y = centerY + offsetY * ratio * (1.0f + pulse); // ratio로 크기 조절 + pulse 추가
 
     float4 worldPos = mul(float4(pos, 1.0f), gmtxGameObject);
     output.positionW = worldPos.xyz;

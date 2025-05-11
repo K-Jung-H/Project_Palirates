@@ -123,6 +123,9 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
 
 float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID)
 {
+    if (materialID == 0)
+        return float4(albedoColor, 1.0f);
+    
     Light_Material_Info lightMaterial = Light_Material_Info_List[materialID];
 
     float3 vToCamera = normalize(camera_pos - wPosition);
@@ -153,4 +156,37 @@ float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albe
     cColor.a = 1.0f;
 
     return cColor;
+}
+
+float3 Lighting_VisualizeLightAmount(float3 wPosition, float3 wNormal, float3 camera_pos, uint materialID)
+{
+    Light_Material_Info lightMaterial = Light_Material_Info_List[materialID];
+    float3 vToCamera = normalize(camera_pos - wPosition);
+    float3 totalLight = float3(0.0f, 0.0f, 0.0f);
+
+    for (int i = 0; i < gnLights; i++)
+    {
+        if (!gLights[i].m_bEnable)
+            continue;
+
+        float3 lightColor = float3(0.0f, 0.0f, 0.0f);
+
+        if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+        {
+            lightColor = DirectionalLight(i, wNormal, vToCamera, 1.0f.xxx, lightMaterial).rgb;
+        }
+        else if (gLights[i].m_nType == POINT_LIGHT)
+        {
+            lightColor = PointLight(i, wPosition, wNormal, vToCamera, 1.0f.xxx, lightMaterial).rgb;
+        }
+        else if (gLights[i].m_nType == SPOT_LIGHT)
+        {
+            lightColor = SpotLight(i, wPosition, wNormal, vToCamera, 1.0f.xxx, lightMaterial).rgb;
+        }
+
+        totalLight += lightColor;
+    }
+
+    // 시각화를 위해 클램핑 (0 ~ 1 범위로)
+    return saturate(totalLight);
 }

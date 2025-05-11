@@ -82,7 +82,7 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
 
 }
 
-bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player_ptr)
+bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPlayer> player_ptr)
 {
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
@@ -95,7 +95,7 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player
     return false;
 }
 
-CPlayer* Scene_Manager::Get_Active_Scene_Player()
+shared_ptr<CPlayer> Scene_Manager::Get_Active_Scene_Player()
 {
     if (activeScene)
         return activeScene->m_pPlayer;
@@ -340,4 +340,3 @@ void Scene_Manager::RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainP
 {
     players[playerId] = player.get();
 }
-

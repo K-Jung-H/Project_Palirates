@@ -71,7 +71,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
 	Build_Scenes();
-
 	return(true);
 }
 
@@ -363,6 +362,10 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					scene_index = (scene_index + 1) % 3;
 
+					std::shared_ptr<CScene> activeScene;
+
+					std::shared_ptr<CScene> prevSceneName = scene_manager->Get_Active_Scene();
+
 					switch (scene_index)
 					{
 					case 0:
@@ -378,12 +381,80 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 						break;
 					}
 
+					//auto activeScene = scene_manager->Get_Active_Scene();
+					//if (!activeScene) return;  // 유효하지 않으면 종료
+					//
+					//
+					//std::string newSceneName = activeScene->Get_Name();  // 또는 activeScene->GetSceneName();
+					//std::cout << "[Debug] 현재 씬 이름: " << newSceneName << std::endl;
+					//
+					//// 씬이 변경되었는지 확인
+					//if (prevSceneName != newSceneName)
+					//{
+					//	std::cout << "[Debug] 씬 변경 감지: " << prevSceneName << " -> " << newSceneName << std::endl;
+					//
+					//	// In_Stage 씬일 때만 네트워크 연결
+					//	if (newSceneName == "In_Stage")
+					//	{
+					//		if (!isRunning)
+					//		{
+					//			ConnectToServer("127.0.0.1", 9000);  // IP와 포트는 필요에 따라 수정
+					//			std::cout << "[Debug] In_Stage로 전환됨 - 네트워크 연결 시도" << std::endl;
+					//		}
+					//	}
+					//	else
+					//	{
+					//		if (isRunning)
+					//		{
+					//			Disconnect();
+					//			std::cout << "[Debug] In_Stage에서 벗어남 - 네트워크 연결 해제" << std::endl;
+					//		}
+					//	}
+					//
+					//	// 이전 씬 이름 갱신
+					//	prevSceneName = newSceneName;
+					//}
+
+		
+
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
 					m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
 					break;
 				}
 				break;
+
+				case 0x38:
+				{
+					// Set scene_index to 0 when key 8 is pressed
+					scene_index = 0;
+					scene_manager->Set_Active_Scene("Character_Select");
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+				}
+					break;
+				case 0x39:
+				{
+					// Set scene_index to 1 when key 9 is pressed
+					scene_index = 1;
+					scene_manager->Set_Active_Scene("Game_Board");
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+				}
+					break;
+				case 0x30:
+				{
+					// Set scene_index to 2 when key 0 is pressed
+					scene_index = 2;
+					scene_manager->Set_Active_Scene("In_Stage");
+					m_pPlayer = scene_manager->Get_Active_Scene_Player();
+					m_pCamera = m_pPlayer->GetCamera();
+					Object_Manager::Reserve_Update();
+				}
+					break;
+
 				case VK_RETURN:
 					break;
 				case VK_F1:
@@ -391,10 +462,10 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F3:
 					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
 					break;
+
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
-			
 				default:
 					break;
 			}
@@ -430,52 +501,60 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			if (wParam == '1') {
-				static bool test = true;
-				if (test) {
-					auto sword = m_pPlayer->DetachChildByName("SM_Wep_Cutlass_01");
-					test = false;
-				}
-				else {
-					auto sword = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-					sword->Set_Active(true);
-					test = true;
-				}
-				
-				
+			if (nMessageID == WM_KEYDOWN && wParam == VK_OEM_2) {
+				// Monster State Change EX
+				//auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 
-				//if (sword)
-				{
-					//sword.get()->Object_type = 10; 
-					//sword.get()->Material_list[0]->SetShader(CMaterial::m_pStandardShader);
-					//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
-				}
-				//m_pPlayer->Set_Active(false);
+				//if (mon && !mon->empty())
+				//{
+				//	std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
+
+				//	CGameObject* base = baseObj.get();
+
+				//	auto* anubis = dynamic_cast<CAnubisObject*>(base);
+				//	if (anubis)
+				//	{
+				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+				//		anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+				//	}
+
+				//	std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
+
+				//	CGameObject* base2 = baseObj2.get();
+
+				//	auto* dra = dynamic_cast<CDragonObject*>(base2);
+				//	if (dra)
+				//	{
+				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+				//		dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
+				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+				//		dra->MoveUp(30.0f);
+				//	}
+				//}
 			}
-			if (wParam == 'C') {
-				scene_manager->Get_Active_Scene()->obj_manager->Clear_Object_List(Object_Type::skinned);
+			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
+				//ServerAnimationSyncData data;
+				////data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
+				//data.position = m_pPlayer->GetPosition();
+				//data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
+				//data.currentState = State::Get_Hit_F2;
+				//for (int i = 0; i < m_pPlayer->n_Animation; i++) {
+				//	data.trackPositions.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
+				//	data.Weights.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
+				//}
 
-			}
-			if (wParam == 'U') {
-				ServerAnimationSyncData data;
-				data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-				data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				data.currentState = State::Dive;
-				for (int i = 0; i < m_pPlayer->n_Animation; i++) {
-					if (i == TRACK_DIVEROLL_FORWARD)
-						data.trackPositions.push_back(0.5f);
-					else data.trackPositions.push_back(0.0f);
-					if (i == TRACK_DIVEROLL_FORWARD)
-						data.Weights.push_back(1.0f);
-					else data.Weights.push_back(0.0f);
-				}
-
-				GetSyncManager().AddPlayerSyncData(ClientNum, data);
-				m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+				//GetSyncManager().AddPlayerSyncData(ClientNum, data);
+				//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			}
 			if (nMessageID == WM_KEYDOWN && wParam == 'T') {
 				//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 				//if (obj_list && obj_list->size() < 7) {
+				static int modelnum = 1;
+				if (modelnum > 5) modelnum = 0;
 					if (!Active_CommandList) {
 						OutputDebugString(L"Active_CommandList is nullptr!\n");
 						return 0;
@@ -493,12 +572,15 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 					std::string_view name_view = player_name;
 
-					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
+					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get(), modelnum);
 					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
 					humanObject_7->Set_Name(player_name);
-					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
+					humanObject_7->SetupWeaponCollider();
+					humanObject_7->Object_type = OBJECT_TPYE_MAIN_PLAYER;
+					humanObject_7->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
 					nPlayer++;
+					modelnum++;
 
 					string message2 = "Player list :";
 					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
@@ -628,27 +710,30 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
 	scene_manager->Register_Scene("In_Stage", in_stage_scene);
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
-	CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get());
+	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
+	pPlayer->Set_Child(pPlayer->m_pRootModel);
+	pPlayer->SetupWeaponCollider();
+	in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
+
 
 	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
 	scene_manager->Register_Scene("Game_Board", game_board_scene);
 	scene_manager->Build_Scene("Game_Board", m_pd3dDevice, Active_CommandList);
-	Observer* game_board_observer = new Observer(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	std::shared_ptr<Observer> game_board_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
 	scene_manager->Set_Scene_Player("Game_Board", game_board_observer);
 
 
 	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
 	scene_manager->Register_Scene("Character_Select", character_select_scene);
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
-	Observer* select_scene_observer = new Observer(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
+	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	select_scene_observer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
-
+	
 
 	scene_manager->Set_Active_Scene("In_Stage");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
-	m_pPlayer->SetPosition(XMFLOAT3{ 50.0f, 0.0f, 50.0f });
-
 
 	m_pCamera = m_pPlayer->GetCamera();
 	
@@ -678,8 +763,6 @@ void CGameFramework::Release_Scenes()
 
 void CGameFramework::ProcessInput()
 {
-	if (!m_pPlayer) return;
-
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
 
@@ -688,7 +771,7 @@ void CGameFramework::ProcessInput()
 	if (GetKeyboardState(pKeysBuffer) && main_scene)
 		bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
 
-	if (!bProcessedByScene)
+	if (!bProcessedByScene && m_pPlayer->bIsControllable)
 	{
 		DWORD dwDirection = 0;
 
@@ -750,7 +833,7 @@ void CGameFramework::Animate_Scene()
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
-	// test 
+	// Server logic EX
 	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
 	//data.position.x += 10.0f;
 
@@ -761,7 +844,6 @@ void CGameFramework::Animate_Scene()
 	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
 
 	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
-	// test 
 
 	//===============================================================
 
@@ -785,6 +867,22 @@ void CGameFramework::Animate_Scene()
 	{
 		m_pPlayer->Animate(fTimeElapsed);
 		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
+
+		static bool dead = false;
+		// Weapon Drop EX
+		if (!dead) {
+			if (m_pPlayer->GetStateMachine()->Get_State() == State::Knock_Down) {
+				auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
+				scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+				dead = true;
+			}
+		}
+		else {
+			if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down) {
+				m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
+				dead = false;
+			}
+		}
 	}
 }
 
@@ -1030,30 +1128,11 @@ void CGameFramework::FrameAdvance()
 					remotePlayer->Render(Active_CommandList, m_pCamera);
 			}
 		}
-		auto monsterList = GetSceneManager().Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-		if (monsterList)
-		{
-			for (auto& monster : *monsterList)
-			{
-				if (monster)
-					monster->Render(Active_CommandList, m_pCamera);
-			}
-		}
 
-		//auto objectList = GetSceneManager().Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
-		//if (objectList)
-		//{
-		//	for (auto& object : *objectList)
-		//	{
-		//		if (object)
-		//			object->Render(Active_CommandList, m_pCamera);
-		//	}
-		//}
-
-		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
 			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-
+		
 		// Merge G-Buffers
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
@@ -1070,16 +1149,16 @@ void CGameFramework::FrameAdvance()
 
 
 		//Debuging G-Buffer
-		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(0);
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
 		//post_effect_manager->fullscreen_shader->OnPrepareRender(Active_CommandList);
 		//post_effect_manager->fullscreen_shader->Set_SRV_ScreenTexture(Active_CommandList, Albedo_G_Buffer_SRV_handle);
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
-		//post_effect_manager->Add_Effect(Effect_Type::Outline, 0, NULL);
-		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(4);
-		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
-
+		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
+		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
@@ -1100,7 +1179,6 @@ void CGameFramework::FrameAdvance()
 
 		// Record moving Object's Last Pos to use motion blur
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
-
 		if (m_pPlayer)
 		{
 			m_pPlayer->Record_Last_Pos();
@@ -1136,6 +1214,9 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 
+	Particle_Manager* active_scene_particle_manager = scene_manager->Get_Active_Scene()->particle_manager;
+	if (active_scene_particle_manager)
+		active_scene_particle_manager->Process_Destroy_Queue();
 
 	SendPacket();
 
@@ -1143,9 +1224,12 @@ void CGameFramework::FrameAdvance()
 
 
 
+
 //==============서버================
 void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
+	if (isRunning) return;
+
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
@@ -1187,8 +1271,8 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 void CGameFramework::SendPacket()
 {
-	if (serverSocket == INVALID_SOCKET) return;  
-	if (!m_pPlayer) return; 
+	if (serverSocket == INVALID_SOCKET) return;
+	if (!m_pPlayer) return;
 
 	XMFLOAT3 pos = m_pPlayer->GetPosition();
 	XMFLOAT3 look = m_pPlayer->GetLookVector();
@@ -1289,9 +1373,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 		CreateLocalPlayer(ClientNum);
 
-		m_pPlayer = GetSceneManager().GetPlayerById(ClientNum);
+		m_pPlayer = std::shared_ptr<CPlayer>(GetSceneManager().GetPlayerById(ClientNum));
 		if (m_pCamera && m_pPlayer)
-			m_pCamera->SetPlayer(m_pPlayer);
+			m_pCamera->SetPlayer(m_pPlayer.get());
 
 		// 지연된 remote 생성 처리
 		while (!pendingPlayerCreates.empty()) {
@@ -1416,61 +1500,61 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 	}
-	else if (receivedData.rfind("MONSTER_UPDATE,", 0) == 0)
-	{
-		int id, state, hp, type;
-		float x, y, z;
-		float lookX, lookY, lookZ;
-
-		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-		if (!scene) return;
-
-
-		if (sscanf_s(receivedData.c_str(), "MONSTER_UPDATE,%d,%f,%f,%f,%f,%f,%f,%d,%d,%d",
-			&id, &x, &y, &z, &lookX, &lookY, &lookZ, &hp, &state, &type) == 10)
-		{
-			std::lock_guard<std::mutex> lock(monsterDataMutex);
-
-			auto& monsterMap = remoteMonsters;
-
-			if (monsterMap.find(id) == monsterMap.end())
-			{
-				  CLoadedModelInfo* pFishmanModel =   CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), "Model/FishmanLP.bin", NULL);
-				//CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
-
-				  std::shared_ptr<CMonsterObject> pMonster = std::make_shared<CMonsterObject>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), pFishmanModel, 5);
-				//std::shared_ptr<CMonsterObject> m =		   std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pFishmanModel_t, 5);
+	//else if (receivedData.rfind("MONSTER_UPDATE,", 0) == 0)
+	//{
+	//	int id, state, hp, type;
+	//	float x, y, z;
+	//	float lookX, lookY, lookZ;
+	//
+	//	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+	//	if (!scene) return;
 
 
-				pMonster->SetPosition(XMFLOAT3(x, y, z));
-				pMonster->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-				pMonster->SetScale(10.0f, 10.0f, 10.0f);
-				std::string name = "monster_" + std::to_string(id);
-				pMonster->Set_Name(name.c_str());
-				pMonster->test_num = id + 1000;
-				pMonster->Set_Active(true);
-								
-				pMonster->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
-
-				monsterMap[id] = pMonster;
-
-				CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-				if (!scene) return;
-
-				Object_Manager* renderManager = scene->obj_manager;
-
-				renderManager->Add_Object(pMonster, Object_Type::skinned);
-			}
-			else
-			{
-				// 기존 객체 위치 및 방향 업데이트
-				auto& monster = monsterMap[id];
-				monster->SetPosition(XMFLOAT3(x, y, z));
-				monster->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-				monster->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
-			}
-		}
-	}
+		//if (sscanf_s(receivedData.c_str(), "MONSTER_UPDATE,%d,%f,%f,%f,%f,%f,%f,%d,%d,%d",
+		//	&id, &x, &y, &z, &lookX, &lookY, &lookZ, &hp, &state, &type) == 10)
+		//{
+		//	std::lock_guard<std::mutex> lock(monsterDataMutex);
+		//
+		//	auto& monsterMap = remoteMonsters;
+		//
+		//	if (monsterMap.find(id) == monsterMap.end())
+		//	{
+		//		CLoadedModelInfo* pFishmanModel = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), "Model/FishmanLP.bin", NULL);
+		//		//CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
+		//
+		//		std::shared_ptr<CMonsterObject> pMonster = std::make_shared<CMonsterObject>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), pFishmanModel, 5);
+		//		//std::shared_ptr<CMonsterObject> m =		   std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pFishmanModel_t, 5);
+		//
+		//
+		//		pMonster->SetPosition(XMFLOAT3(x, y, z));
+		//		pMonster->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+		//		pMonster->SetScale(10.0f, 10.0f, 10.0f);
+		//		std::string name = "monster_" + std::to_string(id);
+		//		pMonster->Set_Name(name.c_str());
+		//		pMonster->test_num = id + 1000;
+		//		pMonster->Set_Active(true);
+		//
+		//		pMonster->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+		//
+		//		monsterMap[id] = pMonster;
+		//
+		//		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+		//		if (!scene) return;
+		//
+		//		Object_Manager* renderManager = scene->obj_manager;
+		//
+		//		renderManager->Add_Object(pMonster, Object_Type::skinned);
+		//	}
+		//	else
+		//	{
+		//		// 기존 객체 위치 및 방향 업데이트
+		//		auto& monster = monsterMap[id];
+		//		monster->SetPosition(XMFLOAT3(x, y, z));
+		//		monster->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+		//		monster->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+		//	}
+		//}
+	//}
 	else if (receivedData.rfind("PLAYER_LEAVE,", 0) == 0)
 	{
 		int leaveId;
@@ -1486,14 +1570,14 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					{
 						//scene->obj_manager->Remove_Object(it->second);  // Remove_Object() 함수 필요
 					}
-
+	
 					m_pRemotePlayers.erase(it);
 					std::cout << "[디버그] remote player 제거됨: " << leaveId << std::endl;
 				}
 			}
 		}
 	}
-	
+
 }
 
 void CGameFramework::CreateLocalPlayer(int playerId)
@@ -1505,12 +1589,14 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 
 	auto local_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get());
 
-	local_player->SetPosition(XMFLOAT3(25.0f, 0.0f, 25.0f)); 
+	local_player->SetPosition(XMFLOAT3(25.0f, 0.0f, 25.0f));
 	//local_player->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	local_player->SetID(playerId);
 	local_player->SetState(0);
 	local_player->Set_Name("MyPlayer");
-	local_player->Object_type = OBJECT_TPYE_PLAYER;
+	local_player->Set_Child(local_player->m_pRootModel);
+	local_player->SetupWeaponCollider();
+	local_player->Object_type = OBJECT_TPYE_MAIN_PLAYER;
 
 	scene->obj_manager->Add_Object(local_player, Object_Type::player);
 
@@ -1518,11 +1604,11 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 
 	scene_manager->RegisterRemotePlayer(playerId, local_player);
 
-	m_pPlayer = local_player.get();
+	m_pPlayer = local_player;// .get();
 
 	if (m_pCamera)
 	{
-		m_pCamera->SetPlayer(m_pPlayer);
+		m_pCamera->SetPlayer(m_pPlayer.get());
 	}
 
 	auto playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
@@ -1536,7 +1622,7 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 			if (obj)
 			{
 				auto rawObj = obj.get();
-				std::cout << " - 이름: " << rawObj->m_pstrFrameName	<< ", Active: " << rawObj->Get_Active() << std::endl;
+				std::cout << " - 이름: " << rawObj->m_pstrFrameName << ", Active: " << rawObj->Get_Active() << std::endl;
 			}
 		}
 	}
@@ -1579,8 +1665,8 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get());
 
-	remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
-	remotePlayer->Material_list = m_pPlayer->Material_list;
+	//remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
+	//remotePlayer->Material_list = m_pPlayer->Material_list;
 
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -1592,6 +1678,8 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->Object_type = OBJECT_TPYE_PLAYER;
 	remotePlayer->SetRotationSpeed(1.0f);
 	remotePlayer->Set_Active(true);
+	remotePlayer->Set_Child(remotePlayer->m_pRootModel);
+	remotePlayer->SetupWeaponCollider();
 	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	remotePlayer->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
@@ -1605,17 +1693,22 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 void CGameFramework::Disconnect()
 {
+	if (!isRunning) return;
+
 	isRunning = false;
 	if (networkThread.joinable())
 		networkThread.join();
 	closesocket(serverSocket);
 	WSACleanup();
 
+	std::cout << "[INFO] 서버 연결 종료" << std::endl;
+
 }
 
 void CGameFramework::NetworkLoop()
 {
-	std::cout << "[쓰레드 확인] NetworkLoop() 시작됨" << std::endl;
+	//std::cout << "[쓰레드 확인] NetworkLoop() 시작됨" << std::endl;
+
 
 	while (isRunning)
 	{
@@ -1654,5 +1747,22 @@ void CGameFramework::NetworkLoop()
 				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << ", LookVec : (" << lookVec.x << ", " << lookVec.y << ", " << lookVec.z << ")"
 				<< std::endl;
 		}
+	}
+}
+
+void CGameFramework::OnSceneChange(const std::string& newSceneName)
+{
+	std::cout << "[Debug] 씬 전환: " << newSceneName << std::endl;
+
+	// In_Stage 씬으로 전환 시 네트워크 연결
+	if (newSceneName == "In_Stage")
+	{
+		ConnectToServer("127.0.0.1", 9000);  // IP와 포트는 필요에 따라 수정
+		std::cout << "[Debug] In_Stage로 전환됨 - 네트워크 연결 시도" << std::endl;
+	}
+	else
+	{
+		Disconnect();
+		std::cout << "[Debug] In_Stage에서 벗어남 - 네트워크 연결 해제" << std::endl;
 	}
 }

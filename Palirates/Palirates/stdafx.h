@@ -27,10 +27,11 @@
 #include <algorithm>
 #include <unordered_set>
 #include <unordered_map>
+#include<queue>
 #include <map>
 #include <array>
 #include <random>
-
+#include <optional>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -39,7 +40,6 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-#include <queue>
 #pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -88,8 +88,10 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
-#define FRAME_BUFFER_WIDTH				840
-#define FRAME_BUFFER_HEIGHT				480
+#define FRAME_BUFFER_WIDTH				1280
+#define FRAME_BUFFER_HEIGHT				720
+//#define FRAME_BUFFER_WIDTH				840
+//#define FRAME_BUFFER_HEIGHT				480
 
 #define ANIMATION_TYPE_ONCE				0
 #define ANIMATION_TYPE_LOOP				1
@@ -133,8 +135,8 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define WRITE_TEXT_UI
-//#define LOAD_SCENE
-//#define RENDER_OBB
+#define LOAD_SCENE
+#define RENDER_OBB
 #define RENDER_PARTICLE
 
 
@@ -164,6 +166,16 @@ enum Control_BufferType
 	BUFFER_COUNTER_RESET = 2
 };
 
+struct GPU_OBB
+{
+	XMFLOAT3 Center;
+	UINT Active;
+
+	XMFLOAT3 Extents;
+	UINT Type;
+
+	XMFLOAT4 Rotation;
+};
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
 extern void SwapResourcePointer(ID3D12Resource** ppd3dResourceA, ID3D12Resource** ppd3dResourceB);

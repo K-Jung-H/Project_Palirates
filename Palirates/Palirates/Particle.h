@@ -11,10 +11,20 @@
 enum class Particle_Type
 {
 	spread,
+	sand,
+	dragon_fire,
 	sample_1,
 	sample_2,
+	boss_skill,
 	etc
 };
+
+#define FACE_LEFT    0 // -X
+#define FACE_RIGHT   1 // +X
+#define FACE_BOTTOM  2 // -Y
+#define FACE_TOP     3 // +Y
+#define FACE_BACK    4 // -Z
+#define FACE_FRONT   5 // +Z
 
 struct Particle_Format
 {
@@ -24,6 +34,7 @@ struct Particle_Format
 
 	XMFLOAT3 center{};
 	XMFLOAT3 area_xyz{};
+	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
 
 	float MaxLifetime;
 
@@ -32,33 +43,34 @@ struct Particle_Format
 	XMFLOAT3 acceleration {};
 
 	XMFLOAT3 color{};
-	XMFLOAT2 size{};
+	float size;
 };
 
 struct Render_Instance
 {
-	XMFLOAT3 Position;
-	XMFLOAT4  Velocity_and_Rotate;
-	XMFLOAT4 Color;
+	XMFLOAT4 Position_and_Scale;        // xyz = Position, w = Scale
+	XMFLOAT4 Velocity_and_Rotate;       // xyz = axis, w = angle
+	XMFLOAT4 Color;                     // rgba
 };
 
 struct Particle_Info
 {
 	XMFLOAT3 Position;
-	float    Lifetime;
+	float Lifetime;
 
 	XMFLOAT3 Velocity;
-	float    MaxLifetime;
+	float MaxLifetime;
 
 	XMFLOAT3 Acceleration;
-	float Roate_Value;
+	float Rotate_Value;
 
 	XMFLOAT3 Color;
-	float    Padding1;
+	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
 
-	XMFLOAT2 Size;
-	UINT     Type;
-	UINT     Active;
+	float Size;            
+	UINT Type;
+	UINT Active;
+	float Padding;
 };
 
 //==============================================================================
@@ -184,6 +196,8 @@ public:
 };
 //==============================================================================
 
+class Particle_Manager;
+
 class ParticleObject : public CGameObject
 {
 private:
@@ -195,7 +209,12 @@ private:
 	XMFLOAT3 center {};
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
+	
+
+	Particle_Manager* owner_manager = nullptr; 
+
 public:
+	UINT Update_Func_Index = 0;
 	ParticleObject();
 	virtual ~ParticleObject();
 
@@ -229,4 +248,10 @@ public:
 	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(center, area_xyz); }
 	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }
 	UINT Get_Size_Render_Instance() { return particle_data->N_Render_Instance; }
+
+
+	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
+
+	void Add_Destroy_Queue();
+
 };

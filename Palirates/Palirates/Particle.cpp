@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Particle.h"
+#include "Particle_Manager.h"
 
 //==============================================================================
 
@@ -289,6 +290,14 @@ Particle::Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdL
 
 Particle::~Particle()
 {
+
+	if (particle_buffer_texture)
+	{
+		particle_buffer_texture->ReleaseUploadBuffers();
+		delete particle_buffer_texture;
+		particle_buffer_texture = nullptr;
+	}
+
 	ReleaseBuffers();
 }
 
@@ -316,9 +325,9 @@ void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	CounterResetBuffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), 0);
 	Debug_Reset_Buffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT) * 4, 0);
 
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 1);
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, Render_Instance_counterBuffer, 2);
-	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, nullptr, 3);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 0, Particle_Info_List_counterBuffer, 2);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 1, Render_Instance_counterBuffer, 3);
+	CDescriptor_Heap::CreateStructuredBufferUAV(pd3dDevice, particle_buffer_texture, 2, nullptr, 4);
 
 	{
 		ID3D12Resource* Init_Buffer = Create_Control_Buffer(pd3dDevice, BUFFER_COUNTER_RESET, sizeof(UINT), m_nMaxParticles);
@@ -357,10 +366,26 @@ D3D12_VERTEX_BUFFER_VIEW Particle::Update_Render_Instance_VBV()
 
 void Particle::ReleaseBuffers()
 {
+	if (Particle_Info_List_counterBuffer) { Particle_Info_List_counterBuffer->Release(); Particle_Info_List_counterBuffer = nullptr; }
+	if (Particle_Info_List_readbackBuffer) { Particle_Info_List_readbackBuffer->Release(); Particle_Info_List_readbackBuffer = nullptr; }
+
+	if (Render_Instance_counterBuffer) { Render_Instance_counterBuffer->Release(); Render_Instance_counterBuffer = nullptr; }
+	if (Render_Instance_readbackBuffer) { Render_Instance_readbackBuffer->Release(); Render_Instance_readbackBuffer = nullptr; }
+
+	if (Debug_ReadBack_buffer) { Debug_ReadBack_buffer->Release(); Debug_ReadBack_buffer = nullptr; }
+
+	if (CounterResetBuffer) { CounterResetBuffer->Release(); CounterResetBuffer = nullptr; }
+	if (Debug_Reset_Buffer) { Debug_Reset_Buffer->Release(); Debug_Reset_Buffer = nullptr; }
 }
 
 Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
 { 
+	auto RandomOffset = [](float base, float range = 0.03f) -> float {
+		float offset = ((float)rand() / RAND_MAX) * 2.0f * range - range;
+		float result = base + offset;
+		return std::clamp(result, 0.0f, 1.0f); 
+		};
+
 	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
 	{
@@ -373,12 +398,18 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		particle_info[i].Position = XMFLOAT3{};
 		particle_info[i].Velocity = XMFLOAT3{};
 		particle_info[i].Acceleration = particle_format.acceleration;
-		particle_info[i].Roate_Value = 0.0f;
+		particle_info[i].Rotate_Value = 0.0f;
 
-		particle_info[i].Color = particle_format.color;
+		XMFLOAT3 baseColor = particle_format.color;
+		particle_info[i].Color = XMFLOAT3(
+			RandomOffset(baseColor.x),
+			RandomOffset(baseColor.y),
+			RandomOffset(baseColor.z)
+		);
+		//particle_info[i].Color = particle_format.color;
 		particle_info[i].Size = particle_format.size;
 
-		particle_info[i].Padding1 = 0.0f;
+		particle_info[i].EmitFaceIndex = particle_format.EmitFaceIndex;
 	}
 
 	return particle_info;
@@ -386,37 +417,19 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 
 void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	//SynchronizeResourceTransition(pd3dCommandList, Particle_Info_List_readbackBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	// 데이터를 복사
 	pd3dCommandList->CopyBufferRegion(Particle_Info_List_readbackBuffer, 0, Particle_Info_List_counterBuffer, 0, sizeof(UINT));
-
-	// 상태를 GENERIC_READ로 전환
-	//SynchronizeResourceTransition(pd3dCommandList, Particle_Info_List_readbackBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 void Particle::Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	//SynchronizeResourceTransition(pd3dCommandList, Render_Instance_readbackBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	// 데이터를 복사
 	pd3dCommandList->CopyBufferRegion(Render_Instance_readbackBuffer, 0, Render_Instance_counterBuffer, 0, sizeof(UINT));
-
-	// 상태를 GENERIC_READ로 전환
-	//SynchronizeResourceTransition(pd3dCommandList, Render_Instance_readbackBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 void Particle::Copy_DebugBuffer(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	//SynchronizeResourceTransition(pd3dCommandList, Debug_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	pd3dCommandList->CopyBufferRegion(Debug_ReadBack_buffer, 0, particle_buffer_texture->GetResource(2), 0, sizeof(UINT) * 4);
-
-	// 상태를 GENERIC_READ로 전환
-	//SynchronizeResourceTransition(pd3dCommandList, Debug_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 
@@ -545,6 +558,8 @@ ParticleObject::ParticleObject() : CGameObject(1)
 
 ParticleObject::~ParticleObject()
 {
+	delete particle_data;
+
 }
 
 void ParticleObject::ReleaseUploadBuffers()
@@ -600,7 +615,8 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// 메시기반 인스턴싱 하기
+	if (!Get_Active())
+		return;
 
 	D3D12_VERTEX_BUFFER_VIEW Particle_Instancing_BufferView = particle_data->Update_Render_Instance_VBV();
 	UINT instance_num = particle_data->N_Render_Instance;
@@ -608,6 +624,18 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	if (instance_num == 0)
 		return;
 
+	 
+	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+
 	if (shape_mesh)
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 
+}
+
+void ParticleObject::Add_Destroy_Queue() 
+{
+	auto particlePtr = std::dynamic_pointer_cast<ParticleObject>(shared_from_this());
+
+	if (particlePtr)
+		owner_manager->Queue_Destroy(particlePtr);
 }

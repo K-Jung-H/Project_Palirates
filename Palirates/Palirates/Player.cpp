@@ -34,18 +34,6 @@ CPlayer::CPlayer()
 
 }
 
-CPlayer::CPlayer(const CPlayer& other) : CGameObject(other)
-{
-	m_StateMachine = std::make_unique<PlayerStateMachine>(this);
-
-	m_fPitch = other.m_fPitch;
-	m_fYaw = other.m_fYaw;
-	m_fRoll = other.m_fRoll;
-
-	m_xmf3Velocity = other.m_xmf3Velocity;
-	
-}
-
 CPlayer::~CPlayer()
 {
 	ReleaseShaderVariables();
@@ -172,6 +160,7 @@ void CPlayer::Animate_test()
 
 void CPlayer::Update(float fTimeElapsed)
 {
+	CPlayer* a = this;
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
 
 	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
@@ -284,7 +273,7 @@ void CPlayer::OnPrepareAnimate()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	//if (nCameraMode == THIRD_PERSON_CAMERA) 
+	if (nCameraMode == THIRD_PERSON_CAMERA || Object_type == OBJECT_TPYE_SELECT_PLAYER)
 		CGameObject::Render(pd3dCommandList, pCamera);
 }
 
@@ -298,6 +287,34 @@ void CPlayer::SetLookDirection(const XMFLOAT3& look)
 
 }
 
+void CPlayer::SetupWeaponCollider()
+{
+	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+
+	if (!model || !model->m_pMesh) return;
+
+	model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+		XMStoreFloat4(&quaternion, rotationQuat);
+	else
+		quaternion = XMFLOAT4(0, 0, 0, 1);
+
+	BoundingOrientedBox* obb = new BoundingOrientedBox(
+		model->m_pMesh->GetAABBCenter(),
+		model->m_pMesh->GetAABBExtents(),
+		quaternion
+	);
+
+	model->Set_Collider(obb);
+	model->bUpdateOBBOff();
+	Weapon_ptr = model;
+}
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 #define _WITH_DEBUG_CALLBACK_DATA
@@ -317,23 +334,34 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 #endif
 }
 
-CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext) : CPlayer()
+CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext, int ModelNum) : CPlayer()
 {
 	Object_type = OBJECT_TPYE_MAIN_PLAYER;
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
-	  
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Wench_v12.bin", NULL);
-	CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Captain_v12.bin", NULL);
-	//CLoadedModelInfo *pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Characters_ani12.bin", NULL);
-	Set_Child(pAngrybotModel->m_pModelRootObject);
+	char* modelPaths[] = {
+	"Model/Captain_v17.bin",
+	"Model/Deckhand_v17.bin",
+	"Model/Female_Pirate_v17.bin",
+	"Model/First_Mate_v17.bin",
+	"Model/Seaman_v17.bin",
+	"Model/Skeleton_v17.bin"
+	};
 
-	n_Animation = 12;
+	const int modelCount = sizeof(modelPaths) / sizeof(modelPaths[0]);
+	if (ModelNum < 0 || ModelNum >= modelCount)
+		ModelNum = 0; 
+	CLoadedModelInfo* pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(
+		pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelPaths[ModelNum], NULL);
+	//Set_Child(pAngrybotModel->m_pModelRootObject);
+	m_pRootModel = pAngrybotModel->m_pModelRootObject;
+
+	n_Animation = 17;
+	RootIndex = 2;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
 	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
 	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
 	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
@@ -348,11 +376,19 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
-
+	//m_pSkinnedAnimationController->Bone_Info();
 	// Once type Setting
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_nType = ANIMATION_TYPE_ONCE;
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
-	m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
+	for (int i = 0; i < n_Animation; ++i) {
+		if (GetUpdateHipsTracks().contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK1].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK2].m_nType = ANIMATION_TYPE_ONCE;
+	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK3].m_nType = ANIMATION_TYPE_ONCE;
 
 	m_pSkinnedAnimationController->SetCallbackKeys(1, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -378,34 +414,33 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
+	WeaponName = "SM_Wep_Cutlass_01";
+	//auto model = FindFrame_v2("SM_Wep_Cutlass_01");
+	////auto model = FindFrame("body_lp");
+	//model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+	//XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
+	//XMVECTOR scale, rotationQuat, translation;
+	//XMFLOAT4 quaternion;
+	//XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	//if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+	//{
+
+	//	XMStoreFloat4(&quaternion, rotationQuat);
+	//}
+	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
+	//model->Set_Collider(b);
+	//model->bUpdateOBBOff();
+	//Weapon_ptr = model;
+
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 0.8f, 0.0f),
+		XMFLOAT3(0.4f, 0.8f, 0.4f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
+
 	if (pAngrybotModel) delete pAngrybotModel;
-}
-
-CTerrainPlayer::CTerrainPlayer(const CPlayer& other) : CPlayer(other)
-{
-	On_Ground = false;
-}
-
-CTerrainPlayer::CTerrainPlayer(const CTerrainPlayer& other)	: CPlayer(other) 
-{
-	m_StateMachine = std::make_unique<PlayerStateMachine>(this);
-
-	if (other.m_pMesh)
-		m_pMesh = new CMesh(*other.m_pMesh);
-
-	if (other.m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*other.m_pSkinnedAnimationController);
-
-	Material_list.clear();
-	for (const auto& mat : other.Material_list)
-	{
-		if (mat)
-			Material_list.push_back(mat->CloneWithSharedTextures());
-		else
-			Material_list.push_back(nullptr);
-	}
-
-	On_Ground = other.On_Ground;
 }
 
 CTerrainPlayer::~CTerrainPlayer()
@@ -420,7 +455,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 	{
 		case FIRST_PERSON_CAMERA:
 			SetFriction(250.0f);
-			SetGravity(XMFLOAT3(0.0f, -400.0f, 0.0f));
+			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(300.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(FIRST_PERSON_CAMERA, nCurrentCameraMode);
@@ -431,7 +466,7 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case SPACESHIP_CAMERA:
-			SetFriction(5000.0f);
+			SetFriction(50.0f);
 			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetMaxVelocityXZ(1000.0f);
 			SetMaxVelocityY(400.0f);
@@ -466,24 +501,26 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 {
 	CHeightMapTerrain *pTerrain = (CHeightMapTerrain *)m_pPlayerUpdatedContext;
-	XMFLOAT3 xmf3Scale = pTerrain->GetScale();
-	XMFLOAT3 xmf3PlayerPosition = GetPosition();
-	int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
-	bool bReverseQuad = ((z % 2) != 0);
+	if (pTerrain) {
+		XMFLOAT3 xmf3Scale = pTerrain->GetScale();
+		XMFLOAT3 xmf3PlayerPosition = GetPosition();
+		int z = (int)(xmf3PlayerPosition.z / xmf3Scale.z);
+		bool bReverseQuad = ((z % 2) != 0);
 
-	float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
+		float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
 
-	if (xmf3PlayerPosition.y < fHeight)
-	{
-		XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
-		xmf3PlayerVelocity.y = 0.0f;
-		SetVelocity(xmf3PlayerVelocity);
-		xmf3PlayerPosition.y = fHeight;
-		SetPosition(xmf3PlayerPosition);
-		On_Ground = true;
+		if (xmf3PlayerPosition.y < fHeight)
+		{
+			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
+			xmf3PlayerVelocity.y = 0.0f;
+			SetVelocity(xmf3PlayerVelocity);
+			xmf3PlayerPosition.y = fHeight;
+			SetPosition(xmf3PlayerPosition);
+			On_Ground = true;
+		}
+		else
+			On_Ground = false;
 	}
-	else
-		On_Ground = false;
 
 #ifdef DEBUG_MESSAGE
 #ifdef DEBUG_MESSAGE_TILE_MAP
@@ -545,14 +582,20 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
+		else if (Object_type == OBJECT_TPYE_SELECT_PLAYER) {
+			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
+			GetStateMachine()->update(fTimeElapsed);
+		}
 	}
 
 	if (On_Ground)
 	{
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
-		XMFLOAT3 xmf3PlayerPosition = GetPosition();
-		XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
-		AlignWithNormal(world_normal);
+		if (pTerrain) {
+			XMFLOAT3 xmf3PlayerPosition = GetPosition();
+			XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
+			AlignWithNormal(world_normal);
+		}
 	}
 
 	shared_ptr<CGameObject> sibling_ptr = Get_Sibling();
@@ -569,46 +612,6 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
-
-
-	if (m_pSkinnedAnimationController)
-	{
-
-		if (Anime_test_FallingLoop) {
-			if (m_fFallingTimer < 0.0f) {
-
-				m_fFallingTimer += fTimeElapsed;
-
-				float weight0 = 1.0f - (m_fFallingTimer / 1.0f); 
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, weight0);
-
-	
-				float weight2 = m_fFallingTimer / 1.0f; 
-				m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, weight2);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-			}
-			else {
-
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_FORWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_FORWARD, 0.5f);
-				if (m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_RUN_BACKWARD].m_fWeight != 0.5f)
-					m_pSkinnedAnimationController->SetTrackWeight(TRACK_RUN_BACKWARD, 0.5f);
-
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, false);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, true);
-				m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_BACKWARD, true);
-
-				
-			}
-		}
-		else {
-		
-		}
-	}
-
 }
 
 void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
@@ -626,8 +629,7 @@ ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
 {
 	ServerAnimationSyncData data = CGameObject::MakeSyncData();
 	data.currentState = GetStateMachine()->Get_State();
-	for (int i = 0; i < n_Animation; i++)
-	{
+	for (int i = 0; i < n_Animation; i++) {
 		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
 		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
 	}
@@ -635,41 +637,19 @@ ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
 	return data;
 }
 
-
 void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
+	CGameObject::ApplySyncData(syncData);
 	SetPosition(syncData.position);
-	SetLookDirection(syncData.lookVector);
-	SetState(syncData.currentState);
-
-	if (GetStateMachine())
-	{
-		GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	GetStateMachine()->SetState(syncData.currentState);
+	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	for (int i = 0; i < n_Animation; i++) {
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
 	}
-
-	if (auto anim = GetSkinnedAnimationController())
-	{
-		int setIndex = 0;
-		switch (syncData.currentState)
-		{
-			case State::Idle:          setIndex = 0; break;
-			case State::Run:           setIndex = 1; break;
-			case State::Knock_Down:    setIndex = 2; break;
-			case State::Get_Up:        setIndex = 3; break;
-			case State::Dive:          setIndex = 4; break;
-			case State::Jump:          setIndex = 5; break;
-			case State::Attack_Normal: setIndex = 6; break;
-			case State::ETC:           setIndex = 7; break;
-			default:                   setIndex = 0; break;
-		}
-
-		anim->SetTrackAnimationSet(0, setIndex);
-		anim->SetTrackEnable(0, true);
-		anim->SetTrackWeight(0, 1.0f);
-		anim->m_pAnimationTracks[0].SetPosition(0.0f);
-	}
+	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
 }
-
+//보류
 
 //==================================================================
 

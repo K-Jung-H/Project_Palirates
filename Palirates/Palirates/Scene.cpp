@@ -496,7 +496,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
 	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[1].m_bEnable = true;
+	m_pLights[1].m_bEnable = false;
 	m_pLights[1].m_nType = SPOT_LIGHT;
 	m_pLights[1].m_fRange = 500.0f;
 	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -510,9 +510,9 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
 
 
-	m_pLights[2].m_bEnable = false;
+	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
@@ -561,55 +561,85 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 
 	Particle_Format test_snow_info;
 	{
 		test_snow_info.shader_type = Particle_Type::spread;
 		test_snow_info.particle_type = 0;
 		test_snow_info.max_particles = 1000;
+		test_snow_info.MaxLifetime = 3.0f;
 
 		test_snow_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
 		test_snow_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
+		test_snow_info.EmitFaceIndex = 3;
 
-		test_snow_info.MaxLifetime = 3.0f;
 
 		test_snow_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 		test_snow_info.init_velocity_value = 0.0f;
 		test_snow_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
 
-		test_snow_info.size = XMFLOAT2(10.0f, 10.0f);
+		test_snow_info.size = 1.0f;
 		test_snow_info.color = XMFLOAT3(0.5f, 0.5f, 1.0f);
 	}
 
-	Particle_Format test_spark_info;
+	Particle_Format test_dragon_fire_info;
 	{
-		test_spark_info.shader_type = Particle_Type::spread;
-		test_spark_info.particle_type = 1;
-		test_spark_info.max_particles = 30;
+		test_dragon_fire_info.shader_type = Particle_Type::spread;
+		test_dragon_fire_info.particle_type = 5;
+		test_dragon_fire_info.max_particles = 3000;
+		test_dragon_fire_info.MaxLifetime = 1.0f;
 
-		test_spark_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
-		test_spark_info.area_xyz = XMFLOAT3(100.0f, 100.0f, 100.0f);
+		test_dragon_fire_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
+		test_dragon_fire_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
+		test_dragon_fire_info.EmitFaceIndex = 0;
 
-		test_spark_info.MaxLifetime = 1.0f;
 
-		test_spark_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-		test_spark_info.init_velocity_value = 100.0f;
-		test_spark_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+		test_dragon_fire_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		test_dragon_fire_info.init_velocity_value = 100.0f;
+		test_dragon_fire_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
 
-		test_spark_info.size = XMFLOAT2(10.0f, 10.0f);
-		test_spark_info.color = XMFLOAT3(1.0f, 1.0f, 0.0f);
+		test_dragon_fire_info.size = 1.0f;
+		test_dragon_fire_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 	}
 
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_spark_info);
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
+	Particle_Format test_sand_storm_info;
+	{
+		test_sand_storm_info.shader_type = Particle_Type::sand;
+		test_sand_storm_info.particle_type = 3;
+		test_sand_storm_info.max_particles = 10000;
+		test_sand_storm_info.MaxLifetime = 10.0f;
+
+		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.EmitFaceIndex = 5;
+
+		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+		test_sand_storm_info.init_velocity_value = 100.0f;
+		test_sand_storm_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		test_sand_storm_info.size = 0.3f;
+		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
+	}
+
+	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
+	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	test_dragonfire->Set_Active(false);
+	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
+
+	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
+	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
+	for_demo_dragonfire->Set_Center(XMFLOAT3(645.0f, 10.0f, 1590.0f));
+	for_demo_dragonfire->Set_Active(false);
+
+	
 #endif
-
-
 	obj_manager = new Object_Manager();
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
 #endif
 
 //	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
@@ -618,122 +648,99 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
-
-	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Anubis_lp.bin", NULL);
-	CLoadedModelInfo* pFishmanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
-	CLoadedModelInfo* pMedusaModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Medusa_LP_Human.bin", NULL);
-	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
-	CLoadedModelInfo* pSeamanModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Seaman_v12.bin", NULL);
-	CLoadedModelInfo* pWenchModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Wench_v12.bin", NULL);
-	CLoadedModelInfo* pFirst_MateModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
-
-
-	string obj_name_1 = "test_obj_name_1";
-	string obj_name_2 = "test_obj_name_2";
-	string obj_name_3 = "test_obj_name_3";
-	string obj_name_4 = "test_palyer2";
-	string obj_name_5 = "test_palyer3";
-	string obj_name_6 = "test_palyer4";
-	string obj_name_7 = "test_palyer5";
-	string obj_name_8 = "test_palyer6";
+	{
+		string obj_name_1 = "Anubis";
+		string obj_name_2 = "test_obj_name_2";
+		string obj_name_3 = "FishMan";
+		string obj_name_4 = "test_palyer2";
+		string obj_name_5 = "test_palyer3";
+		string obj_name_6 = "test_palyer4";
+		string obj_name_7 = "test_palyer5";
+		string obj_name_8 = "test_palyer6";
 
 
-	std::string_view name_view = obj_name_1;
-	//std::shared_ptr<CMonsterObject> humanObject_1 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pAnubisModel, 5);
-	//humanObject_1->SetPosition(0.0f, m_pTerrain->Get_Mesh_Height(0.0f, 0.0f), 0.0f);
-	//humanObject_1->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_1->Set_Name(obj_name_1);
-	//humanObject_1->test_num = 1;
-	//obj_manager->Add_Object(humanObject_1, Object_Type::skinned);
-	//
-	//name_view = obj_name_2;
-	//std::shared_ptr<CMonsterObject> humanObject_2 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pMedusaModel, 5);
-	//humanObject_2->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 10.0f), 10.0f);
-	//humanObject_2->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_2->Set_Name(obj_name_2);
-	//humanObject_2->test_num = 2;
-	//obj_manager->Add_Object(humanObject_2, Object_Type::skinned);
-	//
-	//name_view = obj_name_3;
-	//std::shared_ptr<CMonsterObject> humanObject_3 = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pGargoyleModel, 5);
-	//humanObject_3->SetPosition(10.0f, m_pTerrain->Get_Mesh_Height(10.0f, 0.0f), 0.0f);
-	//humanObject_3->SetScale(10.0f, 10.0f, 10.0f);
-	//humanObject_3->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	//XMFLOAT3 tt = { 0.0f, 1.0f, 0.0f };
-	//humanObject_3->Rotate(&tt, 90.0f);
-	//humanObject_3->Set_Name(obj_name_3);
-	//humanObject_3->test_num = 3;
-	//obj_manager->Add_Object(humanObject_3, Object_Type::skinned);
-	//
-	//name_view = obj_name_4;
-	//std::shared_ptr<CMonsterObject> obj_p = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pWenchModel, 12);
-	//obj_p->SetPosition(5.0f, m_pTerrain->Get_Mesh_Height(5.0f, 5.0f), 5.0f);
-	//obj_p->SetScale(10.0f, 10.0f, 10.0f);
-	//obj_p->Set_Name(obj_name_2);
-	//obj_p->test_num = 4;
-	//obj_manager->Add_Object(obj_p, Object_Type::non_skinned);
-	//
-	//
-	//for (int i = 0; i < 10; i++) {
-	//	CLoadedModelInfo* pFishmanModel_t = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/FishmanLP.bin", NULL);
-	//	std::shared_ptr<CMonsterObject> m = std::make_shared<CMonsterObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, pFishmanModel_t, 5);
-	//	m->SetPosition(1.0f * i, m_pTerrain->Get_Mesh_Height(1.0f * i, 1.0f * i), 1.0f * i);
-	//	m->SetScale(10.0f, 10.0f, 10.0f);
-	//	//m->SetScale(1.0f, 1.0f, 1.0f);
-	//	m->Set_Name(obj_name_3);
-	//	m->test_num = i + 4;
-	//	obj_manager->Add_Object(m, Object_Type::skinned);
-	//}
-	
-	//name_view = obj_name_8;
-	//std::shared_ptr<CTerrainPlayer> humanObject_8 = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, m_pTerrain.get());
-	//humanObject_8->SetPosition(XMFLOAT3(30.0f, m_pTerrain->Get_Mesh_Height(30.0f, 20.0f), 20.0f));
-	//humanObject_8->Set_Name(obj_name_8);
-	//humanObject_8->SetStateMachine(std::make_unique<MultiPlayerStateMachine>(humanObject_8));
-	//humanObject_8->Object_type = OBJECT_TPYE_PLAYER;
-	//
-	//obj_manager->Add_Object(humanObject_8, Object_Type::player);
+		std::string_view name_view = obj_name_1;
+		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		AnubisObject->SetPosition(10.0f + 450.0f, m_pTerrain->Get_Mesh_Height(10.0f + 450.0f, 0.0f), 0.0f + 450.0f);
+		AnubisObject->Set_Name(obj_name_1);
+		AnubisObject->test_num = 1;
+		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
+		AnubisObject->SetupWeaponCollider();
+		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
-	
+		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		Dragon->Set_Child(Dragon->m_pRootModel);
+		Dragon->SetupWeaponCollider();
+		Dragon->SetPosition(120.0f + 400.0f, m_pTerrain->Get_Mesh_Height(120.0f + 400.0f, 120.0f + 400.0f), 120.0f + 400.0f);
+		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+		Dragon->Rotate(&tt2, 180.0f);
+		Dragon->test_num = 5;
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
-	//=====================================================
+
+		for (int i = 0; i < 10; i++)
+		{
+			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			m->Set_Child(m->m_pRootModel);
+			m->SetupWeaponCollider();
+			m->SetPosition(10.0f * i + 700.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 700.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
+			m->Set_Name(obj_name_3);
+			m->test_num = i + 4;
+			obj_manager->Add_Object(m, Object_Type::skinned);
+		}
 #ifdef LOAD_SCENE
 	// Load Scene
 
-	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
-	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
-	test_scene->SetScale({ 5.0f,5.0f ,5.0f }, true);
-	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+
+
+		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+		test_scene->Set_Name("test_scene");
+		test_scene = Test_Scene_Model->m_pModelRootObject;
+		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f), 800.0f);
+		test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+		obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
-	//=====================================================
+		//=====================================================
 
-	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+		unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 
-	// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
+		// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
 
-	for (auto& [mesh_name, instance_info] : *temp_list_map)
-	{
-		m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
-		m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		for (auto& [mesh_name, instance_info] : *temp_list_map)
+		{
+			m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+			m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		}
+
+		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
+		obj_manager->Classify_Objects_By_Tile();
+
+		Object_Manager::Reserve_Update();
+
+		obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+
 	}
-
-	// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
-	obj_manager->Classify_Objects_By_Tile();
-
-	Object_Manager::Reserve_Update();
-
 	/*if (pGargoyleModel)
 		delete pGargoyleModel;
 	if (pGargoyleModel2)
 		delete pGargoyleModel2;
 	if (pGargoyleModel3)
 		delete pGargoyleModel3;*/
+
+
+#ifdef RENDER_PARTICLE
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
+	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+#endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -908,16 +915,97 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		switch (wParam)
 		{
 		case 'Q':
+			test_button = !test_button;
+			{
+				m_pPlayer->SetBlurMask(test_button);
+
+			}		break;
+
+		case 'E':
 		{
-			if (test_button)
+			particle_test_button = !particle_test_button;
+			test_dragonfire->Set_Active(particle_test_button);
+			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (mon)
+			{
+				for (const auto& obj : *mon)
+				{
+					if (!obj) continue;
+
+					if (auto* dragon = dynamic_cast<CDragonObject*>(obj.get()))
+					{
+						if (particle_test_button) {
+							dragon->Test_Mode = true;
+							float centerZ = 1590.0f;
+							XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
+							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+							dragon->SetPosition(centerPos);
+							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
+						}
+						else {
+							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
+						}
+						break; 
+					}
+				}
+			}
+		}
+		break;
+
+		case 'T':
+		{
+			m_pPlayer->SetBlurMask(true);
+
+			if (test_sand == NULL)
 				break;
 
-			test_button = true;
-		}	break;
+			test_sand->Update_Func_Index +=1;
+			test_sand->Update_Func_Index %= 3;
+
+			if (test_sand->Update_Func_Index != 2)
+			{
+				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+				test_sand->Set_Center(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
+				test_sand->Set_Area(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
+			}
+			else
+			{
+				auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+				if (mon)
+				{
+					for (const auto& obj : *mon)
+					{
+						if (!obj) continue;
+
+						if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
+						{
+							anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+							XMFLOAT3 pos = anu->GetPosition();
+							XMFLOAT3 dir = anu->GetLook();
+							pos.y += test_sand->Get_Area().y;
+							float speed = 30.0f;
+							XMVECTOR vPos = XMLoadFloat3(&pos);
+							XMVECTOR vDir = XMLoadFloat3(&dir);
+							XMVECTOR vMove = XMVectorScale(vDir, speed);
+							XMVECTOR vResult = XMVectorAdd(vPos, vMove);
+							XMStoreFloat3(&pos, vResult);
+							test_sand->Set_Center(pos);
+							//test_sand->Set_Main_Direction(anu->GetLook());
+							//test_sand->target_dir = XMLoadFloat3(&anu->GetLook());
+							test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+						}
+					}
+				}
+				
+
+			}
+		}
+		break;
 
 		case 'Z':
 		{
 			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -927,25 +1015,21 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}		break;
 		case 'C':
 		{
-			//auto it = obj_manager->Get_Object_List(Object_Type::skinned);
-			//if (it && it->size() > 5) {
-			//	auto multiPlayerObj = std::dynamic_pointer_cast<CMultiPlayerObject>((*it)[5]);
-			//	if (multiPlayerObj) {  
-			//		multiPlayerObj->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//		//multiPlayerObj->GetStateMachine()->changeState(State::Dive, Key_Value::None);
-			//		multiPlayerObj->SetStateElapsedTime(0.0f);
-			//	}
-			//}
+			obj_manager->Clear_Object_List(Object_Type::skinned);
 
-			//if (it && it->size() > 6) {
-			//	auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
-			//	if (multiPlayerObj) {
-			//		multiPlayerObj->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//		//multiPlayerObj->GetStateMachine()->changeState(State::Dive, Key_Value::None);
-			//		multiPlayerObj->SetStateElapsedTime(0.0f);
-			//	}
-			//}
 		}		break;
+		case 'P':
+		{
+			bOBBRender = !bOBBRender;
+
+		}		break;
+
+		case 'O':
+		{
+			for_demo_dragonfire_button = !for_demo_dragonfire_button;
+			for_demo_dragonfire->Set_Active(for_demo_dragonfire_button);
+		}		break;
+
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1061,40 +1145,123 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 			shader_ptr->AnimateObjects(fTimeElapsed);
 
 
-	if (m_pLights)
-	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Position.y += 10.0f;
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+	//if (m_pLights)
+	//{
+	//	m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
+	//	m_pLights[1].m_xmf3Position.y += 10.0f;
+	//	m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+	//}
+	
+	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (list) {
+		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+			}
+		}
 	}
+	// Dragon
+	if (particle_test_button)
+	{
+		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+		XMFLOAT3 test_pos{};
+		if (list) {
+			for (auto& obj : *list) {
+				const char* objName = obj->Get_Name();
+				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
+				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack3) {
+					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
 
+					if (weapon) {
+						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
 
+						XMVECTOR scale, rotQuat, trans;
+						XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix);
+
+						XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
+
+						float forwardOffset = 10.0f;  
+						float heightOffset = -5.0f;  
+
+						XMVECTOR offsetVec = forward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
+
+						XMVECTOR finalPos = trans + offsetVec;
+
+						XMFLOAT3 position;
+						XMStoreFloat3(&position, finalPos);
+						test_dragonfire->Set_Center(position);
+
+						XMFLOAT3 look;
+						XMStoreFloat3(&look, forward);
+						test_dragonfire->Set_Main_Direction(look);
+					}
+				}
+			}
+		}
+	}
+	// Sand
+
+	if (for_demo_dragonfire_button)
+	{
+		static float totalTime = 0.0f;
+		totalTime += fTimeElapsed;
+
+		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
+		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
+		for_demo_dragonfire->Set_Center(centerPos);
+	}
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_OBB
 
-	//vector<shared_ptr<CGameObject>>* temp_list = obj_manager->Get_Object_List(Object_Type::skinned);
-	//obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list);
-
-	unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-	obj_manager->Update_OBB_Drawer(pd3dDevice, pd3dCommandList, *temp_list_map);
+	// Update every frame
+	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
-	if (test_button)
+
+
+	if (m_pPlayer->GetTrailOn())
 	{
-		CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+		if (!m_pPlayer->GetTrailStart()) {
+			CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+			trail_obj->Set_Trail_Target(trail_target, false);
+			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+			obj_manager->Add_Object(trail_obj, Object_Type::trail);
+			m_pPlayer->SetTrailObj(trail_obj);
+			m_pPlayer->GetTrailObj()->Set_Active(true);
+			m_pPlayer->Trail_Start();
+		}
 
-		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-		trail_obj->Set_Trail_Target(trail_target, false);
-		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-
-		test_button = false;
+		if (!m_pPlayer->GetTrailObj()->Get_Active()) {
+			m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
+			m_pPlayer->GetTrailObj()->Set_Active(true);
+		}
 	}
+
+
+	if (test_sand && test_sand->Update_Func_Index == 1)
+	{
+		auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (mon)
+		{
+			for (const auto& obj : *mon)
+			{
+				if (!obj) continue;
+
+				if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
+				{
+					test_sand->Set_Center(anu->GetPosition());
+				}
+			}
+		}
+	}
+
 }
 
 void CScene::After_Update_Objects()
@@ -1111,7 +1278,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	pCamera->Update_Last_Frame_Info(pd3dCommandList);
 
 	//씬의 객체들 프러스텀 컬링
-	obj_manager->Check_Culling_All(pCamera);
+	//obj_manager->Check_Culling_All(pCamera);
 
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
@@ -1150,7 +1317,8 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 #endif
 
 #ifdef RENDER_OBB
-	obj_manager->Render_OBB_Drawer(pd3dCommandList, pCamera);
+	if (bOBBRender)
+		obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
@@ -1219,49 +1387,58 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 3;
+	m_nLights = 4;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 
 	m_pLights[0].m_bEnable = true;
 	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.3f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 50.0f, 0.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[0].m_fRange = 50.0f;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.9f, 0.4f, 0.1f, 1.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.9f, 0.4f, 0.1f, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.2f, 0.1f, 0.05f, 0.1f);
+	m_pLights[0].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
+	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.1f, 0.01f);
 
-	m_pLights[1].m_bEnable = false;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 100.0f, 0.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	m_pLights[1].m_bEnable = true;
+	m_pLights[1].m_nType = POINT_LIGHT;
+	m_pLights[1].m_fRange = 10.0f; 
+	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 0.5f, 0.1f, 1.0f);
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 0.5f, 0.1f, 1.0f); 
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.2f, 0.1f, 0.05f, 0.1f);
+	m_pLights[1].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
+	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
+
+	m_pLights[2].m_bEnable = true;
+	m_pLights[2].m_nType = POINT_LIGHT;
+	m_pLights[2].m_fRange = 5.0f;
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.1f);
+	m_pLights[2].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
+	m_pLights[2].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
+
+	m_pLights[3].m_bEnable = false;
+	m_pLights[3].m_nType = POINT_LIGHT;
+	m_pLights[3].m_fRange = 10.0f;
+	m_pLights[3].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.1f);
+	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
+	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
 
 
-	m_pLights[1].m_bEnable = false;
-	m_pLights[1].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
 }
 
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[0].m_bEnable = false;
-	m_pLights[1].m_bEnable = false;
-	m_pLights[2].m_bEnable = false;
+	m_pLights[0].m_bEnable = true;
+	m_pLights[1].m_bEnable = true;
+	m_pLights[2].m_bEnable = true;
+	m_pLights[3].m_bEnable = false;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
@@ -1278,10 +1455,40 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	//=====================================================
+
+	float centerX = 5.0f;
+	float centerZ = 10.0f;
+	float radiusX = 30.0f;
+	float radiusZ = 15.0f; 
+	float minY = -3.0f;
+	float maxY = 0.0f;
+
+	float totalRotationRad = XMConvertToRadians(110.0f);
+
+	for (int i = 0; i < 6; ++i) {
+		float angle = XM_PI * ((float)i / 5.0f);
+		float localX = radiusX * cosf(angle);
+		float localZ = radiusZ * sinf(angle);
+
+		float rotatedX = centerX + (localX * cosf(totalRotationRad) - localZ * sinf(totalRotationRad));
+		float rotatedZ = centerZ + (localX * sinf(totalRotationRad) + localZ * cosf(totalRotationRad));
+
+		float t = (float)i / 5.0f;
+		float y = (maxY - minY) * sinf(t * XM_PI) + minY;
+
+		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
+		player->Set_Child(player->m_pRootModel);
+		player->SetupWeaponCollider();
+
+		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
+		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
+		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
+		obj_manager->Add_Object(player, Object_Type::player);
+	}
 
 	CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
 	std::shared_ptr<CGameObject> test_Island = CGameObject::Make_Instance(Test_Island_Model->m_pModelRootObject, true);
@@ -1291,101 +1498,180 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	obj_manager->Add_Object(test_Island, Object_Type::fixed);
 
+
 	//=====================================================
 	Object_Manager::Reserve_Update();
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 }
 
 void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	CScene::Animate_Objects(pd3dCommandList, fTimeElapsed);
+
+	if (!m_pPlayer) 
+		return;
+
+	XMFLOAT3 targetPos = m_pPlayer->GetPosition();
+	targetPos.y = 0.0f;
+
+	auto playerList = obj_manager->Get_Object_List(Object_Type::player);
+	for (const auto& obj : *playerList)
+	{
+		XMFLOAT3 objPos = obj->GetPosition();
+		objPos.y = 0.0f;
+
+		XMVECTOR dir = XMVectorSubtract(XMLoadFloat3(&targetPos), XMLoadFloat3(&objPos));
+		dir = XMVector3Normalize(dir);
+
+		XMFLOAT3 lookDir;
+		XMStoreFloat3(&lookDir, dir);
+
+		obj->SetLookDirection(lookDir);
+	}
 	m_fElapsedTime = fTimeElapsed;
+
+	static float m_fAccumulatedTime = 0.0f;
+	m_fAccumulatedTime += fTimeElapsed;
+	m_fAccumulatedTime = fmodf(m_fAccumulatedTime, 10.0f);
+
+	float flicker = 0.6f + 0.4f * sinf(m_fAccumulatedTime * 1.5f);
+	float fillFactor = 0.8f + 0.2f * flicker;
+
+	XMFLOAT3 baseColor = { 0.9f, 0.4f, 0.1f };
+	XMFLOAT3 targetColor = { 1.0f, 0.4f, 0.1f };
+
+	float r = baseColor.x + (targetColor.x - baseColor.x) * (flicker - 0.6f) / 0.4f;
+	float g = baseColor.y + (targetColor.y - baseColor.y) * (flicker - 0.6f) / 0.4f;
+	float b = baseColor.z + (targetColor.z - baseColor.z) * (flicker - 0.6f) / 0.4f;
+	float intensity = 1.0f + 1.5f * (flicker - 0.6f);
+
+	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(r * intensity, g * intensity, b * intensity, 1.0f);
+	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f * flicker, 0.2f * flicker, 0.1f * flicker, 0.2f);
+	m_pLights[1].m_fRange = 10.0f + 25.0f * flicker;
+
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.05f * fillFactor, 0.03f * fillFactor, 0.02f * fillFactor, 1.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.02f * fillFactor, 0.01f * fillFactor, 0.005f * fillFactor, 0.05f);
+	m_pLights[0].m_fRange = 50.0f + 20.0f * (fillFactor - 0.8f);
 }
 
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+	CScene::Render(pd3dDevice, pd3dCommandList, pCamera);
+	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+}
+
+void Character_Select_Scene::UpdatePlayerSelection(int new_index)
+{
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	int list_size = static_cast<int>(player_list->size());
+	if (list_size == 0)
+		return;
+
+	int next_index = (new_index + list_size) % list_size;
+
+	if (prev_index >= 0 && prev_index < list_size && prev_index != next_index)
+		(*player_list)[prev_index]->SetOutlineColor(0);
+
+	(*player_list)[next_index]->SetOutlineColor(1);
+
+	prev_index = next_index;
+	select_index = next_index;
+
+	if (select_index != -1)
+	{
+		XMFLOAT3 character_pos = (*player_list)[next_index]->GetPosition();
+		m_pLights[3].m_bEnable = true;
+		m_pLights[3].m_xmf3Position = character_pos;
+		m_pLights[3].m_xmf3Position.y += 15.0f;
+	}
+}
+
+bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case 'Z':
+			UpdatePlayerSelection(select_index - 1);
+			break;
+
+		case 'C':
+			UpdatePlayerSelection(select_index + 1);
+			break;
+
+
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	return(false);
 }
 
 //==========================================================================================
 
 void Board_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 5;
+	m_nLights = 9;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
 	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
-	m_pLights[0].m_bEnable = true;
-	m_pLights[0].m_nType = POINT_LIGHT;
-	m_pLights[0].m_fRange = 300.0f;
-	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-	m_pLights[0].m_xmf4Specular = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[0].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
-	m_pLights[0].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	XMFLOAT4 rainbowColors[7] = {
+		XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f),  // Red
+		XMFLOAT4(1.0f, 0.5f, 0.0f, 1.0f),  // Orange
+		XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f),  // Yellow
+		XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f),  // Green
+		XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f),  // Blue
+		XMFLOAT4(0.29f, 0.0f, 0.51f, 1.0f),// Indigo
+		XMFLOAT4(0.58f, 0.0f, 0.83f, 1.0f) // Violet
+	};
 
-	m_pLights[1].m_bEnable = true;
-	m_pLights[1].m_nType = SPOT_LIGHT;
-	m_pLights[1].m_fRange = 500.0f;
-	m_pLights[1].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[1].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[1].m_xmf3Position = XMFLOAT3(-50.0f, 20.0f, -5.0f);
-	m_pLights[1].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-	m_pLights[1].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[1].m_fFalloff = 8.0f;
-	m_pLights[1].m_fPhi = (float)cos(XMConvertToRadians(40.0f));
-	m_pLights[1].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
+	for (int i = 0; i < 7; ++i)
+	{
+		m_pLights[i].m_bEnable = true;
+		m_pLights[i].m_nType = POINT_LIGHT;
+		m_pLights[i].m_fRange = 300.0f;
+		m_pLights[i].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // white ambient
+		m_pLights[i].m_xmf4Diffuse = rainbowColors[i];                 // rainbow color diffuse
+		m_pLights[i].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f); // white specular
+		m_pLights[i].m_xmf3Position = XMFLOAT3(100.0f + 100.0f * i, 50.0f, 100.0f); // position along x-axis
+		m_pLights[i].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f); // attenuation factors
+	}
 
+	m_pLights[7].m_bEnable = true;
+	m_pLights[7].m_nType = POINT_LIGHT;
+	m_pLights[7].m_fRange = 200.0f;
+	m_pLights[7].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[7].m_xmf4Diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	m_pLights[7].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.3f);
+	m_pLights[7].m_xmf3Position = XMFLOAT3(250.0f, 50.0f, 250.0f);
+	m_pLights[7].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-	m_pLights[2].m_bEnable = false;
-	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
-	//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-
-	m_pLights[3].m_bEnable = false;
-	m_pLights[3].m_nType = SPOT_LIGHT;
-	m_pLights[3].m_fRange = 600.0f;
-	m_pLights[3].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[3].m_xmf4Diffuse = XMFLOAT4(0.3f, 0.7f, 0.0f, 1.0f);
-	m_pLights[3].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[3].m_xmf3Position = XMFLOAT3(550.0f, 330.0f, 530.0f);
-	m_pLights[3].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 1.0f);
-	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.01f, 0.0001f);
-	m_pLights[3].m_fFalloff = 8.0f;
-	m_pLights[3].m_fPhi = (float)cos(XMConvertToRadians(90.0f));
-	m_pLights[3].m_fTheta = (float)cos(XMConvertToRadians(30.0f));
-
-	m_pLights[4].m_bEnable = false;
-	m_pLights[4].m_nType = POINT_LIGHT;
-	m_pLights[4].m_fRange = 200.0f;
-	m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.8f, 0.3f, 0.3f, 1.0f);
-	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
-	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+	m_pLights[8].m_bEnable = true;
+	m_pLights[8].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 }
-
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	m_pLights[2].m_bEnable = true;
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+
+	m_pLights[8].m_bEnable = true;
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-
-	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 #ifdef RENDER_PARTICLE
@@ -1397,7 +1683,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawer(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
@@ -1440,12 +1726,28 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 
 		test_Island_0->SetPosition(-1200.0f, 40.0f, -1200.0f);
+		m_pLights[0].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, -1200.0f);
+
 		test_Island_1->SetPosition(-1200.0f, 40.0f, 0.0f);
+		m_pLights[1].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 0.0f);
+
+		
 		test_Island_2->SetPosition(-1200.0f, 40.0f, 1200.0f);
+		m_pLights[2].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 1200.0f);
+
 		test_Island_3->SetPosition(0.0f, 40.0f, 1200.0f);
+		m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 40.0f, 1200.0f);
+
+
 		test_Island_4->SetPosition(1200.0f, 40.0f, 1200.0f);
+		m_pLights[4].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 1200.0f);
+
+
 		test_Island_5->SetPosition(1200.0f, 40.0f, 0.0f);
+		m_pLights[5].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 0.0f);
+
 		test_Island_6->SetPosition(1200.0f, 40.0f, -1200.0f);
+		m_pLights[6].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, -1200.0f);
 
 
 		obj_manager->Add_Object(test_Island_0, Object_Type::fixed);
@@ -1471,12 +1773,12 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
 
 
-		pirate_ship->SetScale({ 2.0f, 2.0f, 2.0f }, true);
+		pirate_ship->SetScale({ 3.0f, 3.0f, 3.0f }, true);
 		obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
 		pirate_ship->Obj_Info();
 
 
-		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_Pos"));
+		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_pos"));
 		pirate_ship->RegisterMarker("Sailor_0", pirate_ship->FindFrame("Sailor_Pos_0"));
 		pirate_ship->RegisterMarker("Sailor_1", pirate_ship->FindFrame("Sailor_Pos_1"));
 		pirate_ship->RegisterMarker("Sailor_2", pirate_ship->FindFrame("Sailor_Pos_2"));
@@ -1486,14 +1788,31 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		pirate_ship->RegisterMarker("Head", pirate_ship->FindFrame("Bottom_Head"));
 		pirate_ship->RegisterMarker("Tail", pirate_ship->FindFrame("Bottom_Tail"));
 
+		pirate_ship->RegisterMarker("Move_Model_1", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_01"));
+		pirate_ship->RegisterMarker("Move_Model_2", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_02"));
+		pirate_ship->RegisterMarker("Move_Model_3", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_03"));
+		pirate_ship->RegisterMarker("Move_Model_4", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Sails_04"));
+		pirate_ship->RegisterMarker("Move_Model_5", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Sails_05"));
 
-		
+		pirate_ship->RegisterMarker("Stay_Model_1", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_01"));
+		pirate_ship->RegisterMarker("Stay_Model_2", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_02"));
+		pirate_ship->RegisterMarker("Stay_Model_3", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_03"));
+		pirate_ship->RegisterMarker("Stay_Model_4", pirate_ship->FindFrame("SM_Veh_Boat_Warship_01_Mast_SailUp_04"));
+
+		pirate_ship->RegisterMarker("Captain_Wheel", pirate_ship->FindFrame("SM_Prop_ShipWheel_02"));
+
+		pirate_ship->Set_Sail_Mode(false);
+		pirate_ship->Change_Model(true);
+
+
 		if (Ship_Model)
 			delete Ship_Model;
 
 	}
+
 	//=====================================================
 
+#ifdef RENDER_PARTICLE
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
@@ -1510,12 +1829,13 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.init_velocity_value = 100.0f;
 		water_splashes_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
 
-		water_splashes_info.size = XMFLOAT2(10.0f, 10.0f);
+		water_splashes_info.size = 1.0f;
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
-	
+
 	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
 	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
+#endif
 	//=====================================================
 
 
@@ -1525,16 +1845,16 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	{
 		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
-		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.15f;                           // Damping factor for height interpolation
-		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.45f;                            // Minimum wave height
-		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.55f;                            // Maximum wave height
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;                            // Minimum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;                            // Maximum wave height
 		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
 		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
 		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
 		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
 
 		// === Boat Wake Parameters ===
-		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 50.0f;                          // Maximum distance the wake affects
+		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
 		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
 		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
 		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
@@ -1556,15 +1876,16 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	wave_plane->Animate(pd3dCommandList, fTimeElapsed);
 
 	pirate_ship->Animate(fTimeElapsed);
-
+	pirate_ship->HandleBoundaryReflection(1500.0f);
 
 	if (m_pLights)
 	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Position.y += 10.0f;
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+		m_pLights[7].m_xmf3Position = pirate_ship->GetPosition();
+		m_pLights[7].m_xmf3Position.y += 100.0f;
 	}
 
+
+#ifdef RENDER_PARTICLE
 	XMFLOAT3 bottom_head_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
 
@@ -1576,7 +1897,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	water_particle_2->Set_Center(bottom_tail_particle_pos);
 	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
-
+#endif
 
 	if (m_pPlayer && m_pPlayer->GetCamera())
 	{
@@ -1592,6 +1913,21 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
 
+	bool isShipMoving = pirate_ship->Is_Moving(); 
+	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
+
+	if (isShipMoving && !isSailMode)
+	{
+		pirate_ship->Set_Sail_Mode(true); 
+		pirate_ship->Change_Model(false); 
+	}
+	else if (!isShipMoving && isSailMode)
+	{
+		pirate_ship->Set_Sail_Mode(false); 
+		pirate_ship->Change_Model(true); 
+	}
+
+
 	if (focus_button)
 	{
 		CCamera* player_camera = m_pPlayer->GetCamera();
@@ -1602,7 +1938,18 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 		player_camera->UpdateFocusTracking(new_camera_pos);
 	}
+	else
+	{
+		XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
+		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
+		m_pPlayer->SetPosition(Fixed_Position);
+
+		auto pCamera = m_pPlayer->GetCamera();
+		pCamera->SetPosition(Fixed_Position);
+		pCamera->SetLookAtPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 0.0f, 0.0f), UpVector); 
+	}
 
 }
 
@@ -1643,7 +1990,6 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 	}
 }
 
-
 void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
@@ -1672,19 +2018,19 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			test_button = true;
 		}	break;
 
-		case 'I':		case 'i':
+		case 'W':		case 'w':
 		{
 			pirate_ship->MoveForward(20);
 		}
 		break;
 
-		case 'J':		case 'j':
+		case 'A':		case 'a':
 		{
 			pirate_ship->Add_Rotate(-10.0f);
 		}
 		break;
 
-		case 'L':		case 'l':
+		case 'D':		case 'd':
 		{
 			pirate_ship->Add_Rotate(10.0f);
 		}
