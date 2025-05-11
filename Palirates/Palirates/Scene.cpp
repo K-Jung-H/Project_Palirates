@@ -703,7 +703,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	// Load Scene
 
 	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+	//	CLoadedModelInfo* //Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_3/Scene_Name.bin", NULL);
 
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
@@ -947,6 +948,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
+							dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}
 						break; 
@@ -1207,7 +1209,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 			}
 		}
 	}
-	// Sand
 
 	if (for_demo_dragonfire_button)
 	{
