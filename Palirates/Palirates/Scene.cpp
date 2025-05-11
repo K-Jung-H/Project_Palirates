@@ -10,9 +10,6 @@
 
 CScene::CScene()
 {
-	//if (m_pDescriptorHeap == NULL)
-	//	m_pDescriptorHeap = new CDescriptorHeap();
-
 }
 
 CScene::~CScene()
@@ -543,17 +540,50 @@ void CScene::BuildDefaultLightsAndMaterials()
 void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
+	
+	obj_manager = new Object_Manager();
 
 	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature); 
 
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 
-
 	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
 	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 	Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
+	{
+		in_game_wave = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+		in_game_wave->Set_Name("wave_1");
+		in_game_wave->SetPosition(XMFLOAT3(1500.0f, 10.0f, 1500.0f));
+
+		in_game_wave->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+		in_game_wave->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+		obj_manager->Add_Object(in_game_wave, Object_Type::plane);
+		obj_manager->wave_obj = in_game_wave.get();
+
+		{
+			CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
+			CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
+			CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;                            // Minimum wave height
+			CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;                            // Maximum wave height
+			CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
+			CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
+			CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
+			CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
+
+			// === Boat Wake Parameters ===
+			CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
+			CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
+			CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
+			CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
+
+			// === Time ===
+			CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
+			CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
+		}
+	}
 
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
@@ -563,25 +593,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 
-	Particle_Format test_snow_info;
-	{
-		test_snow_info.shader_type = Particle_Type::spread;
-		test_snow_info.particle_type = 0;
-		test_snow_info.max_particles = 1000;
-		test_snow_info.MaxLifetime = 3.0f;
-
-		test_snow_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-		test_snow_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-		test_snow_info.EmitFaceIndex = 3;
-
-
-		test_snow_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-		test_snow_info.init_velocity_value = 0.0f;
-		test_snow_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		test_snow_info.size = 1.0f;
-		test_snow_info.color = XMFLOAT3(0.5f, 0.5f, 1.0f);
-	}
 
 	Particle_Format test_dragon_fire_info;
 	{
@@ -590,7 +601,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
 
-		test_dragon_fire_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
 		test_dragon_fire_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
 		test_dragon_fire_info.EmitFaceIndex = 0;
 
@@ -610,8 +620,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.max_particles = 10000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
-		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
-		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
 		test_sand_storm_info.EmitFaceIndex = 5;
 
 		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
@@ -622,28 +631,25 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
-	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_dragonfire->Set_Active(false);
+
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
+	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
+	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 
 	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	for_demo_dragonfire->Set_Center(XMFLOAT3(645.0f, 10.0f, 1590.0f));
+	for_demo_dragonfire->SetPosition(XMFLOAT3(645.0f, 10.0f, 1590.0f));
 	for_demo_dragonfire->Set_Active(false);
-
 	
 #endif
-	obj_manager = new Object_Manager();
+
 
 
 #ifdef RENDER_OBB
 	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-
 #endif
-
-//	m_pSkyBox = new CSkyBox(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-
 
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
@@ -697,7 +703,8 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	// Load Scene
 
 	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+	//	CLoadedModelInfo* //Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_3/Scene_Name.bin", NULL);
 
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
@@ -728,12 +735,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
 
 	}
-	/*if (pGargoyleModel)
-		delete pGargoyleModel;
-	if (pGargoyleModel2)
-		delete pGargoyleModel2;
-	if (pGargoyleModel3)
-		delete pGargoyleModel3;*/
 
 
 #ifdef RENDER_PARTICLE
@@ -743,6 +744,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 #endif
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 }
 
 #ifdef WRITE_TEXT_UI
@@ -924,6 +926,9 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
+			if (test_dragonfire == NULL)
+				break;
+
 			test_dragonfire->Set_Active(particle_test_button);
 			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 			if (mon)
@@ -943,6 +948,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
+							dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}
 						break; 
@@ -954,21 +960,21 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'T':
 		{
-			m_pPlayer->SetBlurMask(true);
-
 			if (test_sand == NULL)
 				break;
 
 			test_sand->Update_Func_Index +=1;
 			test_sand->Update_Func_Index %= 3;
 
-			if (test_sand->Update_Func_Index != 2)
+			if (test_sand->Update_Func_Index == 0)
 			{
+				test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
+				test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
+
+				test_sand->Set_Speed(0.0f);
 				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
-				test_sand->Set_Center(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
-				test_sand->Set_Area(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
 			}
-			else
+			else if (test_sand->Update_Func_Index == 1 || test_sand->Update_Func_Index == 2)
 			{
 				auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 				if (mon)
@@ -979,26 +985,34 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 						if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
 						{
-							anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-							XMFLOAT3 pos = anu->GetPosition();
-							XMFLOAT3 dir = anu->GetLook();
-							pos.y += test_sand->Get_Area().y;
-							float speed = 30.0f;
-							XMVECTOR vPos = XMLoadFloat3(&pos);
-							XMVECTOR vDir = XMLoadFloat3(&dir);
-							XMVECTOR vMove = XMVectorScale(vDir, speed);
-							XMVECTOR vResult = XMVectorAdd(vPos, vMove);
-							XMStoreFloat3(&pos, vResult);
-							test_sand->Set_Center(pos);
-							//test_sand->Set_Main_Direction(anu->GetLook());
-							//test_sand->target_dir = XMLoadFloat3(&anu->GetLook());
-							test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+							XMFLOAT3 anubisPos = anu->GetPosition();
+
+							// focus_point만 설정 (1번 공통 처리)
+							test_sand->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
+							test_sand->Set_Focus_Point(anubisPos);
+							test_sand->Set_Speed(0.0f);
+
+							// 2번 전용 처리
+							if (test_sand->Update_Func_Index == 2)
+							{
+								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+								XMFLOAT3 pos = anubisPos;
+								XMFLOAT3 dir = anu->GetLook();
+
+								test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+								test_sand->SetPosition(pos);
+								test_sand->Set_Focus_Point(anubisPos);
+
+								test_sand->Set_Speed(100.0f);
+								test_sand->Set_Direction(dir);
+							}
+
+							break; 
 						}
 					}
 				}
-				
-
 			}
+
 		}
 		break;
 
@@ -1027,7 +1041,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'O':
 		{
 			for_demo_dragonfire_button = !for_demo_dragonfire_button;
-			for_demo_dragonfire->Set_Active(for_demo_dragonfire_button);
+			if (for_demo_dragonfire)
+				for_demo_dragonfire->Set_Active(for_demo_dragonfire_button);
 		}		break;
 
 		case 'V':
@@ -1135,22 +1150,15 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
 {
-	m_fElapsedTime = fTimeElapsed;
+	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;
+	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;
+	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.1f;
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
-
 
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr->AnimateObjects(fTimeElapsed);
-
-
-	//if (m_pLights)
-	//{
-	//	m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-	//	m_pLights[1].m_xmf3Position.y += 10.0f;
-	//	m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
-	//}
 	
 	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
 	if (list) {
@@ -1190,7 +1198,8 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						test_dragonfire->Set_Center(position);
+						//test_dragonfire->Set_Center(position);
+						test_dragonfire->SetPosition(position);
 
 						XMFLOAT3 look;
 						XMStoreFloat3(&look, forward);
@@ -1200,7 +1209,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 			}
 		}
 	}
-	// Sand
 
 	if (for_demo_dragonfire_button)
 	{
@@ -1209,7 +1217,16 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 
 		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
 		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
-		for_demo_dragonfire->Set_Center(centerPos);
+		//for_demo_dragonfire->Set_Center(centerPos);
+		for_demo_dragonfire->SetPosition(centerPos);
+
+	}
+
+
+	if (in_game_wave)
+	{
+		Plane_Shader::Update(fTimeElapsed);
+		in_game_wave->Animate(pd3dCommandList, fTimeElapsed);
 	}
 }
 
@@ -1256,17 +1273,21 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 				if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
 				{
-					test_sand->Set_Center(anu->GetPosition());
+					test_sand->Set_Focus_Point(anu->GetPosition());
 				}
 			}
 		}
 	}
 
+	if(in_game_wave)
+		in_game_wave->Copy_Buffer_Data(pd3dCommandList);
+
 }
 
 void CScene::After_Update_Objects()
 {
-
+	if (in_game_wave)
+		in_game_wave->Readback_Buffer_Data();
 }
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1292,9 +1313,9 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
-	if (Shader_list.size())
-		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
-			shader_ptr->Render_Objects(pd3dCommandList, pCamera);
+	//if (Shader_list.size())
+	//	for (std::shared_ptr<CShader> shader_ptr : Shader_list)
+	//		shader_ptr->Render_Objects(pd3dCommandList, pCamera);
 }
 
 void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -1308,6 +1329,9 @@ void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12Graphics
 void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, pCamera);
+
+	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
+	obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
 
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
@@ -1344,9 +1368,6 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
-	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 #ifdef RENDER_PARTICLE
@@ -1820,7 +1841,6 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.particle_type = 2;
 		water_splashes_info.max_particles = 300;
 
-		water_splashes_info.center = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);
 
 		water_splashes_info.MaxLifetime = 0.3f;
@@ -1868,7 +1888,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	m_fElapsedTime = fTimeElapsed;
+	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;
+	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;
+	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;
+
 	Deferred_Plane_Shader::Update(fTimeElapsed);
 
 
@@ -1889,13 +1912,17 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	XMFLOAT3 bottom_head_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
 
-	water_particle_1->Set_Center(bottom_head_particle_pos);
+	//water_particle_1->Set_Center(bottom_head_particle_pos);
+	water_particle_1->SetPosition(bottom_head_particle_pos);
+
 	water_particle_1->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 
 	XMFLOAT3 bottom_tail_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
 
-	water_particle_2->Set_Center(bottom_tail_particle_pos);
+	//water_particle_2->Set_Center(bottom_tail_particle_pos);
+	water_particle_2->SetPosition(bottom_tail_particle_pos);
+
 	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 #endif
 

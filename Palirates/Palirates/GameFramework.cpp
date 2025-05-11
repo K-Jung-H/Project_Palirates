@@ -535,8 +535,12 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get(), modelnum);
 					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
 					humanObject_7->Set_Name(player_name);
+					humanObject_7->Set_Child(humanObject_7->m_pRootModel);
 					humanObject_7->SetupWeaponCollider();
-					humanObject_7->Object_type = OBJECT_TPYE_MAIN_PLAYER;
+					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
+					CPlayer* player = humanObject_7.get(); 
+					auto st = std::make_unique<MultiPlayerStateMachine>(player);
+					humanObject_7->SetStateMachine(std::move(st));
 					humanObject_7->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
 					nPlayer++;
@@ -687,7 +691,7 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
 	scene_manager->Register_Scene("Character_Select", character_select_scene);
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
-	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
 	select_scene_observer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	

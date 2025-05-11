@@ -3752,16 +3752,16 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 
 
-Deferred_Plane_Shader* Plane_Object::plane_shader = NULL;
-
+Deferred_Plane_Shader* Plane_Object::deferred_plane_shader = NULL;
+Plane_Shader* Plane_Object::plane_shader = NULL; 
 
 Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
 {
-	if (plane_shader == nullptr)
+	if (deferred_plane_shader == nullptr)
 	{
-		plane_shader = new Deferred_Plane_Shader();
-		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		deferred_plane_shader = new Deferred_Plane_Shader();
+		deferred_plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		deferred_plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
@@ -3772,7 +3772,7 @@ Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 
 	Plane_Material = new CMaterial(2);
 
-	Plane_Material->SetShader(plane_shader);
+	Plane_Material->SetShader(deferred_plane_shader);
 }
 
 Plane_Object::~Plane_Object()
@@ -3833,13 +3833,21 @@ void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 CS_Wave_Shader* Wave_Object::cs_wave_shader = NULL;
 
-Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n)
+Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n, bool use_deferred_shader)
 	: Plane_Object()
 {
-	if (plane_shader == nullptr)
+	if (use_deferred_shader && deferred_plane_shader == nullptr)
 	{
-		plane_shader = new Deferred_Plane_Shader();
-		plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		deferred_plane_shader = new Deferred_Plane_Shader();
+		deferred_plane_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		deferred_plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	if (!use_deferred_shader && plane_shader == nullptr)
+	{
+		plane_shader = new Plane_Shader();
+		plane_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		plane_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
@@ -3853,7 +3861,11 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	}
 
 	Plane_Material = new CMaterial(2);
-	Plane_Material->SetShader(plane_shader);
+	if(use_deferred_shader)
+		Plane_Material->SetShader(deferred_plane_shader);
+	else if(!use_deferred_shader)
+		Plane_Material->SetShader(plane_shader);
+
 
 	Light_Material_Info temp;
 	temp.gSpecular = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
@@ -3963,7 +3975,6 @@ XMFLOAT3 Wave_Object::Readback_Buffer_Data()
 
 void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 {
-	//World_Boat_Pos = boat_ptr->FindFrame("Bottom_Head")->GetPosition(); // 큰 차이 없음
 	World_Boat_Pos = boat_ptr->GetPosition();
 	World_Boat_Dir = Vector3::ScalarProduct(boat_ptr->GetLook(), -1.0f, false);
 
@@ -3989,18 +4000,46 @@ void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 
 void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	if (!cs_wave_shader)
-		return;
+	if (!cs_wave_shader) return;
 
+	// Set compute root signature
 	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
 
-	// Time update
+	// Step 1: Update global simulation time
 	CS_Wave_Shader::total_time += fTimeElapsed;
 	if (CS_Wave_Shader::total_time >= XM_2PI)
 		CS_Wave_Shader::total_time -= XM_2PI;
 
-	XMFLOAT3 Plane_Position = GetPosition();
+	cs_wave_shader->update_wave_info->g_TotalTime = CS_Wave_Shader::total_time;
 
+	// Step 2: Prepare dispatch group sizes
+	const int readIndex = bPingPongToggle ? 1 : 0;
+	const int writeIndex = bPingPongToggle ? 0 : 1;
+	const UINT threadSize = 8;
+	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
+
+	// Step 3: Dispatch Global Wave Pass (runs unconditionally)
+	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV: previous heightmap
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV: write new heightmap
+	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
+	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
+
+	// Step 4: Insert UAV barrier after global wave pass
+	D3D12_RESOURCE_BARRIER uavBarrier0 = {};
+	uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+	pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
+
+	// Step 5: Check boat direction validity
+	if (World_Boat_Dir.x == 0 && World_Boat_Dir.z == 0)
+	{
+		bPingPongToggle = !bPingPongToggle;
+		return;
+	}
+
+	// Step 6: Update boat-related parameters
+	XMFLOAT3 Plane_Position = GetPosition();
 	float planeHalfSize = Side_Length * 0.5f;
 
 	XMFLOAT2 boatTexel = {
@@ -4013,56 +4052,32 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 	XMFLOAT2 normDirXZ;
 	XMStoreFloat2(&normDirXZ, v);
 
-	cs_wave_shader->update_wave_info->g_BoatPos = XMFLOAT2(boatTexel.x, boatTexel.y);
-	cs_wave_shader->update_wave_info->g_BoatDir = XMFLOAT2(normDirXZ.x, normDirXZ.y);
-	cs_wave_shader->update_wave_info->g_TotalTime = CS_Wave_Shader::total_time;
+	cs_wave_shader->update_wave_info->g_BoatPos = boatTexel;
+	cs_wave_shader->update_wave_info->g_BoatDir = normDirXZ;
 	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
-	const int readIndex = bPingPongToggle ? 1 : 0;
-	const int writeIndex = bPingPongToggle ? 0 : 1;
-	const UINT threadSize = 8;
-	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
-
-	// ======== [Pass 0] Global Wave ========
-	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV
-	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
-
-	// ======= UAV Barrier =========
-	{
-		D3D12_RESOURCE_BARRIER uavBarrier = {};
-		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		uavBarrier.UAV.pResource = wave_data_texture->GetResource(writeIndex);
-		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
-	}
-
-	// ======== [Pass 1] Boat Wake ========
+	// Step 7: Dispatch Boat Wake Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);    // SRV
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);     // UAV
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// ======= UAV Barrier =========
-	{
-		D3D12_RESOURCE_BARRIER uavBarrier = {};
-		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		uavBarrier.UAV.pResource = wave_data_texture->GetResource(readIndex);
-		pd3dCommandList->ResourceBarrier(1, &uavBarrier);
-	}
+	// Step 8: UAV barrier after wake pass
+	D3D12_RESOURCE_BARRIER uavBarrier1 = {};
+	uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+	uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
+	pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
 
-	// ======== [Pass 2] Normal Map ========
+	// Step 9: Dispatch Normal Map Generation Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);     // UAV
-
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // NormalMap
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // Pos_Normal_Data
-
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2); // NormalMap
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3); // Position + Normal buffer
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Ping-Pong toggle
+	// Step 10: Toggle ping-pong state
 	bPingPongToggle = !bPingPongToggle;
 }
 

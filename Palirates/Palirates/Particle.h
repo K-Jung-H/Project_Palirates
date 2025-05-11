@@ -32,7 +32,6 @@ struct Particle_Format
 	UINT particle_type;
 	UINT max_particles = MAX_PARTICLES;
 
-	XMFLOAT3 center{};
 	XMFLOAT3 area_xyz{};
 	UINT EmitFaceIndex; // EmitFace (0~5: -X,+X,-Y,+Y,-Z,+Z)
 
@@ -200,13 +199,21 @@ class Particle_Manager;
 
 class ParticleObject : public CGameObject
 {
+protected:
+	XMFLOAT3 m_xmf3Direction = { 0.0f, 0.0f, 1.0f }; // 기본 전방
+	float m_fSpeed = 0.0f;
+	XMFLOAT3 m_xmf3Velocity = { 0.0f, 0.0f, 0.0f };
+
 private:
 	Particle_Shape_Mesh* shape_mesh = NULL;
 	Particle* particle_data = NULL;
 	CMaterial* particle_Material = NULL;
 	
-	XMFLOAT3 area_xyz {};
-	XMFLOAT3 center {};
+	XMFLOAT3 local_area_xyz {};
+
+	XMFLOAT3 focus_point {};
+	float focus_strength = 0.0f;
+
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
 	
@@ -228,30 +235,36 @@ public:
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	Particle* Get_Particle_Data() { return particle_data; }
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 	
-	void Set_Area(XMFLOAT3 new_area) { area_xyz = new_area; }
-	void Set_Center(XMFLOAT3 new_center) { center = new_center; }
-	XMFLOAT3 Get_Area() { return area_xyz; }
-	XMFLOAT3 Get_Center() { return center; };
+	void Set_Area(XMFLOAT3 new_local_area) { local_area_xyz = new_local_area; }
+	XMFLOAT3 Get_Area() { return local_area_xyz; }
+
+	void Set_Focus_Point(XMFLOAT3 world_point);
+	XMFLOAT3 Get_Focus_Point() { return focus_point; };
+
+	void Set_Focus_Strength(float new_value) { focus_strength = new_value; }
+	float Get_Focus_Strength() { return focus_strength; }
 
 	void Set_Main_Direction(const XMFLOAT3& input);
 	XMFLOAT3 Get_Main_Direction();
 
 	int Get_Init_Velocity_Value() { return Init_Velocity_Value; }
 
-	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(center, area_xyz); }
+	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(XMFLOAT3(0.0f,0.0f,0.0f), local_area_xyz); }
 	UINT Get_Size_Particle_Info_List() { return particle_data->N_Particle_Info_List; }
 	UINT Get_Size_Render_Instance() { return particle_data->N_Render_Instance; }
 
+	void Set_Direction(XMFLOAT3& dir) { m_xmf3Direction = Vector3::Normalize(dir); }
+	void Set_Speed(float speed) { m_fSpeed = speed; }
+
 
 	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
-
 	void Add_Destroy_Queue();
 
 };
