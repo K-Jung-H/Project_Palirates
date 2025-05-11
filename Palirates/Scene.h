@@ -22,6 +22,13 @@ class Particle_Manager;
 class ParticleObject;
 
 
+enum SceneState
+{
+	Character_Select,
+	Game_Board,
+	In_Stage
+};
+
 struct LIGHT
 {
 	XMFLOAT4							m_xmf4Ambient;
@@ -92,7 +99,10 @@ public:
 
 	Particle_Manager* Get_Particle_Manager() { return particle_manager; }
 
-	CPlayer								*m_pPlayer = NULL;
+	//CPlayer								*m_pPlayer = NULL;
+	shared_ptr<CPlayer> m_pPlayer = NULL;
+
+	bool bOBBRender{ false };
 
 protected:
 	ID3D12RootSignature					*m_MRT_GraphicsRootSignature = NULL;
@@ -104,6 +114,11 @@ public:
 
 
 	Particle_Manager* particle_manager = NULL;
+	std::shared_ptr<ParticleObject> test_sand = NULL;
+	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
+	std::shared_ptr<ParticleObject> for_demo_dragonfire = NULL;
+	bool for_demo_dragonfire_button = false;
+	
 	Object_Manager* obj_manager = NULL;
 
 
@@ -122,6 +137,7 @@ public:
 	LIGHTS								*m_pcbMappedLights = NULL;
 
 	bool test_button = false;
+	bool particle_test_button = false;
 
 #ifdef WRITE_TEXT_UI
 	Text_UI_Manager* text_ui_manager = NULL;
@@ -129,6 +145,11 @@ public:
 	std::vector<TextBlock*>* Get_Text_List();
 	void Update_UI();
 #endif
+private:
+	SceneState sceneState;
+public:
+	SceneState GetState() const { return sceneState; }
+	void SetState(SceneState newState) { sceneState = newState; }
 };
 
 class Test_Scene : public CScene
@@ -141,11 +162,16 @@ class Test_Scene : public CScene
 
 class Character_Select_Scene : public CScene
 {
+private:
+	UINT prev_index = -1;
+	UINT select_index = 0;
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	void UpdatePlayerSelection(int new_index);
 };
 
 class Board_Scene : public CScene

@@ -5,14 +5,26 @@
 #include "Player.h"
 #include "Monster.h"
 
+enum SceneState
+{
+    Character_Select,
+    Game_Board,
+    In_Stage
+};
+
+
+
 class Scene
 {
 private:
     std::unordered_map<int, GameCharacter> players;
+    SceneState state;
 
 public:
-   
-    Scene() = default;
+    
+    Scene() : state(In_Stage) {}
+    SceneState getState() const { return state; }
+    void setState(SceneState newState) { state = newState; }
 
     void updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
 

@@ -87,17 +87,27 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             float x, y, z;
             float lookX, lookY, lookZ;
 
+
             if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%f,%f,%f,%d", &clientId, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
             {
                 Scene* scene = sceneManager.getScene(clientId);
+
+
+                if (scene->getState() != In_Stage)
+                {
+                    logger.Log("씬 상태가 IN_STAGE가 아니어서 패킷 무시");
+                    continue;
+                }
+
                 if (!scene->getPlayer(clientId))
                 {
                     scene->addPlayer(clientId);
                 }
-                if (scene)
-                {
+
+                //if (scene)
+                //{
                     scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
-                }
+                //}
 
        
                 float safeLookY = (lookY == 0.0f) ? 1.0f : lookY;
@@ -191,15 +201,15 @@ void Server::BroadcastAllStates()
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
 
-        for (const auto& [id, m] : scene.getMonsters()) 
-        {
-            std::string packet = "MONSTER_UPDATE," + std::to_string(m.id) + "," +
-                std::to_string(m.x) + "," + std::to_string(m.y) + "," + std::to_string(m.z) + "," +
-                std::to_string(m.lookX) + "," + std::to_string(m.lookY) + "," + std::to_string(m.lookZ) + "," +
-                std::to_string(m.hp) + "," + std::to_string(m.state) + "," + std::to_string((int)m.type) + "\n";
-
-            BroadcastPacket(packet, -1);
-        }
+        //for (const auto& [id, m] : scene.getMonsters()) 
+        //{
+        //    std::string packet = "MONSTER_UPDATE," + std::to_string(m.id) + "," +
+        //        std::to_string(m.x) + "," + std::to_string(m.y) + "," + std::to_string(m.z) + "," +
+        //        std::to_string(m.lookX) + "," + std::to_string(m.lookY) + "," + std::to_string(m.lookZ) + "," +
+        //        std::to_string(m.hp) + "," + std::to_string(m.state) + "," + std::to_string((int)m.type) + "\n";
+        //
+        //    BroadcastPacket(packet, -1);
+        //}
     }
 }
 
@@ -233,20 +243,20 @@ void Server::SendInitialStates(int clientId)
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 
 
-        for (const auto& [monsterId, monster] : scene.getMonsters())
-        {
-            std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
-            send(clients[clientId].socket, create.c_str(), create.length(), 0);
-
-            std::string update = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
-                std::to_string(monster.x) + "," + std::to_string(monster.y) + "," + std::to_string(monster.z) + "," +
-                std::to_string(monster.lookX) + "," + std::to_string(monster.lookY) + "," + std::to_string(monster.lookZ) + "," +
-                std::to_string(monster.hp) + "," + std::to_string(monster.state) + "," + std::to_string((int)monster.type) + "\n";
-
-
-            send(clients[clientId].socket, update.c_str(), update.length(), 0);
-
-        }
+        //for (const auto& [monsterId, monster] : scene.getMonsters())
+        //{
+        //    std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
+        //    send(clients[clientId].socket, create.c_str(), create.length(), 0);
+        //
+        //    std::string update = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
+        //        std::to_string(monster.x) + "," + std::to_string(monster.y) + "," + std::to_string(monster.z) + "," +
+        //        std::to_string(monster.lookX) + "," + std::to_string(monster.lookY) + "," + std::to_string(monster.lookZ) + "," +
+        //        std::to_string(monster.hp) + "," + std::to_string(monster.state) + "," + std::to_string((int)monster.type) + "\n";
+        //
+        //
+        //    send(clients[clientId].socket, update.c_str(), update.length(), 0);
+        //
+        //}
     }
 }
 
@@ -307,20 +317,20 @@ void Server::Start()
     Scene* scene = sceneManager.getScene(0);
     if (!scene) return;
 
-    for (int i = 0; i < 10; ++i)
-    {
-        std::cout << "몬스터 생성됨" << std::endl;
-        int id = i + 100;
-        float x = 10 * i;
-        float y = 0.0f;
-        float z = 5 * i;
-        float lookX = 0.0f, lookY = 1.0f, lookZ = 0.0f;
-        int hp = 100;
-        int state = 0;
-        Monster_Type type = static_cast<Monster_Type>(0);
-
-        scene->addMonster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
-    }
+   // for (int i = 0; i < 10; ++i)
+   // {
+   //     std::cout << "몬스터 생성됨" << std::endl;
+   //     int id = i + 100;
+   //     float x = 10 * i;
+   //     float y = 0.0f;
+   //     float z = 5 * i;
+   //     float lookX = 0.0f, lookY = 1.0f, lookZ = 0.0f;
+   //     int hp = 100;
+   //     int state = 0;
+   //     Monster_Type type = static_cast<Monster_Type>(0);
+   //
+   //     scene->addMonster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
+   // }
     BroadcastAllStates();
 
 }

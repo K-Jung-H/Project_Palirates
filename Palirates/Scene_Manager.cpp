@@ -82,7 +82,7 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
 
 }
 
-bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player_ptr)
+bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPlayer> player_ptr)
 {
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
@@ -95,7 +95,7 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, CPlayer* player
     return false;
 }
 
-CPlayer* Scene_Manager::Get_Active_Scene_Player()
+shared_ptr<CPlayer> Scene_Manager::Get_Active_Scene_Player()
 {
     if (activeScene)
         return activeScene->m_pPlayer;
@@ -340,31 +340,3 @@ void Scene_Manager::RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainP
 {
     players[playerId] = player.get();
 }
-
-//void Scene_Manager::CreateRemotePlayer(int id, const DirectX::XMFLOAT3& pos, int state)
-//{
-//    auto scene = Get_Active_Scene_Ptr();
-//    if (!scene || !scene->m_pTerrain) return;
-//
-//    auto remote_player = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList,scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get());
-//
-//    remote_player->SetPosition(pos);
-//    remote_player->Set_Active(true);
-//    remote_player->SetID(id);
-//    remote_player->SetState(state);
-//    remote_player->Set_Name("Remote_" + std::to_string(id));
-//    remote_player->Object_type = OBJECT_TPYE_PLAYER;
-//
-//    if (m_pPlayer && m_pPlayer->m_pSkinnedAnimationController)
-//    {
-//        remote_player->m_pSkinnedAnimationController = std::make_shared<CAnimationController>(*m_pPlayer->m_pSkinnedAnimationController);
-//    }
-//
-//    remote_player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
-//
-//    scene->obj_manager->Add_Object(remote_player, Object_Type::player);
-//    RegisterRemotePlayer(id, remote_player);
-//
-//    std::cout << "[Scene_Manager] CreateRemotePlayer ¼º°ø - ID: " << id << ", pos: "
-//        << pos.x << ", " << pos.y << ", " << pos.z << std::endl;
-//}

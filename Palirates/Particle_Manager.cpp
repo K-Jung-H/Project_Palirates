@@ -110,21 +110,18 @@ D3D12_DEPTH_STENCIL_DESC ParticleShader::CreateDepthStencilState(int nPipelineSt
 D3D12_INPUT_LAYOUT_DESC ParticleShader::CreateInputLayout(int nPipelineState)
 {
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-
 	UINT nInputElementDescs = 4;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,	 D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-	//// 파티클 인스턴스 데이터
-	pd3dInputElementDescs[1] = { "INSTANCE_POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
-	pd3dInputElementDescs[2] = { "INSTANCE_VELOCITY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 12,	D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
-	pd3dInputElementDescs[3] = { "INSTANCE_COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 28, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+	pd3dInputElementDescs[1] = { "INSTANCE_POS_SCALE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+	pd3dInputElementDescs[2] = { "INSTANCE_VELOCITY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+	pd3dInputElementDescs[3] = { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
 	d3dInputLayoutDesc.NumElements = nInputElementDescs;
-
-	return(d3dInputLayoutDesc);
+	return d3dInputLayoutDesc;
 }
 
 D3D12_RASTERIZER_DESC ParticleShader::CreateRasterizerState(int nPipelineState)
@@ -205,8 +202,6 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	m_czThreadGroups = 1;
 }
 
-
-
 D3D12_SHADER_BYTECODE ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
@@ -226,7 +221,7 @@ ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd
 {
 	ID3D12RootSignature* pd3dComputeRootSignature = NULL;
 
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[4];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[6];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
 		pd3dDescriptorRanges[0].NumDescriptors = 1;
@@ -245,33 +240,76 @@ ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd
 		pd3dDescriptorRanges[2].BaseShaderRegister = 2;  // u2
 		pd3dDescriptorRanges[2].RegisterSpace = 0;
 		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[3].NumDescriptors = 1;
+		pd3dDescriptorRanges[3].BaseShaderRegister = 0;  // t0
+		pd3dDescriptorRanges[3].RegisterSpace = 0;
+		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[4].NumDescriptors = 1;
+		pd3dDescriptorRanges[4].BaseShaderRegister = 1;  // t1
+		pd3dDescriptorRanges[4].RegisterSpace = 0;
+		pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+		pd3dDescriptorRanges[5].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[5].NumDescriptors = 1;
+		pd3dDescriptorRanges[5].BaseShaderRegister = 2;  // t2
+		pd3dDescriptorRanges[5].RegisterSpace = 0;
+		pd3dDescriptorRanges[5].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
-	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[8];
 	{
-		// b1 - ConstantBuffer 업데이트에 필요한 정보
+		// b0 - ConstantBuffer 업데이트에 필요한 정보
 		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 		pd3dRootParameters[0].Descriptor.ShaderRegister = 0; // Frame_Info
 		pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[0].Constants.Num32BitValues = 12;
+		pd3dRootParameters[0].Constants.Num32BitValues = 16;
 		pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// u0 - RWStructuredBuffer<Particle> : 파티클 데이터 버퍼 (읽기/쓰기 용도)
-		pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[1].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
+		// b1 - Grid_Info // OBB 검사를 위한 Grid 설정 정보
+		pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[1].Descriptor.ShaderRegister = 1;
+		pd3dRootParameters[1].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[1].Constants.Num32BitValues = 8;
 		pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// u2 - InstanceData : 인스턴스 정보만 추출한 버퍼
+		// u0 - RWStructuredBuffer<Particle> : 파티클 데이터 버퍼 (읽기/쓰기 용도)
 		pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[2].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
+		pd3dRootParameters[2].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
 		pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
+		// u1 - InstanceData : 인스턴스 정보만 추출한 버퍼
 		pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
+		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
+		// u2 - Debug_Data : ReadBack 용도
+		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[2]);
+		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		// t0 - OBB_Data
+		pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[5].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[5].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[3]);
+		pd3dRootParameters[5].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		//t1 - Grid_cellInfos
+		pd3dRootParameters[6].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[6].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[6].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[4]);
+		pd3dRootParameters[6].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		//t2 - Grid_obbIndices
+		pd3dRootParameters[7].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[7].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[7].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
+		pd3dRootParameters[7].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
@@ -368,7 +406,9 @@ void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT c
 	if (cxThreadGroups < 1 || cyThreadGroups < 1 || czThreadGroups < 1)
 		return;
 	else
+	{
 		pd3dCommandList->Dispatch(cxThreadGroups, cyThreadGroups, czThreadGroups);
+	}
 }
 
 //------------------------------------------------------------------------------------------------
@@ -394,8 +434,66 @@ D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateComputeShader(ID3DBlob** ppd3
 		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 1)
 		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Spread_CS", "cs_5_1", ppd3dShaderBlob);
-
 }
+
+
+//------------------------------------------------------------------------------------------------
+
+void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+{
+	//==================================================
+	// Common Variables Part
+
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+
+	if (common_ComputeRootSignature == NULL)
+		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
+
+	//==================================================
+
+	m_ncomputePipelineStates = 4;
+	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
+
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 0); // Emit
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 1); // Sand_Spread
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 2); // Sand_Gathering
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 3); // Sand_Storm
+
+	m_cxThreadGroups = 1;
+	m_cyThreadGroups = 1;
+	m_czThreadGroups = 1;
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Particle.hlsl", "VSParticleDraw", "vs_5_1", ppd3dShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CreateGeometryShader(ppd3dShaderBlob, 0));
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_Transparent_ParticleDraw", "ps_5_1", ppd3dShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Spread_CS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 2)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Gathering_CS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 3)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Storm_CS", "cs_5_1", ppd3dShaderBlob);
+}
+
 
 
 //===================================================================
@@ -414,9 +512,15 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 	ParticleShader* spread_shader = new Spread_ParticleShader();
 	spread_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
+	ParticleShader* sand_shader = new Sand_ParticleShader();
+	sand_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	grid_builder = std::make_unique<Grid_Builder>();
+
 	//===================================================================
 
 	particle_shader_map[Particle_Type::spread] = spread_shader;
+	particle_shader_map[Particle_Type::sand] = sand_shader;
 	particle_shader_map[Particle_Type::sample_1] = NULL;
 	particle_shader_map[Particle_Type::sample_2] = NULL;
 }
@@ -425,10 +529,73 @@ void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 {
 }
 
+void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
+{
+	UINT obbCount = std::min(static_cast<UINT>(obb_container.size()), MAX_OBBS);
+
+	if (m_OBBBufferTexture)
+		delete m_OBBBufferTexture;
+
+	m_OBBBufferTexture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 0, 0, 1, 0, 0, 1);
+	m_OBBBufferTexture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, obbCount ? (void*)obb_container.data() : nullptr, obbCount, sizeof(GPU_OBB), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	OBB_num = obbCount;
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, m_OBBBufferTexture, 0, 5);
+
+	//============================================
+
+	grid_builder->BuildGridFromOBBs(obb_container, 200.0f);
+
+	grid_builder->Create_Grid_ShaderVariables(pd3dDevice, pd3dCommandList);
+
+}
+
+
+void Particle_Manager::Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
+{
+	if (!m_OBBBufferTexture || obb_container.empty()) 
+		return;
+
+	ID3D12Resource* pResource = m_OBBBufferTexture->GetResource(0);
+	if (!pResource) return;
+
+	void* mappedPtr = nullptr;
+	D3D12_RANGE readRange = { 0, 0 }; 
+
+	if (SUCCEEDED(pResource->Map(0, &readRange, &mappedPtr)))
+	{
+		memcpy(mappedPtr, obb_container.data(), sizeof(GPU_OBB) * obb_container.size());
+		pResource->Unmap(0, nullptr);
+	}
+
+	OBB_num = static_cast<UINT>(obb_container.size());
+}
+
+void Particle_Manager::Bind_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (grid_builder)
+		grid_builder->Update_Grid_ShaderVariables(pd3dCommandList);
+
+	if(m_OBBBufferTexture)
+		m_OBBBufferTexture->UpdateComputeSrvShaderVariables(pd3dCommandList);
+}
+
+void Particle_Manager::Release_OBB_Data_ShaderVariables()
+{
+		
+	if (m_OBBBufferTexture)
+	{
+		m_OBBBufferTexture->Release();
+		delete m_OBBBufferTexture;
+		m_OBBBufferTexture = nullptr;
+	}
+}
+
+
 std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
 {
 	static int N = 0;
 	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
+	new_particle_obj->Set_OwnerManager(this);
 	new_particle_obj->Set_Shape(particle_shape_mesh);
 	new_particle_obj->Init_Info(particle_info);
 	new_particle_obj->Set_Name(to_string(N));
@@ -472,16 +639,17 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 			update_info.EmitRegionMax = aabb_pos.second;
 			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 			update_info.Init_Velocity_Value = particle_obj->Get_Init_Velocity_Value();
+			update_info.obb_num = OBB_num;
+			update_info.padding0 = XMFLOAT3{};
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 
-
-			shader_ptr->Dispatch(pd3dCommandList, update_info.Max_Particle_N, 1, 1);
+			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
+			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);
 		}
 	}
 }
-
 
 void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
@@ -496,6 +664,12 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
+			if (type == Particle_Type::sand)
+			{
+				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
+			}
+
+
 			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = particle_obj->GetAABB();
 			
 
@@ -506,12 +680,15 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 			update_info.EmitRegionMax = aabb_pos.second;
 			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 			update_info.Init_Velocity_Value = particle_obj->Get_Init_Velocity_Value();
+			update_info.obb_num = OBB_num;
+			update_info.padding0 = XMFLOAT3{};
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
+			Bind_OBB_Data_ShaderVariables(pd3dCommandList);
 
-			shader_ptr->Dispatch(pd3dCommandList, particle_data->Get_Particle_Max_Num(), 1, 1);
-
+			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
+			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);
 		}
 	}
 }
@@ -553,7 +730,6 @@ void Particle_Manager::Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommand
 		}
 	}
 }
-
 
 void Particle_Manager::Sync_AfterAnimate( Particle_Type type)
 {
@@ -603,7 +779,184 @@ void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	Render(pd3dCommandList, pCamera, Particle_Type::spread);
+	Render(pd3dCommandList, pCamera, Particle_Type::sand);
 	Render(pd3dCommandList, pCamera, Particle_Type::sample_1);
 	Render(pd3dCommandList, pCamera, Particle_Type::sample_2);
 }
 
+
+void Particle_Manager::Process_Destroy_Queue()
+{
+	for (const auto& obj : destroy_queue)
+	{
+		for (std::pair<const Particle_Type, std::vector<std::shared_ptr<ParticleObject>>>& pair : particle_object_list_map)
+		{
+			std::vector<std::shared_ptr<ParticleObject>>& list = pair.second;
+
+			std::vector<std::shared_ptr<ParticleObject>>::iterator it = std::find(list.begin(), list.end(), obj);
+			if (it != list.end())
+			{
+				list.erase(it);
+				break;
+			}
+		}
+	}
+	destroy_queue.clear();
+}
+
+//=========================================================================
+
+Grid_Builder::Grid_Builder()
+{
+
+}
+
+Grid_Builder::~Grid_Builder()
+{
+	Release_Grid_ShaderVariables();
+}
+
+void Grid_Builder::BuildGridFromOBBs(const std::vector<GPU_OBB>& obbs, float inCellSize)
+{
+	tempCellMap.clear();
+	obbIndices.clear();
+	cellInfos.clear();
+
+	meta.cellSize = inCellSize;
+
+	ComputeWorldBounds(obbs);
+
+	int totalCells = meta.gridDim.x * meta.gridDim.y * meta.gridDim.z;
+
+	for (uint32_t i = 0; i < obbs.size(); ++i)
+	{
+		const auto& obb = obbs[i];
+
+		XMFLOAT3 aabbMin = {
+			obb.Center.x - obb.Extents.x,
+			obb.Center.y - obb.Extents.y,
+			obb.Center.z - obb.Extents.z
+		};
+		XMFLOAT3 aabbMax = {
+			obb.Center.x + obb.Extents.x,
+			obb.Center.y + obb.Extents.y,
+			obb.Center.z + obb.Extents.z
+		};
+
+		XMINT3 minCell = GetCellIndex(aabbMin);
+		XMINT3 maxCell = GetCellIndex(aabbMax);
+
+		for (int z = minCell.z; z <= maxCell.z; ++z)
+			for (int y = minCell.y; y <= maxCell.y; ++y)
+				for (int x = minCell.x; x <= maxCell.x; ++x)
+				{
+					XMINT3 cell = { x, y, z };
+					int flatIdx = FlattenIndex(cell);
+					tempCellMap[flatIdx].push_back(i);
+				}
+	}
+
+	cellInfos.resize(totalCells, { 0, 0 });
+	uint32_t indexOffset = 0;
+
+	for (int i = 0; i < totalCells; ++i)
+	{
+		auto& list = tempCellMap[i];
+		if (!list.empty())
+		{
+			cellInfos[i].startIndex = indexOffset;
+			cellInfos[i].count = static_cast<uint32_t>(list.size());
+
+			obbIndices.insert(obbIndices.end(), list.begin(), list.end());
+			indexOffset += list.size();
+		}
+	}
+
+	XMFLOAT3 worldMax = {
+	meta.worldMin.x + meta.gridDim.x * meta.cellSize,
+	meta.worldMin.y + meta.gridDim.y * meta.cellSize,
+	meta.worldMin.z + meta.gridDim.z * meta.cellSize
+	};
+
+	std::ostringstream oss;
+	oss <<"\n[GridBuilder] CellSize: " << meta.cellSize << "\n"
+		<< "WorldMin : (" << meta.worldMin.x << ", " << meta.worldMin.y << ", " << meta.worldMin.z << ")\n"
+		<< "WorldMax : (" << worldMax.x << ", " << worldMax.y << ", " << worldMax.z << ")\n"
+		<< "GridDim  : (" << meta.gridDim.x << ", " << meta.gridDim.y << ", " << meta.gridDim.z << ")\n"
+		<< "Total Cells: " << (meta.gridDim.x * meta.gridDim.y * meta.gridDim.z) << "\n";
+
+	DebugOutput(oss.str());
+}
+
+void Grid_Builder::ComputeWorldBounds(const std::vector<GPU_OBB>& obbs)
+{
+	XMFLOAT3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
+	XMFLOAT3 max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+
+	for (const auto& obb : obbs)
+	{
+		min.x = std::min(min.x, obb.Center.x - obb.Extents.x);
+		min.y = std::min(min.y, obb.Center.y - obb.Extents.y);
+		min.z = std::min(min.z, obb.Center.z - obb.Extents.z);
+
+		max.x = std::max(max.x, obb.Center.x + obb.Extents.x);
+		max.y = std::max(max.y, obb.Center.y + obb.Extents.y);
+		max.z = std::max(max.z, obb.Center.z + obb.Extents.z);
+	}
+
+	meta.worldMin = min;
+
+	XMFLOAT3 extent = {
+		max.x - min.x,
+		max.y - min.y,
+		max.z - min.z
+	};
+
+	meta.gridDim = {
+		static_cast<int>(ceil(extent.x / meta.cellSize)),
+		static_cast<int>(ceil(extent.y / meta.cellSize)),
+		static_cast<int>(ceil(extent.z / meta.cellSize))
+	};
+}
+
+XMINT3 Grid_Builder::GetCellIndex(const XMFLOAT3& pos) const
+{
+	return XMINT3{
+		static_cast<int>(floor((pos.x - meta.worldMin.x) / meta.cellSize)),
+		static_cast<int>(floor((pos.y - meta.worldMin.y) / meta.cellSize)),
+		static_cast<int>(floor((pos.z - meta.worldMin.z) / meta.cellSize))
+	};
+}
+
+int Grid_Builder::FlattenIndex(const XMINT3& cell) const
+{
+	return cell.x + cell.y * meta.gridDim.x + cell.z * meta.gridDim.x * meta.gridDim.y;
+}
+
+void Grid_Builder::Create_Grid_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+		 Obb_Grid_Texture = new CTexture(2, RESOURCE_STRUCTURED_BUFFER, 0, 0, 0, 2, 0, 0, 2);
+		 Obb_Grid_Texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, cellInfos.data(), cellInfos.size(), sizeof(CellInfo), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		 Obb_Grid_Texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 1, obbIndices.data(), obbIndices.size(), sizeof(UINT), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
+		 CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, Obb_Grid_Texture, 0, 6);
+		 CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, Obb_Grid_Texture, 1, 7);
+}
+
+void Grid_Builder::Update_Grid_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->SetComputeRoot32BitConstants(1, 8, &meta, 0);
+
+	if (Obb_Grid_Texture)
+		Obb_Grid_Texture->UpdateComputeSrvShaderVariables(pd3dCommandList);
+}
+
+void Grid_Builder::Release_Grid_ShaderVariables()
+{
+	if (Obb_Grid_Texture)
+	{
+		Obb_Grid_Texture->Release();
+		delete Obb_Grid_Texture;
+		Obb_Grid_Texture = nullptr;
+	}
+}

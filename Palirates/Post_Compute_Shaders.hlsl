@@ -68,9 +68,9 @@ void SobelEdge_Toon(uint3 tid, uint3 gid)
 {
     float objId = gtxtVelocity_Mask_Obj_Id[gid.xy].w;
 
-    if (objId == 10.0f || objId == 20.0f)
+    if (objId >= 10.0f)
     {
-        // 그냥 원본 복사 (윤곽선 생략)
+        // 그냥 원본 복사 (윤곽선 생략 대상)
         gtxtRWOutput[gid.xy] = gtxtInput[gid.xy];
         return;
     }
@@ -78,13 +78,19 @@ void SobelEdge_Toon(uint3 tid, uint3 gid)
     float3 edgeColor = GetObjectColorById(objId);
     float3 original = gtxtInput[gid.xy].rgb;
 
-    float h = dot(gf3ToLuminance,     -gf4GroupSharedCache[tid.x][tid.y + 1].rgb + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
-    + -gf4GroupSharedCache[tid.x + 2][tid.y + 1].rgb);
+    // Sobel 계산
+    float h = dot(gf3ToLuminance, -gf4GroupSharedCache[tid.x][tid.y + 1].rgb 
+        + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
+        + -gf4GroupSharedCache[tid.x + 2][tid.y + 1].rgb);
 
-    float v = dot(gf3ToLuminance, -gf4GroupSharedCache[tid.x + 1][tid.y].rgb + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
-    + -gf4GroupSharedCache[tid.x + 1][tid.y + 2].rgb);
+    float v = dot(gf3ToLuminance, -gf4GroupSharedCache[tid.x + 1][tid.y].rgb 
+        + 2.0 * gf4GroupSharedCache[tid.x + 1][tid.y + 1].rgb 
+        + -gf4GroupSharedCache[tid.x + 1][tid.y + 2].rgb);
 
-    float edge = sqrt(h * h + v * v) * 1.3f;
+    // 윤곽선 객체일수록 edge 강하게
+    float edgeScale = (objId != 0.0f) ? 10.0f : 1.0f;
+
+    float edge = sqrt(h * h + v * v) * 1.3f * edgeScale;
     edge = saturate(edge);
 
     float3 finalColor = lerp(original, edgeColor, edge);
@@ -198,19 +204,28 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         return;
 
     float4 baseColor = gtxtInput[gid.xy];
-    float2 velocity = gtxtVelocity_Mask_Obj_Id[gid.xy].xy;
+    float4 velocityMaskObjId = gtxtVelocity_Mask_Obj_Id[gid.xy];
+    float2 velocity = velocityMaskObjId.xy;
+    float mask = velocityMaskObjId.z;
 
-    // 감도 적용
+    // If mask is 0, skip blur
+    if (mask == 0.0f)
+    {
+        gtxtRWOutput[gid.xy] = baseColor;
+        return;
+    }
+
+    // Apply blur sensitivity
     velocity *= BlurScale;
+
+    // Invert Y axis of velocity
+    velocity.y *= -1.0f;
     
-    // UV 좌표 반전
-    velocity.y *= -1.0f; 
-    
-    // 길이 제한
+    // Limit the length
     float len = length(velocity);
     if (len < VelocityThreshold)
     {
-        gtxtRWOutput[gid.xy] = baseColor; // 블러 생략
+        gtxtRWOutput[gid.xy] = baseColor; // Skip blur if velocity is too low
         return;
     }
     if (len > MaxBlurLength)
@@ -218,7 +233,7 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         velocity = normalize(velocity) * MaxBlurLength;
     }
 
-    // 블러 샘플링
+    // Blur sampling
     const int samples = 5;
     float3 accum = baseColor.rgb;
 
@@ -230,7 +245,6 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         int2 sampleCoord = int2(sampleUV);
         sampleCoord = clamp(sampleCoord, int2(0, 0), int2(texSize - 1));
 
-        
         float3 sampleColor = gtxtInput[sampleCoord].rgb;
         accum += sampleColor;
     }

@@ -11,20 +11,14 @@
 #include "Object.h"
 #include "Camera.h"
 
-enum AnimationTrack
+enum Player_Model
 {
-	TRACK_IDLE = 0,
-	TRACK_RUN_FORWARD_LEFT = 1,
-	TRACK_RUN_FORWARD = 2,
-	TRACK_RUN_FORWARD_RIGHT = 3,
-	TRACK_RUN_BACKWARD_LEFT = 4,
-	TRACK_RUN_BACKWARD = 5,
-	TRACK_RUN_BACKWARD_RIGHT = 6,
-	TRACK_RUN_LEFT = 7, 
-	TRACK_RUN_RIGHT = 8, 
-	TRACK_DIVEROLL_FORWARD = 9,
-	TRACK_KNOCK_DOWN = 10,
-	TRACK_GET_UP = 11
+	Captain = 0,
+	Deckhand = 1,
+	Female_Pirate = 2,
+	First_Mate = 3,
+	Seaman = 4,
+	Skeleton = 5,
 };
 
 class CPlayer : public CGameObject
@@ -63,16 +57,20 @@ protected:
 	float moveZ{ 0.0f };
 
 	bool MultiMode{ false };
+
+	std::shared_ptr<Trail_Object> trail_obj;
+	bool TrailOn{ false };
+	bool TrailStart{ false };
+
 	//=================¼­¹ö=================
 	int id;  
 	int state;
 
-	std::unique_ptr<StateMachine> m_StateMachine;
 private:
+	std::unique_ptr<StateMachine> m_StateMachine;
 
 public:
 	CPlayer();
-	CPlayer(const CPlayer& other);
 	virtual ~CPlayer();
 
 	XMFLOAT3 GetPosition() { return(m_xmf3Position); }
@@ -154,6 +152,14 @@ public:
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
 
+	void SetTrailObj(std::shared_ptr<Trail_Object> obj) { trail_obj = obj; }
+	std::shared_ptr<Trail_Object> GetTrailObj() { return trail_obj; }
+	void bTrailOn() { TrailOn = true; }
+	void bTrailOff() { TrailOn = false; }
+	bool GetTrailOn() { return TrailOn; }
+	void Trail_Start() { TrailStart = true; }
+	bool GetTrailStart() { return TrailStart; }
+
 	void MultiModeOn() { MultiMode = true; }
 	void MultiModeOff() { MultiMode = false; }
 	bool CheckMultiMode() { return MultiMode; }
@@ -163,7 +169,6 @@ public:
 		: id(playerId), state(startState)
 	{
 		m_xmf3Position = XMFLOAT3(startX, startY, startZ);
-		
 	}
 
 	int GetID() const { return id; }
@@ -173,6 +178,7 @@ public:
 	void SetState(int newState) { state = newState; }
 
 	std::string Serialize();
+	virtual void SetupWeaponCollider();
 };
 
 
@@ -192,10 +198,8 @@ private:
 	bool On_Ground = false;
 
 public:
-	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL, int ModelNum = 0);
 	CTerrainPlayer() {}
-	CTerrainPlayer(const CPlayer& other);
-	CTerrainPlayer(const CTerrainPlayer& other);
 	virtual ~CTerrainPlayer();
 
 public:
