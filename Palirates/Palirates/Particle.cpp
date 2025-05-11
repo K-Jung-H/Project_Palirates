@@ -417,37 +417,19 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 
 void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Particle_Info_List_readbackBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	// 데이터를 복사
 	pd3dCommandList->CopyBufferRegion(Particle_Info_List_readbackBuffer, 0, Particle_Info_List_counterBuffer, 0, sizeof(UINT));
-
-	// 상태를 GENERIC_READ로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Particle_Info_List_readbackBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 void Particle::Copy_CounterBuffer_Render_Instance(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Render_Instance_readbackBuffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	// 데이터를 복사
 	pd3dCommandList->CopyBufferRegion(Render_Instance_readbackBuffer, 0, Render_Instance_counterBuffer, 0, sizeof(UINT));
-
-	// 상태를 GENERIC_READ로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Render_Instance_readbackBuffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 void Particle::Copy_DebugBuffer(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Debug_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	pd3dCommandList->CopyBufferRegion(Debug_ReadBack_buffer, 0, particle_buffer_texture->GetResource(2), 0, sizeof(UINT) * 4);
-
-	// 상태를 GENERIC_READ로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Debug_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 

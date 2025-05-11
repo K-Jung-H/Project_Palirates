@@ -3931,13 +3931,7 @@ Wave_Object::~Wave_Object()
 
 void Wave_Object::Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	// 상태를 COPY_DEST로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-
 	pd3dCommandList->CopyBufferRegion(Pos_Normal_ReadBack_buffer, 0, wave_data_texture->GetResource(3), 0, sizeof(UINT) * 4);
-
-	// 상태를 GENERIC_READ로 전환
-	SynchronizeResourceTransition(pd3dCommandList, Pos_Normal_ReadBack_buffer, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_COMMON);
 }
 
 XMFLOAT3 Wave_Object::Readback_Buffer_Data()
