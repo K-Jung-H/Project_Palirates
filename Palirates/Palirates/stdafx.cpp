@@ -463,19 +463,11 @@ XMFLOAT4 Get_Random_Color(float w)
 
 std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area)
 {
-	XMFLOAT3 min_point = 
-	{
-		center.x - area.x,
-		center.y - area.y,
-		center.z - area.z
-	};
+	XMFLOAT3 Center = center;
+	XMFLOAT3 Area = area;
 
-	XMFLOAT3 max_point =
-	{
-		center.x + area.x,
-		center.y + area.y,
-		center.z + area.z
-	};
-
+	XMFLOAT3 half = Vector3::ScalarProduct(Area, 0.5f, false);
+	XMFLOAT3 min_point = Vector3::Subtract(Center, half);
+	XMFLOAT3 max_point = Vector3::Add(Center, half);
 	return { min_point, max_point };
 }

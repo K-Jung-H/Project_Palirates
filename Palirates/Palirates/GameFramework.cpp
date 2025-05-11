@@ -701,7 +701,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
-	scene_manager->Set_Active_Scene("Character_Select");
+	scene_manager->Set_Active_Scene("In_Stage");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
 	m_pCamera = m_pPlayer->GetCamera();

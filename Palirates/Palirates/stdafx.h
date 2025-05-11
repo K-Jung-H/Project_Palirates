@@ -90,8 +90,6 @@ extern HINSTANCE						ghAppInstance;
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 #define FRAME_BUFFER_WIDTH				1280
 #define FRAME_BUFFER_HEIGHT				720
-//#define FRAME_BUFFER_WIDTH				840
-//#define FRAME_BUFFER_HEIGHT				480
 
 #define ANIMATION_TYPE_ONCE				0
 #define ANIMATION_TYPE_LOOP				1
@@ -134,7 +132,7 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-//#define WRITE_TEXT_UI
+#define WRITE_TEXT_UI
 #define LOAD_SCENE
 #define RENDER_OBB
 #define RENDER_PARTICLE

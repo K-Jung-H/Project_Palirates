@@ -3,8 +3,7 @@
 //=============================================================
 
 void Update_Sand(inout Particle_Info p, uint index)
-{
-    p.Type = 3;
+{    
     p.Velocity += p.Acceleration * ElapsedTime;
     p.Velocity += RandomSpreadDirection(index, Main_Direction, 2.0f);
     p.Position += p.Velocity * ElapsedTime;
@@ -15,27 +14,21 @@ void Update_Sand(inout Particle_Info p, uint index)
 
 void Update_Focus_Sand(inout Particle_Info p, uint index)
 {
-    p.Type = 3;
-    float3 realMin = min(EmitRegionMin, EmitRegionMax);
-    float3 realMax = max(EmitRegionMin, EmitRegionMax);
-    float3 center = (realMin + realMax) * 0.5f;
+    float3 startToEnd = focus_point - p.Position;
+    float remainTime = max(0.01f, p.MaxLifetime - p.Lifetime);
 
-    float3 toCenter = normalize(center - p.Position);
-    float speed = length(p.Velocity);
-    speed += abs(p.Acceleration.y) * ElapsedTime;
+    float3 newPos = lerp(p.Position, focus_point, ElapsedTime / remainTime);
+    p.Velocity = (newPos - p.Position) / ElapsedTime;
+    p.Position = newPos;
 
-    p.Velocity = toCenter * speed;
-    p.Position += p.Velocity * ElapsedTime;
     p.Rotate_Value += 2.0f * ElapsedTime;
 
-    float dist = length(center - p.Position);
-    if (dist < 5.0f)
+    if (length(focus_point - p.Position) < 1.0f || remainTime <= ElapsedTime)
     {
         p.Lifetime = p.MaxLifetime;
         p.Active = 0;
-    }
+    }  
 }
-
 //=============================================================
 
 float easeOutExpo(float t)
@@ -45,101 +38,48 @@ float easeOutExpo(float t)
 
 void Update_Sand_Storm(inout Particle_Info p, uint index)
 {
-    float3 center = GetEmitFaceCenter(p.EmitFaceIndex, EmitRegionMin, EmitRegionMax);
-    float3 up = normalize(Main_Direction);
-    float t = saturate(p.Lifetime / p.MaxLifetime);
+    float3 up = normalize(Main_Direction); // 일반적으로 Y축 방향
+    float t = saturate(p.Lifetime / p.MaxLifetime); // 시간 비율
     float seed = frac(sin(index * 91.91f) * 10000.0f);
 
-    float3 toCenter = center - p.Position;
-    float3 tangent = normalize(cross(up, toCenter));
+    // 중심 기준을 focus_point로 변경
+    float3 toFocus = focus_point - p.Position;
+    float3 tangent = normalize(cross(up, toFocus));
 
+    // 상승 속도 계산 (스파이럴 상승)
     float verticalBase = 1.0f + 3.0f * easeOutExpo(t);
     float verticalNoise = lerp(0.5f, 2.5f, frac(sin(index * 23.23f) * 4567.89f));
     float verticalSpeed = verticalBase * verticalNoise;
     if (t < 0.5f)
         verticalSpeed *= 0.1f;
 
+    // 회전 속도 (스파이럴 회전)
     float rotationBase = 60.0f;
     float rotationNoise = lerp(0.8f, 2.5f, frac(cos(index * 57.57f) * 6789.01f));
     float rotationSpeed = rotationBase * rotationNoise;
     if (t > 0.5f)
         rotationSpeed *= 2.0f;
 
+    // 나선형 가속도 적용
     float3 spiralAccel = tangent * rotationSpeed + up * verticalSpeed;
     p.Velocity += spiralAccel * ElapsedTime;
 
+    // 흔들림 (진동)
     float radialOsc = sin(p.Lifetime * 15.0f + seed * 3.14f) * 2.0f;
     float verticalOsc = sin(p.Lifetime * 12.0f + seed * 6.28f) * 1.5f;
 
-    float3 radial = toCenter - dot(toCenter, up) * up;
+    float3 radial = toFocus - dot(toFocus, up) * up;
     float3 radialDir = (length(radial) > 0.001f) ? normalize(radial) : float3(1, 0, 0);
     float3 shake = radialDir * radialOsc + up * verticalOsc;
     p.Velocity += shake * ElapsedTime;
 
+    // 위치 이동, 회전, 생명 처리
     p.Position += p.Velocity * ElapsedTime;
     p.Rotate_Value += (4.0f + seed * 3.0f) * ElapsedTime;
     p.Lifetime += ElapsedTime;
 
     if (p.Lifetime >= p.MaxLifetime)
         p.Active = 0;
-    
-    //float rotationBase = 60.0f;
-    //float rotationNoise = lerp(0.8f, 2.5f, frac(cos(index * 57.57f) * 6789.01f));
-    //float rotationSpeed = rotationBase * rotationNoise;
-    
-    //float3 center = GetEmitFaceCenter(p.EmitFaceIndex, EmitRegionMin, EmitRegionMax);
-    //float3 up = float3(0.0f, 1.0f, 0.0f);
-    //float3 forward = normalize(Main_Direction);
-    //float t = saturate(p.Lifetime / p.MaxLifetime);
-
-    //float3 toCenter = center - p.Position;
-    //float3 tangent = normalize(cross(up, toCenter));
-    //float3 radial = toCenter - dot(toCenter, up) * up;
-    //float3 radialDir = (length(radial) > 0.001f) ? normalize(radial) : float3(1, 0, 0);
-    
-    //float seed = frac(sin(index * 91.91f) * 10000.0f);
-    //float forwardSpeed = 50.0f;
-    
-    ////if (t < 0.1f)
-    ////{
-    ////    float speed = lerp(110.0f, 20.0f, t / 0.3f);
-    ////    p.Velocity = normalize(toCenter) * speed;
-        
-    ////    p.Velocity += tangent * 2.0f;
-    
-    ////    p.Velocity += up * 0.5f;
-    ////}
-    ////else
-    //{
-    //    float verticalBase = 20.0f + 20.0f * easeOutExpo(t);
-    //    float verticalNoise = lerp(0.5f, 2.0f, frac(sin(index * 23.23f) * 4567.89f));
-    //    float verticalSpeed = verticalBase * verticalNoise;
-    //   // if (t < 0.5f)
-    //     //   verticalSpeed *= 0.6f; 
-       
-       
-        
-    //    float3 spiralAccel = tangent * rotationSpeed + up * verticalSpeed;
-    //    p.Velocity = spiralAccel;
-        
-    //    float radialOsc = sin(p.Lifetime * 15.0f + seed * 3.14f) * 2.0f;
-    //    float verticalOsc = sin(p.Lifetime * 12.0f + seed * 6.28f) * 1.5f;
-    //    float3 shake = radialDir * radialOsc + up * verticalOsc;
-    //    p.Velocity += shake * ElapsedTime;
-    //   // p.Position += forward * ElapsedTime * forwardSpeed;
-    //    //if (t > 0.4f)
-    //    //{
-    //    //    p.Lifetime = 1.3f;
-    //    //    p.Position.y = 0.0f;
-    //    //}
-    //}
-    
-    //p.Position += p.Velocity * ElapsedTime;
-    //p.Rotate_Value += (4.0f + seed * 3.0f) * ElapsedTime;
-    //p.Lifetime += ElapsedTime;
-
-    //if (p.Lifetime >= p.MaxLifetime)
-    //    p.Active = 2;
 }
 
 //=============================================================
@@ -153,14 +93,17 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
-    
-    if (p.Lifetime < 0.0f)
+
+    if (DelayActive(p))
     {
-        p.Lifetime += ElapsedTime;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
 
-        if (p.Lifetime >= 0.0f)
-            p.Active = 1;
-
+    if (p.Type != PARTICLE_TYPE_SAND)
+    {
+        p.Type = PARTICLE_TYPE_SAND;
+        p.Active = 0;
         ParticleBuffer_Update[index] = p;
         return;
     }
@@ -169,31 +112,38 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     p.Lifetime += ElapsedTime;
+
     if (p.Lifetime >= p.MaxLifetime)
     {
         p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
     }
-    else
+
+    p.EmitFaceIndex = 5;
+    p.Acceleration = float3(0.0f, -9.8f, 0.0f);
+    Update_Sand(p, index);
+    
+
+    float3 worldPos = mul(float4(p.Position, 1.0f), gWorldMatrix).xyz;
+    if (CheckCollisionWithGridOBBs(worldPos))
     {
-        p.Type = PARTICLE_TYPE_SAND;
-        p.EmitFaceIndex = 5;
-        p.Acceleration = float3(0.0f, -9.8f, 0.0f);
-        
-        Update_Sand(p, index);
-        
-        if (CheckCollisionWithGridOBBs(p.Position))
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            p.Color = float3(0.0f, 0.0f, 1.0f);
-            ParticleBuffer_Update[index] = p;
-            return;
-        }
-        
-        Extract_Instance(p);
+        p.Color = float3(1.0f, 0.5f, 0.0f);
+        p.Lifetime = p.MaxLifetime;
+        p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+    
+    if (worldPos.y <= 10.0f)
+    {
+        p.Velocity = float3(0.0f, 0.0f, 0.0f);
+        p.Lifetime = 0.5f;
+        p.MaxLifetime = 10.0f;
     }
 
     ParticleBuffer_Update[index] = p;
+    Extract_Instance(p);
 }
 
 //=============================================================
@@ -206,14 +156,9 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
-    
-    if (p.Lifetime < 0.0f)
+
+    if (DelayActive(p))
     {
-        p.Lifetime += ElapsedTime;
-
-        if (p.Lifetime >= 0.0f)
-            p.Active = 1;
-
         ParticleBuffer_Update[index] = p;
         return;
     }
@@ -222,19 +167,38 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     p.Lifetime += ElapsedTime;
-    if (p.Lifetime >= p.MaxLifetime)
+
+    float distToFocus = length(focus_point - p.Position);
+    bool reached = (distToFocus < 1.0f || p.Lifetime >= p.MaxLifetime);
+
+    if (reached)
     {
+        p.Type = PARTICLE_TYPE_SAND_STORM;
+        p.Lifetime = -0.1f;
+        p.Active = 1;
+        p.EmitFaceIndex = 2;
+        p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
+    p.Type = PARTICLE_TYPE_SAND;
+    p.EmitFaceIndex = 5;
+    p.Acceleration = float3(0.0f, -9.8f, 0.0f);
+
+    Update_Focus_Sand(p, index);
+    
+    float3 worldPos = mul(float4(p.Position, 1.0f), gWorldMatrix).xyz;
+    if (CheckCollisionWithGridOBBs(worldPos))
+    {
+        p.Color = float3(1.0f, 0.5f, 0.0f);
+        p.Lifetime = p.MaxLifetime;
         p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
     }
-    else
-    {
-        p.Type = PARTICLE_TYPE_SAND;
-        p.EmitFaceIndex = 5;
-        p.Acceleration = float3(0.0f, -9.8f, 0.0f);
-        
-        Update_Focus_Sand(p, index);   
-        Extract_Instance(p);
-    }
+    
+    Extract_Instance(p);
 
     ParticleBuffer_Update[index] = p;
 }
@@ -249,43 +213,66 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
         return;
 
     Particle_Info p = ParticleBuffer_Update[index];
-    
-    if (p.Lifetime < 0.0f)
+
+    if (DelayActive(p))
     {
-        p.Lifetime += ElapsedTime;
-
-        if (p.Lifetime >= 0.0f)
-            p.Active = 1;
-
         ParticleBuffer_Update[index] = p;
         return;
     }
 
     if (p.Active == 0)
         return;
-    
-    
+
+    p.Lifetime += ElapsedTime;
+
     if (p.Type == PARTICLE_TYPE_SAND)
     {
-        p.Type = PARTICLE_TYPE_SAND_STORM;
-        p.EmitFaceIndex = 2;
-        p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-        
-        p.Active = 0;
+        float lifeRatio = p.Lifetime / max(p.MaxLifetime, 0.001f);
+        float distToFocus = length(focus_point - p.Position);
 
-        ParticleBuffer_Update[index] = p;
-        return;
+        if (lifeRatio < 0.6f) 
+        {
+            p.Type = PARTICLE_TYPE_SAND_STORM;
+            p.Active = 0;
+            ParticleBuffer_Update[index] = p;
+            return;
+        }
+        else
+        {
+            Update_Focus_Sand(p, index);
+            Extract_Instance(p);
+
+            if (p.Active == 0) 
+            {
+                p.Type = PARTICLE_TYPE_SAND_STORM;
+                p.Active = 0;
+                ParticleBuffer_Update[index] = p;
+                return;
+            }
+        }
     }
-    
-        p.Lifetime += ElapsedTime;
-    if (p.Lifetime >= p.MaxLifetime)
+    else if (p.Type == PARTICLE_TYPE_SAND_STORM)
     {
-        p.Active = 0;
-    }
-    else
-    {
-        Update_Sand_Storm(p, index);
-        Extract_Instance(p);
+        if (p.Lifetime >= p.MaxLifetime)
+        {
+            p.Active = 0;
+        }
+        else
+        {
+            Update_Sand_Storm(p, index);
+            
+            float3 worldPos = mul(float4(p.Position, 1.0f), gWorldMatrix).xyz;
+            if (CheckCollisionWithGridOBBs(worldPos))
+            {
+                p.Color = float3(1.0f, 0.5f, 0.0f);
+                p.Lifetime = p.MaxLifetime;
+                p.Active = 0;
+                ParticleBuffer_Update[index] = p;
+                return;
+            }
+            
+            Extract_Instance(p);
+        }
     }
 
     ParticleBuffer_Update[index] = p;

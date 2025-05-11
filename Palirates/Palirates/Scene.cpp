@@ -10,9 +10,6 @@
 
 CScene::CScene()
 {
-	//if (m_pDescriptorHeap == NULL)
-	//	m_pDescriptorHeap = new CDescriptorHeap();
-
 }
 
 CScene::~CScene()
@@ -563,25 +560,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 
-	Particle_Format test_snow_info;
-	{
-		test_snow_info.shader_type = Particle_Type::spread;
-		test_snow_info.particle_type = 0;
-		test_snow_info.max_particles = 1000;
-		test_snow_info.MaxLifetime = 3.0f;
-
-		test_snow_info.center = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-		test_snow_info.area_xyz = XMFLOAT3(1250.0f, 100.0f, 1250.0f);
-		test_snow_info.EmitFaceIndex = 3;
-
-
-		test_snow_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-		test_snow_info.init_velocity_value = 0.0f;
-		test_snow_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		test_snow_info.size = 1.0f;
-		test_snow_info.color = XMFLOAT3(0.5f, 0.5f, 1.0f);
-	}
 
 	Particle_Format test_dragon_fire_info;
 	{
@@ -590,7 +568,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
 
-		test_dragon_fire_info.center = XMFLOAT3(10.0f, 10.0f, 10.0f);
 		test_dragon_fire_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
 		test_dragon_fire_info.EmitFaceIndex = 0;
 
@@ -610,8 +587,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.max_particles = 10000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
-		test_sand_storm_info.center = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
-		test_sand_storm_info.area_xyz = XMFLOAT3(1250.0f, 1000.0f, 1250.0f);
+		test_sand_storm_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
 		test_sand_storm_info.EmitFaceIndex = 5;
 
 		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
@@ -622,16 +598,17 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
-	//particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_snow_info);
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_dragonfire->Set_Active(false);
+
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
+	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
+	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 
 	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	for_demo_dragonfire->Set_Center(XMFLOAT3(645.0f, 10.0f, 1590.0f));
+	for_demo_dragonfire->SetPosition(XMFLOAT3(645.0f, 10.0f, 1590.0f));
 	for_demo_dragonfire->Set_Active(false);
-
 	
 #endif
 	obj_manager = new Object_Manager();
@@ -954,21 +931,21 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'T':
 		{
-			m_pPlayer->SetBlurMask(true);
-
 			if (test_sand == NULL)
 				break;
 
 			test_sand->Update_Func_Index +=1;
 			test_sand->Update_Func_Index %= 3;
 
-			if (test_sand->Update_Func_Index != 2)
+			if (test_sand->Update_Func_Index == 0)
 			{
+				test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
+				test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
+
+				test_sand->Set_Speed(0.0f);
 				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
-				test_sand->Set_Center(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
-				test_sand->Set_Area(XMFLOAT3(1250.0f, 1000.0f, 1250.0f));
 			}
-			else
+			else if (test_sand->Update_Func_Index == 1 || test_sand->Update_Func_Index == 2)
 			{
 				auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 				if (mon)
@@ -979,26 +956,34 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 						if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
 						{
-							anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-							XMFLOAT3 pos = anu->GetPosition();
-							XMFLOAT3 dir = anu->GetLook();
-							pos.y += test_sand->Get_Area().y;
-							float speed = 30.0f;
-							XMVECTOR vPos = XMLoadFloat3(&pos);
-							XMVECTOR vDir = XMLoadFloat3(&dir);
-							XMVECTOR vMove = XMVectorScale(vDir, speed);
-							XMVECTOR vResult = XMVectorAdd(vPos, vMove);
-							XMStoreFloat3(&pos, vResult);
-							test_sand->Set_Center(pos);
-							//test_sand->Set_Main_Direction(anu->GetLook());
-							//test_sand->target_dir = XMLoadFloat3(&anu->GetLook());
-							test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+							XMFLOAT3 anubisPos = anu->GetPosition();
+
+							// focus_point만 설정 (1번 공통 처리)
+							test_sand->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
+							test_sand->Set_Focus_Point(anubisPos);
+							test_sand->Set_Speed(0.0f);
+
+							// 2번 전용 처리
+							if (test_sand->Update_Func_Index == 2)
+							{
+								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
+								XMFLOAT3 pos = anubisPos;
+								XMFLOAT3 dir = anu->GetLook();
+
+								test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+								test_sand->SetPosition(pos);
+								test_sand->Set_Focus_Point(anubisPos);
+
+								test_sand->Set_Speed(100.0f);
+								test_sand->Set_Direction(dir);
+							}
+
+							break; 
 						}
 					}
 				}
-				
-
 			}
+
 		}
 		break;
 
@@ -1190,7 +1175,8 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						test_dragonfire->Set_Center(position);
+						//test_dragonfire->Set_Center(position);
+						test_dragonfire->SetPosition(position);
 
 						XMFLOAT3 look;
 						XMStoreFloat3(&look, forward);
@@ -1209,7 +1195,9 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 
 		float centerZ = 1590.0f + 100.0f * sinf(totalTime * 1.0f);
 		XMFLOAT3 centerPos = XMFLOAT3(645.0f, 10.0f, centerZ);
-		for_demo_dragonfire->Set_Center(centerPos);
+		//for_demo_dragonfire->Set_Center(centerPos);
+		for_demo_dragonfire->SetPosition(centerPos);
+
 	}
 }
 
@@ -1256,7 +1244,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 				if (auto* anu = dynamic_cast<CAnubisObject*>(obj.get()))
 				{
-					test_sand->Set_Center(anu->GetPosition());
+					test_sand->Set_Focus_Point(anu->GetPosition());
 				}
 			}
 		}
@@ -1820,7 +1808,6 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.particle_type = 2;
 		water_splashes_info.max_particles = 300;
 
-		water_splashes_info.center = XMFLOAT3(0.0f, 0.0f, 0.0f);
 		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);
 
 		water_splashes_info.MaxLifetime = 0.3f;
@@ -1889,13 +1876,17 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	XMFLOAT3 bottom_head_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
 
-	water_particle_1->Set_Center(bottom_head_particle_pos);
+	//water_particle_1->Set_Center(bottom_head_particle_pos);
+	water_particle_1->SetPosition(bottom_head_particle_pos);
+
 	water_particle_1->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 
 	XMFLOAT3 bottom_tail_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
 
-	water_particle_2->Set_Center(bottom_tail_particle_pos);
+	//water_particle_2->Set_Center(bottom_tail_particle_pos);
+	water_particle_2->SetPosition(bottom_tail_particle_pos);
+
 	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 #endif
 
