@@ -51,6 +51,8 @@ struct CellInfo
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
+    matrix gWorldMatrix;
+
     float3 EmitRegionMin;
     float ElapsedTime;
 
@@ -59,10 +61,13 @@ cbuffer CB_Particle_Update_Info : register(b0)
 
     float3 Main_Direction;
     float Init_Velocity_Value;
-    
+
+    float3 focus_point;
+    float focus_strength;
+
     uint obb_num;
     float3 padding0;
-}
+};
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
@@ -175,6 +180,29 @@ float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
 
     return normalize(baseDir + offset);
 }
+
+bool IsOutOfBounds(float3 pos, float3 minBound, float3 maxBound)
+{
+    return pos.x < minBound.x || pos.x > maxBound.x ||
+           pos.y < minBound.y || pos.y > maxBound.y ||
+           pos.z < minBound.z || pos.z > maxBound.z;
+}
+
+bool DelayActive(inout Particle_Info p)
+{
+    if (p.Lifetime < 0.0f)
+    {
+        p.Lifetime += ElapsedTime;
+
+        if (p.Lifetime >= 0.0f)
+            p.Active = 1;
+
+        return true; // 아직 대기 중
+    }
+
+    return false; // 이미 활성화됨
+}
+
 
 //===============================================================
 // 파티클 동작별 업데이트
@@ -289,13 +317,8 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
-    if (p.Lifetime < 0.0f)
+    if (DelayActive(p))
     {
-        p.Lifetime += ElapsedTime;
-
-        if (p.Lifetime >= 0.0f)
-            p.Active = 1; 
-
         ParticleBuffer_Update[index] = p;
         return;
     }
@@ -305,10 +328,8 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     p.Lifetime += ElapsedTime;
 
-    bool out_of_bounds =
-        p.Position.x < EmitRegionMin.x || p.Position.x > EmitRegionMax.x ||
-        p.Position.y < EmitRegionMin.y || p.Position.y > EmitRegionMax.y ||
-        p.Position.z < EmitRegionMin.z || p.Position.z > EmitRegionMax.z;
+    bool out_of_bounds = IsOutOfBounds(p.Position, EmitRegionMin, EmitRegionMax);
+
 
     if (p.Lifetime >= p.MaxLifetime || out_of_bounds)
     {
@@ -326,7 +347,11 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
             Update_DragonFire(p, index);
         
-        if (CheckCollisionWithGridOBBs(p.Position))
+        
+        float3 localPos = p.Position;
+        float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
+
+        if (CheckCollisionWithGridOBBs(worldPos))
         {
             p.Velocity = float3(0.0f, 0.0f, 0.0f);
             p.Acceleration = float3(0.0f, 0.0f, 0.0f);

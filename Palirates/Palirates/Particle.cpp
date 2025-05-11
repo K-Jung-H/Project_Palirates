@@ -552,8 +552,8 @@ ParticleObject::ParticleObject() : CGameObject(1)
 {
 	m_pMesh = NULL;
 
-	area_xyz = XMFLOAT3{ 1000.0f,100.0f,1000.0f };
-	center = XMFLOAT3{ 0.0f,0.0f ,0.0f };
+	local_area_xyz = XMFLOAT3{ 1000.0f, 100.0f, 1000.0f };
+	focus_point = XMFLOAT3{ 0.0f, 0.0f ,0.0f };
 }
 
 ParticleObject::~ParticleObject()
@@ -569,7 +569,7 @@ void ParticleObject::ReleaseUploadBuffers()
 
 void ParticleObject::Init_Info(Particle_Format particle_info)
 {
-	Set_Center(particle_info.center);
+	Set_Focus_Point(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	Set_Area(particle_info.area_xyz);
 	Set_Main_Direction(particle_info.main_direction);
 	
@@ -603,13 +603,29 @@ XMFLOAT3 ParticleObject::Get_Main_Direction()
 	return result;
 }
 
+void ParticleObject::Set_Focus_Point(XMFLOAT3 world_point)
+{
+	XMFLOAT3 local = Vector3::Subtract(world_point, GetPosition());
+
+	XMFLOAT3 halfArea = Vector3::ScalarProduct(local_area_xyz, 0.5f, false);
+	focus_point.x = std::clamp(local.x, -halfArea.x, halfArea.x);
+	focus_point.y = std::clamp(local.y, -halfArea.y, halfArea.y);
+	focus_point.z = std::clamp(local.z, -halfArea.z, halfArea.z);
+}
+
 void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	particle_data->UpdateBuffers(pd3dCommandList);
 }
 
-void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList)
+void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	if (Vector3::Length(m_xmf3Direction) == 0.0f || m_fSpeed == 0.0f)
+		return;
+
+	m_xmf3Velocity = Vector3::ScalarProduct(m_xmf3Direction, m_fSpeed, false);
+	XMFLOAT3 delta = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	Move(delta); 
 }
 
 
@@ -623,7 +639,6 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 	if (instance_num == 0)
 		return;
-
 	 
 	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
@@ -631,6 +646,7 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	if (shape_mesh)
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 
 }
+
 
 void ParticleObject::Add_Destroy_Queue() 
 {

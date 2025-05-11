@@ -8,6 +8,8 @@
 
 struct CB_Particle_Update_Info
 {
+	XMFLOAT4X4 world_matrix;
+
 	XMFLOAT3 EmitRegionMin;
 	float ElapsedTime;
 
@@ -16,6 +18,9 @@ struct CB_Particle_Update_Info
 
 	XMFLOAT3 Main_Direction;
 	float Init_Velocity_Value;
+
+	XMFLOAT3 focus_point;
+	float focus_strength;
 
 	UINT obb_num;
 	XMFLOAT3 padding0;
