@@ -265,7 +265,7 @@ ID3D12RootSignature* ParticleShader::CreateComputeRootSignature(ID3D12Device* pd
 		pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 		pd3dRootParameters[0].Descriptor.ShaderRegister = 0; // Frame_Info
 		pd3dRootParameters[0].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[0].Constants.Num32BitValues = 16;
+		pd3dRootParameters[0].Constants.Num32BitValues = 36;
 		pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// b1 - Grid_Info // OBB 검사를 위한 Grid 설정 정보
@@ -611,6 +611,17 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	for (auto& [type, shader_ptr] : particle_shader_map)
+	{
+		if (!shader_ptr)
+			continue;
+
+		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+		{
+			particle_obj->Animate(pd3dCommandList, fTimeElapsed);
+		}
+	}
+
 	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
 
 	Emit_Particles(pd3dCommandList, fTimeElapsed);
@@ -630,17 +641,24 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = particle_obj->GetAABB();
+			const auto aabb_pos = particle_obj->GetAABB();
+
+			XMFLOAT4X4 transposedWorldMatrix;
+			XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(XMLoadFloat4x4(&particle_obj->m_xmf4x4World)));
 
 			Particle* particle_data = particle_obj->Get_Particle_Data();
+
+			CB_Particle_Update_Info update_info = {};
+			update_info.world_matrix = transposedWorldMatrix;
 			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
 			update_info.ElapsedTime = fTimeElapsed;
 			update_info.EmitRegionMin = aabb_pos.first;
 			update_info.EmitRegionMax = aabb_pos.second;
 			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 			update_info.Init_Velocity_Value = particle_obj->Get_Init_Velocity_Value();
+			update_info.focus_point = particle_obj->Get_Focus_Point();
+			update_info.focus_strength = particle_obj->Get_Focus_Strength();
 			update_info.obb_num = OBB_num;
-			update_info.padding0 = XMFLOAT3{};
 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
@@ -662,34 +680,42 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1);
 
-		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
+		for (const auto& particle_obj : particle_object_list_map[type])
 		{
 			if (type == Particle_Type::sand)
 			{
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
 			}
 
+			const auto aabb_pos = particle_obj->GetAABB();
 
-			std::pair<XMFLOAT3, XMFLOAT3> aabb_pos = particle_obj->GetAABB();
-			
+			XMFLOAT4X4 transposedWorldMatrix;
+			XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(XMLoadFloat4x4(&particle_obj->m_xmf4x4World)));
 
 			Particle* particle_data = particle_obj->Get_Particle_Data();
+
+			CB_Particle_Update_Info update_info = {};
+			update_info.world_matrix = transposedWorldMatrix;
 			update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
 			update_info.ElapsedTime = fTimeElapsed;
 			update_info.EmitRegionMin = aabb_pos.first;
 			update_info.EmitRegionMax = aabb_pos.second;
 			update_info.Main_Direction = particle_obj->Get_Main_Direction();
 			update_info.Init_Velocity_Value = particle_obj->Get_Init_Velocity_Value();
+			update_info.focus_point = particle_obj->Get_Focus_Point();
+			update_info.focus_strength = particle_obj->Get_Focus_Strength();
 			update_info.obb_num = OBB_num;
-			update_info.padding0 = XMFLOAT3{};
 
+			// 버퍼 바인딩 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 			Bind_OBB_Data_ShaderVariables(pd3dCommandList);
 
+			// Dispatch
 			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
 			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);
 		}
+
 	}
 }
 
@@ -740,14 +766,6 @@ void Particle_Manager::Sync_AfterAnimate( Particle_Type type)
 		if (particle_data != NULL)
 		{
 			particle_data->Readback_All();
-
-
-			//DebugOutput("======================================\n");
-			//DebugOutput("Particle_Info_List : " + to_string(particle_data->N_Particle_Info_List) + "\n");
-			//DebugOutput("Render_Instance : " + to_string(particle_data->N_Render_Instance) + "\n");
-			//DebugOutput("======================================\n");
-			//DebugOutput("\n");
-
 		}
 	}
 }
