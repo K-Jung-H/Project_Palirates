@@ -165,7 +165,10 @@ void CCamera::Update_Last_Frame_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void CCamera::Update_Deffered_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {	
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &m_xmf3Position, 0);
+
+	//pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &m_xmf3Position, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 3, &m_xmf3Position, 0);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &Fog_Trigger, 3);
 }
 
 
