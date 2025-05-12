@@ -544,8 +544,12 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get(), modelnum);
 					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
 					humanObject_7->Set_Name(player_name);
+					humanObject_7->Set_Child(humanObject_7->m_pRootModel);
 					humanObject_7->SetupWeaponCollider();
-					humanObject_7->Object_type = OBJECT_TPYE_MAIN_PLAYER;
+					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
+					CPlayer* player = humanObject_7.get(); 
+					auto st = std::make_unique<MultiPlayerStateMachine>(player);
+					humanObject_7->SetStateMachine(std::move(st));
 					humanObject_7->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
 					nPlayer++;
@@ -682,6 +686,7 @@ void CGameFramework::Build_Scenes()
 	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
 	pPlayer->Set_Child(pPlayer->m_pRootModel);
 	pPlayer->SetupWeaponCollider();
+	pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
 	in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
 	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 
@@ -697,7 +702,8 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Register_Scene("Character_Select", character_select_scene);
 	scene_manager->Build_Scene("Character_Select", m_pd3dDevice, Active_CommandList);
 	std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(m_pd3dDevice, Active_CommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
-	select_scene_observer->SetPosition(XMFLOAT3{ 37.0f, 0.0f, 28.0f });
+	select_scene_observer->SetPosition(XMFLOAT3{ 52.0f, 0.0f, 35.0f });
+	select_scene_observer->Rotate(0.0f, -120.0f, 0.0f);
 	scene_manager->Set_Scene_Player("Character_Select", select_scene_observer);
 	
 
