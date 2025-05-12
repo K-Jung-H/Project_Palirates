@@ -37,7 +37,7 @@ void CreateConsole()
 #define SERVER_PORT 9000
 
 
-int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow){
+int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow) {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -47,7 +47,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 
 	CreateConsole();
 
-	gGameFramework.ConnectToServer(SERVER_IP, SERVER_PORT);
+	//gGameFramework.ConnectToServer(SERVER_IP, SERVER_PORT);
 
 	::LoadString(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
 	::LoadString(hInstance, IDC_PALIRATES, szWindowClass, MAX_LOADSTRING);
