@@ -11,6 +11,7 @@ UINT gnCbvSrvUavDescriptorIncrementSize = 0;
 UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
+UINT Fog_Trigger = true;
 
  DXGI_FORMAT RenderTarget_Config::RTV_FORMATS[RTV_Format_Num] =
 {
