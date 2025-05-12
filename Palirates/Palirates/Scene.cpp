@@ -1336,8 +1336,8 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 {
 	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, pCamera);
 
-	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
-	obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
+	//pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
+	//obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
 
 #ifdef RENDER_PARTICLE
 	if (particle_manager)

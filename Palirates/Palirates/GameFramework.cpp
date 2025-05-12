@@ -381,6 +381,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 						break;
 					case 2:
 						scene_manager->Set_Active_Scene("In_Stage");
+						ConnectToServer(SERVER_IP, SERVER_PORT);
 						break;
 					default:
 						break;
@@ -421,6 +422,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
 					m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
+					ConnectToServer(SERVER_IP, SERVER_PORT);
 				}
 					break;
 
@@ -1203,6 +1205,8 @@ void CGameFramework::FrameAdvance()
 //==============서버================
 void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
+	if (isRunning) return;
+
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
@@ -1543,7 +1547,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					{
 						//scene->obj_manager->Remove_Object(it->second);  // Remove_Object() 함수 필요
 					}
-	
+
 					m_pRemotePlayers.erase(it);
 					std::cout << "[디버그] remote player 제거됨: " << leaveId << std::endl;
 				}
@@ -1567,7 +1571,10 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 	local_player->SetID(playerId);
 	local_player->SetState(0);
 	local_player->Set_Name("MyPlayer");
-	local_player->Object_type = OBJECT_TPYE_PLAYER;
+	local_player->Set_Child(local_player->m_pRootModel);
+	local_player->SetupWeaponCollider();
+	local_player->Object_type = OBJECT_TPYE_MAIN_PLAYER;
+	//local_player->Set_Active(false);
 
 	scene->obj_manager->Add_Object(local_player, Object_Type::player);
 
@@ -1636,8 +1643,8 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get());
 
-	remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
-	remotePlayer->Material_list = m_pPlayer->Material_list;
+	//remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
+	//remotePlayer->Material_list = m_pPlayer->Material_list;
 
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -1649,6 +1656,8 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->Object_type = OBJECT_TPYE_PLAYER;
 	remotePlayer->SetRotationSpeed(1.0f);
 	remotePlayer->Set_Active(true);
+	remotePlayer->Set_Child(remotePlayer->m_pRootModel);
+	remotePlayer->SetupWeaponCollider();
 	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	remotePlayer->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
@@ -1662,11 +1671,15 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 void CGameFramework::Disconnect()
 {
+	if (!isRunning) return;
+
 	isRunning = false;
 	if (networkThread.joinable())
 		networkThread.join();
 	closesocket(serverSocket);
 	WSACleanup();
+
+	std::cout << "[INFO] 서버 연결 종료" << std::endl;
 
 }
 
@@ -1674,8 +1687,17 @@ void CGameFramework::NetworkLoop()
 {
 	//std::cout << "[쓰레드 확인] NetworkLoop() 시작됨" << std::endl;
 
+
 	while (isRunning)
 	{
+		auto activeScene = scene_manager->Get_Active_Scene();
+		if (!activeScene || activeScene != scene_manager->Load_Scene("In_Stage"))
+		{
+			std::cout << "인스테이지 아님" << std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			continue;
+		}
+
 		char buffer[1024 + 1]; // null terminator 공간 확보
 		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
 		std::cout << "[recv] 수신 성공: " << bytesReceived << std::endl;
