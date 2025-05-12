@@ -1315,7 +1315,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 //	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
-
+	Fog_Trigger = true;
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 	
 
@@ -1586,6 +1586,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	CScene::Render(pd3dDevice, pd3dCommandList, pCamera);
+	Fog_Trigger = false;
 	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
@@ -2029,6 +2030,8 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
 	obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
+
+	Fog_Trigger = false;
 }
 
 bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

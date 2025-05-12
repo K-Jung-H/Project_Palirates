@@ -11,6 +11,7 @@ Texture2D<float4> T_Velocity : register(t3);
 cbuffer cb_Post_Camera : register(b0)
 {
     float3 camera_pos;
+    uint Fog_Trigger;
 };
 
 //==================================================================
@@ -108,8 +109,11 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float4 cColor = float4(lerp(Light_Color.rgb, fogColor, fogFactor), 1.0f); // 안개 효과 적용
     
     //================================================================
-
-    return Light_Color;
+    //return cColor;
+    if (Fog_Trigger == 1)
+        return cColor;
+    else
+        return Light_Color;
     
     }
 
