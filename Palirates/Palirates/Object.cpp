@@ -1002,6 +1002,16 @@ void CAnimationSets::ClassifyBones()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+CAnimationTrack::CAnimationTrack()
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dist(0.0f, 3.0f);
+
+	m_fPosition = dist(gen);
+}
+
 CAnimationTrack::~CAnimationTrack()
 {
 	if (m_pCallbackKeys) delete[] m_pCallbackKeys;
@@ -1942,31 +1952,8 @@ void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnS
 		m_pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
-CGameObject* CGameObject::FindFrame(char* pstrFrameName)
-{
-	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
-		return this;
 
-	CGameObject* pFrameObject = nullptr;
-
-	if (m_pSibling)
-	{
-		pFrameObject = m_pSibling->FindFrame(pstrFrameName);
-		if (pFrameObject)
-			return pFrameObject;
-	}
-
-	if (m_pChild)
-	{
-		pFrameObject = m_pChild->FindFrame(pstrFrameName);
-		if (pFrameObject)
-			return pFrameObject;
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<CGameObject> CGameObject::FindFrame_v2(const char* pstrFrameName)
+std::shared_ptr<CGameObject> CGameObject::FindFrame(const char* pstrFrameName)
 {
 	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
 		return shared_from_this();  
@@ -1975,13 +1962,13 @@ std::shared_ptr<CGameObject> CGameObject::FindFrame_v2(const char* pstrFrameName
 
 	if (m_pSibling)
 	{
-		found = m_pSibling->FindFrame_v2(pstrFrameName);
+		found = m_pSibling->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
 	if (m_pChild)
 	{
-		found = m_pChild->FindFrame_v2(pstrFrameName);
+		found = m_pChild->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
@@ -2006,6 +1993,12 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 {
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
+}
+
+void CGameObject::SetRootMotion(bool bRootMotion)
+{
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
 }
 
 void CGameObject::Animate(float fTimeElapsed)
@@ -3156,8 +3149,8 @@ void CGameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoaded
 			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				CGameObject* frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
-				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr;
+				shared_ptr<CGameObject> frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
+				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr.get();
 
 #ifdef _WITH_DEBUG_SKINNING_BONE
 				TCHAR pstrDebug[256] = { 0 };
@@ -3334,11 +3327,11 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	std::shared_ptr<CGameObject> root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
 
-	std::shared_ptr<CGameObject> target = FindFrame_v2(const_cast<char*>(targetName));
+	std::shared_ptr<CGameObject> target = FindFrame(const_cast<char*>(targetName));
 	if (!target || !target->m_pParent)
 		return nullptr;
 	target->Set_Active(false);
-	std::shared_ptr<CGameObject> parentRaw = target->GetParent_v2();
+	std::shared_ptr<CGameObject> parentRaw = target->GetParent();
 
 	std::shared_ptr<CGameObject> prev;
 	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
@@ -4462,7 +4455,7 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void CMonsterObject::SetupWeaponCollider()
 {
-	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+	std::shared_ptr<CGameObject> model = FindFrame(WeaponName);
 
 	if (!model || !model->m_pMesh) return;
 

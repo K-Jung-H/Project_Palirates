@@ -291,7 +291,7 @@ void CPlayer::SetLookDirection(const XMFLOAT3& look)
 
 void CPlayer::SetupWeaponCollider()
 {
-	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+	std::shared_ptr<CGameObject> model = FindFrame(WeaponName);
 
 	if (!model || !model->m_pMesh) return;
 
