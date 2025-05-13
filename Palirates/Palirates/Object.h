@@ -506,26 +506,6 @@ public:
     WeaponObject() {};
     ~WeaponObject() {};
     std::vector<std::shared_ptr<CGameObject>> pWeapon;
-    XMVECTOR target_dir{};
-
-    XMVECTOR m_vVelocity = XMVectorZero();  // 현재 속도
-    bool    m_bInAir = false;           // 공중에 떠 있는 중인지
-    float   m_fGravity = 9.8f;            // 중력 가속도
-    float   m_fInitialUpSpeed = 5.0f;            // 점프 초기 속도
-    float   m_fMoveSpeed = 3.0f;
-
-    void Launch(const XMVECTOR& target_dir)
-    {
-        XMVECTOR dirNorm = XMVector3Normalize(target_dir);
-        // X/Y/Z 속도를 한꺼번에 세팅 (w는 0)
-        m_vVelocity = XMVectorSet(
-            XMVectorGetX(dirNorm) * m_fMoveSpeed,
-            m_fInitialUpSpeed,
-            XMVectorGetZ(dirNorm) * m_fMoveSpeed,
-            0.0f
-        );
-        m_bInAir = true;
-    }
 };
 
 class CGameObject : public std::enable_shared_from_this<CGameObject>

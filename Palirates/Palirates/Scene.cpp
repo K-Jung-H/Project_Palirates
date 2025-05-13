@@ -826,9 +826,6 @@ void CScene::Update_UI()
 
 void CScene::ReleaseObjects()
 {
-	if (m_MRT_GraphicsRootSignature) m_MRT_GraphicsRootSignature->Release();
-
-
 	obj_manager->Clear_Object_List_All();
 #ifdef WRITE_TEXT_UI
 	delete text_ui_manager;

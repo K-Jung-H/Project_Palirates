@@ -3352,7 +3352,6 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 
 	pWeapon = new WeaponObject();
 	pWeapon->pWeapon.push_back(swordClone);
-	pWeapon->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
 	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
 	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
 	swordClone->Object_type = 10;
@@ -3367,7 +3366,8 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 		sword->Set_Active(true);
 	if (!pWeapon->pWeapon.empty()) {
 		for (auto& obj : pWeapon->pWeapon) {
-			obj->Set_Active(false);
+			//obj->Set_Active(false);
+			//obj.reset();
 		}
 	}
 }
