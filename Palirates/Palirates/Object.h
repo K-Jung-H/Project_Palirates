@@ -361,8 +361,8 @@ public:
     int                        m_nAnimationSets = 0;
     CAnimationSet** m_pAnimationSet_list = NULL;
 
-    std::vector<int> m_vecUpperBodyBoneIndices;  // 상체
-    std::vector<int> m_vecLowerBodyBoneIndices;  // 하체
+    std::vector<int> m_vecUpperBodyBoneIndices;  
+    std::vector<int> m_vecLowerBodyBoneIndices;  
 
     int                        m_nBoneFrames = 0;
     std::vector< CGameObject*>   m_ppBoneFrameCaches;
@@ -473,13 +473,7 @@ public:
     void ServerAdvanceTime(const ServerAnimationSyncData& syncData);
 
 public:
-    bool                     m_bRootMotion = false;
     std::shared_ptr<CGameObject>            m_pModelRootObject = NULL;
-
-    std::shared_ptr<CGameObject>            m_pRootMotionObject = NULL;
-    XMFLOAT3                  m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-    void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
 
     virtual void OnRootMotion(CGameObject* pRootGameObject) {}
     virtual void OnAnimationIK(CGameObject* pRootGameObject) {}
@@ -715,9 +709,6 @@ public:
 
     void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
     void SetTrackAnimationPosition(int nAnimationTrack, float fPosition);
-
-    void SetRootMotion(bool bRootMotion);
-
     
     void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
 

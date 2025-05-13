@@ -1995,12 +1995,6 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
 }
 
-void CGameObject::SetRootMotion(bool bRootMotion)
-{
-	if (m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
-}
-
 void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
