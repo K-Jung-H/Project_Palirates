@@ -336,7 +336,7 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 #endif
 }
 
-CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, ID3D12RootSignature *pd3dGraphicsRootSignature, void *pContext, int ModelNum) : CPlayer()
+CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void *pContext, int ModelNum) : CPlayer()
 {
 	Object_type = OBJECT_TPYE_MAIN_PLAYER;
 
@@ -656,7 +656,7 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 //==================================================================
 
 
-Observer::Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+Observer::Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void* pContext)
 	: CPlayer()
 {
 	Object_type = OBJECT_TPYE_MAIN_PLAYER;

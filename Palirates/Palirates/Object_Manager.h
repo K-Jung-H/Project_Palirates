@@ -50,7 +50,6 @@ enum class Object_Type
 	fixed,
 	player,
 	trail,
-	plane,
 	etc
 };
 
@@ -61,7 +60,7 @@ public:
 	BoundingBox_Shader();
 	virtual ~BoundingBox_Shader();
 
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
@@ -77,7 +76,7 @@ class Object_Manager;
 class OBB_Drawer 
 {
 public:
-	OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
+	OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 	~OBB_Drawer();
 
 	void Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
@@ -118,12 +117,16 @@ private:
 	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
 	void Synchronize_Active_Objects_and_Tile();
 
+	// Wave object - unique per scene
+	std::shared_ptr<Wave_Object> wave_obj_ptr;
+	
+
 	// Dynamic object lists
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> player_list;
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
-	std::vector<std::shared_ptr<CGameObject>> plane_obj_list;
+
 
 	// Static object map
 	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
@@ -146,6 +149,12 @@ public:
 
 	// Terrain setter
 	void Set_Terrain_Object(std::shared_ptr<CHeightMapTerrain> obj_ptr) { terrain_ptr = obj_ptr; }
+
+	// Wave setter
+	void Set_Wave_Object(std::shared_ptr<Wave_Object> obj_ptr) { wave_obj_ptr = obj_ptr; }
+	std::shared_ptr<Wave_Object>  Get_Wave_Object() { return wave_obj_ptr; }
+	void Render_Wave(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) { if (wave_obj_ptr != NULL) wave_obj_ptr->Render(pd3dCommandList, pCamera); }
+
 
 	// Accessors for object lists
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
@@ -174,19 +183,20 @@ public:
 	static bool do_instance_update;
 	static void Reserve_Update() { do_instance_update = true; }
 
+	static std::shared_ptr<CShader> trail_shader;
+
+	//============[OBB]===================
+
+
 	// OBB drawer management
-	void Create_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
-	void Create_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, ID3D12RootSignature* rootSig);
+	void Create_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	void Create_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 	void Update_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 	void Update_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 	void Render_OBB_Drawers(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 
-	// Miscellaneous
-	static std::shared_ptr<CShader> trail_shader;
-	Wave_Object* wave_obj = nullptr;
 
 	void Classify_Objects_By_Tile();
-
 
 
 	std::vector<GPU_OBB> m_OBBDataArray;
