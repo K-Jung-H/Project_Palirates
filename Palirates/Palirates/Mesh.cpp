@@ -1456,7 +1456,7 @@ void CSkinnedMesh::PrepareSkinning(std::shared_ptr<CGameObject> pModelRootObject
 	for (int j = 0; j < m_nSkinningBones; j++)
 	{
 		//m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]);
-		m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]);
+		m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]).get();
 	}
 }
 
@@ -1590,6 +1590,47 @@ BoundingOrientedBox CSkinnedMesh::Get_WorldOBB()
 	return result;
 }
 
+BoundingOrientedBox CSkinnedMesh::Get_WorldOBB_FromSkinnedVertices()
+{
+	if (!m_pxmf3Positions || !m_pxmn4BoneIndices || !m_pxmf4BoneWeights ||
+		!m_pcbxmf4x4MappedSkinningBoneTransforms || !m_pcbxmf4x4MappedBindPoseBoneOffsets)
+		return {};
+
+	std::vector<XMFLOAT3> skinnedPositions;
+	skinnedPositions.reserve(m_nVertices);
+
+	for (int i = 0; i < m_nVertices; ++i)
+	{
+		XMVECTOR vPos = XMLoadFloat3(&m_pxmf3Positions[i]);
+		XMINT4 boneIndices = m_pxmn4BoneIndices[i];
+		XMFLOAT4 weights = m_pxmf4BoneWeights[i];
+
+		XMMATRIX bone0 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.x]) *
+			XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.x]);
+		XMMATRIX bone1 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.y]) *
+			XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.y]);
+		XMMATRIX bone2 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.z]) *
+			XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.z]);
+		XMMATRIX bone3 = XMLoadFloat4x4(&m_pcbxmf4x4MappedBindPoseBoneOffsets[boneIndices.w]) *
+			XMLoadFloat4x4(&m_pcbxmf4x4MappedSkinningBoneTransforms[boneIndices.w]);
+
+		XMVECTOR vSkin = XMVectorZero();
+		vSkin += XMVector3Transform(vPos, bone0) * weights.x;
+		vSkin += XMVector3Transform(vPos, bone1) * weights.y;
+		vSkin += XMVector3Transform(vPos, bone2) * weights.z;
+		vSkin += XMVector3Transform(vPos, bone3) * weights.w;
+
+		XMFLOAT3 skinnedPos;
+		XMStoreFloat3(&skinnedPos, vSkin);
+		skinnedPositions.push_back(skinnedPos);
+	}
+
+	// 회전 포함해서 OBB 추출
+	BoundingOrientedBox obb;
+	BoundingOrientedBox::CreateFromPoints(obb, (UINT)skinnedPositions.size(), skinnedPositions.data(), sizeof(XMFLOAT3));
+
+	return obb;
+};
 //===============================================================
 Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments)
 	: CStandardMesh(pd3dDevice, pd3dCmdList), m_nMaxTrailSegments(nMaxTrailSegments)

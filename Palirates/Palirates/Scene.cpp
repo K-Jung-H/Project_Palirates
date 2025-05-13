@@ -1167,7 +1167,7 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 				const char* objName = obj->Get_Name();
 				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
 				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack3) {
-					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
+					shared_ptr<CGameObject> weapon = obj->FindFrame(obj->WeaponName);
 
 					if (weapon) {
 						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
@@ -1230,7 +1230,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (m_pPlayer->GetTrailOn())
 	{
 		if (!m_pPlayer->GetTrailStart()) {
-			CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+			shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 			trail_obj->Set_Trail_Target(trail_target, false);
 			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -1773,8 +1773,6 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 		pirate_ship->SetScale({ 3.0f, 3.0f, 3.0f }, true);
 		obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
-		pirate_ship->Obj_Info();
-
 
 		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_pos"));
 		pirate_ship->RegisterMarker("Sailor_0", pirate_ship->FindFrame("Sailor_Pos_0"));
