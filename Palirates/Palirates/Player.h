@@ -198,7 +198,7 @@ private:
 	bool On_Ground = false;
 
 public:
-	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL, int ModelNum = 0);
+	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void* pContext = NULL, int ModelNum = 0);
 	CTerrainPlayer() {}
 	virtual ~CTerrainPlayer();
 
@@ -223,7 +223,7 @@ public:
 class Observer : public CPlayer
 {
 public:
-	Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void* pContext = NULL);
 	virtual ~Observer();
 
 public:

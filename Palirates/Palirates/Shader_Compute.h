@@ -201,6 +201,8 @@ public:
 	static float total_time;
 	static WaveParams* update_wave_info;
 
+	static void Prepare_WaveParams();
+
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState = 0);
 
 	static ID3D12RootSignature* CreateComputeRootSignature(ID3D12Device* pd3dDevice);

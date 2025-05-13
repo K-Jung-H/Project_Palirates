@@ -551,6 +551,33 @@ void Post_Effect_Manager::Resize_Screen_Size(UINT new_width, UINT new_height)
 float CS_Wave_Shader::total_time = 0.0f;
 WaveParams* CS_Wave_Shader::update_wave_info = NULL;
 
+void CS_Wave_Shader::Prepare_WaveParams()
+{
+	if (CS_Wave_Shader::update_wave_info == NULL)
+	{
+		CS_Wave_Shader::update_wave_info = new WaveParams();
+
+		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
+		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
+		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;                            // Minimum wave height
+		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;                            // Maximum wave height
+		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
+		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
+		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
+		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
+
+		// === Boat Wake Parameters ===
+		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
+		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
+		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
+		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
+
+		// === Time ===
+		CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
+		CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
+	}
+}
+
 D3D12_SHADER_BYTECODE CS_Wave_Shader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
@@ -702,7 +729,8 @@ void CS_Wave_Shader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups,
 	m_cyThreadGroups = cyThreadGroups;
 	m_czThreadGroups = czThreadGroups;
 
-	update_wave_info = new WaveParams();
+	if (!update_wave_info)
+		update_wave_info = new WaveParams();
 }
 
 void CS_Wave_Shader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

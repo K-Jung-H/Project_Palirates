@@ -63,7 +63,9 @@ public:
 	virtual void ReleaseShaderVariables();
 
 	virtual void BuildDefaultLightsAndMaterials();
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+
 	void ReleaseObjects();
 
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
@@ -71,7 +73,7 @@ public:
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 
 	
-	ID3D12RootSignature *Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
+	shared_ptr<ID3D12RootSignature> Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
 
 	bool ProcessInput(UCHAR *pKeysBuffer);
 
@@ -98,9 +100,9 @@ public:
 	bool bOBBRender{ false };
 
 protected:
-	ID3D12RootSignature					*m_MRT_GraphicsRootSignature = NULL;
-	ID3D12RootSignature					*m_Transparent_GraphicsRootSignature = NULL;
-	ID3D12RootSignature					*m_Plane_GraphicsRootSignature = NULL;
+	static std::shared_ptr<ID3D12RootSignature> m_MRT_GraphicsRootSignature;
+	static std::shared_ptr<ID3D12RootSignature> m_Transparent_GraphicsRootSignature;
+	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;
 
 public:
 	float								m_fElapsedTime = 0.0f;
@@ -109,8 +111,6 @@ public:
 	Particle_Manager* particle_manager = NULL;
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
-	std::shared_ptr<ParticleObject> for_demo_dragonfire = NULL;
-	bool for_demo_dragonfire_button = false;
 
 	std::shared_ptr<Wave_Object> in_game_wave;
 
