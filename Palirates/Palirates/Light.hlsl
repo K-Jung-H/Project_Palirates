@@ -6,9 +6,10 @@
 #define SPOT_LIGHT			2
 #define DIRECTIONAL_LIGHT	3
 
-#define _WITH_LOCAL_VIEWER_HIGHLIGHTING
-#define _WITH_THETA_PHI_CONES
-//#define _WITH_REFLECT
+
+//#define _WITH_METALLIC_ROUGHNESS
+
+
 
 struct LIGHT
 {
@@ -51,26 +52,55 @@ cbuffer cbLights : register(b1)
 
 //--------------------------------------------------------------------------------------
 // Diffuse + Specular 조명 계산
+//---------------------------------------------
+// 선택적으로 metallic/roughness 반영하고 싶다면
+#define _WITH_METALLIC_ROUGHNESS
+//---------------------------------------------
+
+//--------------------------------------------------------------------------------------
+// Diffuse + Specular 조명 계산
 float4 ComputeDiffuseSpecular(float3 vToLight, float3 vNormal, float3 vToCamera, float3 albedoColor, Light_Material_Info lightMaterial, int Light_ID)
 {
     LIGHT light = gLights[Light_ID];
     float fDiffuseFactor = max(dot(vToLight, vNormal), 0.0f);
     float fSpecularFactor = 0.0f;
 
-    if (fDiffuseFactor > 0.0f && lightMaterial.gSpecular.w > 0.0f)
+#ifdef _WITH_METALLIC_ROUGHNESS
+    float roughness = saturate(lightMaterial.gRoughness);
+    float metallic = saturate(lightMaterial.gMetallic);
+
+    // perceptual remap
+    float metalFactor = pow(metallic, 2.2);
+
+    // shininess from roughness
+    float shininess = lerp(256.0f, 2.0f, roughness);
+
+    // F0 reflection value
+    float3 dielectricF0 = float3(0.04f, 0.04f, 0.04f);
+    float3 specularColor = lerp(dielectricF0, albedoColor, metalFactor);
+    float3 diffuseColor = lerp(albedoColor, float3(0, 0, 0), metalFactor);
+#else
+    float shininess = lightMaterial.gSpecular.w;
+    float3 specularColor = lightMaterial.gSpecular.rgb;
+    float3 diffuseColor  = albedoColor;
+#endif
+
+    if (fDiffuseFactor > 0.0f && shininess > 0.0f)
     {
 #ifdef _WITH_REFLECT
         float3 vReflect = reflect(-vToLight, vNormal);
-        fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), lightMaterial.gSpecular.w);
+        fSpecularFactor = pow(max(dot(vReflect, vToCamera), 0.0f), shininess);
 #else
         float3 vHalf = normalize(vToCamera + vToLight);
-        fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), lightMaterial.gSpecular.w);
+        fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), shininess);
 #endif
     }
 
-    return (light.m_cAmbient * float4(albedoColor, 1.0f)) +
-           (light.m_cDiffuse * fDiffuseFactor * float4(albedoColor, 1.0f)) +
-           (light.m_cSpecular * fSpecularFactor * float4(1.0f, 1.0f, 1.0f, 1.0f));
+    float4 ambient = light.m_cAmbient * float4(diffuseColor, 1.0f);
+    float4 diffuse = light.m_cDiffuse * fDiffuseFactor * float4(diffuseColor, 1.0f);
+    float4 specular = light.m_cSpecular * fSpecularFactor * float4(specularColor, 1.0f);
+
+    return ambient + diffuse + specular;
 }
 
 //--------------------------------------------------------------------------------------
@@ -121,42 +151,82 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
 
 //--------------------------------------------------------------------------------------
 
-float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID)
+static float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID)
 {
     if (materialID == 0)
         return float4(albedoColor, 1.0f);
-    
+
     Light_Material_Info lightMaterial = Light_Material_Info_List[materialID];
-
     float3 vToCamera = normalize(camera_pos - wPosition);
-
     float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < gnLights; i++)
     {
-        if (gLights[i].m_bEnable)
-        {
-            if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
-            {
-                cColor += DirectionalLight(i, wNormal, vToCamera, albedoColor, lightMaterial);
-            }
-            else if (gLights[i].m_nType == POINT_LIGHT)
-            {
-                cColor += PointLight(i, wPosition, wNormal, vToCamera, albedoColor, lightMaterial);
-            }
-            else if (gLights[i].m_nType == SPOT_LIGHT)
-            {
-                cColor += SpotLight(i, wPosition, wNormal, vToCamera, albedoColor, lightMaterial);
-            }
-        }
+        if (!gLights[i].m_bEnable)
+            continue;
+
+        if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+            cColor += DirectionalLight(i, wNormal, vToCamera, albedoColor, lightMaterial);
+        else if (gLights[i].m_nType == POINT_LIGHT)
+            cColor += PointLight(i, wPosition, wNormal, vToCamera, albedoColor, lightMaterial);
+        else if (gLights[i].m_nType == SPOT_LIGHT)
+            cColor += SpotLight(i, wPosition, wNormal, vToCamera, albedoColor, lightMaterial);
     }
 
-    cColor += (gcGlobalAmbientLight * float4(albedoColor, 1.0f));
-    cColor += (float4(albedoColor, 1.0f) * lightMaterial.gEmissive.w);
+#ifdef _WITH_METALLIC_ROUGHNESS
+    float m = saturate(lightMaterial.gMetallic);
+    float metalFactor = pow(m, 2.2);
+    float3 ambientDiffuse = lerp(albedoColor, float3(0.0f, 0.0f, 0.0f), metalFactor);
+#else
+    float3 ambientDiffuse = albedoColor;
+#endif
+
+    cColor += gcGlobalAmbientLight * float4(ambientDiffuse, 1.0f);
+    cColor += float4(albedoColor, 1.0f) * lightMaterial.gEmissive.w;
     cColor.a = 1.0f;
 
     return cColor;
 }
+
+
+
+
+//static float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID)
+//{
+//    if (materialID == 0)
+//        return float4(albedoColor, 1.0f);
+    
+//    Light_Material_Info lightMaterial = Light_Material_Info_List[materialID];
+
+//    float3 vToCamera = normalize(camera_pos - wPosition);
+
+//    float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+//    for (int i = 0; i < gnLights; i++)
+//    {
+//        if (gLights[i].m_bEnable)
+//        {
+//            if (gLights[i].m_nType == DIRECTIONAL_LIGHT)
+//            {
+//                cColor += DirectionalLight(i, wNormal, vToCamera, albedoColor, lightMaterial);
+//            }
+//            else if (gLights[i].m_nType == POINT_LIGHT)
+//            {
+//                cColor += PointLight(i, wPosition, wNormal, vToCamera, albedoColor, lightMaterial);
+//            }
+//            else if (gLights[i].m_nType == SPOT_LIGHT)
+//            {
+//                cColor += SpotLight(i, wPosition, wNormal, vToCamera, albedoColor, lightMaterial);
+//            }
+//        }
+//    }
+
+//    cColor += (gcGlobalAmbientLight * float4(albedoColor, 1.0f));
+//    cColor += (float4(albedoColor, 1.0f) * lightMaterial.gEmissive.w);
+//    cColor.a = 1.0f;
+
+//    return cColor;
+//}
 
 float3 Lighting_VisualizeLightAmount(float3 wPosition, float3 wNormal, float3 camera_pos, uint materialID)
 {

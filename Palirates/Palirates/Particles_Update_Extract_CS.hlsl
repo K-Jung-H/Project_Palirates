@@ -94,7 +94,7 @@ float3 RotateVectorByQuaternion(float3 v, float4 q)
     return v + 2.0f * cross(q.xyz, cross(q.xyz, v) + q.w * v);
 }
 
-bool CheckOBBCollision(float3 p_point, OBB_INFO obb)
+static bool CheckOBBCollision(float3 p_point, OBB_INFO obb)
 {
     if (obb.Active == 0)
         return false;
@@ -111,7 +111,7 @@ bool CheckOBBCollision(float3 p_point, OBB_INFO obb)
     return all(abs(localPos) <= obb.Extents);
 }
 
-bool CheckCollisionWithGridOBBs(float3 pos)
+static bool CheckCollisionWithGridOBBs(float3 pos)
 {
     int3 cell = int3(floor((pos - worldMin) / cellSize));
     if (any(cell < 0) || any(cell >= gridDim))
@@ -188,7 +188,7 @@ bool IsOutOfBounds(float3 pos, float3 minBound, float3 maxBound)
            pos.z < minBound.z || pos.z > maxBound.z;
 }
 
-bool DelayActive(inout Particle_Info p)
+static bool DelayActive(inout Particle_Info p)
 {
     if (p.Lifetime < 0.0f)
     {
@@ -317,7 +317,8 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
-    if (DelayActive(p))
+    bool isDelayed = DelayActive(p);
+    if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
