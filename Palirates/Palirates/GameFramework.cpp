@@ -1227,14 +1227,14 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 	if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1)
 	{
-		std::cerr << "[ERROR] IP 주소 변환 실패: " << ip << std::endl;
+		//std::cerr << "[ERROR] IP 주소 변환 실패: " << ip << std::endl;
 		closesocket(serverSocket);
 		WSACleanup();
 		return;
 	}
 	if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] 서버 연결 실패: " << WSAGetLastError() << std::endl;
+		//std::cerr << "[ERROR] 서버 연결 실패: " << WSAGetLastError() << std::endl;
 		closesocket(serverSocket);
 		WSACleanup();
 		return;

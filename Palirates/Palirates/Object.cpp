@@ -560,7 +560,7 @@ void CMaterial::ReleaseUploadBuffers()
 CShader* CMaterial::m_pSkinnedAnimationShader = NULL;
 CShader* CMaterial::m_pStandardShader = NULL;
 
-void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	//if (m_pStandardShader)
 	//{
@@ -1002,6 +1002,16 @@ void CAnimationSets::ClassifyBones()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+
+CAnimationTrack::CAnimationTrack()
+{
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<float> dist(0.0f, 3.0f);
+
+	m_fPosition = dist(gen);
+}
+
 CAnimationTrack::~CAnimationTrack()
 {
 	if (m_pCallbackKeys) delete[] m_pCallbackKeys;
@@ -1942,31 +1952,8 @@ void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnS
 		m_pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
 }
 
-CGameObject* CGameObject::FindFrame(char* pstrFrameName)
-{
-	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
-		return this;
 
-	CGameObject* pFrameObject = nullptr;
-
-	if (m_pSibling)
-	{
-		pFrameObject = m_pSibling->FindFrame(pstrFrameName);
-		if (pFrameObject)
-			return pFrameObject;
-	}
-
-	if (m_pChild)
-	{
-		pFrameObject = m_pChild->FindFrame(pstrFrameName);
-		if (pFrameObject)
-			return pFrameObject;
-	}
-
-	return nullptr;
-}
-
-std::shared_ptr<CGameObject> CGameObject::FindFrame_v2(const char* pstrFrameName)
+std::shared_ptr<CGameObject> CGameObject::FindFrame(const char* pstrFrameName)
 {
 	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
 		return shared_from_this();  
@@ -1975,13 +1962,13 @@ std::shared_ptr<CGameObject> CGameObject::FindFrame_v2(const char* pstrFrameName
 
 	if (m_pSibling)
 	{
-		found = m_pSibling->FindFrame_v2(pstrFrameName);
+		found = m_pSibling->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
 	if (m_pChild)
 	{
-		found = m_pChild->FindFrame_v2(pstrFrameName);
+		found = m_pChild->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
@@ -2006,6 +1993,12 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 {
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
+}
+
+void CGameObject::SetRootMotion(bool bRootMotion)
+{
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
 }
 
 void CGameObject::Animate(float fTimeElapsed)
@@ -2922,7 +2915,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	}
 }
 
-std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
+std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -3002,7 +2995,7 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 	return(pGameObject);
 }
 
-std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
+std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -3074,7 +3067,7 @@ std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Dev
 	return(pGameObject);
 }
 
-CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader)
+CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, pstrFileName, "rb");
@@ -3156,8 +3149,8 @@ void CGameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoaded
 			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				CGameObject* frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
-				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr;
+				shared_ptr<CGameObject> frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
+				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr.get();
 
 #ifdef _WITH_DEBUG_SKINNING_BONE
 				TCHAR pstrDebug[256] = { 0 };
@@ -3214,7 +3207,7 @@ void CGameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoaded
 	}
 }
 
-CLoadedModelInfo* CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader)
+CLoadedModelInfo* CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, pstrFileName, "rb");
@@ -3334,11 +3327,11 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	std::shared_ptr<CGameObject> root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
 
-	std::shared_ptr<CGameObject> target = FindFrame_v2(const_cast<char*>(targetName));
+	std::shared_ptr<CGameObject> target = FindFrame(const_cast<char*>(targetName));
 	if (!target || !target->m_pParent)
 		return nullptr;
 	target->Set_Active(false);
-	std::shared_ptr<CGameObject> parentRaw = target->GetParent_v2();
+	std::shared_ptr<CGameObject> parentRaw = target->GetParent();
 
 	std::shared_ptr<CGameObject> prev;
 	std::shared_ptr<CGameObject> curr = parentRaw->m_pChild;
@@ -3385,7 +3378,7 @@ Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
 CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
 CHeightMapImage* CHeightMapTerrain::m_pHeightMapImage = nullptr;
 
-CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName,
+CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
 	int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap, int nMaxDepth) : CGameObject(1)
 {
 	static int tile_map_number = 0;
@@ -3443,7 +3436,7 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	}
 }
 
-void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature,
 	LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
 {
 	if (m_nDepth <= 0) return;
@@ -3755,7 +3748,7 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 Deferred_Plane_Shader* Plane_Object::deferred_plane_shader = NULL;
 Plane_Shader* Plane_Object::plane_shader = NULL; 
 
-Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
+Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color)
 {
 	if (deferred_plane_shader == nullptr)
 	{
@@ -3833,7 +3826,7 @@ void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 CS_Wave_Shader* Wave_Object::cs_wave_shader = NULL;
 
-Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n, bool use_deferred_shader)
+Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, int nLength, int side_vertex_n, bool use_deferred_shader)
 	: Plane_Object()
 {
 	if (use_deferred_shader && deferred_plane_shader == nullptr)
@@ -4462,7 +4455,7 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void CMonsterObject::SetupWeaponCollider()
 {
-	std::shared_ptr<CGameObject> model = FindFrame_v2(WeaponName);
+	std::shared_ptr<CGameObject> model = FindFrame(WeaponName);
 
 	if (!model || !model->m_pMesh) return;
 
@@ -4505,7 +4498,7 @@ void CMonsterObject::SetupWeaponCollider()
 
 ///////////////////////////////////////////////////////////////////
 
-CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	RootMotionTrackSet = {
 		TRACK_FISHMAN_WALK,
@@ -4557,7 +4550,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 ///////////////////////////////////////////////////////////////////
 
-CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	RootMotionTrackSet = {
 		TRACK_ANUBIS_IDLE,
@@ -4618,7 +4611,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 ///////////////////////////////////////////////////////////////////
 
-CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	RootMotionTrackSet = {
 		TRACK_DRAGON_ATTACK1,

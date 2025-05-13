@@ -246,7 +246,7 @@ public:
     static CShader* m_pStandardShader;
     static CShader* m_pSkinnedAnimationShader;
 
-    static void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    static void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
     void SetStandardShader() { CMaterial::SetShader(m_pStandardShader); }
     void SetSkinnedAnimationShader() { CMaterial::SetShader(m_pSkinnedAnimationShader); }
@@ -374,13 +374,7 @@ public:
 class CAnimationTrack
 {
 public:
-    CAnimationTrack() {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<float> dist(0.0f, 3.0f);
-
-        m_fPosition = dist(gen);
-    }
+    CAnimationTrack();
     ~CAnimationTrack();
 
 public:
@@ -452,7 +446,6 @@ public:
     CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
 
     ID3D12Resource** m_ppd3dcbSkinningBoneTransforms = NULL; //[SkinnedMeshes]
-    //Microsoft::WRL::ComPtr<ID3D12Resource> m_ppd3dcbSkinningBoneTransforms = NULL;
     XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
 
     int RootIndex{ 0 };
@@ -541,24 +534,31 @@ private:
     std::shared_ptr<CGameObject> m_pChild = nullptr;
     std::shared_ptr<CGameObject> m_pSibling = nullptr;
 
-
-
     bool Active = true;
 
     XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
+
+public:
+    static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
+    static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+    static void ClearMeshCache();
+
+    CMesh* m_pMesh = NULL;
+
+    std::vector<std::shared_ptr<CMaterial>>  Material_list;
+
+
+public:
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+    int n_Animation = 0;
+    std::shared_ptr<CGameObject> m_pRootModel = NULL;
+
 public:
     char                     m_pstrFrameName[64];
     int Object_type = 0;
 
-    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
-    int n_Animation = 0;
-
-    CMesh* m_pMesh = NULL;
-    std::vector<std::shared_ptr<CMaterial>>  Material_list;
-
-
     std::shared_ptr<CGameObject> m_pParent = NULL;
-    std::shared_ptr<CGameObject> m_pRootModel = NULL;
+
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
 
@@ -720,12 +720,11 @@ public:
     virtual void AlignWithNormal(XMFLOAT3& newNormal);
 
 
-    //CGameObject* GetParent() { return(m_pParent); }
-    std::shared_ptr<CGameObject> GetParent_v2() { return(m_pParent); }
+    std::shared_ptr<CGameObject> GetParent() { return(m_pParent); }
     void UpdateTransform(XMFLOAT4X4* pxmf4x4Parent = NULL);
 
-    CGameObject* FindFrame(char* pstrFrameName);
-    std::shared_ptr<CGameObject> FindFrame_v2(const char* pstrFrameName);
+
+    std::shared_ptr<CGameObject> FindFrame(const char* pstrFrameName);
 
     CTexture* FindReplicatedTexture(_TCHAR* pstrTextureName);
 
@@ -737,20 +736,17 @@ public:
     void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
     void SetTrackAnimationPosition(int nAnimationTrack, float fPosition);
 
-    void SetRootMotion(bool bRootMotion)
-    {
-        if (m_pSkinnedAnimationController)
-            m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
-    }
+    void SetRootMotion(bool bRootMotion);
 
+    
     void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
 
     static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel);
-    static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes);
-    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
+    static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes);
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
 
-    static std::shared_ptr<CGameObject> Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
-    static CLoadedModelInfo* Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
+    static std::shared_ptr<CGameObject> Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+    static CLoadedModelInfo* Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
 
     static void PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent);
 
@@ -788,11 +784,6 @@ public:
     }
     virtual void SetupWeaponCollider() {};
 
-public:
-    static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
-    static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-    static void ClearMeshCache();
-
     //==================
 
     int m_nPlayerId = -1;
@@ -826,11 +817,11 @@ private:
     XMFLOAT2 Area_RB{};
 
 public:
-    CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, LPCTSTR pFileName,
+    CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
         int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1);
     virtual ~CHeightMapTerrain();
 
-    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature,
+    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature,
         LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
     void Set_Tile(int n);
 
@@ -867,7 +858,6 @@ public:
 class Boat_Object : public CGameObject
 {
 private:
-
     XMFLOAT3 wave_normal_vector{};
     float wave_height = 0.0f;
     float smoothedHeight = 0.0f;
@@ -880,7 +870,7 @@ private:
 
     bool Sail_Mode = true; // false == Stay_Mode
 public:
-    std::unordered_map<std::string, CGameObject*> Boat_Frames_Marker;
+    std::unordered_map<std::string, shared_ptr<CGameObject>> Boat_Frames_Marker;
 
 
     Boat_Object();
@@ -908,7 +898,7 @@ public:
     XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
     float Get_RotationSpeed() { return m_fRotationSpeed; }
 
-    void RegisterMarker(const std::string& name, CGameObject* node) { Boat_Frames_Marker[name] = node; }
+    void RegisterMarker(const std::string& name, shared_ptr<CGameObject> node) { Boat_Frames_Marker[name] = node; }
 
     bool GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outWorldPos);
 
@@ -921,18 +911,19 @@ public:
 
 class Plane_Object : public CGameObject
 {
+public:
+    static Plane_Shader* plane_shader;
+    static Deferred_Plane_Shader* deferred_plane_shader;
+
 private:
     CTexture* Plane_BaseTexture = NULL;
     CTexture* Plane_DetailTexture = NULL;
 
 public:
-    static Plane_Shader* plane_shader;
-    static Deferred_Plane_Shader* deferred_plane_shader;
-
     CMaterial* Plane_Material = NULL;
 
     Plane_Object() {}
-    Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+    Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, int nLength, XMFLOAT4 xmf4Color = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
     virtual ~Plane_Object();
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
@@ -944,8 +935,10 @@ public:
 
 class Wave_Object : public Plane_Object
 {
-private:
+public:
     static CS_Wave_Shader* cs_wave_shader;
+
+private:
     CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
     ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
 
@@ -963,7 +956,7 @@ private:
     float BoatPos_WaveHeight = 0.0f;
 
 public:
-    Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100, bool use_deferred_shader = true);
+    Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, int nLength, int side_vertex_n = 100, bool use_deferred_shader = true);
     virtual ~Wave_Object();
 
     void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -973,7 +966,6 @@ public:
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
-
 
 };
 
@@ -994,7 +986,7 @@ private:
     Trail_Mesh* trail_mesh = NULL;
     float m_fAccumulatedTime = 0.0f;
 
-    CGameObject* m_pTargetObject = nullptr;
+    shared_ptr<CGameObject> m_pTargetObject = nullptr;
     bool m_bUseTargetScale = true;
 
     XMFLOAT3 m_vLocalTop = {};
@@ -1008,79 +1000,62 @@ public:
     Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual ~Trail_Object();
 
-    void Set_Trail_Target(CGameObject* target, bool bUseScale = true)
-    {
-        m_pTargetObject = target;
-        m_bUseTargetScale = bUseScale;
-    }
-
-    void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom)
-    {
-        m_vLocalTop = top;
-        m_vLocalBottom = bottom;
-    }
+    void Set_Trail_Target(shared_ptr<CGameObject> target, bool bUseScale = true) { m_pTargetObject = target;  m_bUseTargetScale = bUseScale; }
+    void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom) { m_vLocalTop = top; m_vLocalBottom = bottom; }
 
     virtual void Animate(float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-    Trail_Mesh* GetTrailMesh() {
-        return trail_mesh;
-    }
+    Trail_Mesh* GetTrailMesh() { return trail_mesh; }
 
 };
 
 
 //==================================================================================
 
-
-//==================================================================================
 
 
 
 class CMonsterObject : public CGameObject
 {
-public:
-    //CMonsterObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel, int nAnimationTracks);
-    CMonsterObject() {};
-    virtual ~CMonsterObject();
-    virtual void Animate(float fTimeElapsed);
-    //std::unique_ptr<MonsterStateMachine>& GetStateMachine() { return m_StateMachine; }
-    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
-    int test_num{ 0 };
-    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-    virtual void SetupWeaponCollider();
 protected:
     std::unique_ptr<MonsterStateMachine> m_StateMachine;
+
+public:
+    int test_num{ 0 };
+
+    CMonsterObject() {};
+    virtual ~CMonsterObject();
+
+    virtual void Animate(float fTimeElapsed);
+    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void SetupWeaponCollider();
 };
 
 class CFishManObject : public CMonsterObject
 {
 public:
-    CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
     virtual ~CFishManObject() {};
 
-    FishManStateMachine* GetStateMachine() override {
-        return static_cast<FishManStateMachine*>(m_StateMachine.get());
-    }
+    FishManStateMachine* GetStateMachine() override { return static_cast<FishManStateMachine*>(m_StateMachine.get()); }
 };
 
 class CAnubisObject : public CMonsterObject
 {
 public:
-    CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
     virtual ~CAnubisObject() {};
 
-    AnubisStateMachine* GetStateMachine() override {
-        return static_cast<AnubisStateMachine*>(m_StateMachine.get());
-    }
+    AnubisStateMachine* GetStateMachine() override { return static_cast<AnubisStateMachine*>(m_StateMachine.get()); }
 };
 
 class CDragonObject : public CMonsterObject
 {
 public:
-    CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
     virtual ~CDragonObject() {};
 
-    DragonStateMachine* GetStateMachine() override {
-        return static_cast<DragonStateMachine*>(m_StateMachine.get());
-    }
+    DragonStateMachine* GetStateMachine() override { return static_cast<DragonStateMachine*>(m_StateMachine.get()); }
 };

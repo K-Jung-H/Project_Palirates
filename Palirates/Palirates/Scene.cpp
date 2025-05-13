@@ -7,6 +7,10 @@
 
 
 //=============================================================================================
+std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
+std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
+std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
+
 
 CScene::CScene()
 {
@@ -537,53 +541,45 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 }
 
-void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	BuildDefaultLightsAndMaterials();
-	
+	CS_Wave_Shader::Prepare_WaveParams();
+
 	obj_manager = new Object_Manager();
 
-	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature); 
+	auto com_deleter = [](ID3D12RootSignature* p) { if (p) p->Release(); };
 
-	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
+	if (!m_MRT_GraphicsRootSignature)
+		m_MRT_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_MRT_GraphicsRootSignature(pd3dDevice), com_deleter);
+
+	if (!m_Transparent_GraphicsRootSignature)
+		m_Transparent_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_Transparent_GraphicsRootSignature(pd3dDevice), com_deleter);
+
+	if (!m_Plane_GraphicsRootSignature)
+		m_Plane_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_Plane_GraphicsRootSignature(pd3dDevice), com_deleter);
+
+	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+}
+
+void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
 	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 	Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
-	{
-		in_game_wave = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-		in_game_wave->Set_Name("wave_1");
-		in_game_wave->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+#ifdef RENDER_WAVE
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	wave_obj->Set_Name("in_game_wave");
+	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
 
-		in_game_wave->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-		in_game_wave->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-		obj_manager->Add_Object(in_game_wave, Object_Type::plane);
-		obj_manager->wave_obj = in_game_wave.get();
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	obj_manager->Set_Wave_Object(wave_obj);
+#endif
 
-		{
-			CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
-			CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
-			CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;                            // Minimum wave height
-			CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;                            // Maximum wave height
-			CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
-			CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
-			CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
-			CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
-
-			// === Boat Wake Parameters ===
-			CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
-			CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
-			CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
-			CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
-
-			// === Time ===
-			CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
-			CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
-		}
-	}
 
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
@@ -637,11 +633,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
-
-	for_demo_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
-	for_demo_dragonfire->Set_Main_Direction(XMFLOAT3(1.0f, 0.0f, 0.0f));
-	for_demo_dragonfire->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
-	for_demo_dragonfire->Set_Active(false);
 	
 #endif
 
@@ -699,11 +690,10 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
-#ifdef LOAD_SCENE
-	// Load Scene
 
-	//	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File/TST.bin", NULL);
-	//	CLoadedModelInfo* //Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_2/OBB_Test_Scene.bin", NULL);
+#ifdef LOAD_SCENE
+
+
 		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_3/Scene_Name.bin", NULL);
 
 
@@ -848,12 +838,14 @@ void CScene::ReleaseObjects()
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr.reset();
 		
-		if (m_pSkyBox) delete m_pSkyBox;
+		if (m_pSkyBox) 
+			delete m_pSkyBox;
 
 
 	ReleaseShaderVariables();
 
-	if (m_pLights) delete[] m_pLights;
+	if (m_pLights) 
+		delete[] m_pLights;
 }
 
 
@@ -1045,13 +1037,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		}		break;
 
-		case 'O':
-		{
-			for_demo_dragonfire_button = !for_demo_dragonfire_button;
-			if (for_demo_dragonfire)
-				for_demo_dragonfire->Set_Active(for_demo_dragonfire_button);
-		}		break;
-
 		case 'V':
 		{
 			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1155,18 +1140,14 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 }
 
-void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float fTimeElapsed)
+void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;
-	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;
-	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.1f;
-
 	obj_manager->Animate_Objects_All(fTimeElapsed);
 
 	if (Shader_list.size())
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr->AnimateObjects(fTimeElapsed);
-	
+
 	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
 	if (list) {
 		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
@@ -1186,7 +1167,7 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 				const char* objName = obj->Get_Name();
 				CMonsterObject* monster = dynamic_cast<CMonsterObject*>(obj.get());
 				if (strcmp(objName, "Dragon") == 0 && monster->GetStateMachine()->Get_State() == State::Attack3) {
-					CGameObject* weapon = obj->FindFrame(obj->WeaponName);
+					shared_ptr<CGameObject> weapon = obj->FindFrame(obj->WeaponName);
 
 					if (weapon) {
 						XMMATRIX worldMatrix = XMLoadFloat4x4(&weapon->WeaponMatrix);
@@ -1196,8 +1177,8 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 
 						XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
 
-						float forwardOffset = 10.0f;  
-						float heightOffset = -5.0f;  
+						float forwardOffset = 10.0f;
+						float heightOffset = -5.0f;
 
 						XMVECTOR offsetVec = forward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
 
@@ -1217,23 +1198,21 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList *pd3dCommandList, float f
 		}
 	}
 
-	if (for_demo_dragonfire_button)
-	{
-		static float totalTime = 0.0f;
-		totalTime += fTimeElapsed;
+#ifdef RENDER_WAVE
 
-		float centerZ = 741.0f + 100.0f * sinf(totalTime * 1.0f);
-		XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 10.0f, centerZ);
-		//for_demo_dragonfire->Set_Center(centerPos);
-		for_demo_dragonfire->SetPosition(centerPos);
-	}
+	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;
+	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;
+	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.1f;
 
-
-	if (in_game_wave)
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
 	{
 		Plane_Shader::Update(fTimeElapsed);
-		in_game_wave->Animate(pd3dCommandList, fTimeElapsed);
+		wave_obj->Animate(pd3dCommandList, fTimeElapsed);
 	}
+#endif
+
+
 }
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1251,7 +1230,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (m_pPlayer->GetTrailOn())
 	{
 		if (!m_pPlayer->GetTrailStart()) {
-			CGameObject* trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+			shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 			trail_obj->Set_Trail_Target(trail_target, false);
 			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -1285,21 +1264,30 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
-	if(in_game_wave)
-		in_game_wave->Copy_Buffer_Data(pd3dCommandList);
+#ifdef RENDER_WAVE
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+		wave_obj->Copy_Buffer_Data(pd3dCommandList);
+#endif
 
 }
 
 void CScene::After_Update_Objects()
 {
-	if (in_game_wave)
-		in_game_wave->Readback_Buffer_Data();
+
+#ifdef RENDER_WAVE
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+		wave_obj->Readback_Buffer_Data();
+
+#endif
+
 }
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_MRT_GraphicsRootSignature)
-		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature);
+		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
 	pCamera->Update_Render_ShaderVariables(pd3dCommandList);
 	pCamera->Update_Last_Frame_Info(pd3dCommandList);
@@ -1317,27 +1305,27 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 //	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	Fog_Trigger = true;
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
-	
 
-	//if (Shader_list.size())
-	//	for (std::shared_ptr<CShader> shader_ptr : Shader_list)
-	//		shader_ptr->Render_Objects(pd3dCommandList, pCamera);
 }
 
 void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_Transparent_GraphicsRootSignature)
-		pd3dCommandList->SetGraphicsRootSignature(m_Transparent_GraphicsRootSignature);
+		pd3dCommandList->SetGraphicsRootSignature(m_Transparent_GraphicsRootSignature.get());
 
 	pCamera->Update_Render_ShaderVariables(pd3dCommandList);
+
+
 }
 
 void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, pCamera);
 
-	//pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
-	//obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
+#ifdef RENDER_WAVE
+	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
+	obj_manager->Render_Wave(pd3dCommandList, pCamera);
+#endif
 
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
@@ -1367,13 +1355,7 @@ void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	BuildDefaultLightsAndMaterials();
-
-	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
-	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 
 #ifdef RENDER_PARTICLE
@@ -1461,16 +1443,13 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	BuildDefaultLightsAndMaterials();
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
 	m_pLights[0].m_bEnable = true;
 	m_pLights[1].m_bEnable = true;
 	m_pLights[2].m_bEnable = true;
 	m_pLights[3].m_bEnable = false;
 
-	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
-	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
@@ -1478,8 +1457,6 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-
-	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
 	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
@@ -1692,14 +1669,10 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	BuildDefaultLightsAndMaterials();
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 	m_pLights[8].m_bEnable = true;
 
-	m_MRT_GraphicsRootSignature = Create_MRT_GraphicsRootSignature(pd3dDevice);
-	m_Plane_GraphicsRootSignature = Create_Plane_GraphicsRootSignature(pd3dDevice);
-	m_Transparent_GraphicsRootSignature = Create_Transparent_GraphicsRootSignature(pd3dDevice);
-	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
 
 #ifdef RENDER_PARTICLE
@@ -1708,24 +1681,21 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	particle_manager->BuildObjects(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	obj_manager = new Object_Manager();
 
 #ifdef RENDER_OBB
 	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
+#ifdef RENDER_WAVE
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 100, true);
+	wave_obj->Set_Name("board_scene_wave");
+	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
-	wave_plane = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000);
-	wave_plane->Set_Name("wave_1");
-	wave_plane->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
-
-	wave_plane->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
-	wave_plane->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
-	obj_manager->Add_Object(wave_plane, Object_Type::plane);
-	obj_manager->wave_obj = wave_plane.get();
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
+	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
+	obj_manager->Set_Wave_Object(wave_obj);
+#endif
 
 	//=====================================================
 	{
@@ -1803,8 +1773,6 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 		pirate_ship->SetScale({ 3.0f, 3.0f, 3.0f }, true);
 		obj_manager->Add_Object(pirate_ship, Object_Type::non_skinned);
-		pirate_ship->Obj_Info();
-
 
 		pirate_ship->RegisterMarker("Captain", pirate_ship->FindFrame("Captain_pos"));
 		pirate_ship->RegisterMarker("Sailor_0", pirate_ship->FindFrame("Sailor_Pos_0"));
@@ -1870,40 +1838,29 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	{
-		CS_Wave_Shader::update_wave_info->g_WaveSpeed = 0.5f;                            // Wave propagation speed
-		CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;                           // Damping factor for height interpolation
-		CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;                            // Minimum wave height
-		CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;                            // Maximum wave height
-		CS_Wave_Shader::update_wave_info->g_BaseSpacing = 0.01f;                           // Base spacing for wave pattern
-		CS_Wave_Shader::update_wave_info->g_BaseSharpness = 0.9f;                            // Wave sharpness (peak shaping)
-		CS_Wave_Shader::update_wave_info->g_BandSize = 30.0f;                         // Vertical layer height (band size)
-		CS_Wave_Shader::update_wave_info->g_AngleOffsetPerBand = XMConvertToRadians(5.1f);       // Direction offset per band in radians
-
-		// === Boat Wake Parameters ===
-		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
-		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
-		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
-		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
-
-		// === Time ===
-		CS_Wave_Shader::update_wave_info->g_TotalTime = 0.0f;							// Total accumulated time (in seconds)
-		CS_Wave_Shader::update_wave_info->_padding = 0.0f;                                      // Padding for 16-byte alignment
-	}
-
 }
 
 void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+
+#ifdef RENDER_WAVE
+
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;
 	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;
 	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;
 
 	Deferred_Plane_Shader::Update(fTimeElapsed);
 
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 
-	wave_plane->Synchronize_Wave_to_Boat(pirate_ship.get());
-	wave_plane->Animate(pd3dCommandList, fTimeElapsed);
+	if (wave_obj)
+	{
+		wave_obj->Synchronize_Wave_to_Boat(pirate_ship.get());
+		wave_obj->Animate(pd3dCommandList, fTimeElapsed);
+	}
+
+#endif
+
 
 	pirate_ship->Animate(fTimeElapsed);
 	pirate_ship->HandleBoundaryReflection(1500.0f);
@@ -1919,17 +1876,14 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	XMFLOAT3 bottom_head_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
 
-	//water_particle_1->Set_Center(bottom_head_particle_pos);
-	water_particle_1->SetPosition(bottom_head_particle_pos);
 
+	water_particle_1->SetPosition(bottom_head_particle_pos);
 	water_particle_1->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 
 	XMFLOAT3 bottom_tail_particle_pos;
 	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
 
-	//water_particle_2->Set_Center(bottom_tail_particle_pos);
 	water_particle_2->SetPosition(bottom_tail_particle_pos);
-
 	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
 #endif
 
@@ -1943,7 +1897,11 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	wave_plane->Copy_Buffer_Data(pd3dCommandList);
+#ifdef RENDER_WAVE
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+		wave_obj->Copy_Buffer_Data(pd3dCommandList);
+#endif
 
 	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
 
@@ -1989,9 +1947,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 void Board_Scene::After_Update_Objects()
 {
-	wave_plane->Readback_Buffer_Data();
-
 	CScene::After_Update_Objects();
+
 }
 
 void Board_Scene::SetCameraTarget(std::string_view target)
@@ -2028,8 +1985,12 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 
-	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature);
-	obj_manager->Render_Objects(Object_Type::plane, pd3dCommandList, pCamera);
+#ifdef RENDER_WAVE
+	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get()); // Wave_RootSignature
+	obj_manager->Render_Wave(pd3dCommandList, pCamera);
+#endif
+
+
 
 	Fog_Trigger = false;
 }
@@ -2110,5 +2071,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
 }
 
