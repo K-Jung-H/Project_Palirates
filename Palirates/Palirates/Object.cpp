@@ -562,30 +562,33 @@ CShader* CMaterial::m_pStandardShader = NULL;
 
 void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	//if (m_pStandardShader)
-	//{
-	m_pStandardShader = new Deferred_CStandard_Shader();
-	m_pStandardShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-	m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	//}
+	if (!m_pStandardShader)
+	{
+		m_pStandardShader = new Deferred_CStandard_Shader();
+		m_pStandardShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		m_pStandardShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
 
-	//if (m_pSkinnedAnimationShader)
-	//{
-	m_pSkinnedAnimationShader = new Deferred_CSkinnedAnimationStandardShader();
-	m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-	m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	//}
+	if (!m_pSkinnedAnimationShader)
+	{
+		m_pSkinnedAnimationShader = new Deferred_CSkinnedAnimationStandardShader();
+		m_pSkinnedAnimationShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		m_pSkinnedAnimationShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
 
-	//if (Object_Manager::instance_shader)
-	//{
-	Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
-	Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-	Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	if (!Object_Manager::instance_shader)
+	{
+		Object_Manager::instance_shader = std::make_shared<Deferred_CStandard_Instance_Shader>();
+		Object_Manager::instance_shader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
 
-	//Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-	//Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	//Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-//}
+	if (!Object_Manager::trail_shader)
+	{
+		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
 }
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)

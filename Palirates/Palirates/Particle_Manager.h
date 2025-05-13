@@ -86,7 +86,7 @@ class Spread_ParticleShader : public ParticleShader
 
 class Sand_ParticleShader : public ParticleShader
 {
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
@@ -100,6 +100,8 @@ class Grid_Builder;
 class Particle_Manager
 {
 private:
+	static bool is_cs_shader_compiled;
+
 	unique_ptr<Grid_Builder> grid_builder;
 
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
@@ -117,7 +119,7 @@ public:
 	~Particle_Manager();
 	void Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
-	void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	void Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
 	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);
 	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);

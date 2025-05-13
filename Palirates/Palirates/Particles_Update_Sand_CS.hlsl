@@ -94,7 +94,8 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
-    if (DelayActive(p))
+    bool isDelayed = DelayActive(p);
+    if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
@@ -157,7 +158,8 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
-    if (DelayActive(p))
+    bool isDelayed = DelayActive(p);
+    if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
@@ -214,7 +216,8 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
-    if (DelayActive(p))
+    bool isDelayed = DelayActive(p);
+    if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
