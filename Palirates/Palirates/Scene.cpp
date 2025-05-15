@@ -639,7 +639,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
@@ -669,15 +669,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		AnubisObject->SetupWeaponCollider();
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
-		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		Dragon->Set_Child(Dragon->m_pRootModel);
-		Dragon->SetupWeaponCollider();
-		Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
-		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
-		Dragon->Rotate(&tt2, 180.0f);
-		Dragon->test_num = 5;
-		obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		//std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		//Dragon->Set_Child(Dragon->m_pRootModel);
+		//Dragon->SetupWeaponCollider();
+		//Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
+		//Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+		//XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+		//Dragon->Rotate(&tt2, 180.0f);
+		//Dragon->test_num = 5;
+		//obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
 		for (int i = 0; i < 5; i++)
@@ -721,8 +721,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		Object_Manager::Reserve_Update();
 
-		obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
-		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 
 	}
 
@@ -1220,7 +1220,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #ifdef RENDER_OBB
 
 	// Update every frame
-	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
 
 #endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
@@ -1245,6 +1245,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			m_pPlayer->GetTrailObj()->Set_Active(true);
 		}
 	}
+
 
 
 	if (test_sand && test_sand->Update_Func_Index == 1)
@@ -1336,7 +1337,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 #ifdef RENDER_OBB
 	if (bOBBRender)
-		obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
+		obj_manager->Render_OBB(pd3dCommandList, pCamera);
 #endif
 
 	// For UI
@@ -1457,7 +1458,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	//=====================================================
@@ -1680,7 +1681,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 
 #ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 

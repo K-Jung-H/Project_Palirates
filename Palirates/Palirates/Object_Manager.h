@@ -71,42 +71,120 @@ public:
 };
 
 
-class Object_Manager;
 
-class OBB_Drawer 
+class OBB_Renderer
 {
-public:
-	OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
-	~OBB_Drawer();
-
-	void Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	void Release_OBB_Data_ShaderVariables();
-
-	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type, Object_Manager* obj_mgr);
-	static bool Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world);
-
-	void Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
-
-private:
-	void Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list);
-	void Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map);
-	
-	//bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
-	std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
-
-	void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited);
-
 private:
 	static CubeMesh* obb_Mesh;
 	static BoundingBox_Shader* obb_shader;
 
+private:
 	ID3D12Resource* Instance_info = nullptr;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView{};
 	BoundingBox_Instance_Info* Mapped_Instance_info = nullptr;
 
 	int obb_instance_buffer_max_num = 64;
 	int rendering_num = 0;
+
+public:
+	OBB_Renderer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	~OBB_Renderer();
+
+	void Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void Release_OBB_Data_ShaderVariables();
+
+	void Update_Fixed(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map);
+	void Update_Dynamic(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,  std::vector<std::shared_ptr<CGameObject>>& obj_list);
+
+	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<std::shared_ptr<CGameObject>>& obj_list);
+	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map);
+	
+	void Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 };
+
+namespace DirectX
+{
+	inline bool operator==(const XMINT3& lhs, const XMINT3& rhs)
+	{
+		return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+	}
+}
+
+struct XMINT3Hasher
+{
+	std::size_t operator()(const XMINT3& k) const noexcept
+	{
+		return std::hash<int>()(k.x) ^ std::hash<int>()(k.y << 1) ^ std::hash<int>()(k.z << 2);
+	}
+};
+
+struct OBB_Info
+{
+	std::shared_ptr<CGameObject> object;
+	std::shared_ptr<CMesh> mesh;
+	BoundingOrientedBox obb;
+	UINT type = 0;
+};
+
+class OBBCollision_Manager
+{
+private:
+	std::vector<OBB_Info> obb_objects;
+	std::unordered_map<XMINT3, std::vector<UINT>, XMINT3Hasher> uniform_cell_map;
+	float grid_cell_size = 100.0f;
+
+private:
+	XMINT3 Get_CellIndexFromPosition(const XMFLOAT3& pos) const;
+	void Compute_CellBounds_From_OBB(const BoundingOrientedBox& obb, XMINT3& out_min_cell, XMINT3& out_max_cell) const;
+	void Register_OBB_To_Cells(const BoundingOrientedBox& obb, UINT index);
+
+public:
+	OBBCollision_Manager() = default;
+	~OBBCollision_Manager() = default;
+
+	void Clear();
+
+	void Update_OBB_Data(const std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map);
+
+	void Build_UniformGrid(float cellSize); // Rebuilds the cell map from existing OBBs using the given cell size.
+	void Add_OBB(const OBB_Info& info);
+
+	bool Check_Collision(const BoundingOrientedBox& obb) const;
+};
+
+class OBB_Manager 
+{
+private:
+	unique_ptr<OBB_Renderer> fixed_obb_renderer;
+	unique_ptr<OBB_Renderer> dynamic_obb_renderer;
+	unique_ptr<OBBCollision_Manager> collision_manager;
+
+public:
+	OBB_Manager(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	~OBB_Manager();
+
+
+	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<shared_ptr<CGameObject>>& obj_list);
+	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map);
+
+	void Render_OBB(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
+
+
+public:
+	bool Check_Collision(const BoundingOrientedBox& obb) const;
+
+
+
+public:
+	static XMMATRIX Build_OBB_WorldMatrix(const BoundingOrientedBox& obb, bool transpose = true);
+	static XMMATRIX Build_Weapon_OBB_WorldMatrix(const BoundingOrientedBox& obb, CXMMATRIX customRot, bool transpose = true);
+
+	static bool Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix);
+	static bool Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world);
+	static void FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited);
+
+};
+
 
 
 class Object_Manager
@@ -134,7 +212,7 @@ private:
 	void Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container);
 
 	// OBB drawer map per object type
-	std::unordered_map<Object_Type, std::shared_ptr<OBB_Drawer>> obb_drawer_map;
+	std::unique_ptr<OBB_Manager> obb_manager;
 
 public:
 	// Constructor / Destructor
@@ -189,11 +267,9 @@ public:
 
 
 	// OBB drawer management
-	void Create_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
-	void Create_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
-	void Update_OBB_Drawer(Object_Type type, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	void Update_OBB_Drawers(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
-	void Render_OBB_Drawers(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
+	void Create_OBB_Manager(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type);
+	void Render_OBB(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 
 
 	void Classify_Objects_By_Tile();
