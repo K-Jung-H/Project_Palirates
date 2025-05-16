@@ -639,6 +639,25 @@ ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
 	return data;
 }
 
+
+void CPlayer::SendAnimationUpdate() 
+{
+	std::vector<std::pair<uint8_t, float>> changedTracks;
+
+	for (int i = 0; i < m_AnimationTracks.size(); ++i) {
+		float newWeight = GetAnimationWeight(i);
+		if (abs(newWeight - m_AnimationTracks[i].m_fWeight) > 0.01f) {
+			changedTracks.emplace_back(i, newWeight);
+			m_AnimationTracks[i].m_fWeight = newWeight;
+		}
+	}
+
+	if (!changedTracks.empty()) {
+		AnimationWeightPacket packet = { 3, GetPlayerID(), (uint8_t)changedTracks.size(), changedTracks };
+		CGameFramework::GetInstance()->SendAnimationPacket(packet);
+	}
+}
+
 void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
@@ -651,6 +670,9 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 	}
 	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
 }
+
+
+
 //º¸·ù
 
 //==================================================================
