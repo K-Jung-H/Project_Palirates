@@ -10,7 +10,7 @@
 // CPlayer
 
 CPlayer::CPlayer() 
-	//: )
+
 {
 	
 	m_StateMachine = std::make_unique<PlayerStateMachine>(this);
@@ -86,6 +86,9 @@ void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
 	if (bUpdateVelocity)
 	{
 		m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+		if (!m_bSliding)
+			m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, xmf3Shift);
+
 	}
 	else
 	{
@@ -162,60 +165,64 @@ void CPlayer::Animate_test()
 
 void CPlayer::Update(float fTimeElapsed)
 {
-	CPlayer* a = this;
-	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
-
-	float fLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
-
-	float fMaxVelocityXZ = m_fMaxVelocityXZ;
-	float fMaxVelocityY = m_fMaxVelocityY;
-
-	if (fLength > m_fMaxVelocityXZ)
+	if (m_bSliding)
 	{
-		m_xmf3Velocity.x *= (fMaxVelocityXZ / fLength);
-		m_xmf3Velocity.z *= (fMaxVelocityXZ / fLength);
+		float speed = Vector3::Length(m_xmf3Velocity) * 0.5;
+		XMFLOAT3 direction = Vector3::Normalize(m_xmf3SlideVector);
+		m_xmf3Velocity = Vector3::ScalarProduct(direction, speed, false);
+		DisableSliding();
 	}
 
-	XMFLOAT3 look = GetLook();   
-	XMFLOAT3 right = GetRight();
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, m_xmf3Gravity);
 
+	float fXZLength = sqrtf(m_xmf3Velocity.x * m_xmf3Velocity.x + m_xmf3Velocity.z * m_xmf3Velocity.z);
+	if (fXZLength > m_fMaxVelocityXZ)
+	{
+		float ratio = m_fMaxVelocityXZ / fXZLength;
+		m_xmf3Velocity.x *= ratio;
+		m_xmf3Velocity.z *= ratio;
+	}
+
+	XMFLOAT3 look = GetLook();
+	XMFLOAT3 right = GetRight();
 	XMFLOAT3 velocityXZ = XMFLOAT3(m_xmf3Velocity.x, 0.0f, m_xmf3Velocity.z);
 	float velocityLength = Vector3::Length(velocityXZ);
-	XMFLOAT3 normalizedVelocity = velocityLength > 0.0f ? Vector3::Normalize(velocityXZ) : XMFLOAT3(0, 0, 0);
+	XMFLOAT3 normalizedVelocity = (velocityLength > 0.0f) ? Vector3::Normalize(velocityXZ) : XMFLOAT3(0, 0, 0);
 
-	moveZ = Vector3::DotProduct(normalizedVelocity, look);  
-	moveX = Vector3::DotProduct(normalizedVelocity, right); 
+	moveZ = Vector3::DotProduct(normalizedVelocity, look);
+	moveX = Vector3::DotProduct(normalizedVelocity, right);
 
-	fLength = sqrtf(m_xmf3Velocity.y * m_xmf3Velocity.y);
+	float fYLength = fabsf(m_xmf3Velocity.y);
+	if (fYLength > m_fMaxVelocityY)
+	{
+		m_xmf3Velocity.y *= (m_fMaxVelocityY / fYLength);
+	}
 
-	if (fLength > m_fMaxVelocityY) 
-		m_xmf3Velocity.y *= (fMaxVelocityY / fLength);
+	XMFLOAT3 scaledVelocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	Move(scaledVelocity, false);
 
-	XMFLOAT3 xmf3Velocity = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
-	Move(xmf3Velocity, false);
-
-	if (m_pPlayerUpdatedContext) 
+	if (m_pPlayerUpdatedContext)
 		OnPlayerUpdateCallback(fTimeElapsed);
 
-	DWORD nCurrentCameraMode = m_pCamera->GetMode();
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
-		m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+	if (m_pCamera)
+	{
+		DWORD nCurrentCameraMode = m_pCamera->GetMode();
+		if (nCurrentCameraMode == THIRD_PERSON_CAMERA)
+		{
+			m_pCamera->Update(m_xmf3Position, fTimeElapsed);
+			m_pCamera->SetLookAt(m_xmf3Position);
+		}
+		if (m_pCameraUpdatedContext)
+			OnCameraUpdateCallback(fTimeElapsed);
 
-	if (m_pCameraUpdatedContext) 
-		OnCameraUpdateCallback(fTimeElapsed);
+		m_pCamera->RegenerateViewMatrix();
+	}
 
-	if (nCurrentCameraMode == THIRD_PERSON_CAMERA) 
-		m_pCamera->SetLookAt(m_xmf3Position);
+	float speed = Vector3::Length(m_xmf3Velocity);
+	float frictionAmount = m_fFriction * fTimeElapsed;
+	if (frictionAmount > speed) frictionAmount = speed;
 
-	m_pCamera->RegenerateViewMatrix();
-
-	fLength = Vector3::Length(m_xmf3Velocity);
-	float fDeceleration = (m_fFriction * fTimeElapsed);
-
-	if (fDeceleration > fLength) 
-		fDeceleration = fLength;
-
-	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -fDeceleration, true));
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -frictionAmount, true));
 }
 
 CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
@@ -480,7 +487,9 @@ CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case THIRD_PERSON_CAMERA:
+//			SetFriction(10.0f);
 			SetFriction(800.0f);
+//			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
 			SetGravity(XMFLOAT3(0.0f, -250.0f, 0.0f));
 			SetMaxVelocityXZ(500.0f);
 			SetMaxVelocityY(400.0f);

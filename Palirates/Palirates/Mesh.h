@@ -99,12 +99,8 @@ public:
 	BoundingOrientedBox* Get_BoundingBox() { return bounding_box; };
 	void Set_BoundingBox(BoundingOrientedBox* obb_ptr);
 
-	XMFLOAT3 GetAABBCenter() {
-		return m_xmf3AABBCenter;
-	}
-	XMFLOAT3 GetAABBExtents() {
-		return m_xmf3AABBExtents;
-	}
+	XMFLOAT3 GetAABBCenter() { return m_xmf3AABBCenter; }
+	XMFLOAT3 GetAABBExtents() { return m_xmf3AABBExtents; }
 };
 
 class OBBContainer : public CMesh

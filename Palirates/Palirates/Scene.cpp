@@ -637,7 +637,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #endif
 
 
-
 #ifdef RENDER_OBB
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
@@ -669,15 +668,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		AnubisObject->SetupWeaponCollider();
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 
-		//std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-		//Dragon->Set_Child(Dragon->m_pRootModel);
-		//Dragon->SetupWeaponCollider();
-		//Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
-		//Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
-		//XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
-		//Dragon->Rotate(&tt2, 180.0f);
-		//Dragon->test_num = 5;
-		//obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		Dragon->Set_Child(Dragon->m_pRootModel);
+		Dragon->SetupWeaponCollider();
+		Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
+		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
+		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
+		Dragon->Rotate(&tt2, 180.0f);
+		Dragon->test_num = 5;
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
 		for (int i = 0; i < 5; i++)
@@ -1323,11 +1322,6 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 {
 	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, pCamera);
 
-#ifdef RENDER_WAVE
-	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
-	obj_manager->Render_Wave(pd3dCommandList, pCamera);
-#endif
-
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 	{
@@ -1340,6 +1334,10 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 		obj_manager->Render_OBB(pd3dCommandList, pCamera);
 #endif
 
+#ifdef RENDER_WAVE
+	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
+	obj_manager->Render_Wave(pd3dCommandList, pCamera);
+#endif
 	// For UI
 	//if (Shader_list.size())
 	//	for (std::shared_ptr<CShader> shader_ptr : Shader_list)
@@ -1376,8 +1374,6 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	m_fElapsedTime = fTimeElapsed;
-
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -1533,7 +1529,6 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 		obj->SetLookDirection(lookDir);
 	}
-	m_fElapsedTime = fTimeElapsed;
 
 	static float m_fAccumulatedTime = 0.0f;
 	m_fAccumulatedTime += fTimeElapsed;

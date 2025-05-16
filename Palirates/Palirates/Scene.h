@@ -105,9 +105,6 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;
 
 public:
-	float								m_fElapsedTime = 0.0f;
-
-
 	Particle_Manager* particle_manager = NULL;
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;

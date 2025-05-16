@@ -149,7 +149,8 @@ public:
 	void Build_UniformGrid(float cellSize); // Rebuilds the cell map from existing OBBs using the given cell size.
 	void Add_OBB(const OBB_Info& info);
 
-	bool Check_Collision(const BoundingOrientedBox& obb) const;
+	std::vector<OBB_Info> Get_Nearby_OBBs(const BoundingOrientedBox& obb) const;
+	std::vector<OBB_Info> Check_OBB_Collisions(const BoundingOrientedBox& obb) const;
 };
 
 class OBB_Manager 
@@ -172,7 +173,7 @@ public:
 
 public:
 	bool Check_Collision(const BoundingOrientedBox& obb) const;
-
+	bool Resolve_Slide_On_Collision(BoundingOrientedBox& playerOBB, XMVECTOR& inOutMoveDir) const; // If collision occurs -> Dir == OBB Sliding
 
 
 public:

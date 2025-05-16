@@ -805,7 +805,6 @@ void CGameFramework::ProcessInput()
 
 void CGameFramework::Animate_Scene()
 {
-	HRESULT hResult;
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
@@ -824,37 +823,31 @@ void CGameFramework::Animate_Scene()
 
 	//===============================================================
 
+
+	if (m_pPlayer)
+		m_pPlayer->Animate(fTimeElapsed);
+
+
 	if (multiMode)
 	{
-		if (m_pPlayer)
-		{
-			m_pPlayer->Animate(m_GameTimer.GetTimeElapsed());
-			m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-		}
 		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
-		{
 			if (remotePlayer)
-			{
-				remotePlayer->Animate(m_GameTimer.GetTimeElapsed());
-				remotePlayer->Update(m_GameTimer.GetTimeElapsed());
-			}
-		}
+				remotePlayer->Animate(fTimeElapsed);
 	}
 	else
 	{
-		m_pPlayer->Animate(fTimeElapsed);
-		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-
 		static bool dead = false;
 		// Weapon Drop EX
-		if (!dead) {
+		if (!dead) 
+		{
 			if (m_pPlayer->GetStateMachine()->Get_State() == State::Knock_Down) {
 				auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
 				scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
 				dead = true;
 			}
 		}
-		else {
+		else 
+		{
 			if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down) {
 				m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
 				dead = false;
@@ -865,8 +858,25 @@ void CGameFramework::Animate_Scene()
 
 void CGameFramework::Update_Scene()
 {
+	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
+
 	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList);
+
+	if (m_pPlayer)
+		m_pPlayer->Update(fTimeElapsed);
+
+	if (multiMode)
+	{
+		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
+			if (remotePlayer)
+				remotePlayer->Update(fTimeElapsed);
+
+	}
 }
+
+
+
+
 
 void CGameFramework::After_Update_Scene()
 {
