@@ -183,8 +183,8 @@ struct Light_Material_Info
     XMFLOAT4 gEmissive;    // Emissive: rgb + intensity
 
     Light_Material_Info()
-        : gRoughness(0.5f),
-        gMetallic(0.0f),
+        : gRoughness(0.9f),
+        gMetallic(0.001f),
         gSpecular(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f)),
         gEmissive(XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f)),
         padding0(0.0f),

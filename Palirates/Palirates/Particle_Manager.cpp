@@ -439,7 +439,7 @@ D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateComputeShader(ID3DBlob** ppd3
 
 //------------------------------------------------------------------------------------------------
 
-void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature)
+void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	//==================================================
 	// Common Variables Part
@@ -447,7 +447,7 @@ void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_ngraphicsPipelineStates = 1;
 	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature, 0);
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0);
 
 	if (common_ComputeRootSignature == NULL)
 		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
@@ -497,6 +497,7 @@ D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dS
 
 
 //===================================================================
+ bool Particle_Manager::is_cs_shader_compiled = false;
 
 Particle_Manager::Particle_Manager()
 {
@@ -508,6 +509,18 @@ Particle_Manager::~Particle_Manager()
 }
 
 void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	if (is_cs_shader_compiled)
+		return;
+	else
+	{
+		Build_Shader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		is_cs_shader_compiled = true;
+	}
+
+}
+
+void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	ParticleShader* spread_shader = new Spread_ParticleShader();
 	spread_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
@@ -525,10 +538,6 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 	particle_shader_map[Particle_Type::sample_2] = NULL;
 }
 
-void Particle_Manager::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
-{
-}
-
 void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
 {
 	UINT obbCount = std::min(static_cast<UINT>(obb_container.size()), MAX_OBBS);
@@ -538,7 +547,9 @@ void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice,
 
 	m_OBBBufferTexture = new CTexture(1, RESOURCE_STRUCTURED_BUFFER, 0, 0, 0, 1, 0, 0, 1);
 	m_OBBBufferTexture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, obbCount ? (void*)obb_container.data() : nullptr, obbCount, sizeof(GPU_OBB), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+
 	OBB_num = obbCount;
+
 	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, m_OBBBufferTexture, 0, 5);
 
 	//============================================
