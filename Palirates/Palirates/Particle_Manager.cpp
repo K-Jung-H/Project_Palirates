@@ -16,6 +16,11 @@ D3D12_PRIMITIVE_TOPOLOGY_TYPE ParticleShader::GetPrimitiveTopologyType(int nPipe
 {
 	if (nPipelineState == 0)
 		return (D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	else if(nPipelineState == 1)
+		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	else
+		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
 }
 
 UINT ParticleShader::GetNumRenderTargets(int nPipelineState)
@@ -35,17 +40,34 @@ DXGI_FORMAT ParticleShader::GetDSVFormat(int nPipelineState)
 
 D3D12_SHADER_BYTECODE ParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
+	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "VSParticleDraw", "vs_5_1", ppd3dShaderBlob));
+	else if(nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particle.hlsl", "VS_BILLBOARD_PARTICLE_DRAW", "vs_5_1", ppd3dShaderBlob);
+	else
+		return(CShader::CreateVertexShader(ppd3dShaderBlob, 0));
+	
+
 }
 
 D3D12_SHADER_BYTECODE ParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-	return(CShader::CreateGeometryShader(ppd3dShaderBlob, 0));
+	if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particle.hlsl", "GS_BILLBOARD_PARTICLE_DRAW", "gs_5_1", ppd3dShaderBlob);
+	else
+		return CShader::CreateGeometryShader(ppd3dShaderBlob, 0);
+
 }
 
 D3D12_SHADER_BYTECODE ParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
-		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_Transparent_ParticleDraw", "ps_5_1", ppd3dShaderBlob)); //PS_Deffered_ParticleDraw
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_Transparent_ParticleDraw", "ps_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_BILLBOARD_PARTICLE_DRAW", "ps_5_1", ppd3dShaderBlob);
+	else
+		return(CShader::CreatePixelShader(ppd3dShaderBlob, 0));
+
 }
 
 
@@ -110,17 +132,32 @@ D3D12_DEPTH_STENCIL_DESC ParticleShader::CreateDepthStencilState(int nPipelineSt
 D3D12_INPUT_LAYOUT_DESC ParticleShader::CreateInputLayout(int nPipelineState)
 {
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-	UINT nInputElementDescs = 4;
-	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+	if (nPipelineState == 0)
+	{
+		UINT nInputElementDescs = 4;
+		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-	pd3dInputElementDescs[1] = { "INSTANCE_POS_SCALE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
-	pd3dInputElementDescs[2] = { "INSTANCE_VELOCITY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
-	pd3dInputElementDescs[3] = { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[1] = { "INSTANCE_POS_SCALE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[2] = { "INSTANCE_VELOCITY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[3] = { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
-	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
-	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+		d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+		d3dInputLayoutDesc.NumElements = nInputElementDescs;
+	}
+	else if (nPipelineState == 1)
+	{
+		UINT nInputElementDescs = 3;
+		D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+		pd3dInputElementDescs[0] = { "INSTANCE_POS_SCALE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[1] = { "INSTANCE_VELOCITY", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[2] = { "INSTANCE_COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+
+		d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+		d3dInputLayoutDesc.NumElements = nInputElementDescs;
+	}
 	return d3dInputLayoutDesc;
 }
 
@@ -152,6 +189,7 @@ void ParticleShader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D1
 	d3dPipelineStateDesc.pRootSignature = pd3dGraphicsRootSignature;
 
 	d3dPipelineStateDesc.VS = CreateVertexShader(&pd3dVertexShaderBlob, nPipelineState);
+	d3dPipelineStateDesc.GS = CreateGeometryShader(&pd3dGeometryShaderBlob, nPipelineState);
 	d3dPipelineStateDesc.PS = CreatePixelShader(&pd3dPixelShaderBlob, nPipelineState);
 
 	d3dPipelineStateDesc.RasterizerState = CreateRasterizerState(nPipelineState);
@@ -181,10 +219,11 @@ void ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	//==================================================
 	// Common Variables Part
 
-	m_ngraphicsPipelineStates = 1;
+	m_ngraphicsPipelineStates = 2;
 	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0);
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0); // Polygon Mesh
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 1); // Billboard
 
 	if (common_ComputeRootSignature == NULL)
 		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
@@ -413,21 +452,6 @@ void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT c
 
 //------------------------------------------------------------------------------------------------
 
-D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
-{
-		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "VSParticleDraw", "vs_5_1", ppd3dShaderBlob));
-}
-
-D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
-{
-	return(CShader::CreateGeometryShader(ppd3dShaderBlob, 0));
-}
-
-D3D12_SHADER_BYTECODE Spread_ParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
-{
-		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_Transparent_ParticleDraw", "ps_5_1", ppd3dShaderBlob));
-}
-
 D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
@@ -444,10 +468,11 @@ void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	//==================================================
 	// Common Variables Part
 
-	m_ngraphicsPipelineStates = 1;
+	m_ngraphicsPipelineStates = 2;
 	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0);
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0); // Polygon_Mesh
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 1); // Billboard
 
 	if (common_ComputeRootSignature == NULL)
 		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
@@ -465,21 +490,6 @@ void Sand_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	m_cxThreadGroups = 1;
 	m_cyThreadGroups = 1;
 	m_czThreadGroups = 1;
-}
-
-D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
-{
-	return(CShader::CompileShaderFromFile(L"Particle.hlsl", "VSParticleDraw", "vs_5_1", ppd3dShaderBlob));
-}
-
-D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
-{
-	return(CShader::CreateGeometryShader(ppd3dShaderBlob, 0));
-}
-
-D3D12_SHADER_BYTECODE Sand_ParticleShader::CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
-{
-	return(CShader::CompileShaderFromFile(L"Particle.hlsl", "PS_Transparent_ParticleDraw", "ps_5_1", ppd3dShaderBlob));
 }
 
 D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
@@ -798,11 +808,24 @@ void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 	if (!particle_shader_map[type])
 		return;
 
-	particle_shader_map[type]->Setting_Render(pd3dCommandList);
+	int prevPipelineIndex = -1;
 
 	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
-		particle_obj->Render(pd3dCommandList, pCamera);
+	{
+		Particle_Shape_Mesh* particle_mesh = particle_obj->Get_Shape();
+		if (!particle_mesh) 
+			continue;
 
+		int currentPipelineIndex = dynamic_cast<Billboard_Shape_Mesh*>(particle_mesh) ? 1 : 0;
+
+		if (currentPipelineIndex != prevPipelineIndex)
+		{
+			particle_shader_map[type]->Setting_Render(pd3dCommandList, currentPipelineIndex);
+			prevPipelineIndex = currentPipelineIndex;
+		}
+		 
+		particle_obj->Render(pd3dCommandList, pCamera);
+	}
 }
 
 void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

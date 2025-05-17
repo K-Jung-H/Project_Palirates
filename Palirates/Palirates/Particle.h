@@ -193,6 +193,25 @@ public:
 
 	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 };
+
+class Tetrahedron_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Tetrahedron_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize = 2.0f);
+	virtual ~Tetrahedron_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
+class Billboard_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Billboard_Shape_Mesh(ID3D12Device* pd3dDevice = NULL, ID3D12GraphicsCommandList* pd3dCommandList = NULL, float fSize = 2.0f);
+	virtual ~Billboard_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
 //==============================================================================
 
 class Particle_Manager;
@@ -228,6 +247,7 @@ public:
 	void ReleaseUploadBuffers();
 
 	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
+	Particle_Shape_Mesh* Get_Shape() { return shape_mesh; }
 	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
 	void Init_Info(Particle_Format particle_info);
 
