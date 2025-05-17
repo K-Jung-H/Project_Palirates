@@ -46,7 +46,7 @@ protected:
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
-	CCamera						*m_pCamera = NULL;
+	shared_ptr<CCamera> m_pCamera = NULL;
 	CHeightMapTerrain* last_tile_ptr = NULL;
 
 	float stateElapsedTime{ 0.0f };
@@ -119,8 +119,8 @@ public:
 	float GetPitch() const { return(m_fPitch); }
 	float GetRoll() const { return(m_fRoll); }
 
-	CCamera *GetCamera() { return(m_pCamera); }
-	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
+	shared_ptr<CCamera>GetCamera() { return(m_pCamera); }
+	void SetCamera(shared_ptr<CCamera> pCamera) { m_pCamera = pCamera; }
 	void DelCamera() { m_pCamera = nullptr; }
 
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
@@ -147,9 +147,9 @@ public:
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 
-	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
+	shared_ptr<CCamera>OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
+	virtual shared_ptr<CCamera>ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareAnimate();
 
 
@@ -224,7 +224,7 @@ public:
 	virtual ~CTerrainPlayer();
 
 public:
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual shared_ptr<CCamera> ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
@@ -248,7 +248,7 @@ public:
 	virtual ~Observer();
 
 public:
-	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual shared_ptr<CCamera>ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);

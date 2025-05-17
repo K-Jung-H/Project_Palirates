@@ -58,7 +58,7 @@ CMesh::~CMesh()
 
 std::string CMesh::Get_Name() const 
 {
-	return std::string(m_pstrMeshName);
+	return std::string(m_pstrMeshName, strnlen_s(m_pstrMeshName, 64));
 }
 
 bool CMesh::Vertex_Existence() const

@@ -27,7 +27,6 @@ struct alignas(16) BoundingBox_Instance_Info
 
 struct Fixed_Object_Info
 {
-
 	std::vector<std::shared_ptr<CGameObject>> fixed_obj_list;
 	std::shared_ptr<CMesh> obj_mesh;
 
@@ -151,6 +150,10 @@ public:
 
 	std::vector<OBB_Info> Get_Nearby_OBBs(const BoundingOrientedBox& obb) const;
 	std::vector<OBB_Info> Check_OBB_Collisions(const BoundingOrientedBox& obb) const;
+
+public:
+	std::vector<OBB_Info> Get_Visible_OBBs_From_CameraFrustum(const BoundingFrustum& frustum) const;
+
 };
 
 class OBB_Manager 
@@ -159,6 +162,12 @@ private:
 	unique_ptr<OBB_Renderer> fixed_obb_renderer;
 	unique_ptr<OBB_Renderer> dynamic_obb_renderer;
 	unique_ptr<OBBCollision_Manager> collision_manager;
+
+public:
+	OBB_Renderer* Get_Fixed_OBB_Renderer() const { return fixed_obb_renderer.get(); }
+	OBB_Renderer* Get_Dynamic_OBB_Renderer() const { return dynamic_obb_renderer.get(); }
+	OBBCollision_Manager* Get_Collision_Manager() const { return collision_manager.get(); }
+
 
 public:
 	OBB_Manager(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
@@ -194,7 +203,6 @@ private:
 	// Terrain and tile management
 	std::shared_ptr<CHeightMapTerrain> terrain_ptr;
 	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
-	void Synchronize_Active_Objects_and_Tile();
 
 	// Wave object - unique per scene
 	std::shared_ptr<Wave_Object> wave_obj_ptr;
@@ -270,6 +278,11 @@ public:
 	// OBB drawer management
 	void Create_OBB_Manager(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 	void Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type);
+
+	void Check_OBB_Collision();
+	void Check_OBB_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* camera);
+	void ApplyCulledOBBsToInstanceBuffers(const std::vector<OBB_Info>& culledOBBs);
+
 	void Render_OBB(ID3D12GraphicsCommandList* cmdList, CCamera* camera);
 
 

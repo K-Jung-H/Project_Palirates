@@ -40,8 +40,6 @@ CPlayer::~CPlayer()
 {
 	ReleaseShaderVariables();
 
-	if (m_pCamera) delete m_pCamera;
-
 	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController.reset();
 }
 
@@ -225,20 +223,20 @@ void CPlayer::Update(float fTimeElapsed)
 	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, Vector3::ScalarProduct(m_xmf3Velocity, -frictionAmount, true));
 }
 
-CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
+shared_ptr<CCamera> CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
 {
-	CCamera *pNewCamera = NULL;
+	shared_ptr<CCamera> pNewCamera = NULL;
 	switch (nNewCameraMode)
 	{
-		case FIRST_PERSON_CAMERA:
-			pNewCamera = new CFirstPersonCamera(m_pCamera);
-			break;
-		case THIRD_PERSON_CAMERA:
-			pNewCamera = new CThirdPersonCamera(m_pCamera);
-			break;
-		case SPACESHIP_CAMERA:
-			pNewCamera = new CSpaceShipCamera(m_pCamera);
-			break;
+	case FIRST_PERSON_CAMERA:
+		pNewCamera = std::make_shared<CFirstPersonCamera>(m_pCamera);
+		break;
+	case THIRD_PERSON_CAMERA:
+		pNewCamera = std::make_shared<CThirdPersonCamera>(m_pCamera);
+		break;
+	case SPACESHIP_CAMERA:
+		pNewCamera = std::make_shared<CSpaceShipCamera>(m_pCamera);
+		break;
 	}
 	if (nCurrentCameraMode == SPACESHIP_CAMERA)
 	{
@@ -263,8 +261,6 @@ CCamera *CPlayer::OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode)
 		pNewCamera->SetMode(nNewCameraMode);
 		pNewCamera->SetPlayer(this);
 	}
-
-	if (m_pCamera) delete m_pCamera;
 
 	return(pNewCamera);
 }
@@ -456,7 +452,7 @@ CTerrainPlayer::~CTerrainPlayer()
 {
 }
 
-CCamera *CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
+shared_ptr<CCamera> CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 {
 	DWORD nCurrentCameraMode = (m_pCamera) ? m_pCamera->GetMode() : 0x00;
 	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
@@ -561,8 +557,10 @@ void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)
 		m_pCamera->SetPosition(xmf3CameraPosition);
 		if (m_pCamera->GetMode() == THIRD_PERSON_CAMERA)
 		{
-			CThirdPersonCamera *p3rdPersonCamera = (CThirdPersonCamera *)m_pCamera;
-			p3rdPersonCamera->SetLookAt(GetPosition());
+			if (auto* thirdPersonCam = dynamic_cast<CThirdPersonCamera*>(m_pCamera.get()))
+			{
+				thirdPersonCam->SetLookAt(GetPosition());
+			}
 		}
 	}
 }
@@ -685,7 +683,7 @@ Observer::~Observer()
 {
 }
 
-CCamera* Observer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
+shared_ptr<CCamera> Observer::ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed)
 {
 	DWORD nCurrentCameraMode = (m_pCamera) ? m_pCamera->GetMode() : 0x00;
 	if (nCurrentCameraMode == nNewCameraMode) return(m_pCamera);
