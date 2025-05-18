@@ -13,6 +13,7 @@ enum class Particle_Type
 	spread,
 	sand,
 	dragon_fire,
+	bleeding,
 	sample_1,
 	sample_2,
 	boss_skill,
@@ -224,10 +225,13 @@ protected:
 	XMFLOAT3 m_xmf3Velocity = { 0.0f, 0.0f, 0.0f };
 
 private:
-	Particle_Shape_Mesh* shape_mesh = NULL;
+	Particle_Manager* owner_manager = nullptr;
 	Particle* particle_data = NULL;
-	CMaterial* particle_Material = NULL;
-	
+	Particle_Shape_Mesh* shape_mesh = NULL;
+
+	shared_ptr<CMaterial> particle_Material = NULL;
+	bool is_textured = false;
+	//=============================
 	XMFLOAT3 local_area_xyz {};
 
 	XMFLOAT3 focus_point {};
@@ -235,9 +239,9 @@ private:
 
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
-	
+	//=============================
 
-	Particle_Manager* owner_manager = nullptr; 
+
 
 public:
 	UINT Update_Func_Index = 0;
@@ -252,6 +256,12 @@ public:
 	void Init_Info(Particle_Format particle_info);
 
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
+	virtual void SetMaterial(CMaterial* pMaterial);
+	virtual void SetMaterial(int nMaterial, CMaterial* pMaterial);
+	virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+
+//	virtual void SetTexture();
+
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 

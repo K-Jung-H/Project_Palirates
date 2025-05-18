@@ -108,8 +108,8 @@ struct PS__BILLBOARD_INPUT
 {
     float4 position : SV_POSITION;
     float4 color : COLOR;
+    float2 uv : TEXCOORD0; 
 };
-
 
 
 
@@ -135,8 +135,8 @@ void GS_BILLBOARD_PARTICLE_DRAW(point VS_BILLBOARD_OUTPUT input[1], inout Triang
     float scale = input[0].data.scale;
     float4 color = input[0].data.color;
 
-    float3 right = normalize(float3(gmtxView._11, gmtxView._12, gmtxView._13));
-    float3 up = normalize(float3(gmtxView._21, gmtxView._22, gmtxView._23));
+    float3 right = normalize(float3(gmtxInverseView._11, gmtxInverseView._12, gmtxInverseView._13));
+    float3 up = normalize(float3(gmtxInverseView._21, gmtxInverseView._22, gmtxInverseView._23));
 
     for (int i = 0; i < 4; ++i)
     {
@@ -147,15 +147,15 @@ void GS_BILLBOARD_PARTICLE_DRAW(point VS_BILLBOARD_OUTPUT input[1], inout Triang
         PS__BILLBOARD_INPUT outp;
         outp.position = clipPos;
         outp.color = color;
-
+        outp.uv = gf2QuadUVs[i];
         triStream.Append(outp);
     }
 }
 
 float4 PS_BILLBOARD_PARTICLE_DRAW(PS__BILLBOARD_INPUT input) : SV_Target
 {
-    return float4(1.0f, 0.0f, 0.0f, 1.0f);
-//    return input.color;
+    float4 base_texture = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    return base_texture * input.color;
 }
 
 

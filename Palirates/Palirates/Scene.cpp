@@ -628,13 +628,37 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
+	Particle_Format bleeding_info;
+	{
+		bleeding_info.shader_type = Particle_Type::bleeding;
+		bleeding_info.particle_type = 0;
+		bleeding_info.max_particles = 30;
+		bleeding_info.MaxLifetime = 3.0f;
+
+		bleeding_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+		bleeding_info.EmitFaceIndex = 5;
+
+		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		bleeding_info.init_velocity_value = 10.0f;
+		bleeding_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		bleeding_info.size = 0.3f;
+		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	}
+
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_dragonfire->Set_Active(false);
 
+
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, billboard_mesh, test_sand_storm_info);
+	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds");
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
+	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, bleeding_info);
+	
+
+
 #endif
 
 
@@ -721,9 +745,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		Object_Manager::Reserve_Update();
 
+#ifdef USING_OBB
 		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
 		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
-
+#endif
 	}
 
 
@@ -826,9 +851,6 @@ void CScene::Update_UI()
 
 void CScene::ReleaseObjects()
 {
-	if (m_MRT_GraphicsRootSignature) m_MRT_GraphicsRootSignature->Release();
-
-
 	obj_manager->Clear_Object_List_All();
 #ifdef WRITE_TEXT_UI
 	delete text_ui_manager;

@@ -668,6 +668,33 @@ void ParticleObject::ReleaseUploadBuffers()
 	CGameObject::ReleaseUploadBuffers();
 }
 
+void ParticleObject::SetMaterial(CMaterial* pMaterial)
+{
+	std::shared_ptr<CMaterial> material_ptr(pMaterial);
+	particle_Material = material_ptr;
+}
+
+void ParticleObject::SetMaterial(int nMaterial, CMaterial* pMaterial)
+{
+	SetMaterial(pMaterial);
+}
+
+void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+
+	particle_Material = std::make_shared<CMaterial>(1);
+
+	CTexture* base_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	base_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, base_texture, 0, 3);
+
+	particle_Material->SetTexture(base_texture, 0);
+}
+
+
 void ParticleObject::Init_Info(Particle_Format particle_info)
 {
 	Set_Focus_Point(XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -743,6 +770,8 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	 
 	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
+	if (particle_Material)
+		particle_Material->UpdateShaderVariable(pd3dCommandList);
 
 	if (shape_mesh)
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 

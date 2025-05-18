@@ -82,28 +82,14 @@ D3D12_BLEND_DESC ParticleShader::CreateBlendState(int nPipelineState)
 	d3dBlendDesc.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
 	d3dBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-	if (nPipelineState == 0)
-	{
-		// snow
-		d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-		d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
 
-		d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-		d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-		d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	}
-	else if (nPipelineState == 1)
-	{
-		// spark
-		d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-		d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_ONE;
-		d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-
-		d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-		d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-		d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-	}
+	d3dBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+	d3dBlendDesc.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	d3dBlendDesc.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	d3dBlendDesc.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+	d3dBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+	d3dBlendDesc.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+	d3dBlendDesc.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
 
 	return d3dBlendDesc;
 }
@@ -614,6 +600,13 @@ void Particle_Manager::Release_OBB_Data_ShaderVariables()
 
 std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
 {
+	if (particle_info.shader_type == Particle_Type::bleeding)
+	{
+		std::shared_ptr<ParticleObject> recycled_particle = Recycle_Particle(particle_shape_mesh, particle_info);
+		if (recycled_particle != NULL)
+			return recycled_particle;
+	}
+
 	static int N = 0;
 	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
 	new_particle_obj->Set_OwnerManager(this);
@@ -625,9 +618,26 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 	Particle* new_particle_data = new Particle(pd3dDevice, pd3dCommandList, particle_info);
 	new_particle_obj->Set_Particle_Data(new_particle_data);
 
+
 	particle_object_list_map[particle_info.shader_type].push_back(new_particle_obj);
 
 	return new_particle_obj;
+}
+
+std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
+{
+	std::vector<std::shared_ptr<ParticleObject>> target_particle_list = particle_object_list_map[particle_info.shader_type];
+
+	for (std::shared_ptr<ParticleObject> particle_obj : target_particle_list)
+	{
+		// 객체에 Lifetime 추가 + 해당 기반 Active 추가하기
+		// Active == false 인 객체 발견할 경우, 해당 객체 Lifetime 초기화 및 Active로 변경 후
+		// 해당 객체 반환
+
+		// 대상 없으면, NULL 반환 후, Add_Particle 반환하기
+	}
+
+	return NULL;
 }
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -821,6 +831,8 @@ void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 		if (currentPipelineIndex != prevPipelineIndex)
 		{
 			particle_shader_map[type]->Setting_Render(pd3dCommandList, currentPipelineIndex);
+			pCamera->Update_Render_ShaderVariables(pd3dCommandList); // for billboard
+
 			prevPipelineIndex = currentPipelineIndex;
 		}
 		 
