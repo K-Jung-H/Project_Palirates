@@ -672,10 +672,19 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			const auto aabb_pos = particle_obj->GetAABB();
+			auto aabb_pos = particle_obj->GetAABB(); // local AABB
 
 			XMFLOAT4X4 transposedWorldMatrix;
-			XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(XMLoadFloat4x4(&particle_obj->m_xmf4x4World)));
+			XMMATRIX world = XMLoadFloat4x4(&particle_obj->m_xmf4x4World);
+			XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(world));
+
+			if (!particle_obj->Is_Local_Coordinate()) // world AABB
+			{
+				XMVECTOR vMin = XMVector3Transform(XMLoadFloat3(&aabb_pos.first), world);
+				XMVECTOR vMax = XMVector3Transform(XMLoadFloat3(&aabb_pos.second), world);
+				XMStoreFloat3(&aabb_pos.first, XMVectorMin(vMin, vMax));
+				XMStoreFloat3(&aabb_pos.second, XMVectorMax(vMin, vMax));
+			}
 
 			Particle* particle_data = particle_obj->Get_Particle_Data();
 
@@ -702,12 +711,9 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	CB_Particle_Update_Info update_info;
-
 	for (auto& [type, shader_ptr] : particle_shader_map)
 	{
-		if (!shader_ptr)
-			continue;
+		if (!shader_ptr) continue;
 
 		shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1);
 
@@ -718,10 +724,18 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
 			}
 
-			const auto aabb_pos = particle_obj->GetAABB();
-
+			auto aabb_pos = particle_obj->GetAABB();
+			XMMATRIX world = XMLoadFloat4x4(&particle_obj->m_xmf4x4World);
 			XMFLOAT4X4 transposedWorldMatrix;
-			XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(XMLoadFloat4x4(&particle_obj->m_xmf4x4World)));
+			XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(world));
+
+			if (!particle_obj->Is_Local_Coordinate())
+			{
+				XMVECTOR vMin = XMVector3Transform(XMLoadFloat3(&aabb_pos.first), world);
+				XMVECTOR vMax = XMVector3Transform(XMLoadFloat3(&aabb_pos.second), world);
+				XMStoreFloat3(&aabb_pos.first, XMVectorMin(vMin, vMax));
+				XMStoreFloat3(&aabb_pos.second, XMVectorMax(vMin, vMax));
+			}
 
 			Particle* particle_data = particle_obj->Get_Particle_Data();
 
@@ -737,16 +751,13 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 			update_info.focus_strength = particle_obj->Get_Focus_Strength();
 			update_info.obb_num = OBB_num;
 
-			// 버퍼 바인딩 
 			particle_data->UpdateBuffers(pd3dCommandList);
 			shader_ptr->Update_Compute_ShaderVariables(pd3dCommandList, &update_info);
 			Bind_OBB_Data_ShaderVariables(pd3dCommandList);
 
-			// Dispatch
 			UINT dispatchCount = (update_info.Max_Particle_N + THREAD_COUNT - 1) / THREAD_COUNT;
 			shader_ptr->Dispatch(pd3dCommandList, dispatchCount, 1, 1);
 		}
-
 	}
 }
 

@@ -652,6 +652,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, billboard_mesh, test_sand_storm_info);
 	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds");
+	test_sand->Set_Local_Coordinate();
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
@@ -961,14 +962,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						if (particle_test_button) {
 							dragon->Test_Mode = true;
 							float centerZ = 1590.0f;
-							//XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
 							XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 35.0f, 831.0f);
 							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 							dragon->SetPosition(centerPos);
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
-							//dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
 							dragon->SetPosition(XMFLOAT3(1723.0f, 35.0f, 831.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}

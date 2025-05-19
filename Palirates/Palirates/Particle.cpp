@@ -652,7 +652,7 @@ void Particle::Reset_Debug_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
 ParticleObject::ParticleObject() : CGameObject(1)
 {
 	m_pMesh = NULL;
-
+	is_local = true;
 	local_area_xyz = XMFLOAT3{ 1000.0f, 100.0f, 1000.0f };
 	focus_point = XMFLOAT3{ 0.0f, 0.0f ,0.0f };
 }
@@ -754,6 +754,7 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float f
 	m_xmf3Velocity = Vector3::ScalarProduct(m_xmf3Direction, m_fSpeed, false);
 	XMFLOAT3 delta = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 	Move(delta); 
+
 }
 
 
@@ -768,7 +769,12 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	if (instance_num == 0)
 		return;
 	 
-	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	if(is_local)
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	else
+	{
+		UpdateShaderVariable(pd3dCommandList, &Matrix4x4::Identity());
+	}
 
 	if (particle_Material)
 		particle_Material->UpdateShaderVariable(pd3dCommandList);

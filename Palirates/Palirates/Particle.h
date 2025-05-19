@@ -232,6 +232,8 @@ private:
 	shared_ptr<CMaterial> particle_Material = NULL;
 	bool is_textured = false;
 	//=============================
+
+	bool is_local = true;
 	XMFLOAT3 local_area_xyz {};
 
 	XMFLOAT3 focus_point {};
@@ -240,8 +242,6 @@ private:
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
 	//=============================
-
-
 
 public:
 	UINT Update_Func_Index = 0;
@@ -259,9 +259,7 @@ public:
 	virtual void SetMaterial(CMaterial* pMaterial);
 	virtual void SetMaterial(int nMaterial, CMaterial* pMaterial);
 	virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
-
-//	virtual void SetTexture();
-
+	
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -271,7 +269,11 @@ public:
 
 	Particle* Get_Particle_Data() { return particle_data; }
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
-	
+
+	void Set_Local_Coordinate() { is_local = true; }
+	void Set_World_Coordinate() { is_local = false; }
+	bool Is_Local_Coordinate() const { return is_local; }
+
 	void Set_Area(XMFLOAT3 new_local_area) { local_area_xyz = new_local_area; }
 	XMFLOAT3 Get_Area() { return local_area_xyz; }
 
