@@ -143,8 +143,7 @@ void Cube_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandLi
 
 //==============================================================================
 
-Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)
-	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
+Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
 {
 	XMFLOAT4 color1 = { 0.5f, 0.5f, 0.8f, 1.0f };
 	XMFLOAT4 color2 = { 0.0f, 0.0f, 0.5f, 1.0f };
@@ -270,13 +269,115 @@ void Sphere_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommand
 	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
 	pd3dCommandList->SOSetTargets(0, 1, NULL);
 
-	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[3] = { m_d3dPositionBufferView, m_d3dColorBufferView, d3dInstancingBufferView };
-	pd3dCommandList->IASetVertexBuffers(m_nSlot, 3, pVertexBufferViews);
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[2] = { m_d3dPositionBufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews);
 
-
-	pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+	if (m_ppd3dSubSetIndexBuffers[0] != nullptr)
+	{
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = m_pd3dSubSetIndexBufferViews[0];
+		pd3dCommandList->IASetIndexBuffer(&indexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
 
 }
+
+//==============================================================================
+
+Tetrahedron_Shape_Mesh::Tetrahedron_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize) : Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
+{
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	m_nVertices = 4;
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
+
+	float s = fSize / sqrtf(2.0f);
+	m_pxmf3Positions[0] = XMFLOAT3(s, s, s);
+	m_pxmf3Positions[1] = XMFLOAT3(-s, -s, s);
+	m_pxmf3Positions[2] = XMFLOAT3(-s, s, -s);
+	m_pxmf3Positions[3] = XMFLOAT3(s, -s, -s);
+
+	for (int i = 0; i < m_nVertices; ++i) m_pxmf4Colors[i] = XMFLOAT4(0.7f, 0.3f, 1.0f, 1.0f);
+
+	m_nSubMeshes = 1;
+	int nIndices = 12;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+	m_ppnSubSetIndices[0] = new UINT[nIndices];
+	m_pnSubSetIndices[0] = nIndices;
+
+	UINT* indices = m_ppnSubSetIndices[0];
+	int k = 0;
+	indices[k++] = 0; indices[k++] = 1; indices[k++] = 2;
+	indices[k++] = 0; indices[k++] = 2; indices[k++] = 3;
+	indices[k++] = 0; indices[k++] = 3; indices[k++] = 1;
+	indices[k++] = 1; indices[k++] = 3; indices[k++] = 2;
+
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCommandList, indices, sizeof(UINT) * nIndices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nIndices;
+
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
+	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
+}
+
+Tetrahedron_Shape_Mesh::~Tetrahedron_Shape_Mesh() 
+{
+}
+
+void Tetrahedron_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+	pd3dCommandList->SOSetTargets(0, 1, NULL);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[2] = { m_d3dPositionBufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews);
+
+	if (m_ppd3dSubSetIndexBuffers[0] != nullptr)
+	{
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = m_pd3dSubSetIndexBufferViews[0];
+		pd3dCommandList->IASetIndexBuffer(&indexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+
+
+
+}
+
+Billboard_Shape_Mesh::Billboard_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize) : Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
+{
+
+}
+Billboard_Shape_Mesh::~Billboard_Shape_Mesh()
+{
+
+}
+
+void Billboard_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[1] = { d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(0, 1, pVertexBufferViews);
+
+	pd3dCommandList->DrawInstanced(1, instance_num, 0, 0);
+}
+
 
 
 //==============================================================================
@@ -551,7 +652,7 @@ void Particle::Reset_Debug_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
 ParticleObject::ParticleObject() : CGameObject(1)
 {
 	m_pMesh = NULL;
-
+	is_local = true;
 	local_area_xyz = XMFLOAT3{ 1000.0f, 100.0f, 1000.0f };
 	focus_point = XMFLOAT3{ 0.0f, 0.0f ,0.0f };
 }
@@ -566,6 +667,33 @@ void ParticleObject::ReleaseUploadBuffers()
 {
 	CGameObject::ReleaseUploadBuffers();
 }
+
+void ParticleObject::SetMaterial(CMaterial* pMaterial)
+{
+	std::shared_ptr<CMaterial> material_ptr(pMaterial);
+	particle_Material = material_ptr;
+}
+
+void ParticleObject::SetMaterial(int nMaterial, CMaterial* pMaterial)
+{
+	SetMaterial(pMaterial);
+}
+
+void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+{
+	if (filename == NULL)
+		return;
+
+	particle_Material = std::make_shared<CMaterial>(1);
+
+	CTexture* base_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	base_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, base_texture, 0, 3);
+
+	particle_Material->SetTexture(base_texture, 0);
+}
+
 
 void ParticleObject::Init_Info(Particle_Format particle_info)
 {
@@ -626,6 +754,7 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float f
 	m_xmf3Velocity = Vector3::ScalarProduct(m_xmf3Direction, m_fSpeed, false);
 	XMFLOAT3 delta = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
 	Move(delta); 
+
 }
 
 
@@ -640,8 +769,15 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	if (instance_num == 0)
 		return;
 	 
-	UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	if(is_local)
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+	else
+	{
+		UpdateShaderVariable(pd3dCommandList, &Matrix4x4::Identity());
+	}
 
+	if (particle_Material)
+		particle_Material->UpdateShaderVariable(pd3dCommandList);
 
 	if (shape_mesh)
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 

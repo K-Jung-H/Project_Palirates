@@ -88,6 +88,7 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPla
     if (it != sceneCache.end())
     {
         it->second->m_pPlayer = player_ptr;
+        it->second->main_Camera = player_ptr->GetCamera();
         return true;
     }
 
@@ -103,6 +104,28 @@ shared_ptr<CPlayer> Scene_Manager::Get_Active_Scene_Player()
         DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
     return NULL;
 
+}
+
+shared_ptr<CCamera> Scene_Manager::Get_Active_Scene_Main_Camera()
+{
+    if (activeScene)
+        return activeScene->main_Camera;
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
+    return NULL;
+
+}
+
+void Scene_Manager::Set_Active_Scene_Main_Camera(const std::shared_ptr<CCamera>& newCamera)
+{
+    if (activeScene)
+    {
+        activeScene->main_Camera = newCamera;
+    }
+    else
+    {
+        DebugOutput("[Scene_Manager] ERROR: Cannot set main_Camera - Active_Scene is NULL");
+    }
 }
 
 void Scene_Manager::Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -225,11 +248,11 @@ void Scene_Manager::Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandL
 
 }
 
-void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
     {
-        activeScene->Prepare_Render(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Prepare_Render(pd3dDevice, pd3dCommandList);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -237,21 +260,21 @@ void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphic
 }
 
 
-void Scene_Manager::Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
-        activeScene->Render(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Render(pd3dDevice, pd3dCommandList);
 
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 }
 
-void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
     {
-        activeScene->Prepare_Transparent_Render(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Prepare_Transparent_Render(pd3dDevice, pd3dCommandList);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -259,10 +282,10 @@ void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, I
 }
 
 
-void Scene_Manager::Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
-        activeScene->Transparent_Render(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Transparent_Render(pd3dDevice, pd3dCommandList);
 
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -276,20 +299,21 @@ void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3
         MRT_shader->OnPostRenderTarget(pd3dCommandList);
 }
 
-void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if(MRT_shader)
         MRT_shader->Setting_Render(pd3dCommandList, 0);
 
 
     if (activeScene)
+    {
         activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
+        
+        activeScene->main_Camera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
+    }
 
-    Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
+        Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
 
-    if (pCamera)
-        pCamera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
-    
 
     if(MRT_shader)
         MRT_shader->Render(pd3dCommandList, NULL);
@@ -297,10 +321,10 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 }
 
 
-void Scene_Manager::Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Scene_Manager::Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)    
-        activeScene->Post_Update(pd3dDevice, pd3dCommandList, pCamera);
+        activeScene->Post_Update(pd3dDevice, pd3dCommandList);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 

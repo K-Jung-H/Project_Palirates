@@ -388,7 +388,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					}
 
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					m_pCamera = m_pPlayer->GetCamera();
+					//m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
 					break;
 				}
@@ -400,7 +400,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					scene_index = 0;
 					scene_manager->Set_Active_Scene("Character_Select");
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					m_pCamera = m_pPlayer->GetCamera();
+					//m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
 				}
 					break;
@@ -410,7 +410,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					scene_index = 1;
 					scene_manager->Set_Active_Scene("Game_Board");
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					m_pCamera = m_pPlayer->GetCamera();
+					//m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
 				}
 					break;
@@ -420,7 +420,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					scene_index = 2;
 					scene_manager->Set_Active_Scene("In_Stage");
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					m_pCamera = m_pPlayer->GetCamera();
+					//m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
 					ConnectToServer(SERVER_IP, SERVER_PORT);
 				}
@@ -431,8 +431,14 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F1:
 				case VK_F2:
 				case VK_F3:
-					m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
-					break;
+				{
+					//m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
+
+					shared_ptr<CCamera> temp = scene_manager->Get_Active_Scene_Player()->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
+					scene_manager->Get_Active_Scene_Player()->SetCamera(temp);
+					scene_manager->Set_Active_Scene_Main_Camera(temp);
+				}
+				break;
 
 				case VK_F9:
 					ChangeSwapChainState();
@@ -712,7 +718,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
-	m_pCamera = m_pPlayer->GetCamera();
+	//m_pCamera = m_pPlayer->GetCamera();
 	
 	//========================================================
 
@@ -805,7 +811,6 @@ void CGameFramework::ProcessInput()
 
 void CGameFramework::Animate_Scene()
 {
-	HRESULT hResult;
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
@@ -824,37 +829,31 @@ void CGameFramework::Animate_Scene()
 
 	//===============================================================
 
+
+	if (m_pPlayer)
+		m_pPlayer->Animate(fTimeElapsed);
+
+
 	if (multiMode)
 	{
-		if (m_pPlayer)
-		{
-			m_pPlayer->Animate(m_GameTimer.GetTimeElapsed());
-			m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-		}
 		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
-		{
 			if (remotePlayer)
-			{
-				remotePlayer->Animate(m_GameTimer.GetTimeElapsed());
-				remotePlayer->Update(m_GameTimer.GetTimeElapsed());
-			}
-		}
+				remotePlayer->Animate(fTimeElapsed);
 	}
 	else
 	{
-		m_pPlayer->Animate(fTimeElapsed);
-		m_pPlayer->Update(m_GameTimer.GetTimeElapsed());
-
 		static bool dead = false;
 		// Weapon Drop EX
-		if (!dead) {
+		if (!dead) 
+		{
 			if (m_pPlayer->GetStateMachine()->Get_State() == State::Knock_Down) {
 				auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
 				scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
 				dead = true;
 			}
 		}
-		else {
+		else 
+		{
 			if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down) {
 				m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
 				dead = false;
@@ -865,8 +864,25 @@ void CGameFramework::Animate_Scene()
 
 void CGameFramework::Update_Scene()
 {
+	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
+
 	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList);
+
+	if (m_pPlayer)
+		m_pPlayer->Update(fTimeElapsed);
+
+	if (multiMode)
+	{
+		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
+			if (remotePlayer)
+				remotePlayer->Update(fTimeElapsed);
+
+	}
 }
+
+
+
+
 
 void CGameFramework::After_Update_Scene()
 {
@@ -1011,8 +1027,8 @@ void CGameFramework::PrepareStage(GPU_Stage stage)
 
 	if (stage == GPU_Stage::Render || stage == GPU_Stage::Post)
 	{
-		if (m_pCamera)
-			m_pCamera->SetViewportsAndScissorRects(Active_CommandList);
+		if (scene_manager->Get_Active_Scene_Main_Camera())
+			scene_manager->Get_Active_Scene_Main_Camera()->SetViewportsAndScissorRects(Active_CommandList);
 	}
 }
 
@@ -1020,6 +1036,9 @@ void CGameFramework::PrepareStage(GPU_Stage stage)
 
 void CGameFramework::FrameAdvance()
 {
+	if (!scene_manager->Get_Active_Scene())
+		return;
+
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
 
@@ -1089,12 +1108,14 @@ void CGameFramework::FrameAdvance()
 
 		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
 
-		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList);
 		UpdateShaderVariables();
-		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList);
+
+		shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 
 		if (m_pPlayer)
-			m_pPlayer->Render(Active_CommandList, m_pCamera);
+			m_pPlayer->Render(Active_CommandList, scene_camera.get());
 
 		{
 			std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
@@ -1102,7 +1123,7 @@ void CGameFramework::FrameAdvance()
 			for (auto& [id, remotePlayer] : m_pRemotePlayers)
 			{
 				if (remotePlayer)
-					remotePlayer->Render(Active_CommandList, m_pCamera);
+					remotePlayer->Render(Active_CommandList, scene_camera.get());
 			}
 		}
 
@@ -1114,7 +1135,7 @@ void CGameFramework::FrameAdvance()
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
 		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
-		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList);
 	}
 	EndGPUStage(GPU_Stage::Render);
 
@@ -1149,13 +1170,13 @@ void CGameFramework::FrameAdvance()
 
 
 		// Rendering Transparent object
-		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Prepare_Render_Transparent_Scene(m_pd3dDevice, Active_CommandList);
 		UpdateShaderVariables();
-		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Render_Transparent_Scene(m_pd3dDevice, Active_CommandList);
 
 
 		// Record moving Object's Last Pos to use motion blur
-		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList, m_pCamera);
+		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList);
 		if (m_pPlayer)
 		{
 			m_pPlayer->Record_Last_Pos();
@@ -1351,8 +1372,8 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		CreateLocalPlayer(ClientNum);
 
 		m_pPlayer = std::shared_ptr<CPlayer>(GetSceneManager().GetPlayerById(ClientNum));
-		if (m_pCamera && m_pPlayer)
-			m_pCamera->SetPlayer(m_pPlayer.get());
+		if (sceneManager.Get_Active_Scene_Main_Camera() && m_pPlayer)
+			sceneManager.Get_Active_Scene_Main_Camera()->SetPlayer(m_pPlayer.get());
 
 		// 지연된 remote 생성 처리
 		while (!pendingPlayerCreates.empty()) {
@@ -1584,9 +1605,9 @@ void CGameFramework::CreateLocalPlayer(int playerId)
 
 	m_pPlayer = local_player;// .get();
 
-	if (m_pCamera)
+	if (sceneManager.Get_Active_Scene_Main_Camera())
 	{
-		m_pCamera->SetPlayer(m_pPlayer.get());
+		sceneManager.Get_Active_Scene_Main_Camera()->SetPlayer(m_pPlayer.get());
 	}
 
 	auto playerList = scene->obj_manager->Get_Object_List(Object_Type::player);

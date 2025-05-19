@@ -22,7 +22,7 @@ CCamera::CCamera()
 	m_pPlayer = NULL;
 }
 
-CCamera::CCamera(CCamera *pCamera)
+CCamera::CCamera(shared_ptr<CCamera> pCamera)
 {
 	if (pCamera)
 	{
@@ -128,17 +128,17 @@ void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComm
 
 void CCamera::Update_Render_ShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	XMFLOAT4X4 xmf4x4View;
-	XMStoreFloat4x4(&xmf4x4View, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4View)));
-	::memcpy(&m_pcbMappedCamera->m_xmf4x4View, &xmf4x4View, sizeof(XMFLOAT4X4));
+	XMMATRIX view = XMLoadFloat4x4(&m_xmf4x4View);
+	XMMATRIX proj = XMLoadFloat4x4(&m_xmf4x4Projection);
+	XMMATRIX invView = XMMatrixInverse(nullptr, view);
 
-	XMFLOAT4X4 xmf4x4Projection;
-	XMStoreFloat4x4(&xmf4x4Projection, XMMatrixTranspose(XMLoadFloat4x4(&m_xmf4x4Projection)));
-	::memcpy(&m_pcbMappedCamera->m_xmf4x4Projection, &xmf4x4Projection, sizeof(XMFLOAT4X4));
-	::memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
+	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4View, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
+	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4InverseView, XMMatrixTranspose(invView));
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress_1 = m_pd3dcbCamera->GetGPUVirtualAddress();
-	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, d3dGpuVirtualAddress_1);
+	memcpy(&m_pcbMappedCamera->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
+
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, m_pd3dcbCamera->GetGPUVirtualAddress()); 
 }
 
 
@@ -269,7 +269,7 @@ void CCamera::UpdateFocusTracking(XMFLOAT3& new_camera_pos)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CSpaceShipCamera
 
-CSpaceShipCamera::CSpaceShipCamera(CCamera *pCamera) : CCamera(pCamera)
+CSpaceShipCamera::CSpaceShipCamera(shared_ptr<CCamera> pCamera) : CCamera(pCamera)
 {
 	m_nMode = SPACESHIP_CAMERA;
 }
@@ -314,7 +314,7 @@ void CSpaceShipCamera::Rotate(float x, float y, float z)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CFirstPersonCamera
 
-CFirstPersonCamera::CFirstPersonCamera(CCamera *pCamera) : CCamera(pCamera)
+CFirstPersonCamera::CFirstPersonCamera(shared_ptr<CCamera> pCamera) : CCamera(pCamera)
 {
 	m_nMode = FIRST_PERSON_CAMERA;
 	if (pCamera)
@@ -363,7 +363,7 @@ void CFirstPersonCamera::Rotate(float x, float y, float z)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CThirdPersonCamera
 
-CThirdPersonCamera::CThirdPersonCamera(CCamera *pCamera) : CCamera(pCamera)
+CThirdPersonCamera::CThirdPersonCamera(shared_ptr<CCamera> pCamera) : CCamera(pCamera)
 {
 	m_nMode = THIRD_PERSON_CAMERA;
 	if (pCamera)
