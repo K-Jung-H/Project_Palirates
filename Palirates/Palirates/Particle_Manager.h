@@ -6,26 +6,6 @@
 #include "Particle.h"
 
 
-struct CB_Particle_Update_Info
-{
-	XMFLOAT4X4 world_matrix;
-
-	XMFLOAT3 EmitRegionMin;
-	float ElapsedTime;
-
-	XMFLOAT3 EmitRegionMax;
-	UINT Max_Particle_N;
-
-	XMFLOAT3 Main_Direction;
-	float Init_Velocity_Value;
-
-	XMFLOAT3 focus_point;
-	float focus_strength;
-
-	UINT obb_num;
-	XMFLOAT3 padding0;
-};
-
 class ParticleShader : public CShader
 {
 protected:
@@ -124,6 +104,8 @@ public:
 	void Release_OBB_Data_ShaderVariables();
 
 	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	
 
 	void Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	void Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);

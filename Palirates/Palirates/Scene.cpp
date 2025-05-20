@@ -593,7 +593,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format test_dragon_fire_info;
 	{
-		test_dragon_fire_info.shader_type = Particle_Type::spread;
+		test_dragon_fire_info.shader_type = Particle_Type::loop;
 		test_dragon_fire_info.particle_type = 5;
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
@@ -630,12 +630,12 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format bleeding_info;
 	{
-		bleeding_info.shader_type = Particle_Type::bleeding;
-		bleeding_info.particle_type = 0;
+		bleeding_info.shader_type = Particle_Type::interval;
+		bleeding_info.particle_type = 6;
 		bleeding_info.max_particles = 30;
 		bleeding_info.MaxLifetime = 3.0f;
 
-		bleeding_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
 		bleeding_info.EmitFaceIndex = 5;
 
 		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -656,8 +656,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, bleeding_info);
-	
+	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
+	test_bleeding->Set_World_Coordinate();
 
 
 #endif
@@ -943,6 +943,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 			}		break;
 
+		case 'R':
+		{
+		}
+			break;
+
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
@@ -1218,6 +1223,9 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 			}
 		}
 	}
+
+	if(test_bleeding)
+		test_bleeding->SetPosition(m_pPlayer->GetPosition());
 
 #ifdef RENDER_WAVE
 
@@ -1831,7 +1839,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
-		water_splashes_info.shader_type = Particle_Type::spread;
+		water_splashes_info.shader_type = Particle_Type::loop;
 		water_splashes_info.particle_type = 2;
 		water_splashes_info.max_particles = 300;
 

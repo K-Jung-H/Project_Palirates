@@ -108,8 +108,7 @@ public:
 	Particle_Manager* particle_manager = NULL;
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
-
-	std::shared_ptr<Wave_Object> in_game_wave;
+	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
 
 	Object_Manager* obj_manager = NULL;

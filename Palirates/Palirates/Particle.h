@@ -10,13 +10,11 @@
 
 enum class Particle_Type
 {
-	spread,
+	loop,
+	interval,
 	sand,
-	dragon_fire,
-	bleeding,
 	sample_1,
 	sample_2,
-	boss_skill,
 	etc
 };
 
@@ -73,6 +71,27 @@ struct Particle_Info
 	float Padding;
 };
 
+struct CB_Particle_Update_Info
+{
+	XMFLOAT4X4 world_matrix;
+
+	XMFLOAT3 EmitRegionMin;
+	float ElapsedTime;
+
+	XMFLOAT3 EmitRegionMax;
+	UINT Max_Particle_N;
+
+	XMFLOAT3 Main_Direction;
+	float Init_Velocity_Value;
+
+	XMFLOAT3 focus_point;
+	float focus_strength;
+
+	UINT obb_num;
+	UINT Reset_Flag;
+	XMFLOAT2 padding0;
+};
+
 //==============================================================================
 
 class Particle
@@ -117,7 +136,6 @@ public:
 	// 버퍼 생성 및 해제
 	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
 
-	//ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 
@@ -241,6 +259,9 @@ private:
 
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
+	
+	float ElapsedTime = 0.0f;
+	float Max_Lifetime = 0.0f;
 	//=============================
 
 public:
@@ -264,10 +285,11 @@ public:
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-
+	void Update_Interval(float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	Particle* Get_Particle_Data() { return particle_data; }
+	CB_Particle_Update_Info Get_Particle_Update_Info(float fTimeElapsed);
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 
 	void Set_Local_Coordinate() { is_local = true; }
