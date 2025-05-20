@@ -937,7 +937,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		switch (wParam)
 		{
 		case 'Q':
-			test_button = !test_button;
 			{
 				m_pPlayer->SetBlurMask(test_button);
 
@@ -945,6 +944,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'R':
 		{
+			test_button = !test_button;
 		}
 			break;
 
@@ -1300,6 +1300,31 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
+	if (test_button)
+	{
+		test_button = false;
+		Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
+
+		Particle_Format bleeding_info;
+		{
+			bleeding_info.shader_type = Particle_Type::interval;
+			bleeding_info.particle_type = 6;
+			bleeding_info.max_particles = 30;
+			bleeding_info.MaxLifetime = 3.0f;
+
+			bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+			bleeding_info.EmitFaceIndex = 5;
+
+			bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			bleeding_info.init_velocity_value = 10.0f;
+			bleeding_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			bleeding_info.size = 0.3f;
+			bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+		}
+		test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
+		test_bleeding->Set_World_Coordinate();
+	}
 }
 
 void CScene::After_Update_Objects()

@@ -608,24 +608,33 @@ void Particle_Manager::Release_OBB_Data_ShaderVariables()
 
 std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
 {
+	std::shared_ptr<ParticleObject> new_particle_obj = nullptr;
+
+	static int Particle_ID = 0;
+
 	if (particle_info.shader_type == Particle_Type::interval)
 	{
 		std::shared_ptr<ParticleObject> recycled_particle = Recycle_Particle(particle_shape_mesh, particle_info);
-		if (recycled_particle != NULL)
+		if (recycled_particle != nullptr)
+		{
+			recycled_particle->Set_Shape(particle_shape_mesh);
+			recycled_particle->Init_Info(particle_info);
+			recycled_particle->Set_Max_Interval(particle_info.MaxLifetime);
+
 			return recycled_particle;
+		}
 	}
 
-	static int N = 0;
-	std::shared_ptr<ParticleObject> new_particle_obj = make_shared<ParticleObject>();
+	new_particle_obj = std::make_shared<ParticleObject>();
 	new_particle_obj->Set_OwnerManager(this);
 	new_particle_obj->Set_Shape(particle_shape_mesh);
 	new_particle_obj->Init_Info(particle_info);
-	new_particle_obj->Set_Name(to_string(N));
-	N++;
+	new_particle_obj->Set_Name(std::to_string(Particle_ID));
+	new_particle_obj->Set_Max_Interval(particle_info.MaxLifetime);
+	Particle_ID++;
 
 	Particle* new_particle_data = new Particle(pd3dDevice, pd3dCommandList, particle_info);
 	new_particle_obj->Set_Particle_Data(new_particle_data);
-
 
 	particle_object_list_map[particle_info.shader_type].push_back(new_particle_obj);
 
@@ -638,11 +647,14 @@ std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(Particle_Shap
 
 	for (std::shared_ptr<ParticleObject> particle_obj : target_particle_list)
 	{
-		// 객체에 Lifetime 추가 + 해당 기반 Active 추가하기
-		// Active == false 인 객체 발견할 경우, 해당 객체 Lifetime 초기화 및 Active로 변경 후
-		// 해당 객체 반환
-
-		// 대상 없으면, NULL 반환 후, Add_Particle 반환하기
+		if (particle_obj->Get_Active())
+			continue;
+		else
+		{
+			particle_obj->Set_Active(true);
+			particle_obj->Reset_Interval();
+			return particle_obj;
+		}
 	}
 
 	return NULL;
@@ -670,8 +682,8 @@ void Particle_Manager::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandL
 			if (particle_obj->Get_Active())
 			{
 				particle_obj->Animate(pd3dCommandList, fTimeElapsed);
-				//if (type == Particle_Type::interval)
-				//	particle_obj->Update_Interval(fTimeElapsed);
+				if (type == Particle_Type::interval)
+					particle_obj->Update_Interval(fTimeElapsed);
 			}
 
 		}

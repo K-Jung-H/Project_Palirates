@@ -274,6 +274,7 @@ public:
 	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
 	Particle_Shape_Mesh* Get_Shape() { return shape_mesh; }
 	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
+	void Set_Max_Interval(float new_max_lifetime) { Max_Lifetime = new_max_lifetime; }
 	void Init_Info(Particle_Format particle_info);
 
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
@@ -284,8 +285,10 @@ public:
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	void Update_Interval(float fTimeElapsed);
+	void Reset_Interval() { ElapsedTime = 0.0f, Max_Lifetime = 0.0f; }
+
+	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	Particle* Get_Particle_Data() { return particle_data; }
