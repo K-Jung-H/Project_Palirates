@@ -748,6 +748,7 @@ void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* p
 
 void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+
 	if (Vector3::Length(m_xmf3Direction) == 0.0f || m_fSpeed == 0.0f)
 		return;
 
@@ -757,6 +758,16 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 }
 
+void ParticleObject::Update_Interval(float fTimeElapsed)
+{
+	if (ElapsedTime > Max_Lifetime)
+	{
+		Set_Active(false);
+		return;
+	}
+	else
+		ElapsedTime += fTimeElapsed;
+}
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
@@ -783,6 +794,44 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 
 }
 
+
+CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElapsed)
+{
+	CB_Particle_Update_Info update_info = {};
+	auto aabb_pos = GetAABB(); // local AABB
+
+	XMFLOAT4X4 transposedWorldMatrix;
+	XMMATRIX world = XMLoadFloat4x4(&m_xmf4x4World);
+	XMStoreFloat4x4(&transposedWorldMatrix, XMMatrixTranspose(world));
+	update_info.world_matrix = transposedWorldMatrix;
+
+	if (!Is_Local_Coordinate()) // world AABB
+	{
+		XMVECTOR vMin = XMVector3Transform(XMLoadFloat3(&aabb_pos.first), world);
+		XMVECTOR vMax = XMVector3Transform(XMLoadFloat3(&aabb_pos.second), world);
+		XMStoreFloat3(&aabb_pos.first, XMVectorMin(vMin, vMax));
+		XMStoreFloat3(&aabb_pos.second, XMVectorMax(vMin, vMax));
+		update_info.world_matrix = Matrix4x4::Identity();
+
+		//DebugOutput("\n");
+		//DebugOutput("X1: " + to_string(aabb_pos.first.x) + "Y1: " + to_string(aabb_pos.first.y) + "Z1: " + to_string(aabb_pos.first.z) + "\n");
+		//DebugOutput("X2: " + to_string(aabb_pos.second.x) + "Y2: " + to_string(aabb_pos.second.y) + "Z2: " + to_string(aabb_pos.second.z) + "\n");
+
+	}
+
+
+
+	update_info.Max_Particle_N = particle_data->Get_Particle_Max_Num();
+	update_info.ElapsedTime = fTimeElapsed;
+	update_info.EmitRegionMin = aabb_pos.first;
+	update_info.EmitRegionMax = aabb_pos.second;
+	update_info.Main_Direction = Get_Main_Direction();
+	update_info.Init_Velocity_Value = Get_Init_Velocity_Value();
+	update_info.focus_point = Get_Focus_Point();
+	update_info.focus_strength = Get_Focus_Strength();
+	update_info.Reset_Flag = !Get_Active();
+	return update_info;
+}
 
 void ParticleObject::Add_Destroy_Queue() 
 {

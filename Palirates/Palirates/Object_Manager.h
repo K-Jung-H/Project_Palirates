@@ -202,7 +202,6 @@ class Object_Manager
 private:
 	// Terrain and tile management
 	std::shared_ptr<CHeightMapTerrain> terrain_ptr;
-	std::unordered_map<int, std::vector<std::shared_ptr<CGameObject>>> obj_list_in_tile;
 
 	// Wave object - unique per scene
 	std::shared_ptr<Wave_Object> wave_obj_ptr;

@@ -585,15 +585,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 
-	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+//	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+//	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
-	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* billboard_mesh = new Billboard_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 
 	Particle_Format test_dragon_fire_info;
 	{
-		test_dragon_fire_info.shader_type = Particle_Type::spread;
+		test_dragon_fire_info.shader_type = Particle_Type::loop;
 		test_dragon_fire_info.particle_type = 5;
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
@@ -630,12 +630,12 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format bleeding_info;
 	{
-		bleeding_info.shader_type = Particle_Type::bleeding;
-		bleeding_info.particle_type = 0;
+		bleeding_info.shader_type = Particle_Type::interval;
+		bleeding_info.particle_type = 6;
 		bleeding_info.max_particles = 30;
 		bleeding_info.MaxLifetime = 3.0f;
 
-		bleeding_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
 		bleeding_info.EmitFaceIndex = 5;
 
 		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
@@ -656,8 +656,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
-	particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, bleeding_info);
-	
+	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
+	test_bleeding->Set_World_Coordinate();
 
 
 #endif
@@ -672,7 +672,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	m_pTerrain->PrintFrameInfo(m_pTerrain.get(), NULL);
+
 	obj_manager->Set_Terrain_Object(m_pTerrain);
+
 
 	{
 		string obj_name_1 = "Anubis";
@@ -685,14 +688,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		string obj_name_8 = "test_palyer6";
 
 
-		std::string_view name_view = obj_name_1;
+	/*	std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		AnubisObject->SetPosition(1450.0f, m_pTerrain->Get_Mesh_Height(1450.0f, 650.0f), 650.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
 		AnubisObject->SetupWeaponCollider();
-		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
+		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);*/
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
@@ -705,7 +708,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-		for (int i = 0; i < 5; i++)
+		/*for (int i = 0; i < 5; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
@@ -714,7 +717,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
-		}
+		}*/
 
 #ifdef LOAD_SCENE
 
@@ -937,11 +940,16 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		switch (wParam)
 		{
 		case 'Q':
-			test_button = !test_button;
 			{
 				m_pPlayer->SetBlurMask(test_button);
 
 			}		break;
+
+		case 'R':
+		{
+			test_button = !test_button;
+		}
+			break;
 
 		case 'E':
 		{
@@ -1207,7 +1215,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						//test_dragonfire->Set_Center(position);
 						test_dragonfire->SetPosition(position);
 
 						XMFLOAT3 look;
@@ -1218,6 +1225,9 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 			}
 		}
 	}
+
+	if(test_bleeding)
+		test_bleeding->SetPosition(m_pPlayer->GetPosition());
 
 #ifdef RENDER_WAVE
 
@@ -1292,6 +1302,31 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
+	if (test_button)
+	{
+		test_button = false;
+		Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
+
+		Particle_Format bleeding_info;
+		{
+			bleeding_info.shader_type = Particle_Type::interval;
+			bleeding_info.particle_type = 6;
+			bleeding_info.max_particles = 30;
+			bleeding_info.MaxLifetime = 3.0f;
+
+			bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+			bleeding_info.EmitFaceIndex = 5;
+
+			bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			bleeding_info.init_velocity_value = 10.0f;
+			bleeding_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			bleeding_info.size = 0.3f;
+			bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+		}
+		test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
+		test_bleeding->Set_World_Coordinate();
+	}
 }
 
 void CScene::After_Update_Objects()
@@ -1831,7 +1866,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
-		water_splashes_info.shader_type = Particle_Type::spread;
+		water_splashes_info.shader_type = Particle_Type::loop;
 		water_splashes_info.particle_type = 2;
 		water_splashes_info.max_particles = 300;
 
