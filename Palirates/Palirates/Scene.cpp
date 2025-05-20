@@ -585,10 +585,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 
-	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+//	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+//	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
-	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* billboard_mesh = new Billboard_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 
 	Particle_Format test_dragon_fire_info;
@@ -672,7 +672,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	m_pTerrain->PrintFrameInfo(m_pTerrain.get(), NULL);
+
 	obj_manager->Set_Terrain_Object(m_pTerrain);
+
 
 	{
 		string obj_name_1 = "Anubis";
@@ -685,14 +688,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		string obj_name_8 = "test_palyer6";
 
 
-		std::string_view name_view = obj_name_1;
+	/*	std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		AnubisObject->SetPosition(1450.0f, m_pTerrain->Get_Mesh_Height(1450.0f, 650.0f), 650.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
 		AnubisObject->SetupWeaponCollider();
-		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
+		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);*/
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
@@ -705,7 +708,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-		for (int i = 0; i < 5; i++)
+		/*for (int i = 0; i < 5; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
@@ -714,7 +717,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
-		}
+		}*/
 
 #ifdef LOAD_SCENE
 
@@ -1212,7 +1215,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						//test_dragonfire->Set_Center(position);
 						test_dragonfire->SetPosition(position);
 
 						XMFLOAT3 look;

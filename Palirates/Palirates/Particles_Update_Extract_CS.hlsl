@@ -329,7 +329,7 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     Particle_Info p = ParticleBuffer_Update[index];
 
     // Check Reset Flag
-    if (Reset_Flag == true)
+    if (Reset_Flag != 0)
     {
         p.Active = 0;
         ParticleBuffer_Update[index] = p;

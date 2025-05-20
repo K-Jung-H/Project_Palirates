@@ -2,10 +2,9 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
 struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 {
-    float3 position : POSITION;
+    float3 position : LOCALPOS; 
     float4 Position_and_Scale : INSTANCE_POS_SCALE;
     float4 velocity_and_Rotate : INSTANCE_VELOCITY; // xyz = 회전축, w = 회전각
     float4 color : INSTANCE_COLOR;
@@ -13,8 +12,8 @@ struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 
 struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
 {
-    float4 position : SV_POSITION;
-    float3 positionW : POSITION;
+    float4 position : SV_POSITION; 
+    float3 positionW : POSITIONW; 
     float4 color : COLOR;
     float2 velocity : VELOCITY;
 };
@@ -101,7 +100,7 @@ struct GS_BILLBOARD_INPUT
 
 struct VS_BILLBOARD_OUTPUT
 {
-    GS_BILLBOARD_INPUT data : DATA;
+    GS_BILLBOARD_INPUT data;
 };
 
 struct PS__BILLBOARD_INPUT

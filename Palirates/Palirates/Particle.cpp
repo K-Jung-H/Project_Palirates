@@ -813,10 +813,9 @@ CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElap
 		XMStoreFloat3(&aabb_pos.second, XMVectorMax(vMin, vMax));
 		update_info.world_matrix = Matrix4x4::Identity();
 
-		DebugOutput("\n");
-		DebugOutput("X1: " + to_string(aabb_pos.first.x) + "Y1: " + to_string(aabb_pos.first.y) + "Z1: " + to_string(aabb_pos.first.z) + "\n");
-		DebugOutput("X2: " + to_string(aabb_pos.second.x) + "Y2: " + to_string(aabb_pos.second.y) + "Z2: " + to_string(aabb_pos.second.z) + "\n");
-
+		//DebugOutput("\n");
+		//DebugOutput("X1: " + to_string(aabb_pos.first.x) + "Y1: " + to_string(aabb_pos.first.y) + "Z1: " + to_string(aabb_pos.first.z) + "\n");
+		//DebugOutput("X2: " + to_string(aabb_pos.second.x) + "Y2: " + to_string(aabb_pos.second.y) + "Z2: " + to_string(aabb_pos.second.z) + "\n");
 
 	}
 

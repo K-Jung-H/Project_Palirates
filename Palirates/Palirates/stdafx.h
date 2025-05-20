@@ -133,10 +133,10 @@ extern HINSTANCE						ghAppInstance;
 
 
 //#define WRITE_TEXT_UI
-//#define LOAD_SCENE
-//#define USING_OBB
+#define LOAD_SCENE
+#define USING_OBB
 #define RENDER_PARTICLE
-//#define RENDER_WAVE
+#define RENDER_WAVE
 
 #define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
