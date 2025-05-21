@@ -1,4 +1,5 @@
 #pragma once
+#include "Shader.h"
 
 struct TextDesign
 {
@@ -23,7 +24,6 @@ struct TextBlock
     }
 
 };
-
 
 // 프레임워크에서 동작하는 객체
 // 씬에서 TextBlock배열을 전달받아, 일괄 렌더링
@@ -85,4 +85,75 @@ public:
     ID3D11Resource**                m_ppd3d11WrappedRenderTargets = NULL;
     ID2D1Bitmap1**                  m_ppd2dRenderTargets = NULL;
 
+};
+
+struct TextureBlock
+{
+    ID3D12Resource* pTexture = nullptr;
+    D3D12_GPU_DESCRIPTOR_HANDLE srvGpuHandle = {};
+    D2D1_RECT_F screenRect;
+    std::shared_ptr<CTextureMesh> mesh = nullptr;
+
+    TextureBlock(ID3D12Resource* texture, D3D12_GPU_DESCRIPTOR_HANDLE handle, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
+        : pTexture(texture), srvGpuHandle(handle), screenRect(rect), mesh(meshPtr) {
+    }
+};
+
+class Texture_UI_Manager
+{
+private:
+    std::vector<std::unique_ptr<TextureBlock>> textureBlockList;
+    std::vector<TextureBlock*> rawTextureBlockList;
+    std::unique_ptr<CTextureToScreenShader> textureShader;
+    std::unique_ptr<Texture_UI_Renderer> textureRenderer;
+
+public:
+    void SetShader(std::unique_ptr<CTextureToScreenShader> shader) {
+        textureShader = std::move(shader);
+    }
+
+    void SetRenderer(std::unique_ptr<Texture_UI_Renderer> renderer) {
+        textureRenderer = std::move(renderer);
+    }
+
+    void Add_TextureBlock(std::unique_ptr<TextureBlock> block) {
+        textureBlockList.emplace_back(std::move(block));
+    }
+
+    void RenderAll(ID3D12GraphicsCommandList* cmdList) {
+        if (textureRenderer && textureShader)
+        {
+            std::vector<TextureBlock*> rawPtrs;
+            for (auto& block : textureBlockList)
+                rawPtrs.push_back(block.get());
+
+            textureShader->OnPrepareRender(cmdList, 0);
+            textureRenderer->Render_UI_Textures(cmdList, &rawPtrs);
+        }
+    }
+
+    std::vector<TextureBlock*>* GetTextureBlockPtrs()
+    {
+        rawTextureBlockList.clear();
+        for (auto& block : textureBlockList)
+            rawTextureBlockList.push_back(block.get());
+        return &rawTextureBlockList; 
+    }
+
+    CTextureToScreenShader* GetShader() const { return textureShader.get(); }
+};
+
+class Texture_UI_Renderer
+{
+public:
+    Texture_UI_Renderer(ID3D12Device* device);
+    ~Texture_UI_Renderer();
+
+    void Render_UI_Textures(ID3D12GraphicsCommandList* cmdList, std::vector<TextureBlock*>* pTextureList);
+
+private:
+    ID3D12Device* m_pd3dDevice = nullptr;
+
+    ID3D12Resource* m_pVertexBuffer = nullptr;
+    D3D12_VERTEX_BUFFER_VIEW        m_VertexBufferView = {};
 };

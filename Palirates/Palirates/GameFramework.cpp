@@ -614,6 +614,8 @@ void CGameFramework::OnDestroy()
 	delete text_ui_renderer;
 #endif;
 
+	delete texture_ui_renderer;
+
 #if defined(_DEBUG)
 	IDXGIDebug1	*pdxgiDebug = NULL;
 	DXGIGetDebugInterface1(0, __uuidof(IDXGIDebug1), (void **)&pdxgiDebug);
@@ -1080,6 +1082,8 @@ void CGameFramework::FrameAdvance()
 	scene_manager->Update_UI();
 #endif
 
+	scene_manager->Update_Texture_UI();
+
 	// ====================== [4] Render Phase ======================
 	BeginGPUStage(GPU_Stage::Render);
 	PrepareStage(GPU_Stage::Render);
@@ -1172,6 +1176,8 @@ void CGameFramework::FrameAdvance()
 #ifdef WRITE_TEXT_UI
 	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
 #endif
+
+	scene_manager->Render_Scene_Texture_UI(Active_CommandList);
 
 	// ====================== [7] Present ======================
 #ifdef _WITH_PRESENT_PARAMETERS

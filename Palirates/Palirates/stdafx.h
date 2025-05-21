@@ -132,11 +132,11 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-//#define WRITE_TEXT_UI
+#define WRITE_TEXT_UI
 #define LOAD_SCENE
 #define RENDER_OBB
 #define RENDER_PARTICLE
-#define RENDER_WAVE
+//#define RENDER_WAVE
 
 //#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO

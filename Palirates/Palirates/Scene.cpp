@@ -10,6 +10,7 @@
 std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
+std::shared_ptr<ID3D12RootSignature> CScene::m_TextureUI_GraphicsRootSignature = NULL;
 
 
 CScene::CScene()
@@ -480,6 +481,76 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 	return(pd3dGraphicsRootSignature);
 }
 
+ID3D12RootSignature* CScene::Create_TextureUI_GraphicsRootSignature(ID3D12Device* pd3dDevice)
+{
+	ID3D12RootSignature* pd3dGraphicsRootSignature = NULL;
+
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRange = {};
+	pd3dDescriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	pd3dDescriptorRange.NumDescriptors = 1;
+	pd3dDescriptorRange.BaseShaderRegister = 8; // t8: gtxtUITexture
+	pd3dDescriptorRange.RegisterSpace = 0;
+	pd3dDescriptorRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	D3D12_ROOT_PARAMETER pd3dRootParameters[1] = {};
+	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[0].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRange;
+	pd3dRootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDesc = {};
+	pd3dSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	pd3dSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	pd3dSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	pd3dSamplerDesc.MipLODBias = 0;
+	pd3dSamplerDesc.MaxAnisotropy = 1;
+	pd3dSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dSamplerDesc.MinLOD = 0;
+	pd3dSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dSamplerDesc.ShaderRegister = 0;
+	pd3dSamplerDesc.RegisterSpace = 0;
+	pd3dSamplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc = {};
+	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
+	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
+	d3dRootSignatureDesc.NumStaticSamplers = 1;
+	d3dRootSignatureDesc.pStaticSamplers = &pd3dSamplerDesc;
+	d3dRootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	ID3DBlob* pd3dSignatureBlob = NULL;
+	ID3DBlob* pd3dErrorBlob = NULL;
+	HRESULT hr = D3D12SerializeRootSignature(
+		&d3dRootSignatureDesc,
+		D3D_ROOT_SIGNATURE_VERSION_1,
+		&pd3dSignatureBlob,
+		&pd3dErrorBlob
+	);
+
+	if (FAILED(hr)) {
+		if (pd3dErrorBlob) OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+		else OutputDebugStringA("Failed to serialize root signature.\n");
+	}
+
+	hr = pd3dDevice->CreateRootSignature(
+		0,
+		pd3dSignatureBlob->GetBufferPointer(),
+		pd3dSignatureBlob->GetBufferSize(),
+		__uuidof(ID3D12RootSignature),
+		(void**)&pd3dGraphicsRootSignature
+	);
+
+	if (FAILED(hr)) {
+		OutputDebugStringA("Failed to create root signature.\n");
+	}
+
+	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
+	if (pd3dErrorBlob) pd3dErrorBlob->Release();
+
+	return pd3dGraphicsRootSignature;
+}
+
 void CScene::BuildDefaultLightsAndMaterials()
 {
 	m_nLights = 5;
@@ -558,6 +629,9 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	if (!m_Plane_GraphicsRootSignature)
 		m_Plane_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_Plane_GraphicsRootSignature(pd3dDevice), com_deleter);
+
+	if (!m_TextureUI_GraphicsRootSignature)
+		m_TextureUI_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_TextureUI_GraphicsRootSignature(pd3dDevice), com_deleter);
 
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 }
@@ -823,6 +897,42 @@ void CScene::Update_UI()
 }
 
 #endif
+
+void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Texture_UI_Renderer* texture_ui_renderer_ptr)
+{
+	    texture_ui_manager = new Texture_UI_Manager();
+    if (!texture_ui_manager) return;
+
+    auto pShader = std::make_unique<CTextureToScreenShader>(1);
+    pShader->CreateShader(pd3dDevice, pd3dCommandList, m_TextureUI_GraphicsRootSignature.get());
+    texture_ui_manager->SetShader(std::move(pShader));
+
+    CTexture* pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+    pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Texture_01_C.dds", RESOURCE_TEXTURE2D, 0);
+    CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTexture, 0, 0);
+
+    D3D12_GPU_DESCRIPTOR_HANDLE handle = CDescriptor_Heap::GetGPUDescriptorHandleForHeapStart();
+
+    auto mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
+
+    D2D1_RECT_F screenRect = D2D1::RectF(0, 0, 128, 128);
+    auto block = std::make_unique<TextureBlock>(pTexture->GetResource(0), handle, screenRect, mesh);
+
+    texture_ui_manager->Add_TextureBlock(std::move(block));
+}
+
+std::vector<TextureBlock*>* CScene::Get_Texture_List()
+{
+	if (texture_ui_manager)
+		return texture_ui_manager->GetTextureBlockPtrs();
+	else
+		return nullptr;
+}
+
+void CScene::Update_Texture_UI()
+{
+
+}
 
 void CScene::ReleaseObjects()
 {

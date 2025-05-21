@@ -1836,3 +1836,75 @@ void Trail_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* p
 	pd3dCommandList->IASetIndexBuffer(&m_pd3dSubSetIndexBufferViews[0]);
 }
 
+CTextureMesh::CTextureMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float width, float height)
+	: CMesh(pd3dDevice, pd3dCommandList)
+{
+	m_nVertices = 4;
+	m_nSubMeshes = 1;
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+
+	m_pxmf3Positions = new XMFLOAT3[4]{
+		XMFLOAT3(-width * 0.5f, +height * 0.5f, 0.0f),
+		XMFLOAT3(+width * 0.5f, +height * 0.5f, 0.0f),
+		XMFLOAT3(-width * 0.5f, -height * 0.5f, 0.0f),
+		XMFLOAT3(+width * 0.5f, -height * 0.5f, 0.0f)
+	};
+
+	m_pxmf2TexCoords = new XMFLOAT2[4]{
+		XMFLOAT2(0.0f, 0.0f),
+		XMFLOAT2(1.0f, 0.0f),
+		XMFLOAT2(0.0f, 1.0f),
+		XMFLOAT2(1.0f, 1.0f)
+	};
+
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	m_pd3dTexCoordBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TexCoords, sizeof(XMFLOAT2) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTexCoordUploadBuffer);
+
+	m_d3dTexCoordBufferView.BufferLocation = m_pd3dTexCoordBuffer->GetGPUVirtualAddress();
+	m_d3dTexCoordBufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTexCoordBufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+}
+
+CTextureMesh::~CTextureMesh()
+{
+	if (m_pd3dPositionBuffer) m_pd3dPositionBuffer->Release();
+	if (m_pd3dTexCoordBuffer) m_pd3dTexCoordBuffer->Release();
+
+	if (m_pxmf3Positions) delete[] m_pxmf3Positions;
+	if (m_pxmf2TexCoords) delete[] m_pxmf2TexCoords;
+}
+
+void CTextureMesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[] = {
+		m_d3dPositionBufferView,
+		m_d3dTexCoordBufferView
+	};
+	pd3dCommandList->IASetVertexBuffers(0, _countof(pVertexBufferViews), pVertexBufferViews);
+}
+
+void CTextureMesh::Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet)
+{
+	UpdateShaderVariables(pd3dCommandList);
+	OnPreRender(pd3dCommandList, nullptr);
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+	pd3dCommandList->DrawInstanced(m_nVertices, 1, 0, 0);
+}
+
+void CTextureMesh::ReleaseUploadBuffers()
+{
+	if (m_pd3dPositionUploadBuffer) m_pd3dPositionUploadBuffer->Release();
+	if (m_pd3dTexCoordUploadBuffer) m_pd3dTexCoordUploadBuffer->Release();
+
+	m_pd3dPositionUploadBuffer = nullptr;
+	m_pd3dTexCoordUploadBuffer = nullptr;
+}

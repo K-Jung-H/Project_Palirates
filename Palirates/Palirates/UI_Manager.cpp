@@ -262,3 +262,89 @@ void Text_UI_Renderer::Render(UINT nFrame, std::vector<TextBlock*>* block_list_p
     m_pd3d11DeviceContext->Flush();
 }
 
+////////////////////////////////////////////////////////
+
+Texture_UI_Renderer::Texture_UI_Renderer(ID3D12Device* device)
+{
+    m_pd3dDevice = device;
+
+    struct Vertex { XMFLOAT3 pos; XMFLOAT2 uv; };
+    Vertex vertices[] = {
+        {{ -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f }},
+        {{  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f }},
+        {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f }},
+        {{  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f }},
+    };
+
+    const UINT vbSize = sizeof(vertices);
+
+    D3D12_HEAP_PROPERTIES heapProps = {};
+    heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+    heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapProps.CreationNodeMask = 1;
+    heapProps.VisibleNodeMask = 1;
+
+    D3D12_RESOURCE_DESC resDesc = {};
+    resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resDesc.Alignment = 0;
+    resDesc.Width = vbSize;
+    resDesc.Height = 1;
+    resDesc.DepthOrArraySize = 1;
+    resDesc.MipLevels = 1;
+    resDesc.Format = DXGI_FORMAT_UNKNOWN;
+    resDesc.SampleDesc.Count = 1;
+    resDesc.SampleDesc.Quality = 0;
+    resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    m_pd3dDevice->CreateCommittedResource(
+        &heapProps, D3D12_HEAP_FLAG_NONE,
+        &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr, IID_PPV_ARGS(&m_pVertexBuffer)
+    );
+
+    void* mappedData = nullptr;
+    m_pVertexBuffer->Map(0, nullptr, &mappedData);
+    memcpy(mappedData, vertices, vbSize);
+    m_pVertexBuffer->Unmap(0, nullptr);
+
+    m_VertexBufferView.BufferLocation = m_pVertexBuffer->GetGPUVirtualAddress();
+    m_VertexBufferView.SizeInBytes = vbSize;
+    m_VertexBufferView.StrideInBytes = sizeof(Vertex);
+}
+
+Texture_UI_Renderer::~Texture_UI_Renderer()
+{
+
+}
+
+void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList, std::vector<TextureBlock*>* pTextureList)
+{
+    for (auto& block : *pTextureList)
+    {
+        if (!block || !block->pTexture || !block->mesh) continue;
+
+        cmdList->SetGraphicsRootDescriptorTable(0, block->srvGpuHandle);
+
+        D3D12_VIEWPORT vp = {};
+        vp.TopLeftX = block->screenRect.left;
+        vp.TopLeftY = block->screenRect.top;
+        vp.Width = block->screenRect.right - block->screenRect.left;
+        vp.Height = block->screenRect.bottom - block->screenRect.top;
+        vp.MinDepth = 0.0f;
+        vp.MaxDepth = 1.0f;
+        cmdList->RSSetViewports(1, &vp);
+
+        D3D12_RECT scissor = {
+            (LONG)block->screenRect.left,
+            (LONG)block->screenRect.top,
+            (LONG)block->screenRect.right,
+            (LONG)block->screenRect.bottom
+        };
+        cmdList->RSSetScissorRects(1, &scissor);
+
+        block->mesh->OnPreRender(cmdList, nullptr);
+        block->mesh->Render(cmdList, 0);
+    }
+}

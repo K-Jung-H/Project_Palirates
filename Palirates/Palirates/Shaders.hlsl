@@ -455,3 +455,30 @@ float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
         
     return (cColor);
 }
+
+Texture2D gtxtUITexture : register(t8);
+
+struct VS_UI_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+};
+
+struct VS_UI_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD;
+};
+
+VS_UI_OUTPUT VS_UI(VS_UI_INPUT input)
+{
+    VS_UI_OUTPUT output;
+    output.position = float4(input.position.xy, 0.0f, 1.0f); 
+    output.uv = input.uv;
+    return output;
+}
+
+float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
+{
+    return gtxtUITexture.Sample(gssClamp, input.uv);
+}
