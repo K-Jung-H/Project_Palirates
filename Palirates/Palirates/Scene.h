@@ -46,6 +46,16 @@ struct LIGHTS
 	int									m_nLights;
 };
 
+struct Fog_Info
+{
+	XMFLOAT3 fogColor;
+	int Fog_Trigger;
+
+	float fogStart;
+	float fogEnd;
+	XMFLOAT2 padding0;
+};
+
 
 class CScene
 {
@@ -57,9 +67,11 @@ public:
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables_Light_Info(ID3D12GraphicsCommandList* pd3dCommandList);
-	
+	virtual void UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+
 	virtual void ReleaseShaderVariables();
 
 	virtual void BuildDefaultLightsAndMaterials();
@@ -126,6 +138,8 @@ public:
 
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
+
+	shared_ptr<Fog_Info> fog_info = NULL;
 
 	bool test_button = false;
 	bool particle_test_button = false;

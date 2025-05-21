@@ -881,9 +881,6 @@ void CGameFramework::Update_Scene()
 }
 
 
-
-
-
 void CGameFramework::After_Update_Scene()
 {
 	scene_manager->After_Update_Active_Objects();

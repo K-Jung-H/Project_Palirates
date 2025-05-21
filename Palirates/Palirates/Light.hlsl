@@ -42,7 +42,7 @@ struct Light_Material_Info
 
 StructuredBuffer<Light_Material_Info> Light_Material_Info_List : register(t4);
 
-cbuffer cbLights : register(b1)
+cbuffer cbLights : register(b2)
 {
     LIGHT gLights[MAX_LIGHTS];
     float4 gcGlobalAmbientLight;

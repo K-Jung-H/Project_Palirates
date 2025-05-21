@@ -160,7 +160,7 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// n = 12, t6 = Terrain_Base_Texture
+		// n = 12, t6 = Terrain_Detail_Texture
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
@@ -560,6 +560,17 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		m_Plane_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_Plane_GraphicsRootSignature(pd3dDevice), com_deleter);
 
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+
+	fog_info = make_shared<Fog_Info>();
+	{
+		fog_info->fogColor = XMFLOAT3(0.5f, 0.5f, 0.5f);
+		fog_info->Fog_Trigger = false;
+
+		fog_info->fogStart = 10.0f;
+		fog_info->fogEnd = 200.0f;
+		fog_info->padding0 = XMFLOAT2(0.0f, 0.0f);
+	}
+
 }
 
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -672,7 +683,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-	m_pTerrain->PrintFrameInfo(m_pTerrain.get(), NULL);
 
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
@@ -734,18 +744,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #endif
 		//=====================================================
 
-		//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
-
-		// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
-
-		//for (auto& [mesh_name, instance_info] : *temp_list_map)
-		//{
-			//m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
-			//m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
-		//}
-
-		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
-		//obj_manager->Classify_Objects_By_Tile();
 
 		Object_Manager::Reserve_Update();
 
@@ -897,6 +895,11 @@ void CScene::UpdateShaderVariables_Light_Info(ID3D12GraphicsCommandList* pd3dCom
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX, d3dcbLightsGpuVirtualAddress); //Lights
 }
 
+void CScene::UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_FOG_INFO_INDEX, 8, fog_info.get(), 0);
+}
+
 void CScene::ReleaseShaderVariables()
 {
 	if (m_pd3dcbLights)
@@ -950,6 +953,13 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			test_button = !test_button;
 		}
 			break;
+
+		case 'F':		case 'f':
+		{
+			// Toggle Fog On/Off
+			fog_info->Fog_Trigger ^= 1;
+		}
+		break;
 
 		case 'E':
 		{
@@ -1407,6 +1417,7 @@ void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	obj_manager->Post_Update_All();
 }
 
+//==========================================================================================
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -1665,6 +1676,12 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 			UpdatePlayerSelection(select_index + 1);
 			break;
 
+		case 'F':		case 'f':
+		{
+			// Toggle Fog On/Off
+			fog_info->Fog_Trigger ^= 1;
+		}
+		break;
 
 		default:
 			break;
@@ -2076,6 +2093,13 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		case 'A':		case 'a':
 		{
 			pirate_ship->Add_Rotate(-10.0f);
+		}
+		break;
+
+		case 'F':		case 'f':
+		{
+			// Toggle Fog On/Off
+			fog_info->Fog_Trigger ^= 1;
 		}
 		break;
 

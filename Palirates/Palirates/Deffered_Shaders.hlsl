@@ -6,12 +6,19 @@ Texture2D<float4> T_World_Position: register(t1);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Velocity : register(t3);
 
+cbuffer cb_Fog_Info : register(b0)
+{
+    float3 fogColor;
+    int Fog_Trigger;
+    
+    float fogStart;
+    float fogEnd; 
+    float2 padding0;
+}
 
-
-cbuffer cb_Post_Camera : register(b0)
+cbuffer cb_Post_Camera : register(b1)
 {
     float3 camera_pos;
-    uint Fog_Trigger;
 };
 
 //==================================================================
@@ -81,7 +88,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
     
     float3 wNormal = wNormal_CD.xyz;
-    float Camera_Distance = wNormal_CD.w;    
+    float Camera_Distance = wNormal_CD.w;
 
     
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
@@ -94,10 +101,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     //================================================================    
     
     // 안개 강도 계산 (카메라와의 거리를 기반)
-    float3 fogColor = float3(0.5f, 0.5f, 0.5f); // 안개 색상 (회색)
-    float fogStart = 10.0f; // 안개 시작 거리
-    float fogEnd = 200.0f; // 안개 끝 거리
-    
+ 
     // 선형 안개
     float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart)); // 선형 안개
 
@@ -106,16 +110,16 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     //float fogFactor = 1.0 - exp(-Camera_Distance * fogDensity);
     
     
-    float4 cColor = float4(lerp(Light_Color.rgb, fogColor, fogFactor), 1.0f); // 안개 효과 적용
+    float4 fogged_cColor = float4(lerp(Light_Color.rgb, fogColor, fogFactor), 1.0f); // 안개 효과 적용
     
     //================================================================
-    //return cColor;
+
     if (Fog_Trigger == 1)
-        return cColor;
+        return fogged_cColor;
     else
         return Light_Color;
     
-    }
+}
 
 //=====================================================================
 
