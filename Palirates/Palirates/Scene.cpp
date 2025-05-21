@@ -659,14 +659,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 
-	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+//	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+//	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
-
+	Particle_Shape_Mesh* billboard_mesh = new Billboard_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
 
 	Particle_Format test_dragon_fire_info;
 	{
-		test_dragon_fire_info.shader_type = Particle_Type::spread;
+		test_dragon_fire_info.shader_type = Particle_Type::loop;
 		test_dragon_fire_info.particle_type = 5;
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
@@ -701,19 +702,43 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
+	Particle_Format bleeding_info;
+	{
+		bleeding_info.shader_type = Particle_Type::interval;
+		bleeding_info.particle_type = 6;
+		bleeding_info.max_particles = 30;
+		bleeding_info.MaxLifetime = 3.0f;
+
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+		bleeding_info.EmitFaceIndex = 5;
+
+		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		bleeding_info.init_velocity_value = 10.0f;
+		bleeding_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		bleeding_info.size = 0.3f;
+		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	}
+
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_dragonfire->Set_Active(false);
 
-	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
+
+	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, billboard_mesh, test_sand_storm_info);
+	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds");
+	test_sand->Set_Local_Coordinate();
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
+	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
+	test_bleeding->Set_World_Coordinate();
+
+
 #endif
 
 
-
-#ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
@@ -721,7 +746,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+	m_pTerrain->PrintFrameInfo(m_pTerrain.get(), NULL);
+
 	obj_manager->Set_Terrain_Object(m_pTerrain);
+
 
 	{
 		string obj_name_1 = "Anubis";
@@ -734,14 +762,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		string obj_name_8 = "test_palyer6";
 
 
-		std::string_view name_view = obj_name_1;
+	/*	std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		AnubisObject->SetPosition(1450.0f, m_pTerrain->Get_Mesh_Height(1450.0f, 650.0f), 650.0f);
 		AnubisObject->Set_Name(obj_name_1);
 		AnubisObject->test_num = 1;
 		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
 		AnubisObject->SetupWeaponCollider();
-		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
+		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);*/
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
@@ -754,7 +782,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-		for (int i = 0; i < 5; i++)
+		/*for (int i = 0; i < 5; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
@@ -763,7 +791,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
-		}
+		}*/
 
 #ifdef LOAD_SCENE
 
@@ -780,24 +808,25 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #endif
 		//=====================================================
 
-		unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
+		//unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 
 		// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
 
-		for (auto& [mesh_name, instance_info] : *temp_list_map)
-		{
+		//for (auto& [mesh_name, instance_info] : *temp_list_map)
+		//{
 			//m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
 			//m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
-		}
+		//}
 
 		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
-		obj_manager->Classify_Objects_By_Tile();
+		//obj_manager->Classify_Objects_By_Tile();
 
 		Object_Manager::Reserve_Update();
 
-		obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
-		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
-
+#ifdef USING_OBB
+		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
 	}
 
 
@@ -1021,11 +1050,16 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		switch (wParam)
 		{
 		case 'Q':
-			test_button = !test_button;
 			{
 				m_pPlayer->SetBlurMask(test_button);
 
 			}		break;
+
+		case 'R':
+		{
+			test_button = !test_button;
+		}
+			break;
 
 		case 'E':
 		{
@@ -1046,14 +1080,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						if (particle_test_button) {
 							dragon->Test_Mode = true;
 							float centerZ = 1590.0f;
-							//XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
 							XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 35.0f, 831.0f);
 							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 							dragon->SetPosition(centerPos);
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
-							//dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
 							dragon->SetPosition(XMFLOAT3(1723.0f, 35.0f, 831.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}
@@ -1293,7 +1325,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						//test_dragonfire->Set_Center(position);
 						test_dragonfire->SetPosition(position);
 
 						XMFLOAT3 look;
@@ -1304,6 +1335,9 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 			}
 		}
 	}
+
+	if(test_bleeding)
+		test_bleeding->SetPosition(m_pPlayer->GetPosition());
 
 #ifdef RENDER_WAVE
 
@@ -1324,12 +1358,18 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-#ifdef RENDER_OBB
-
-	// Update every frame
-	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
-
+#ifdef RENDER_WAVE
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
+
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
+	obj_manager->Check_OBB_Collision();
+	obj_manager->Check_OBB_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+#endif
+
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
@@ -1354,6 +1394,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 
 
+
 	if (test_sand && test_sand->Update_Func_Index == 1)
 	{
 		auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1371,12 +1412,31 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
-#ifdef RENDER_WAVE
-	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
-	if (wave_obj)
-		wave_obj->Copy_Buffer_Data(pd3dCommandList);
-#endif
+	if (test_button)
+	{
+		test_button = false;
+		Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 
+		Particle_Format bleeding_info;
+		{
+			bleeding_info.shader_type = Particle_Type::interval;
+			bleeding_info.particle_type = 6;
+			bleeding_info.max_particles = 30;
+			bleeding_info.MaxLifetime = 3.0f;
+
+			bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+			bleeding_info.EmitFaceIndex = 5;
+
+			bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			bleeding_info.init_velocity_value = 10.0f;
+			bleeding_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			bleeding_info.size = 0.3f;
+			bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+		}
+		test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
+		test_bleeding->Set_World_Coordinate();
+	}
 }
 
 void CScene::After_Update_Objects()
@@ -1391,13 +1451,13 @@ void CScene::After_Update_Objects()
 
 }
 
-void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
-	pCamera->Update_Render_ShaderVariables(pd3dCommandList);
-	pCamera->Update_Last_Frame_Info(pd3dCommandList);
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
 
 	//씬의 객체들 프러스텀 컬링
 	//obj_manager->Check_Culling_All(pCamera);
@@ -1407,45 +1467,43 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 }
 
-void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
 	Fog_Trigger = true;
-	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 
 }
 
-void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (m_Transparent_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_Transparent_GraphicsRootSignature.get());
 
-	pCamera->Update_Render_ShaderVariables(pd3dCommandList);
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 
 
 }
 
-void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, pCamera);
-
-#ifdef RENDER_WAVE
-	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
-	obj_manager->Render_Wave(pd3dCommandList, pCamera);
-#endif
+	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, main_Camera.get());
 
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 	{
-		particle_manager->Render_All(pd3dCommandList, pCamera);
+		particle_manager->Render_All(pd3dCommandList, main_Camera.get());
 	}
 #endif
 
-#ifdef RENDER_OBB
+#ifdef USING_OBB
 	if (bOBBRender)
-		obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
+		obj_manager->Render_OBB(pd3dCommandList, main_Camera.get());
 #endif
 
+#ifdef RENDER_WAVE
+	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
+	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
+#endif
 	// For UI
 	//if (Shader_list.size())
 	//	for (std::shared_ptr<CShader> shader_ptr : Shader_list)
@@ -1454,7 +1512,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 }
 
 
-void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Post_Update_All();
 }
@@ -1482,8 +1540,6 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	m_fElapsedTime = fTimeElapsed;
-
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -1493,9 +1549,9 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 
 }
 
-void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 }
 
 //==========================================================================================
@@ -1563,8 +1619,8 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 #endif
 
 
-#ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	//=====================================================
@@ -1639,7 +1695,6 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 		obj->SetLookDirection(lookDir);
 	}
-	m_fElapsedTime = fTimeElapsed;
 
 	static float m_fAccumulatedTime = 0.0f;
 	m_fAccumulatedTime += fTimeElapsed;
@@ -1665,9 +1720,16 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 	m_pLights[0].m_fRange = 50.0f + 20.0f * (fillFactor - 0.8f);
 }
 
-void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	CScene::Render(pd3dDevice, pd3dCommandList, pCamera);
+	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+}
+
+
+void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	CScene::Render(pd3dDevice, pd3dCommandList);
 	Fog_Trigger = false;
 	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
@@ -1717,8 +1779,6 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		default:
 			break;
 		}
-	default:
-		break;
 	}
 	return(false);
 }
@@ -1786,8 +1846,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 #endif
 
 
-#ifdef RENDER_OBB
-	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
@@ -1916,7 +1976,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
-		water_splashes_info.shader_type = Particle_Type::spread;
+		water_splashes_info.shader_type = Particle_Type::loop;
 		water_splashes_info.particle_type = 2;
 		water_splashes_info.max_particles = 300;
 
@@ -1946,7 +2006,6 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-
 #ifdef RENDER_WAVE
 
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;
@@ -1993,7 +2052,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	if (m_pPlayer && m_pPlayer->GetCamera())
 	{
-		auto* camera = m_pPlayer->GetCamera();
+		auto camera = m_pPlayer->GetCamera();
 
 		camera->UpdateMouseHold(fTimeElapsed);
 	}
@@ -2007,7 +2066,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
 
-	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
+	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -2026,7 +2086,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	if (focus_button)
 	{
-		CCamera* player_camera = m_pPlayer->GetCamera();
+		shared_ptr<CCamera> player_camera = m_pPlayer->GetCamera();
 
 		XMFLOAT3 new_camera_pos;
 		pirate_ship->UpdateTransform(NULL);
@@ -2039,13 +2099,13 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
 		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
-		m_pPlayer->SetPosition(Fixed_Position);
-
+		//m_pPlayer->SetPosition(Fixed_Position);
+		
 		auto pCamera = m_pPlayer->GetCamera();
 		pCamera->SetPosition(Fixed_Position);
-		pCamera->SetLookAtPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 0.0f, 0.0f), UpVector); 
-	}
+		pCamera->RegenerateViewMatrix();
+		}
 
 }
 
@@ -2057,7 +2117,7 @@ void Board_Scene::After_Update_Objects()
 
 void Board_Scene::SetCameraTarget(std::string_view target)
 {
-	CCamera* camera_ptr = m_pPlayer->GetCamera();
+	shared_ptr<CCamera> camera_ptr = m_pPlayer->GetCamera();
 	if (!camera_ptr)
 		return;
 
@@ -2085,16 +2145,14 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 	}
 }
 
-void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 
 #ifdef RENDER_WAVE
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get()); // Wave_RootSignature
-	obj_manager->Render_Wave(pd3dCommandList, pCamera);
+	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
-
-
 
 	Fog_Trigger = false;
 }
@@ -2139,15 +2197,15 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '1':
 			SetCameraTarget("Captain");
-		break;
+			break;
 
 		case '2':
 			SetCameraTarget("Sailor_0");
-		break;
+			break;
 
 		case '3':
 			SetCameraTarget("Sailor_1");
-		break;
+			break;
 
 		case '4':
 			SetCameraTarget("Sailor_2");
@@ -2159,13 +2217,11 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '6':
 			SetCameraTarget("Sailor_4");
-		break;
+			break;
 
 		default:
 			break;
 		}
-	default:
-		break;
 	}
 	return(false);
 }

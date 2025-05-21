@@ -3426,15 +3426,28 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
-	if (nMaxDepth == 0)
+	bool bIsRoot = (tile_map_number == 0);
+
+	if (bIsRoot) // Root node
 	{
-		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
-		SetMesh(part_mesh);
+		CHeightMapGridMesh* full = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, 
+			m_pHeightMapImage->GetHeightMapWidth(), m_pHeightMapImage->GetHeightMapLength(), xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
+		Set_FullMesh(full);  // Only used for rendering
+		SetMesh(nullptr);    
+	}
+	else if (m_nDepth == 0) // Leaf node: used for height/normal
+	{
+		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, 
+			nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
+		SetMesh(part_mesh);  // local terrain 
+	}
+	else
+	{
+		SetMesh(nullptr);    
 	}
 }
 
-void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature,
-	LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
+void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
 {
 	if (m_nDepth <= 0) return;
 
@@ -3447,24 +3460,17 @@ void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12Graph
 		for (int x = 0; x < Cell_num; ++x)
 		{
 			XMFLOAT4 tile_color = Get_Random_Color(1.0f);
-
 			int xStart = (int)Tile_Start_Pos.x + x * blocks_x_size[0];
 			int zStart = (int)Tile_Start_Pos.y + z * blocks_z_size[0];
 
-			std::shared_ptr<CHeightMapTerrain> child = std::make_shared<CHeightMapTerrain>(
-				pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName,
-				xStart, zStart, blocks_x_size[x], blocks_z_size[z],
-				xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1
-			);
+			std::shared_ptr<CHeightMapTerrain> child = std::make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, 
+				xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1);
 
 			Set_Child(child);
-
-			// 재귀 분할
 			child->DivideIntoChildren(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xmf3Scale, Vertex_gap);
 		}
 	}
 }
-
 
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
@@ -3712,7 +3718,7 @@ void CHeightMapTerrain::Check_Culling(CCamera* pCamera)
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (Get_Active() && m_pMesh != NULL)
+	if (Get_Active() && full_mesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
@@ -3721,21 +3727,20 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 
 			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
+			
+			full_mesh->Render(pd3dCommandList, 0);
 
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
 		}
 	}
 
-	if (Get_Active())
-	{
-		std::shared_ptr<CGameObject> pChild = Get_Child();
-		if (pChild) pChild->Render(pd3dCommandList, pCamera);
-	}
+	//if (Get_Active())
+	//{
+	//	std::shared_ptr<CGameObject> pChild = Get_Child();
+	//	if (pChild) pChild->Render(pd3dCommandList, pCamera);
+	//}
 
-	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
-	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+	//std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	//if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
 
 }
 
@@ -4446,7 +4451,8 @@ void CMonsterObject::Animate(float fTimeElapsed)
 	GetStateMachine()->update(fTimeElapsed);
 }
 
-void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
+void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) 
+{
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
 

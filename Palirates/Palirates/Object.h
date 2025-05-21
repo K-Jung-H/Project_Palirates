@@ -787,6 +787,8 @@ private:
     XMFLOAT2 Area_LT{};
     XMFLOAT2 Area_RB{};
 
+    CMesh* full_mesh = NULL;
+    void Set_FullMesh(CMesh* new_mesh) { full_mesh = new_mesh; }
 public:
     CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
         int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1);

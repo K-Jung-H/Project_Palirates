@@ -6,26 +6,6 @@
 #include "Particle.h"
 
 
-struct CB_Particle_Update_Info
-{
-	XMFLOAT4X4 world_matrix;
-
-	XMFLOAT3 EmitRegionMin;
-	float ElapsedTime;
-
-	XMFLOAT3 EmitRegionMax;
-	UINT Max_Particle_N;
-
-	XMFLOAT3 Main_Direction;
-	float Init_Velocity_Value;
-
-	XMFLOAT3 focus_point;
-	float focus_strength;
-
-	UINT obb_num;
-	XMFLOAT3 padding0;
-};
-
 class ParticleShader : public CShader
 {
 protected:
@@ -78,18 +58,14 @@ public:
 
 class Spread_ParticleShader : public ParticleShader
 {
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
 class Sand_ParticleShader : public ParticleShader
 {
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreateGeometryShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
@@ -128,6 +104,8 @@ public:
 	void Release_OBB_Data_ShaderVariables();
 
 	void AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	
 
 	void Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	void Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
@@ -140,7 +118,8 @@ public:
 	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 
-	std::shared_ptr<ParticleObject>  Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
+	std::shared_ptr<ParticleObject> Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
+	std::shared_ptr<ParticleObject> Recycle_Particle(Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
 
 	void Clear_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -194,5 +173,5 @@ private:
 	std::unordered_map<int, std::vector<UINT>> tempCellMap;
 
 	GridMeta meta;
-
+	
 };

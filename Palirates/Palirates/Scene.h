@@ -82,21 +82,21 @@ public:
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
 
-	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-    virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera=NULL);
+	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+	
+	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
-
-	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void ReleaseUploadBuffers();
 
 	Particle_Manager* Get_Particle_Manager() { return particle_manager; }
 
-	//CPlayer								*m_pPlayer = NULL;
 	shared_ptr<CPlayer> m_pPlayer = NULL;
+	shared_ptr<CCamera> main_Camera = NULL;
 
 	bool bOBBRender{ false };
 
@@ -107,14 +107,10 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature;
 
 public:
-	float								m_fElapsedTime = 0.0f;
-
-
 	Particle_Manager* particle_manager = NULL;
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
-
-	std::shared_ptr<Wave_Object> in_game_wave;
+	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
 
 	Object_Manager* obj_manager = NULL;
@@ -153,7 +149,7 @@ class Test_Scene : public CScene
 {
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 };
 
@@ -165,7 +161,9 @@ private:
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void UpdatePlayerSelection(int new_index);
@@ -192,7 +190,7 @@ public:
 
 	void SetCameraTarget(std::string_view target);
 
-	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);

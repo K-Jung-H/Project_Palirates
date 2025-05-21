@@ -2,10 +2,9 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-
 struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 {
-    float3 position : POSITION;
+    float3 position : LOCALPOS; 
     float4 Position_and_Scale : INSTANCE_POS_SCALE;
     float4 velocity_and_Rotate : INSTANCE_VELOCITY; // xyz = 회전축, w = 회전각
     float4 color : INSTANCE_COLOR;
@@ -13,8 +12,8 @@ struct VS_INSTANCE_PARTICLE_DRAW_INPUT
 
 struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
 {
-    float4 position : SV_POSITION;
-    float3 positionW : POSITION;
+    float4 position : SV_POSITION; 
+    float3 positionW : POSITIONW; 
     float4 color : COLOR;
     float2 velocity : VELOCITY;
 };
@@ -36,31 +35,6 @@ float3x3 AxisAngleToMatrix(float3 axis, float angle)
     );
 }
 
-//VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT input)
-//{
-//    VS_INSTANCE_PARTICLE_DRAW_OUTPUT output = (VS_INSTANCE_PARTICLE_DRAW_OUTPUT) 0;
-
-    
-//    float3 axis = normalize(input.velocity_and_Rotate.xyz); // rotation axis
-//    float angle = input.velocity_and_Rotate.w; // rotation angle
-//    float3x3 rotation = AxisAngleToMatrix(axis, angle);
-
-//    float scale = input.Position_and_Scale.w;
-//    float3 scaledPos = input.position * scale;
-//    float3 rotatedPos = mul(rotation, scaledPos);
-//    float3 worldPos = rotatedPos + input.Position_and_Scale.xyz;
-
-//    float4 worldPos4 = mul(float4(worldPos, 1.0f), gmtxGameObject);
-//    output.positionW = worldPos4.xyz;
-//    output.position = mul(mul(worldPos4, gmtxView), gmtxProjection);
-//    output.color = input.color;
-
-//    float4 velocityViewProj = mul(mul(float4(input.velocity_and_Rotate.xyz, 0.0f), gmtxView), gmtxProjection);
-//    float2 velocityNDC = velocityViewProj.xy / output.position.w;
-//    output.velocity = velocityNDC * 0.5f * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
-
-//    return output;
-//}
 
 VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT input)
 {
@@ -104,6 +78,101 @@ float4 PS_Transparent_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input) : SV_
 
     return float4(particle_color);
 }
+
+
+//=============================================================================================
+
+
+struct VS_INSTANCE_BILLBOARD_PARTICLE_DRAW_INPUT
+{
+    float4 Position_and_Scale : INSTANCE_POS_SCALE;
+    float4 Velocity_and_Rotate : INSTANCE_VELOCITY;
+    float4 Color : INSTANCE_COLOR;
+};
+
+struct GS_BILLBOARD_INPUT
+{
+    float3 center : CENTER;
+    float scale : SCALE;
+    float4 color : COLOR;
+    float3 velocity : VELOCITY;
+};
+
+struct VS_BILLBOARD_OUTPUT
+{
+    GS_BILLBOARD_INPUT data;
+};
+
+struct PS__BILLBOARD_INPUT
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
+    float2 uv : TEXCOORD0; 
+};
+
+
+
+
+VS_BILLBOARD_OUTPUT VS_BILLBOARD_PARTICLE_DRAW(VS_INSTANCE_BILLBOARD_PARTICLE_DRAW_INPUT input)
+{
+    VS_BILLBOARD_OUTPUT output;
+    output.data.center = input.Position_and_Scale.xyz;
+    output.data.scale = input.Position_and_Scale.w;
+    output.data.color = input.Color;
+    output.data.velocity = input.Velocity_and_Rotate.xyz;
+    return output;
+}
+
+
+static float3 gf3BillboardOffsets[4] = { float3(-10.0f, +10.0f, 0.0f), float3(+10.0f, +10.0f, 0.0f), float3(-10.0f, -10.0f, 0.0f), float3(+10.0f, -10.0f, 0.0f) };
+static float2 gf2QuadUVs[4] = { float2(0.0f, 0.0f), float2(1.0f, 0.0f), float2(0.0f, 1.0f), float2(1.0f, 1.0f) };
+
+[maxvertexcount(4)]
+void GS_BILLBOARD_PARTICLE_DRAW(point VS_BILLBOARD_OUTPUT input[1], inout TriangleStream<PS__BILLBOARD_INPUT> triStream)
+{
+    float3 center = input[0].data.center;
+    float scale = input[0].data.scale;
+    float4 color = input[0].data.color;
+
+    float3 right = normalize(float3(gmtxInverseView._11, gmtxInverseView._12, gmtxInverseView._13));
+    float3 up = normalize(float3(gmtxInverseView._21, gmtxInverseView._22, gmtxInverseView._23));
+
+    for (int i = 0; i < 4; ++i)
+    {
+        float3 offset = (gf3BillboardOffsets[i].x * right + gf3BillboardOffsets[i].y * up) * scale;
+        float3 posWorld = mul(float4(center + offset, 1.0f), gmtxGameObject).xyz;
+        float4 clipPos = mul(mul(float4(posWorld, 1.0f), gmtxView), gmtxProjection);
+
+        PS__BILLBOARD_INPUT outp;
+        outp.position = clipPos;
+        outp.color = color;
+        outp.uv = gf2QuadUVs[i];
+        triStream.Append(outp);
+    }
+}
+
+float4 PS_BILLBOARD_PARTICLE_DRAW(PS__BILLBOARD_INPUT input) : SV_Target
+{
+    float4 base_texture = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    return base_texture * input.color;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

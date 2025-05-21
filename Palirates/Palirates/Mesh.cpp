@@ -58,7 +58,7 @@ CMesh::~CMesh()
 
 std::string CMesh::Get_Name() const 
 {
-	return std::string(m_pstrMeshName);
+	return std::string(m_pstrMeshName, strnlen_s(m_pstrMeshName, 64));
 }
 
 bool CMesh::Vertex_Existence() const
@@ -1155,9 +1155,38 @@ void CStandardMesh::LoadMeshFromFile(ID3D12Device *pd3dDevice, ID3D12GraphicsCom
 		}
 		else if (!strcmp(pstrToken, "</Mesh>"))
 		{
+			// Dummy Buffer			
+			if (!m_pd3dTangentBuffer)
+			{
+				m_pxmf3Tangents = new XMFLOAT3[m_nVertices];
+				for (int i = 0; i < m_nVertices; ++i) m_pxmf3Tangents[i] = XMFLOAT3(0.0f, 0.0f, 1.0f);
+
+				m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+
+				m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
+				m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+			}
+
+			// Dummy Buffer
+			if (!m_pd3dBiTangentBuffer)
+			{
+				m_pxmf3BiTangents = new XMFLOAT3[m_nVertices];
+				for (int i = 0; i < m_nVertices; ++i) m_pxmf3BiTangents[i] = XMFLOAT3(0.0f, 0.0f, 1.0f);
+
+				m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+
+				m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
+				m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+			}
+
 			break;
 		}
 	}
+
 }
 
 void CStandardMesh::LoadMeshFrom_OtherFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const char* pstrFileName)
@@ -1338,6 +1367,33 @@ void CStandardMesh::LoadMeshFrom_OtherFile(ID3D12Device* pd3dDevice, ID3D12Graph
 		}
 		else if (!strcmp(pstrToken, "</Mesh>"))
 		{
+			// Dummy Buffer			
+			if (!m_pd3dTangentBuffer)
+			{
+				m_pxmf3Tangents = new XMFLOAT3[m_nVertices];
+				for (int i = 0; i < m_nVertices; ++i) m_pxmf3Tangents[i] = XMFLOAT3(0.0f, 0.0f, 1.0f);
+
+				m_pd3dTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Tangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+
+				m_d3dTangentBufferView.BufferLocation = m_pd3dTangentBuffer->GetGPUVirtualAddress();
+				m_d3dTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+			}
+
+			// Dummy Buffer
+			if (!m_pd3dBiTangentBuffer)
+			{
+				m_pxmf3BiTangents = new XMFLOAT3[m_nVertices];
+				for (int i = 0; i < m_nVertices; ++i) m_pxmf3BiTangents[i] = XMFLOAT3(0.0f, 0.0f, 1.0f);
+
+				m_pd3dBiTangentBuffer = ::CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3BiTangents, sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dBiTangentUploadBuffer);
+
+				m_d3dBiTangentBufferView.BufferLocation = m_pd3dBiTangentBuffer->GetGPUVirtualAddress();
+				m_d3dBiTangentBufferView.StrideInBytes = sizeof(XMFLOAT3);
+				m_d3dBiTangentBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+			}
 			break;
 		}
 	}

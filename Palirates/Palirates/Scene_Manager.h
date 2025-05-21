@@ -31,9 +31,12 @@ public:
     std::shared_ptr<CScene> Get_Active_Scene() { return activeScene; }
     CScene* Get_Active_Scene_Ptr() { return activeScene.get(); }
 
-    bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPlayer> player_ptr);
-    shared_ptr<CPlayer> Get_Active_Scene_Player();
+    bool Set_Scene_Player(std::string_view sceneName, shared_ptr<CPlayer> player_ptr);
+    void Set_Active_Scene_Main_Camera(const std::shared_ptr<CCamera>& newCamera);
 
+    shared_ptr<CPlayer> Get_Active_Scene_Player();
+    shared_ptr<CCamera> Get_Active_Scene_Main_Camera();
+    
     void Set_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
 
     void Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -49,23 +52,21 @@ public:
     void Update_UI();
     void Update_Texture_UI();
 
-    void Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    void Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     
     void Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle);
-    void Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    void Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
     // Render Alpha obj
-    void Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
-    void Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera); 
+    void Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    void Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
     
     void Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3dCommandList);
-    void Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    void Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-    void Prepare_Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-    void Post_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
-    void Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    void Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
     void Render_Scene_UI(UINT nFrame);
     void Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList);

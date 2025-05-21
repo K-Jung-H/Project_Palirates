@@ -48,6 +48,7 @@ struct CellInfo
 #define PARTICLE_TYPE_SAND       3
 #define PARTICLE_TYPE_SAND_STORM       4
 #define PARTICLE_TYPE_DRAGON_FIRE       5
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 6
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
@@ -66,7 +67,8 @@ cbuffer CB_Particle_Update_Info : register(b0)
     float focus_strength;
 
     uint obb_num;
-    float3 padding0;
+    uint Reset_Flag;
+    float2 padding0;
 };
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
@@ -282,6 +284,15 @@ void Update_DragonFire(inout Particle_Info p, uint index)
     p.Color = FireColorGradient(lifeRatio, outerT);
 }
 
+void Update_Bleeding(inout Particle_Info p, uint index)
+{
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Velocity += RandomSpreadDirection(index, Main_Direction, 1.0f);
+    p.Position += p.Velocity * ElapsedTime;
+    p.Rotate_Value += 8.0f * ElapsedTime;
+}
+
+
 //===============================================================
 // 인스턴싱 정보 추출
 
@@ -317,16 +328,26 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
+    // Check Reset Flag
+    if (Reset_Flag != 0)
+    {
+        p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
+    // Check Delay    
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
     }
-
+    
     if (p.Active == 0)
         return;
-
+    
+    
     p.Lifetime += ElapsedTime;
 
     bool out_of_bounds = IsOutOfBounds(p.Position, EmitRegionMin, EmitRegionMax);
@@ -347,7 +368,9 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Water_Splash(p, index);
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
             Update_DragonFire(p, index);
-        
+        else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
+            Update_Bleeding(p, index);
+    
         
         float3 localPos = p.Position;
         float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
