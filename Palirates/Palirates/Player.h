@@ -21,6 +21,14 @@ enum Player_Model
 	Skeleton = 5,
 };
 
+struct AnimationWeightPacket
+{
+	uint8_t packetType;
+	uint32_t playerId;
+	uint8_t trackCount;
+	std::vector<std::pair<uint8_t, float>> trackWeights;
+};
+
 class CPlayer : public CGameObject
 {
 protected:
@@ -63,8 +71,12 @@ protected:
 	bool TrailStart{ false };
 
 	//=================¼­¹ö=================
-	int id;  
+	int m_PlayerID;
 	int state;
+	void SendAnimationUpdate();
+	float GetAnimationWeight(int track);
+	void SetPlayerID(int id);
+	void SetOnline(bool online);
 
 private:
 	std::unique_ptr<StateMachine> m_StateMachine;
@@ -166,14 +178,13 @@ public:
 
 	//=================¼­¹ö=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
-		: id(playerId), state(startState)
+		: m_PlayerID(playerId), state(startState)
 	{
 		m_xmf3Position = XMFLOAT3(startX, startY, startZ);
 	}
 
-	int GetID() const { return id; }
-	void SetID(int playerId) { id = playerId; }
-
+	int GetPlayerID();
+	void SendMovePacket(const XMFLOAT3& shift);
 	int GetState() const { return state; }
 	void SetState(int newState) { state = newState; }
 

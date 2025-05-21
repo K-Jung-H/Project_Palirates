@@ -73,8 +73,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	if (IsServerConnected()) 
 	{
 		int serverId = GetServerPlayerID();
-		m_pLocalPlayer->SetPlayerID(serverId);
-		m_pLocalPlayer->SetOnline(true);
+		//m_pLocalPlayer->SetPlayerID(serverId);
+		//m_pLocalPlayer->SetOnline(true);
 		std::cout << "[Info] 서버 ID로 갱신: " << serverId << std::endl;
 	}
 
@@ -1744,25 +1744,3 @@ void CGameFramework::NetworkLoop()
 	}
 }
 
-void CGameFramework::SendAnimationPacket(const AnimationWeightPacket& packet) 
-{
-	size_t size = sizeof(packet.packetType) + sizeof(packet.playerId) + sizeof(packet.trackCount) +
-		packet.trackCount * (sizeof(uint8_t) + sizeof(float));
-
-	char* buffer = new char[size];
-	memcpy(buffer, &packet.packetType, sizeof(packet.packetType));
-	memcpy(buffer + 1, &packet.playerId, sizeof(packet.playerId));
-	memcpy(buffer + 5, &packet.trackCount, sizeof(packet.trackCount));
-
-	size_t offset = 6;
-	for (const auto& [trackId, weight] : packet.trackWeights) {
-		memcpy(buffer + offset, &trackId, sizeof(trackId));
-		offset += sizeof(trackId);
-		memcpy(buffer + offset, &weight, sizeof(weight));
-		offset += sizeof(weight);
-	}
-
-	send(socket, buffer, size, 0);
-	delete[] buffer;
-	std::cout << "[Info] 애니메이션 패킷 전송: PlayerID=" << packet.playerId << std::endl;
-}

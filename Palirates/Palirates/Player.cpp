@@ -5,9 +5,12 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Shader.h"
+#include "GameFramework.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CPlayer
+
+extern CGameFramework* g_pFramework;
 
 CPlayer::CPlayer() 
 	//: )
@@ -78,6 +81,43 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		}
 
 		Move(xmf3Shift, bUpdateVelocity);
+
+		SendMovePacket(xmf3Shift);
+	}
+}
+
+void CPlayer::SetPlayerID(int id)
+{
+	m_PlayerID = id;
+}
+
+int CPlayer::GetPlayerID() 
+{
+	return m_PlayerID;
+}
+
+void CPlayer::SendMovePacket(const XMFLOAT3& shift)
+{
+	char buffer[256];
+	int clientId = GetPlayerID();
+
+	float x = m_xmf3Position.x;
+	float y = m_xmf3Position.y;
+	float z = m_xmf3Position.z;
+
+	float dx = shift.x;
+	float dy = shift.y;
+	float dz = shift.z;
+
+	sprintf_s(buffer, "MOVE,%d,%f,%f,%f,%f,%f,%f", clientId, x, y, z, dx, dy, dz);
+
+	if (send(g_pFramework->serverSocket, buffer, strlen(buffer), 0) == SOCKET_ERROR) 
+	{
+		std::cerr << "[ERROR] 이동 패킷 전송 실패: " << WSAGetLastError() << std::endl;
+	}
+	else
+	{
+		std::cout << "[Client] 이동 패킷 전송: " << buffer << std::endl;
 	}
 }
 
@@ -640,23 +680,6 @@ ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
 }
 
 
-void CPlayer::SendAnimationUpdate() 
-{
-	std::vector<std::pair<uint8_t, float>> changedTracks;
-
-	for (int i = 0; i < m_AnimationTracks.size(); ++i) {
-		float newWeight = GetAnimationWeight(i);
-		if (abs(newWeight - m_AnimationTracks[i].m_fWeight) > 0.01f) {
-			changedTracks.emplace_back(i, newWeight);
-			m_AnimationTracks[i].m_fWeight = newWeight;
-		}
-	}
-
-	if (!changedTracks.empty()) {
-		AnimationWeightPacket packet = { 3, GetPlayerID(), (uint8_t)changedTracks.size(), changedTracks };
-		CGameFramework::GetInstance()->SendAnimationPacket(packet);
-	}
-}
 
 void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 {

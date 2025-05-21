@@ -72,8 +72,6 @@ using Microsoft::WRL::ComPtr;
 extern HINSTANCE						ghAppInstance;
 
 
-
-
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "d3d12.lib")
@@ -519,3 +517,10 @@ namespace Plane
 		return(xmf4Result);
 	}
 }
+
+
+#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "1.242.69.251"
+#define SERVER_PORT 9000
+
+
