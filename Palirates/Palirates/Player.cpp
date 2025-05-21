@@ -5,12 +5,10 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Shader.h"
-#include "GameFramework.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CPlayer
 
-extern CGameFramework* g_pFramework;
 
 CPlayer::CPlayer() 
 	//: )
@@ -81,8 +79,6 @@ void CPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVelocity)
 		}
 
 		Move(xmf3Shift, bUpdateVelocity);
-
-		SendMovePacket(xmf3Shift);
 	}
 }
 
@@ -94,31 +90,6 @@ void CPlayer::SetPlayerID(int id)
 int CPlayer::GetPlayerID() 
 {
 	return m_PlayerID;
-}
-
-void CPlayer::SendMovePacket(const XMFLOAT3& shift)
-{
-	char buffer[256];
-	int clientId = GetPlayerID();
-
-	float x = m_xmf3Position.x;
-	float y = m_xmf3Position.y;
-	float z = m_xmf3Position.z;
-
-	float dx = shift.x;
-	float dy = shift.y;
-	float dz = shift.z;
-
-	sprintf_s(buffer, "MOVE,%d,%f,%f,%f,%f,%f,%f", clientId, x, y, z, dx, dy, dz);
-
-	if (send(g_pFramework->serverSocket, buffer, strlen(buffer), 0) == SOCKET_ERROR) 
-	{
-		std::cerr << "[ERROR] 이동 패킷 전송 실패: " << WSAGetLastError() << std::endl;
-	}
-	else
-	{
-		std::cout << "[Client] 이동 패킷 전송: " << buffer << std::endl;
-	}
 }
 
 void CPlayer::Move(const XMFLOAT3& xmf3Shift, bool bUpdateVelocity)
