@@ -99,6 +99,22 @@ struct TextureBlock
     }
 };
 
+
+class Texture_UI_Renderer
+{
+public:
+    Texture_UI_Renderer(ID3D12Device* device);
+    ~Texture_UI_Renderer();
+
+    void Render_UI_Textures(ID3D12GraphicsCommandList* cmdList, std::vector<TextureBlock*>* pTextureList);
+
+private:
+    ID3D12Device* m_pd3dDevice = nullptr;
+
+    ID3D12Resource* m_pVertexBuffer = nullptr;
+    D3D12_VERTEX_BUFFER_VIEW        m_VertexBufferView = {};
+};
+
 class Texture_UI_Manager
 {
 private:
@@ -141,19 +157,4 @@ public:
     }
 
     CTextureToScreenShader* GetShader() const { return textureShader.get(); }
-};
-
-class Texture_UI_Renderer
-{
-public:
-    Texture_UI_Renderer(ID3D12Device* device);
-    ~Texture_UI_Renderer();
-
-    void Render_UI_Textures(ID3D12GraphicsCommandList* cmdList, std::vector<TextureBlock*>* pTextureList);
-
-private:
-    ID3D12Device* m_pd3dDevice = nullptr;
-
-    ID3D12Resource* m_pVertexBuffer = nullptr;
-    D3D12_VERTEX_BUFFER_VIEW        m_VertexBufferView = {};
 };

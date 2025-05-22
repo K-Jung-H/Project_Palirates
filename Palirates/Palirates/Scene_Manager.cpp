@@ -76,7 +76,7 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
 #ifdef WRITE_TEXT_UI
         it->second->Build_Text_UI(text_ui_renderer.get());
 #endif
-        it->second->Build_Texture_UI(pd3dDevice, pd3dCommandList, texture_ui_renderer.get());
+       // it->second->Build_Texture_UI(pd3dDevice, pd3dCommandList, texture_ui_renderer.get());
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Can't find " + std::string(sceneName));
