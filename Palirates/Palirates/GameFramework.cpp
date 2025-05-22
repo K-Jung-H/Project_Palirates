@@ -1262,27 +1262,48 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 void CGameFramework::SendPacket()
 {
-	if (serverSocket == INVALID_SOCKET) return;
-	if (!m_pPlayer) return;
+	if (serverSocket == INVALID_SOCKET || !m_pPlayer) return;
 
 	XMFLOAT3 pos = m_pPlayer->GetPosition();
 	XMFLOAT3 look = m_pPlayer->GetLookVector();
-	int state = static_cast<int>(m_pPlayer->GetState());
+	int state = m_pPlayer->GetState();
 
-	char buffer[256];
-	sprintf_s(buffer, "MOVE,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%d", ClientNum, pos.x, pos.y, pos.z, look.x, look.y, look.z, state);
+	auto controller = m_pPlayer->GetSkinnedAnimationController();
+	if (!controller) return;
 
-	send(serverSocket, buffer, (int)strlen(buffer), 0);
+	std::ostringstream oss;
+
+	oss << "PLAYER_UPDATE," << ClientNum
+		<< "," << pos.x << "," << pos.y << "," << pos.z
+		<< "," << look.x << "," << look.y << "," << look.z
+		<< "," << state;
+
+	int trackCount = m_pPlayer->n_Animation;
+	oss << "," << trackCount;
+
+	for (int i = 0; i < trackCount; ++i)
+	{
+		float pos = controller->m_pAnimationTracks[i].m_fPosition;
+		float weight = controller->m_pAnimationTracks[i].m_fWeight;
+		oss << "," << pos << "," << weight;
+	}
+
+	std::string packet = oss.str();
+
+	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
+	if (result == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] PLAYER_UPDATE 전송 실패: " << WSAGetLastError() << std::endl;
+	}
+	else
+	{
+		std::cout << "[SEND] " << packet << std::endl;
+	}
 }
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
 	std::cout << "[디버그] ProcessReceivedData() 호출됨" << std::endl;
-
-	int playerId;
-	float px, py, pz;
-	float lookX, lookY, lookZ;
-	int state;
 
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
@@ -1293,66 +1314,90 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (m_pCamera && m_pPlayer)
 			m_pCamera->SetPlayer(m_pPlayer.get());
 
-		// 지연된 remote 생성 처리
 		while (!pendingPlayerCreates.empty()) {
 			int pendingId = pendingPlayerCreates.front();
 			pendingPlayerCreates.pop();
 			if (pendingId != ClientNum)
 				CreateRemotePlayer(pendingId);
 
-			{
-				std::lock_guard<std::mutex> lock(pendingUpdateMutex);
-				if (pendingUpdateMap.contains(pendingId)) {
-					ProcessReceivedData(pendingUpdateMap[pendingId]);
-					pendingUpdateMap.erase(pendingId);
-				}
+			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+			if (pendingUpdateMap.contains(pendingId)) {
+				ProcessReceivedData(pendingUpdateMap[pendingId]);
+				pendingUpdateMap.erase(pendingId);
 			}
 		}
-
 		return;
 	}
 
 	if (!bClientIdAssigned)
 	{
 		std::cout << "[경고] 아직 CLIENT_ID를 받지 않아 패킷 처리 지연 중: " << receivedData << std::endl;
-
 		int playerId;
 		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
 		{
 			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
-			pendingUpdateMap[playerId] = receivedData;  // 최신 패킷 하나만 저장
+			pendingUpdateMap[playerId] = receivedData;
 		}
-
 		return;
 	}
 
-	if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d,%f,%f,%f,%f,%f,%f,%d", &playerId, &px, &py, &pz, &lookX, &lookY, &lookZ, &state) == 8)
+	// 파싱 시작
+	std::vector<std::string> tokens;
+	std::stringstream ss(receivedData);
+	std::string item;
+
+	while (std::getline(ss, item, ',')) {
+		tokens.push_back(item);
+	}
+
+	if (tokens.size() < 9) return;
+
+	if (tokens[0] == "PLAYER_UPDATE")
 	{
-		std::cout << "[디버그] PLAYER_UPDATE 패킷 감지됨" << std::endl;
+		int playerId = std::stoi(tokens[1]);
+		float px = std::stof(tokens[2]);
+		float py = std::stof(tokens[3]);
+		float pz = std::stof(tokens[4]);
+		float lookX = std::stof(tokens[5]);
+		float lookY = std::stof(tokens[6]);
+		float lookZ = std::stof(tokens[7]);
+		int state = std::stoi(tokens[8]);
 
-		State convertedState = static_cast<State>(state);
+		XMFLOAT3 pos(px, py, pz);
+		XMFLOAT3 look(lookX, lookY, lookZ);
 
+		ServerAnimationSyncData syncData;
+		syncData.position = pos;
+		syncData.lookVector = look;
+		syncData.currentState = static_cast<State>(state);
 
+		if (tokens.size() > 9) {
+			int trackCount = std::stoi(tokens[9]);
+			for (int i = 0; i < trackCount; ++i) {
+				int baseIdx = 10 + i * 2;
+				if (baseIdx + 1 < tokens.size()) {
+					float animPos = std::stof(tokens[baseIdx]);
+					float animWeight = std::stof(tokens[baseIdx + 1]);
+					syncData.trackPositions.push_back(animPos);
+					syncData.Weights.push_back(animWeight);
+				}
+			}
+		}
 
 		if (playerId == ClientNum)
 		{
-			if (px == 0.0f && py == 0.0f && pz == 0.0f)
-			{
-				std::cout << "[디버그] 좌표가 (0,0,0)이므로 무시됨" << std::endl;
-				return;
-			}
+			if (px == 0.0f && py == 0.0f && pz == 0.0f) return;
 
 			if (m_pPlayer)
 			{
-				m_pPlayer->SetPosition(XMFLOAT3(px, py, pz));
-				m_pPlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+				m_pPlayer->SetPosition(pos);
+				m_pPlayer->SetLookDirection(look);
 				m_pPlayer->SetState(state);
 
-				State convertedState = static_cast<State>(state);
 				if (m_pPlayer->GetStateMachine())
-				{
-					m_pPlayer->GetStateMachine()->changeState(convertedState, Key_Value::None);
-				}
+					m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+
+				m_pPlayer->ApplySyncData(syncData);
 			}
 		}
 		else
@@ -1360,59 +1405,32 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			auto it = m_pRemotePlayers.find(playerId);
 			if (it == m_pRemotePlayers.end())
 			{
-				// 중복 큐 방지
-				bool alreadyQueued = false;
 				std::queue<int> tempQueue = pendingPlayerCreates;
+				bool alreadyQueued = false;
 				while (!tempQueue.empty())
 				{
-					if (tempQueue.front() == playerId)
-					{
-						alreadyQueued = true;
-						break;
+					if (tempQueue.front() == playerId) {
+						alreadyQueued = true; break;
 					}
 					tempQueue.pop();
 				}
-
-				if (!alreadyQueued)
-				{
+				if (!alreadyQueued) {
 					std::lock_guard<std::mutex> lock(pendingCreateMutex);
 					pendingPlayerCreates.push(playerId);
 					std::cout << "[디버그] playerId " << playerId << " remote 큐에 추가됨" << std::endl;
-				}
-				else
-				{
-					std::cout << "[중복 방지] playerId " << playerId << " 이미 큐에 있음" << std::endl;
 				}
 				return;
 			}
 
 			auto remotePlayer = it->second;
-			if (remotePlayer)
-			{
-
+			if (remotePlayer) {
 				std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
-
-				auto& syncDataMap = GetSyncManager().GetAllSyncData();
-				if (syncDataMap.find(playerId) != syncDataMap.end())
-				{
-					auto syncData = syncDataMap[playerId];
-
-					remotePlayer->ApplySyncData(syncData);
-				}
-
-				remotePlayer->SetPosition(XMFLOAT3(px, py, pz));
-				remotePlayer->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-
-
-				State convertedState = static_cast<State>(state);
+				remotePlayer->SetPosition(pos);
+				remotePlayer->SetLookDirection(look);
+				remotePlayer->SetState(state);
 				if (remotePlayer->GetStateMachine())
-				{
-					remotePlayer->GetStateMachine()->changeState(convertedState, Key_Value::None);
-				}
-			}
-			else
-			{
-				std::cout << "[경고] remotePlayer null 상태" << std::endl;
+					remotePlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+				remotePlayer->ApplySyncData(syncData);
 			}
 		}
 	}
@@ -1422,25 +1440,19 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &leaveId) == 1)
 		{
 			std::cout << "[디버그] PLAYER_LEAVE 감지됨: " << leaveId << std::endl;
+			auto it = m_pRemotePlayers.find(leaveId);
+			if (it != m_pRemotePlayers.end())
 			{
-				auto it = m_pRemotePlayers.find(leaveId);
-				if (it != m_pRemotePlayers.end())
+				CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+				if (scene && scene->obj_manager)
 				{
-					CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-					if (scene && scene->obj_manager)
-					{
-						//scene->obj_manager->Remove_Object(it->second);  // Remove_Object() 함수 필요
-					}
-
-					m_pRemotePlayers.erase(it);
-					std::cout << "[디버그] remote player 제거됨: " << leaveId << std::endl;
+					//scene->obj_manager->Remove_Object(it->second);
 				}
+				m_pRemotePlayers.erase(it);
 			}
 		}
 	}
-
 }
-
 
 void CGameFramework::CreateRemotePlayer(int playerId)
 {
