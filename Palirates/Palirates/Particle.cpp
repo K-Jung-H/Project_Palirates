@@ -500,6 +500,7 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		particle_info[i].Velocity = XMFLOAT3{};
 		particle_info[i].Acceleration = particle_format.acceleration;
 		particle_info[i].Rotate_Value = 0.0f;
+		particle_info[i].Sleep = 0;
 
 		XMFLOAT3 baseColor = particle_format.color;
 		particle_info[i].Color = XMFLOAT3(
@@ -760,13 +761,15 @@ void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 void ParticleObject::Update_Interval(float fTimeElapsed)
 {
-	if (ElapsedTime > Max_Lifetime)
+	if (ElapsedTime >= Max_Lifetime)
 	{
 		Set_Active(false);
 		return;
 	}
 	else
+	{
 		ElapsedTime += fTimeElapsed;
+	}
 }
 
 void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -829,7 +832,14 @@ CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElap
 	update_info.Init_Velocity_Value = Get_Init_Velocity_Value();
 	update_info.focus_point = Get_Focus_Point();
 	update_info.focus_strength = Get_Focus_Strength();
-	update_info.Reset_Flag = !Get_Active();
+	update_info.Reset_Flag = 0;
+
+	if (!Get_Active() && !wasResetFlagSent)
+	{
+		update_info.Reset_Flag = 1;
+		wasResetFlagSent = true;
+	}
+
 	return update_info;
 }
 

@@ -563,11 +563,16 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	fog_info = make_shared<Fog_Info>();
 	{
-		fog_info->fogColor = XMFLOAT3(0.5f, 0.5f, 0.5f);
+		fog_info->fogColor = XMFLOAT3(0.8f, 0.6f, 0.3f);
 		fog_info->Fog_Trigger = false;
 
-		fog_info->fogStart = 10.0f;
+		fog_info->fogStart = 5.0f;
 		fog_info->fogEnd = 200.0f;
+		fog_info->fogDensity = 2.0f;
+		fog_info->noiseScale = 0.001f;
+
+		fog_info->noiseStrength = 0.5f;
+		fog_info->time = 0.0f;
 		fog_info->padding0 = XMFLOAT2(0.0f, 0.0f);
 	}
 
@@ -879,6 +884,15 @@ void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComma
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
+
+
+	fog_noise = make_shared<CMaterial>(1);
+	CTexture* noise_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	noise_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Test_Noise.dds", RESOURCE_TEXTURE2D, 0);
+
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, noise_texture, 0, ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX);
+
+	fog_noise->SetTexture(noise_texture, 0);
 }
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -897,7 +911,12 @@ void CScene::UpdateShaderVariables_Light_Info(ID3D12GraphicsCommandList* pd3dCom
 
 void CScene::UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	if (fog_info->time >= 100.0f)
+		fog_info->time = fmod(fog_info->time, 100.0f);
+
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_FOG_INFO_INDEX, 8, fog_info.get(), 0);
+
+	fog_noise->Update_TextureShaderVariables(pd3dCommandList);
 }
 
 void CScene::ReleaseShaderVariables()
@@ -1181,6 +1200,8 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	fog_info->time += fTimeElapsed;
+
 	obj_manager->Animate_Objects_All(fTimeElapsed);
 
 	if (Shader_list.size())
@@ -1441,6 +1462,8 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	fog_info->time += fTimeElapsed;
+
 	if (m_pLights)
 	{
 		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
@@ -1913,6 +1936,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
+	fog_info->time += fTimeElapsed;
+
 #ifdef RENDER_WAVE
 
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;

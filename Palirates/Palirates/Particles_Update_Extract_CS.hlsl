@@ -15,7 +15,7 @@ struct Particle_Info
     float Size;
     uint Type;
     uint Active;
-    float padding0;
+    uint Sleep;
 };
 
 struct Render_Instance
@@ -286,6 +286,7 @@ void Update_DragonFire(inout Particle_Info p, uint index)
 
 void Update_Bleeding(inout Particle_Info p, uint index)
 {
+    
     p.Velocity += p.Acceleration * ElapsedTime;
     p.Velocity += RandomSpreadDirection(index, Main_Direction, 1.0f);
     p.Position += p.Velocity * ElapsedTime;
@@ -332,6 +333,7 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     if (Reset_Flag != 0)
     {
         p.Active = 0;
+        p.Sleep = 1;
         ParticleBuffer_Update[index] = p;
         return;
     }

@@ -609,6 +609,16 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	}
 }
 
+void CMaterial::Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (int i = 0; i < m_nTextures; i++)
+	{
+		if (m_ppTextures[i])
+			m_ppTextures[i]->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+	}
+}
+
+
 void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrTextureName[64] = { '\0' };
@@ -3738,15 +3748,6 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 		}
 	}
-
-	//if (Get_Active())
-	//{
-	//	std::shared_ptr<CGameObject> pChild = Get_Child();
-	//	if (pChild) pChild->Render(pd3dCommandList, pCamera);
-	//}
-
-	//std::shared_ptr<CGameObject> pSibling = Get_Sibling();
-	//if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
 
 }
 

@@ -704,8 +704,6 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			// continue 대신 Reset_Flag를 전달하고, 발생시, 모두 타입별 생성 초기값으로 초기화하기
-
 			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed);
 			update_info.obb_num = OBB_num;
 
@@ -729,8 +727,6 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
-			// continue 대신 Reset_Flag를 전달하고, 발생시, 모두 타입별 생성 초기값으로 초기화하기
-
 			if (type == Particle_Type::sand)
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
 

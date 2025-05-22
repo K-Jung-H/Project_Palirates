@@ -53,6 +53,11 @@ struct Fog_Info
 
 	float fogStart;
 	float fogEnd;
+	float fogDensity;
+	float noiseScale;
+
+	float noiseStrength;
+	float time;
 	XMFLOAT2 padding0;
 };
 
@@ -140,6 +145,7 @@ public:
 	LIGHTS								*m_pcbMappedLights = NULL;
 
 	shared_ptr<Fog_Info> fog_info = NULL;
+	shared_ptr<CMaterial>fog_noise = NULL;
 
 	bool test_button = false;
 	bool particle_test_button = false;

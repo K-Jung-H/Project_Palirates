@@ -239,6 +239,7 @@ public:
     void SetTexture(CTexture* pTexture, UINT nTexture = 0);
 
     virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void ReleaseUploadBuffers();
 
 

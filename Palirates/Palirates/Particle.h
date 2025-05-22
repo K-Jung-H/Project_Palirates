@@ -68,7 +68,7 @@ struct Particle_Info
 	float Size;            
 	UINT Type;
 	UINT Active;
-	float Padding;
+	UINT Sleep;
 };
 
 struct CB_Particle_Update_Info
@@ -237,6 +237,9 @@ class Particle_Manager;
 
 class ParticleObject : public CGameObject
 {
+private:
+	bool wasResetFlagSent = false;
+
 protected:
 	XMFLOAT3 m_xmf3Direction = { 0.0f, 0.0f, 1.0f }; // 기본 전방
 	float m_fSpeed = 0.0f;

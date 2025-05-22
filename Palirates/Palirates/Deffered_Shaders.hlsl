@@ -5,6 +5,8 @@ Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Position: register(t1);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Velocity : register(t3);
+// t4 = Light_Material_Info
+Texture2D<float4> T_Fog_Noise : register(t5);
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -12,7 +14,12 @@ cbuffer cb_Fog_Info : register(b0)
     int Fog_Trigger;
     
     float fogStart;
-    float fogEnd; 
+    float fogEnd;     
+    float fogDensity; 
+    float noiseScale; 
+    
+    float noiseStrength; 
+    float time; 
     float2 padding0;
 }
 
@@ -97,27 +104,43 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     
     float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.xyz, materialID);
 
-    
     //================================================================    
     
-    // 안개 강도 계산 (카메라와의 거리를 기반)
- 
-    // 선형 안개
-    float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart)); // 선형 안개
+    float2 baseUV = world_position.xz - camera_pos.xz;
 
-    // Density 가 작으면, 은은하게, 크면, 급격한 안개 형성
-    //float fogDensity = 0.02f;
-    //float fogFactor = 1.0 - exp(-Camera_Distance * fogDensity);
-    
-    
-    float4 fogged_cColor = float4(lerp(Light_Color.rgb, fogColor, fogFactor), 1.0f); // 안개 효과 적용
-    
-    //================================================================
+    float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart));
+    fogFactor = pow(fogFactor, fogDensity);
+    fogFactor = lerp(0.1f, 1.0f, fogFactor);
 
-    if (Fog_Trigger == 1)
-        return fogged_cColor;
-    else
-        return Light_Color;
+    float2 noiseUV1 = baseUV * 0.002f + float2(time * 0.05f, time * 0.05f);
+    float2 noiseUV2 = baseUV * 0.0033f + float2(time * 0.013f, time * 0.015f);
+    float2 distortion = sin(baseUV.yx * 13.0 + time * 0.2f) * 0.001f;
+    noiseUV1 += distortion;
+    noiseUV2 += distortion;
+
+    float n1 = T_Fog_Noise.Sample(gssWrap, noiseUV1).r;
+    float n2 = T_Fog_Noise.Sample(gssWrap, noiseUV2).r;
+    float noiseVal = (n1 + n2) * 0.5f;
+    float smoothNoise = smoothstep(0.3f, 0.7f, noiseVal);
+
+    float tintStrength = 0.03f;
+    float3 baseFogColor = fogColor * 1.2f;
+    float3 modFogColor = baseFogColor * (1.0 - tintStrength + smoothNoise * tintStrength * 2.0);
+    float3 finalFogColor = modFogColor;
+
+    float3 foggedColor = lerp(Light_Color.rgb, finalFogColor, fogFactor);
+    
+    bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
+    if (isEmptyPixel)
+    {
+        return Fog_Trigger == 1 ? float4(finalFogColor, 1.0f) : float4(1, 1, 1, 1);
+    }
+    
+    
+    return Fog_Trigger == 1 ? float4(foggedColor, 1.0f) : Light_Color;
+
+
+
     
 }
 
