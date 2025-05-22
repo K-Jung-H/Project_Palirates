@@ -72,13 +72,6 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
-	if (IsServerConnected()) 
-	{
-		int serverId = GetServerPlayerID();
-		//m_pLocalPlayer->SetPlayerID(serverId);
-		//m_pLocalPlayer->SetOnline(true);
-		std::cout << "[Info] 서버 ID로 갱신: " << serverId << std::endl;
-	}
 
 	Build_Scenes();
 	return(true);
@@ -1597,12 +1590,12 @@ void CGameFramework::SendMovePacket(int clientId, const XMFLOAT3& pos, const XMF
 		std::cout << "[Client] 이동 패킷 전송: " << buffer << std::endl;
 }
 
-int CGameFramework::GetServerPlayerID()
-{
-	return 0;
-}
-
 bool CGameFramework::IsServerConnected()
 {
-	return true; 
+	return isRunning && serverSocket != INVALID_SOCKET;
+}
+
+int CGameFramework::GetServerPlayerID()
+{
+	return ClientNum;
 }

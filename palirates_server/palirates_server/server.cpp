@@ -88,6 +88,70 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             float lookX, lookY, lookZ;
 
 
+            if (packet.rfind("PLAYER_UPDATE,", 0) == 0)
+            {
+                std::istringstream iss(packet);
+                std::string token;
+                std::vector<std::string> tokens;
+
+                while (std::getline(iss, token, ','))
+                {
+                    tokens.push_back(token);
+                }
+
+                if (tokens.size() >= 10)
+                {
+                    int id = std::stoi(tokens[1]);
+                    float x = std::stof(tokens[2]);
+                    float y = std::stof(tokens[3]);
+                    float z = std::stof(tokens[4]);
+                    float lookX = std::stof(tokens[5]);
+                    float lookY = std::stof(tokens[6]);
+                    float lookZ = std::stof(tokens[7]);
+                    int state = std::stoi(tokens[8]);
+                    int trackCount = std::stoi(tokens[9]);
+
+                    std::vector<float> trackPositions;
+                    std::vector<float> trackWeights;
+                    for (int i = 0; i < trackCount; ++i)
+                    {
+                        int base = 10 + i * 2;
+                        if (base + 1 >= tokens.size()) break;
+                        trackPositions.push_back(std::stof(tokens[base]));
+                        trackWeights.push_back(std::stof(tokens[base + 1]));
+                    }
+
+                    Scene* scene = sceneManager.getScene(clientId);
+                    if (!scene) {
+                        sceneManager.addScene(clientId);
+                        scene = sceneManager.getScene(clientId);
+                    }
+
+                    if (!scene->getPlayer(clientId)) {
+                        scene->addPlayer(clientId);
+                    }
+
+                    scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
+                    scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
+
+                    std::ostringstream oss;
+                    oss << "PLAYER_UPDATE," << clientId << "," << x << "," << y << "," << z
+                        << "," << lookX << "," << lookY << "," << lookZ << "," << state
+                        << "," << trackCount;
+                    for (int i = 0; i < trackCount; ++i)
+                    {
+                        oss << "," << trackPositions[i] << "," << trackWeights[i];
+                    }
+                    oss << "\n";
+
+                    std::string response = oss.str();
+                    BroadcastPacket(response, clientId);
+                }
+
+                continue;
+            }
+
+
             if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%f,%f,%f,%d", &clientId, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
             {
                 Scene* scene = sceneManager.getScene(clientId);
@@ -139,7 +203,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료");
 
-            if (clients.contains(clientId)) 
+            if (clients.find(clientId) != clients.end())
             {
                 clients[clientId].is_connected = false;
                 closesocket(clients[clientId].socket);

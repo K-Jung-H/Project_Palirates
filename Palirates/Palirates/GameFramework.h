@@ -7,8 +7,8 @@
 #include "Scene_Manager.h"
 #include "Object.h"
 
-#define SERVER_IP "192127.0.0.1"
-#define SERVER_PORT 9000
+//#define SERVER_IP "192.127.0.0.1"
+//#define SERVER_PORT 9000
 
 enum class GPU_Stage
 {

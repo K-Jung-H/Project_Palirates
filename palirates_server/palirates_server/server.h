@@ -7,6 +7,8 @@
 #include "DatabaseManager.h"
 #include "Logger.h"
 #include "Player.h"
+#include <sstream>
+#include <vector>
 
 #pragma comment(lib, "ws2_32.lib")
 
