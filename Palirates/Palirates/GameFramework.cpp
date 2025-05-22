@@ -689,6 +689,7 @@ void CGameFramework::Build_Scenes()
 	scene_manager->Register_Scene("In_Stage", in_stage_scene);
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
 	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
+	pPlayer->SetID(0); // 기본ID
 	pPlayer->Set_Child(pPlayer->m_pRootModel);
 	pPlayer->SetupWeaponCollider();
 	pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
@@ -1255,7 +1256,7 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 void CGameFramework::SendPacket()
 {
-	if (serverSocket == INVALID_SOCKET || !m_pPlayer) return;
+	if (!bClientIdAssigned || serverSocket == INVALID_SOCKET || !m_pPlayer) return;
 
 	XMFLOAT3 pos = m_pPlayer->GetPosition();
 	XMFLOAT3 look = m_pPlayer->GetLookVector();
@@ -1303,7 +1304,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		std::cout << "[Debug] 내 클라이언트 ID 수신 완료: " << ClientNum << std::endl;
 		bClientIdAssigned = true;
 
-		m_pPlayer = std::shared_ptr<CPlayer>(GetSceneManager().GetPlayerById(ClientNum));
+		//m_pPlayer = std::shared_ptr<CPlayer>(GetSceneManager().GetPlayerById(ClientNum));
 		if (m_pCamera && m_pPlayer)
 			m_pCamera->SetPlayer(m_pPlayer.get());
 
@@ -1578,11 +1579,10 @@ void CGameFramework::NetworkLoop()
 
 void CGameFramework::SendMovePacket(int clientId, const XMFLOAT3& pos, const XMFLOAT3& shift)
 {
-	if (serverSocket == INVALID_SOCKET) return;
+	if (serverSocket == INVALID_SOCKET || ClientNum < 0 || !bClientIdAssigned) return;
 
 	char buffer[256];
-	sprintf_s(buffer, "MOVE,%d,%f,%f,%f,%f,%f,%f", clientId,
-		pos.x, pos.y, pos.z, shift.x, shift.y, shift.z);
+	sprintf_s(buffer, "MOVE,%d,%f,%f,%f,%f,%f,%f", clientId, pos.x, pos.y, pos.z, shift.x, shift.y, shift.z);
 
 	if (send(serverSocket, buffer, strlen(buffer), 0) == SOCKET_ERROR)
 		std::cerr << "[ERROR] 이동 패킷 전송 실패: " << WSAGetLastError() << std::endl;
