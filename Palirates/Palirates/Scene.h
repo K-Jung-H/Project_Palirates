@@ -20,7 +20,7 @@
 
 class Particle_Manager;
 class ParticleObject;
-
+class Particle_Shape_Mesh;
 
 struct LIGHT
 {
@@ -127,7 +127,7 @@ public:
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
 	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
-
+	Particle_Shape_Mesh* dust_shape_mesh = NULL;
 	Object_Manager* obj_manager = NULL;
 
 	std::vector<std::shared_ptr<CShader>> Shader_list;

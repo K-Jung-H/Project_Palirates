@@ -20,6 +20,11 @@ struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
 
 float3x3 AxisAngleToMatrix(float3 axis, float angle)
 {
+    if (all(axis == float3(0.0f, 0.0f, 0.0f)))
+    {
+        axis = float3(0.0f, 1.0f, 0.0f);
+    }
+    
     float s = sin(angle);
     float c = cos(angle);
     float t = 1.0f - c;

@@ -508,7 +508,6 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 			RandomOffset(baseColor.y),
 			RandomOffset(baseColor.z)
 		);
-		//particle_info[i].Color = particle_format.color;
 		particle_info[i].Size = particle_format.size;
 
 		particle_info[i].EmitFaceIndex = particle_format.EmitFaceIndex;
@@ -749,7 +748,6 @@ void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* p
 
 void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-
 	if (Vector3::Length(m_xmf3Direction) == 0.0f || m_fSpeed == 0.0f)
 		return;
 
@@ -798,7 +796,7 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 }
 
 
-CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElapsed)
+CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage)
 {
 	CB_Particle_Update_Info update_info = {};
 	auto aabb_pos = GetAABB(); // local AABB
@@ -834,7 +832,7 @@ CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElap
 	update_info.focus_strength = Get_Focus_Strength();
 	update_info.Reset_Flag = 0;
 
-	if (!Get_Active() && !wasResetFlagSent)
+	if (!wasResetFlagSent && !is_emit_stage)
 	{
 		update_info.Reset_Flag = 1;
 		wasResetFlagSent = true;

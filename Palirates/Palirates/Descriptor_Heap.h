@@ -124,4 +124,9 @@ public:
     CDescriptor_Heap& operator=(const CDescriptor_Heap&) = delete;
     CDescriptor_Heap(CDescriptor_Heap&&) = delete;
     CDescriptor_Heap& operator=(CDescriptor_Heap&&) = delete;
+
+    public:
+        static UINT GetCreatedCbvCount();
+        static UINT GetCreatedSrvCount();
+        static UINT GetCreatedUavCount();
 };
