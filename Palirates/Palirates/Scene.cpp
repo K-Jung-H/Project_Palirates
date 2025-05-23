@@ -724,11 +724,11 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	test_dragonfire->Set_Active(false);
 
 
-	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, billboard_mesh, test_sand_storm_info);
+	/*test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, billboard_mesh, test_sand_storm_info);
 	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds");
 	test_sand->Set_Local_Coordinate();
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
-	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
+	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));*/
 	
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_dust_shape_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
@@ -836,6 +836,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, nullptr);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -929,7 +931,7 @@ void CScene::Update_UI()
 
 void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Texture_UI_Renderer* texture_ui_renderer_ptr)
 {
-	    texture_ui_manager = new Texture_UI_Manager();
+	texture_ui_manager = new Texture_UI_Manager();
     if (!texture_ui_manager) return;
 
     auto pShader = std::make_unique<CTextureToScreenShader>(1);

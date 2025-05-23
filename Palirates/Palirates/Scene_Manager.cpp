@@ -353,8 +353,9 @@ void Scene_Manager::Render_Scene_UI(UINT nFrame)
 void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList)
 {
     if (activeScene) {
-        if (texture_ui_renderer)
-            texture_ui_renderer->Render_UI_Textures(cmdList, activeScene->Get_Texture_List());
+        if (activeScene->texture_ui_manager) {
+            activeScene->texture_ui_manager->RenderAll(cmdList);
+        }
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
