@@ -1301,7 +1301,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 	if (m_pPlayer->GetTrailOn())
 	{
-		if (!m_pPlayer->GetTrailStart()) {
+		if (!m_pPlayer->GetTrailStart()) 
+		{
 			shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 			trail_obj->Set_Trail_Target(trail_target, false);
@@ -1312,7 +1313,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			m_pPlayer->Trail_Start();
 		}
 
-		if (!m_pPlayer->GetTrailObj()->Get_Active()) {
+		if (!m_pPlayer->GetTrailObj()->Get_Active()) 
+		{
 			m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
 			m_pPlayer->GetTrailObj()->Set_Active(true);
 		}
@@ -1341,25 +1343,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	{
 		test_button = false;
 
-		Particle_Format bleeding_info;
-		{
-			bleeding_info.shader_type = Particle_Type::interval;
-			bleeding_info.particle_type = 6;
-			bleeding_info.max_particles = 30;
-			bleeding_info.MaxLifetime = 3.0f;
-
-			bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
-			bleeding_info.EmitFaceIndex = 5;
-
-			bleeding_info.main_direction = XMFLOAT3(0.0f, 0.8f, 0.5f);
-			bleeding_info.init_velocity_value = 50.0f;
-			bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-			bleeding_info.size = 0.3f;
-			bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
-		}
-
-	
 		int  cbv = CDescriptor_Heap::GetCreatedCbvCount();
 		int  srv = CDescriptor_Heap::GetCreatedSrvCount();
 		int  uav = CDescriptor_Heap::GetCreatedUavCount();
@@ -1368,19 +1351,14 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		DebugOutput("SRV: " + to_string(srv) + "\n");
 		DebugOutput("UAV: " + to_string(uav) + "\n");
 
-		shared_ptr<Particle_Shape_Mesh> particle_mesh;
-		particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+		test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, "bleeding");
+		test_bleeding->Set_World_Coordinate();
 
-		for (size_t i = 0; i < 10; i++)
-		{
-			test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
-			test_bleeding->Set_World_Coordinate();
-			test_bleeding->Rotate((0.0f, 1.0f, 0.0f), i * 10.0f);
-			XMFLOAT3 p_pos = m_pPlayer->GetPosition();
-			p_pos.y += 15.0f;
-			p_pos.x += 15.0f * i;
-			test_bleeding->SetPosition(p_pos);
-		}
+		XMFLOAT3 p_pos = m_pPlayer->GetPosition();
+		p_pos.y += 15.0f;
+		test_bleeding->SetPosition(p_pos);
+		test_bleeding->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, 1.0f));
+
 	}
 }
 

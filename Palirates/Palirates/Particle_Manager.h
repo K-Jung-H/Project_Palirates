@@ -77,6 +77,12 @@ class Interval_ParticleShader : public ParticleShader
 
 //==============================================================================
 
+struct ParticleData
+{
+	shared_ptr<Particle_Shape_Mesh> particle_shape_mesh;
+	Particle_Format particle_format;
+};
+
 class Grid_Builder;
 
 class Particle_Manager
@@ -88,6 +94,7 @@ private:
 
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
 	std::unordered_map<string, shared_ptr<Particle_Shape_Mesh>> particle_mesh_map;
+	std::unordered_map<string, ParticleData> particle_data_map; // for re-use particle
 	CTexture* m_OBBBufferTexture = NULL;
 	UINT OBB_num = 0;
 
@@ -127,6 +134,8 @@ public:
 
 
 	std::shared_ptr<ParticleObject> Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<Particle_Shape_Mesh> particle_shape_mesh, Particle_Format particle_info);
+	std::shared_ptr<ParticleObject> Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, string particle_data_name);
+
 	std::shared_ptr<ParticleObject> Recycle_Particle(shared_ptr<Particle_Shape_Mesh>  particle_shape_mesh, Particle_Format particle_info);
 
 	std::unordered_map<string, shared_ptr<Particle_Shape_Mesh>> Get_Particle_Mesh_Map() {return particle_mesh_map;	}

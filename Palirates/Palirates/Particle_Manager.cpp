@@ -519,11 +519,37 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 		return;
 	else
 	{
-		Build_Particle_Mesh(pd3dDevice, pd3dCommandList);
 		Build_Shader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-
 		is_cs_shader_compiled = true;
 	}
+
+	Build_Particle_Mesh(pd3dDevice, pd3dCommandList);
+
+	Particle_Format bleeding_info;
+	{
+		bleeding_info.shader_type = Particle_Type::interval;
+		bleeding_info.particle_type = 6;
+		bleeding_info.max_particles = 30;
+		bleeding_info.MaxLifetime = 3.0f;
+
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+		bleeding_info.EmitFaceIndex = 5;
+
+		bleeding_info.main_direction = XMFLOAT3(0.0f, 0.8f, 0.5f);
+		bleeding_info.init_velocity_value = 50.0f;
+		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
+
+		bleeding_info.size = 0.3f;
+		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	}
+
+
+	ParticleData bleeding_particle_data;
+	bleeding_particle_data.particle_shape_mesh = particle_mesh_map["tetrahedron"];
+	bleeding_particle_data.particle_format = bleeding_info;
+
+	particle_data_map["bleeding"] = bleeding_particle_data;
+
 
 }
 
@@ -555,7 +581,7 @@ void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12Graph
 	particle_mesh_map["cube"] = make_shared<Cube_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
 	particle_mesh_map["cube_dust"] = make_shared<Cube_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["billboard"] = make_shared<Billboard_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
-	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
 }
 
@@ -660,6 +686,19 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 	particle_object_list_map[particle_info.shader_type].push_back(new_particle_obj);
 
 	return new_particle_obj;
+}
+
+std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, string particle_data_name)
+{
+	auto it = particle_data_map.find(particle_data_name);
+	if (it != particle_data_map.end())
+	{
+		Particle_Format  particle_format = it->second.particle_format;
+		shared_ptr<Particle_Shape_Mesh> particle_mesh = it->second.particle_shape_mesh;
+		return Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, particle_format);
+	}
+
+	return nullptr;
 }
 
 std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(shared_ptr<Particle_Shape_Mesh>  particle_shape_mesh, Particle_Format particle_info)

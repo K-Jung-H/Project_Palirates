@@ -461,11 +461,10 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
         }
         else if (worldPos.y <= 3.0f)
         {
-            p.Velocity = float3(0.0f, -0.1f, 0.0f);
+            p.Velocity = float3(0.0f, 0.0f, 0.0f);
             p.Acceleration = float3(0.0f, 0.0f, 0.0f);
             ParticleBuffer_Update[index] = p;
         }
-    
         Extract_Instance(p);
     }
 
