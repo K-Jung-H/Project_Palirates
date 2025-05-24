@@ -5,8 +5,85 @@
 #include "stdafx.h"
 #include "Scene.h"
 
+//=============================================================================================
+
+shared_ptr<CShader> Shadow_Camera::shadow_map_shader = NULL;
+
+Shadow_Camera::Shadow_Camera() : CCamera()
+{
+}
+
+Shadow_Camera::~Shadow_Camera()
+{
+
+}
+
+void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	constexpr UINT width = 2048;
+	constexpr UINT height = 2048;
+
+	shadow_map = make_shared<CMaterial>(1);
+	CTexture* shadowTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+
+	D3D12_CLEAR_VALUE clearValue{};
+	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
+	clearValue.DepthStencil = { 1.0f, 0 };
+
+	shadowTexture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, width, height, 1, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice);
+	shadowTexture->SetDSV(dsvHandle);
+
+	// 6. Shader Resource View 생성 (셰이더에서 깊이 텍스처 참조할 수 있도록)
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, shadowTexture, 0, 3); // root param index 3
+
+	// 7. CMaterial에 이 텍스처 등록
+	shadow_map->SetTexture(shadowTexture, 0);
+
+}
+
+
+void Shadow_Camera::SetupDirectionalLightCamera(LIGHT& directionalLight, float width, float height, float nearZ, float farZ)
+{
+	// Light direction (normalized)
+	XMFLOAT3 lightDir = Vector3::Normalize(directionalLight.m_xmf3Direction);
+
+	// Light position: place far along the direction to simulate "from above"
+	XMFLOAT3 lightPos = 
+	{
+		-lightDir.x * 3000.0f,
+		-lightDir.y * 3000.0f,
+		-lightDir.z * 3000.0f
+	};
+
+	XMFLOAT3 target = { 0.0f, 0.0f, 0.0f };
+	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+
+	// View matrix
+	GenerateViewMatrix(lightPos, target, up);
+
+	// Projection matrix (orthographic)
+	XMMATRIX ortho = XMMatrixOrthographicLH(width, height, nearZ, farZ);
+	XMStoreFloat4x4(&m_xmf4x4Projection, ortho);
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE Shadow_Camera::Get_Shadow_Map_DSV() const
+{
+	if (shadow_map)
+	{
+		CTexture* shadowTex = shadow_map->m_ppTextures[0];
+		if (shadowTex)
+			return shadowTex->GetDSVDescriptorHandle();
+	}
+
+	// 기본값 반환 (nullptr 방지용)
+	return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
+}
 
 //=============================================================================================
+
+std::shared_ptr<ID3D12RootSignature> CScene::m_ShadowMap_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
@@ -19,6 +96,88 @@ CScene::CScene()
 CScene::~CScene()
 {
 	DebugOutput("\nDelete Scene");
+}
+
+ID3D12RootSignature* CScene::Create_ShadowMap_GraphicsRootSignature(ID3D12Device* pd3dDevice)
+{
+	ID3D12RootSignature* pd3dGraphicsRootSignature = NULL;
+
+	D3D12_ROOT_PARAMETER pd3dRootParameters[3];
+	{
+		// n = 0, b0 = Frame_Info
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		// n = 1, b1 = GameObject(Transform)
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		// n = 2, b2 = Shadow Camera Matrix
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 2;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+	}
+
+	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
+	{
+		pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		pd3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pd3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pd3dSamplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		pd3dSamplerDescs[0].MipLODBias = 0;
+		pd3dSamplerDescs[0].MaxAnisotropy = 1;
+		pd3dSamplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		pd3dSamplerDescs[0].MinLOD = 0;
+		pd3dSamplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
+		pd3dSamplerDescs[0].ShaderRegister = 0;
+		pd3dSamplerDescs[0].RegisterSpace = 0;
+		pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	}
+
+	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags =
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc;
+	::ZeroMemory(&d3dRootSignatureDesc, sizeof(D3D12_ROOT_SIGNATURE_DESC));
+	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
+	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
+	d3dRootSignatureDesc.NumStaticSamplers = _countof(pd3dSamplerDescs);
+	d3dRootSignatureDesc.pStaticSamplers = pd3dSamplerDescs;
+	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
+
+	ID3DBlob* pd3dSignatureBlob = NULL;
+	ID3DBlob* pd3dErrorBlob = NULL;
+	HRESULT hr = D3D12SerializeRootSignature(&d3dRootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &pd3dSignatureBlob, &pd3dErrorBlob);
+	if (FAILED(hr))
+	{
+		if (pd3dErrorBlob)
+		{
+			OutputDebugStringA((char*)pd3dErrorBlob->GetBufferPointer());
+			pd3dErrorBlob->Release();
+		}
+		else
+		{
+			OutputDebugStringA("Failed to serialize shadow map root signature.\n");
+		}
+	}
+
+	if (SUCCEEDED(hr))
+	{
+		hr = pd3dDevice->CreateRootSignature(0, pd3dSignatureBlob->GetBufferPointer(), pd3dSignatureBlob->GetBufferSize(), __uuidof(ID3D12RootSignature), (void**)&pd3dGraphicsRootSignature);
+	}
+
+	if (pd3dSignatureBlob) pd3dSignatureBlob->Release();
+
+	return pd3dGraphicsRootSignature;
 }
 
 ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3dDevice)
@@ -517,7 +676,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
-//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+
 	m_pLights[3].m_bEnable = false;
 	m_pLights[3].m_nType = SPOT_LIGHT;
 	m_pLights[3].m_fRange = 600.0f;
@@ -539,6 +698,13 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
 	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
+
+
+	if (m_pLights[2].m_nType = DIRECTIONAL_LIGHT)
+	{
+		fixed_shadow_camera = std::make_shared<Shadow_Camera>();
+		fixed_shadow_camera->SetupDirectionalLightCamera(m_pLights[2]);
+	}
 }
 
 void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -549,6 +715,9 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	obj_manager = new Object_Manager();
 
 	auto com_deleter = [](ID3D12RootSignature* p) { if (p) p->Release(); };
+
+	if (!m_ShadowMap_GraphicsRootSignature)
+		m_ShadowMap_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_ShadowMap_GraphicsRootSignature(pd3dDevice), com_deleter);
 
 	if (!m_MRT_GraphicsRootSignature)
 		m_MRT_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_MRT_GraphicsRootSignature(pd3dDevice), com_deleter);
@@ -581,6 +750,12 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	Shadow_Camera::shadow_map_shader = std::make_shared<CShadowMapShader>();
+	Shadow_Camera::shadow_map_shader->CreateShader(pd3dDevice, pd3dCommandList, m_ShadowMap_GraphicsRootSignature);
+	Shadow_Camera::shadow_map_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	fixed_shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 
 	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
 	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
@@ -1374,8 +1549,38 @@ void CScene::After_Update_Objects()
 
 }
 
+void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (fixed_shadow_camera)
+	{
+		if (m_ShadowMap_GraphicsRootSignature)
+			pd3dCommandList->SetGraphicsRootSignature(m_ShadowMap_GraphicsRootSignature.get());
+
+		fixed_shadow_camera->shadow_map_shader->OnPrepareRender(pd3dCommandList);
+
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV();
+
+		pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+
+		pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+		fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList);
+	}
+}
+
+void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (fixed_shadow_camera)
+	{
+		obj_manager->Render_Objects_All(pd3dCommandList, fixed_shadow_camera.get());
+	}
+}
+
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	Prepare_Shadow_Map_Render(pd3dDevice, pd3dCommandList);
+	Shadow_Map_Render(pd3dDevice, pd3dCommandList);
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
@@ -1392,9 +1597,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	Fog_Trigger = true;
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
-
 }
 
 void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1656,7 +1859,6 @@ void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12Grap
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	CScene::Render(pd3dDevice, pd3dCommandList);
-	Fog_Trigger = false;
 	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
@@ -2091,7 +2293,6 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
 
-	Fog_Trigger = false;
 }
 
 bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

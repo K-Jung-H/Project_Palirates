@@ -77,6 +77,7 @@ public:
     D3D12_GPU_DESCRIPTOR_HANDLE GetGraphicsSrvGpuDescriptorHandle(int index) const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetComputeUavGpuDescriptorHandle(int index) const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetComputeSrvGpuDescriptorHandle(int index) const;
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDSVDescriptorHandle() const { return m_d3dDsvCPUDescriptorHandle; }
 
     void SetGraphicsSrvGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
     void SetComputeUavGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
@@ -107,6 +108,8 @@ public:
     void ReleaseUploadBuffers();
 
     void SetSampler(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
+    void SetDSV(D3D12_CPU_DESCRIPTOR_HANDLE handle) { m_d3dDsvCPUDescriptorHandle = handle; }
+
 
     void LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, wchar_t* filename, UINT resourceType, UINT index);
     void LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index);
@@ -125,7 +128,6 @@ public:
 
     D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
     D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);
-
 private:
     int m_nReferences = 0;
     char m_pstrTextureName[64] = {};
@@ -157,6 +159,8 @@ private:
     std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dComputeSrvRootParameterGpuDescriptorHandles;
 
     std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dSamplerGpuDescriptorHandles;
+
+    D3D12_CPU_DESCRIPTOR_HANDLE m_d3dDsvCPUDescriptorHandle{}; // only one
 };
 
 

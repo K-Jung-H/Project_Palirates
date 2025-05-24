@@ -62,8 +62,30 @@ struct Fog_Info
 };
 
 
+class Shadow_Camera : public CCamera
+{
+public:
+	static std::shared_ptr<CShader> shadow_map_shader;
+
+private:
+	shared_ptr<CMaterial> shadow_map;
+
+public:
+	Shadow_Camera();
+	virtual ~Shadow_Camera();
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void SetupDirectionalLightCamera(LIGHT& directionalLight, float width = 3000.0f, float height = 3000.0f, float nearZ = 1.0f, float farZ = 5000.0f);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE Get_Shadow_Map_DSV() const;
+};
+
+
 class CScene
 {
+private:
+	std::shared_ptr<Shadow_Camera> fixed_shadow_camera;
+
 public:
     CScene();
     ~CScene();
@@ -85,6 +107,8 @@ public:
 
 	void ReleaseObjects();
 
+	
+	ID3D12RootSignature* Create_ShadowMap_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
@@ -97,6 +121,9 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);	
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
+
+	virtual void Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
@@ -117,6 +144,7 @@ public:
 	bool bOBBRender{ false };
 
 protected:
+	static std::shared_ptr<ID3D12RootSignature> m_ShadowMap_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_MRT_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Transparent_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;

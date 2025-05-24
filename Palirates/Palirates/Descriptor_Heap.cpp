@@ -366,24 +366,39 @@ void CDescriptor_Heap::CreateStructuredBufferUAV(ID3D12Device* pd3dDevice, CText
 UINT CDescriptor_Heap::GetCreatedCbvCount()
 {
     CDescriptor_Heap* instance = Get_Instance();
-    return static_cast<UINT>(
-        (instance->CbvCPUDescriptorNextHandle.ptr - instance->CbvCPUDescriptorStartHandle.ptr) / ::gnCbvSrvUavDescriptorIncrementSize);
+    return static_cast<UINT>((instance->CbvCPUDescriptorNextHandle.ptr - instance->CbvCPUDescriptorStartHandle.ptr) / ::gnCbvSrvUavDescriptorIncrementSize);
 }
 
 UINT CDescriptor_Heap::GetCreatedSrvCount()
 {
     CDescriptor_Heap* instance = Get_Instance();
-    return static_cast<UINT>(
-        (instance->SrvCPUDescriptorNextHandle.ptr - instance->SrvCPUDescriptorStartHandle.ptr) / ::gnCbvSrvUavDescriptorIncrementSize);
+    return static_cast<UINT>((instance->SrvCPUDescriptorNextHandle.ptr - instance->SrvCPUDescriptorStartHandle.ptr) / ::gnCbvSrvUavDescriptorIncrementSize);
 }
 
 UINT CDescriptor_Heap::GetCreatedUavCount()
 {
     CDescriptor_Heap* instance = Get_Instance();
-    return static_cast<UINT>(
-        (instance->UavCPUDescriptorNextHandle.ptr - instance->UavCPUDescriptorStartHandle.ptr) / ::gnCbvSrvUavDescriptorIncrementSize);
+    return static_cast<UINT>((instance->UavCPUDescriptorNextHandle.ptr - instance->UavCPUDescriptorStartHandle.ptr) / ::gnCbvSrvUavDescriptorIncrementSize);
 }
 
+
+D3D12_CPU_DESCRIPTOR_HANDLE CDescriptor_Heap::CreateDsv(ID3D12Device* pd3dDevice)
+{
+    auto* inst = Get_Instance();
+
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = inst->DsvDescriptorNextHandle;
+
+    // 다음 슬롯 위치로 증가
+    inst->DsvDescriptorNextHandle.ptr += inst->DsvIncrementSize;
+
+    return handle;
+}
+
+UINT CDescriptor_Heap::GetCreatedDsvCount()
+{
+    auto* inst = Get_Instance();
+    return static_cast<UINT>((inst->DsvDescriptorNextHandle.ptr - inst->DsvDescriptorStartHandle.ptr) / inst->DsvIncrementSize);
+}
 
 //===========================================================
 // 유틸리티 함수 - 힙 손상 위험 있음 - 사용 전에 검토 필요
