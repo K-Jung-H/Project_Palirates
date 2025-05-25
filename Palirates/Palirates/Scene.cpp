@@ -875,8 +875,8 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->SetRootSignature(pRootSignature);
 
     CTexture* pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-    //pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Texture_01_C.dds", RESOURCE_TEXTURE2D, 0);
-    pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds", RESOURCE_TEXTURE2D, 0);
+    pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/itachi.dds", RESOURCE_TEXTURE2D, 0);
+    //pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTexture, 0, 0);
 
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
@@ -888,8 +888,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		RequestSceneChange("Game_Board");
 		};
 	block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);      
-	block->borderColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	block->borderSize = 0.2f;
+	block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
     texture_ui_manager->Add_TextureBlock(std::move(block));
 
 	D2D1_RECT_F screenRect2 = MakeNormalizedRect(0.2f, 0.7f, 0.4f, pTexture, 1.5f);

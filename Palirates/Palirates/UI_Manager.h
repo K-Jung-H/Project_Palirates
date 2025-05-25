@@ -133,8 +133,7 @@ struct TextureBlock
     bool bClicked = false;
 
     XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
-    XMFLOAT4 borderColor = { 1.0f, 0.0f, 0.0f, 1.0f };  
-    float borderSize = 0.02f;                     
+    XMFLOAT4 hoverGlowColor = { 1.0f, 0.0f, 0.0f, 1.0f };         
 
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
         : pTexture(texture), screenRect(rect), mesh(meshPtr) {

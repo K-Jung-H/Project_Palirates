@@ -328,23 +328,18 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
         struct UIConstants
         {
             XMFLOAT4 tintColor;
-            XMFLOAT4 borderColor;
-            float borderSize;
-            BOOL isHovered;
-            float padding[2]; 
+            XMFLOAT4 hoverGlowColor;
+            float isHovered;
+            float padding[3];
         };
 
         UIConstants ui = {};
         ui.tintColor = block->tintColor;
-        ui.borderColor = block->borderColor;
-        ui.borderSize = block->borderSize;
-        ui.isHovered = block->bHovered;
+        ui.hoverGlowColor = block->hoverGlowColor;
+        ui.isHovered = block->bHovered ? 1.0f : 0.0f;
 
         cmdList->SetGraphicsRoot32BitConstants(
-            /* RootParameterIndex */ 4,                     
-            /* Num32BitValues     */ sizeof(UIConstants) / 4,
-            /* pSrcData           */ &ui,
-            /* DestOffset         */ 0
+            4, sizeof(UIConstants) / 4, &ui, 0
         );
 
         cmdList->SetGraphicsRootDescriptorTable(3, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
