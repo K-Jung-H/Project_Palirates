@@ -878,7 +878,9 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
     D2D1_RECT_F screenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, pTexture);
 
 	std::unique_ptr<TextureBlock> block = std::make_unique<TextureBlock>(pTexture, screenRect, mesh);
-
+	block->onClick = []() {
+		OutputDebugStringW(L"[UI] 버튼이 클릭됨\n");
+		};
     texture_ui_manager->Add_TextureBlock(std::move(block));
 
 	D2D1_RECT_F screenRect2 = MakeNormalizedRect(0.2f, 0.7f, 0.4f, pTexture, 1.5f);
@@ -887,12 +889,12 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(block2));
 }
 
-std::vector<TextureBlock*>* CScene::Get_Texture_List()
+std::vector<TextureBlock*> CScene::Get_Texture_List()
 {
 	if (texture_ui_manager)
-		return texture_ui_manager->GetTextureBlockPtrs();
+		return texture_ui_manager->GetTextureBlockPtrs(); 
 	else
-		return nullptr;
+		return {};
 }
 
 void CScene::Update_Texture_UI()
@@ -1697,6 +1699,28 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 		m_pLights[3].m_xmf3Position = character_pos;
 		m_pLights[3].m_xmf3Position.y += 15.0f;
 	}
+}
+
+bool Character_Select_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	if (nMessageID == WM_LBUTTONDOWN)
+	{
+		int mouseX = LOWORD(lParam);
+		int mouseY = HIWORD(lParam);
+		float fMouseX = static_cast<float>(mouseX);
+		float fMouseY = static_cast<float>(mouseY);
+
+		auto blocks = texture_ui_manager->GetTextureBlockPtrs();
+		for (auto& block : blocks)
+		{
+			if (block && IsPointInRect(block->screenRect, fMouseX, fMouseY))
+			{
+				if (block->onClick) block->onClick();
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)

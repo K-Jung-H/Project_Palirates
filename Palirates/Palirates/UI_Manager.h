@@ -24,6 +24,17 @@ inline D2D1_RECT_F MakeNormalizedRect(
     return D2D1::RectF(cx - w * 0.5f, cy - h * 0.5f, cx + w * 0.5f, cy + h * 0.5f);
 }
 
+inline bool IsPointInRect(const D2D1_RECT_F& rect, float x, float y)
+{
+    return x >= rect.left && x <= rect.right &&
+        y >= rect.top && y <= rect.bottom;
+}
+
+inline bool IsMouseClicked()
+{
+    return (GetAsyncKeyState(VK_LBUTTON) & 0x8000);
+}
+
 struct TextDesign
 {
     std::string_view d_name;
@@ -115,6 +126,7 @@ struct TextureBlock
     CTexture* pTexture = nullptr;
     D2D1_RECT_F screenRect;
     std::shared_ptr<CTextureMesh> mesh = nullptr;
+    std::function<void()> onClick;
 
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
         : pTexture(texture), screenRect(rect), mesh(meshPtr) {
@@ -177,12 +189,12 @@ public:
         }
     }
 
-    std::vector<TextureBlock*>* GetTextureBlockPtrs()
+    std::vector<TextureBlock*> GetTextureBlockPtrs() 
     {
-        rawTextureBlockList.clear();
+        std::vector<TextureBlock*> result;
         for (auto& block : textureBlockList)
-            rawTextureBlockList.push_back(block.get());
-        return &rawTextureBlockList; 
+            result.push_back(block.get());
+        return result;
     }
 
     CTextureToScreenShader* GetShader() const { return textureShader.get(); }

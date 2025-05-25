@@ -32,6 +32,7 @@
 #include <array>
 #include <random>
 #include <optional>
+#include <functional>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
