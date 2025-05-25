@@ -1232,6 +1232,7 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 	serverAddr.sin_family = AF_INET;
 	serverAddr.sin_port = htons(port);
+	//serverAddr.sin_addr.s_addr = INADDR_ANY;
 
 	if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1)
 	{
@@ -1284,7 +1285,12 @@ void CGameFramework::SendPacket()
 
 	std::string packet = oss.str();
 
+	packet += "\n";
+
+
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
+
+
 	if (result == SOCKET_ERROR)
 	{
 		std::cerr << "[ERROR] PLAYER_UPDATE 전송 실패: " << WSAGetLastError() << std::endl;

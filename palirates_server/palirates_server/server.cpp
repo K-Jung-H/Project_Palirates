@@ -71,22 +71,33 @@ void Server::AcceptClients()
 void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 {
     char buffer[1024];
+    std::string recvBuffer;
 
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
-        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer), 0);
+        int bytesReceived = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 
-        if (bytesReceived > 0)
+        if (bytesReceived <= 0)
         {
-            buffer[bytesReceived] = '\0';
-            std::string packet(buffer);
+            logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료 또는 recv 실패");
+            break;
+        }
+
+        buffer[bytesReceived] = '\0';
+        recvBuffer += buffer;
+
+        size_t pos;
+        while ((pos = recvBuffer.find('\n')) != std::string::npos)
+        {
+            std::string packet = recvBuffer.substr(0, pos);
+            recvBuffer.erase(0, pos + 1);
+
             logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
 
             int id, state;
             float x, y, z;
             float lookX, lookY, lookZ;
-
 
             if (packet.rfind("PLAYER_UPDATE,", 0) == 0)
             {
@@ -95,20 +106,18 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 std::vector<std::string> tokens;
 
                 while (std::getline(iss, token, ','))
-                {
                     tokens.push_back(token);
-                }
 
                 if (tokens.size() >= 10)
                 {
-                    int id = std::stoi(tokens[1]);
-                    float x = std::stof(tokens[2]);
-                    float y = std::stof(tokens[3]);
-                    float z = std::stof(tokens[4]);
-                    float lookX = std::stof(tokens[5]);
-                    float lookY = std::stof(tokens[6]);
-                    float lookZ = std::stof(tokens[7]);
-                    int state = std::stoi(tokens[8]);
+                    id = std::stoi(tokens[1]);
+                    x = std::stof(tokens[2]);
+                    y = std::stof(tokens[3]);
+                    z = std::stof(tokens[4]);
+                    lookX = std::stof(tokens[5]);
+                    lookY = std::stof(tokens[6]);
+                    lookZ = std::stof(tokens[7]);
+                    state = std::stoi(tokens[8]);
                     int trackCount = std::stoi(tokens[9]);
 
                     std::vector<float> trackPositions;
@@ -119,6 +128,13 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         if (base + 1 >= tokens.size()) break;
                         trackPositions.push_back(std::stof(tokens[base]));
                         trackWeights.push_back(std::stof(tokens[base + 1]));
+                    }
+
+                    if (trackPositions.empty() || trackWeights.empty())
+                    {
+                        trackPositions.push_back(0.0f);
+                        trackWeights.push_back(0.01f);
+                        trackCount = 1;
                     }
 
                     Scene* scene = sceneManager.getScene(clientId);
@@ -144,105 +160,69 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     }
                     oss << "\n";
 
-                    std::string response = oss.str();
+                    BroadcastPacket(oss.str(), clientId);
+                }
+            }
+            else if (packet.rfind("MOVE,", 0) == 0)
+            {
+                if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%f,%f,%f,%d", &id, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
+                {
+                    Scene* scene = sceneManager.getScene(clientId);
+                    if (!scene) continue;
+
+                    if (!scene->getPlayer(clientId)) {
+                        scene->addPlayer(clientId);
+                    }
+
+                    if (scene->getState() != In_Stage)
+                    {
+                        logger.Log("씬 상태가 IN_STAGE가 아니어서 패킷 무시");
+                        continue;
+                    }
+
+                    scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
+
+                    float safeLookY = (lookY == 0.0f) ? 1.0f : lookY;
+
+                    std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
+                        std::to_string(x) + "," + std::to_string(y) + "," +
+                        std::to_string(z) + "," + std::to_string(lookX) + "," + std::to_string(safeLookY) + "," +
+                        std::to_string(lookZ) + "," + std::to_string(state) + "\n";
+
                     BroadcastPacket(response, clientId);
                 }
-
-                continue;
             }
-
-
-            if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%f,%f,%f,%d", &clientId, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
+            else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
             {
-                Scene* scene = sceneManager.getScene(clientId);
-
-
-                if (scene->getState() != In_Stage)
-                {
-                    logger.Log("씬 상태가 IN_STAGE가 아니어서 패킷 무시");
-                    continue;
-                }
-
-                if (!scene->getPlayer(clientId))
-                {
-                    scene->addPlayer(clientId);
-                }
-
-                //if (scene)
-                //{
-                    scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
-                //}
-
-       
-                float safeLookY = (lookY == 0.0f) ? 1.0f : lookY;
-      
-                std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
-                    std::to_string(x) + "," + std::to_string(y) + "," +
-                    std::to_string(z) + "," + std::to_string(lookX) + "," + std::to_string(safeLookY) + "," +
-                    std::to_string(lookZ) + "," + std::to_string(state) + "\n";
-                logger.Log("클라이언트 " + std::to_string(clientId) + "에게 브로드캐스트: " + response);
-
-                for (const auto& [otherId, session] : clients)
-                {
-                    if (otherId == clientId || !session.is_connected) continue;
-
-                    int sendResult = send(session.socket, response.c_str(), (int)response.size(), 0);
-                    if (sendResult == SOCKET_ERROR)
-                    {
-                        logger.Log("[에러] 클라이언트 " + std::to_string(otherId) + "에게 전송 실패: " + std::to_string(WSAGetLastError()));
-                    }
-                }
-                BroadcastPacket(response, clientId);
+                // 나중에 반드시 추가
             }
             else
             {
                 logger.Log("잘못된 패킷 형식 수신: " + packet);
             }
         }
-        else if (bytesReceived == 0)
-        {
-            logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료");
-
-            if (clients.find(clientId) != clients.end())
-            {
-                clients[clientId].is_connected = false;
-                closesocket(clients[clientId].socket);
-            }
-
-            for (auto& [sceneId, scene] : sceneManager.getAllScenes())
-            {
-                scene.removePlayer(clientId);
-            }
-
-            std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId);
-            BroadcastPacket(leavePacket, clientId);
-
-            clients.erase(clientId);
-
-            break;
-        }
-        else
-        {
-            logger.Log("recv() 오류 발생: " + std::to_string(WSAGetLastError()));
-            break;
-        }
     }
 }
 
 void Server::BroadcastPacket(const std::string& packet, int senderId)
 {
+    std::string finalizedPacket = packet;
+
+    if (!finalizedPacket.empty() && finalizedPacket.back() != '\n')
+        finalizedPacket += '\n';
+
     for (const auto& [id, session] : clients)
     {
         if (!session.is_connected || id == senderId) continue;
 
-        int bytesSent = send(session.socket, packet.c_str(), (int)packet.length(), 0);
+        int bytesSent = send(session.socket, finalizedPacket.c_str(), (int)finalizedPacket.length(), 0);
         if (bytesSent == SOCKET_ERROR)
         {
             logger.Log("[ERROR] 클라이언트 " + std::to_string(id) + "에게 send() 실패: " + std::to_string(WSAGetLastError()));
         }
         else
         {
-            logger.Log("클라이언트 " + std::to_string(id) + "에게 패킷 전송 완료: " + packet);
+            logger.Log("클라이언트 " + std::to_string(id) + "에게 패킷 전송 완료: " + finalizedPacket);
         }
     }
 }
