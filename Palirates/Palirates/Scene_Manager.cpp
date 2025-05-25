@@ -356,6 +356,7 @@ void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList)
 {
     if (activeScene) {
         if (activeScene->texture_ui_manager) {
+            activeScene->texture_ui_manager->m_UI_Timer.Tick(100);
             activeScene->texture_ui_manager->RenderAll(cmdList);
         }
     }

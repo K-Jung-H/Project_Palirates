@@ -1,5 +1,6 @@
 #pragma once
 #include "Shader.h"
+#include "Timer.h"
 
 inline D2D1_RECT_F MakeNormalizedRect(
     float normCX, float normCY, float normW,
@@ -140,20 +141,30 @@ struct TextureBlock
     }
 };
 
-
 class Texture_UI_Renderer
 {
 public:
     Texture_UI_Renderer(ID3D12Device* device);
     ~Texture_UI_Renderer();
 
+    void CreateShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+    void UpdateShaderVariables(float currentTime, float elapsedTime, ID3D12GraphicsCommandList* cmdList);
+
     void Render_UI_Textures(ID3D12GraphicsCommandList* cmdList, std::vector<TextureBlock*>* pTextureList);
 
 private:
     ID3D12Device* m_pd3dDevice = nullptr;
+    
+    struct CB_FRAMEWORK_INFO
+    {
+        float m_fCurrentTime = 0.0f;
+        float m_fElapsedTime = 0.0f;
+    };
 
+    ID3D12Resource* m_pCBFrameInfo = nullptr;
+    CB_FRAMEWORK_INFO* m_pMappedCBFrameInfo = nullptr;
     ID3D12Resource* m_pVertexBuffer = nullptr;
-    D3D12_VERTEX_BUFFER_VIEW        m_VertexBufferView = {};
+    D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView = {};
 };
 
 class Texture_UI_Manager
@@ -166,6 +177,9 @@ private:
     std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature = NULL;
 
 public:
+
+    CGameTimer               m_UI_Timer;
+
     void SetShader(std::unique_ptr<CTextureToScreenShader> shader) {
         textureShader = std::move(shader);
     }
@@ -174,6 +188,9 @@ public:
         textureRenderer = std::move(renderer);
     }
 
+    Texture_UI_Renderer* GetRenderer() const {
+        return textureRenderer.get();
+    }
     void SetRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature) {
         m_TextureUI_GraphicsRootSignature = rootSignature;
     }
@@ -190,6 +207,15 @@ public:
                 rawPtrs.push_back(block.get());
 
             cmdList->SetGraphicsRootSignature(m_TextureUI_GraphicsRootSignature.get());
+
+            float a = m_UI_Timer.GetTotalTime();
+            float b = m_UI_Timer.GetTimeElapsed();
+
+            textureRenderer->UpdateShaderVariables(
+                m_UI_Timer.GetTotalTime(),
+                m_UI_Timer.GetTimeElapsed(),
+                cmdList
+            );
 
             textureShader->OnPrepareRender(cmdList, 0);
             textureRenderer->Render_UI_Textures(cmdList, &rawPtrs);

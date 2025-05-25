@@ -72,6 +72,7 @@ public:
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
+	ID3D12RootSignature* Create_UI_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 
 	
 	shared_ptr<ID3D12RootSignature> Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
@@ -104,6 +105,7 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_MRT_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Transparent_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;
+	static std::shared_ptr<ID3D12RootSignature> m_UI_GraphicsRootSignature;
 
 public:
 	Particle_Manager* particle_manager = NULL;
