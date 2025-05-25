@@ -1,4 +1,3 @@
-#include "Shaders.hlsl"
 #include "Light.hlsl"
 
 Texture2D<float4> T_Albedo_Color : register(t0);
@@ -7,6 +6,7 @@ Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Velocity : register(t3);
 // t4 = Light_Material_Info
 Texture2D<float4> T_Fog_Noise : register(t5);
+Texture2D<float> T_Fixed_ShadowMap : register(t6);
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -27,6 +27,20 @@ cbuffer cb_Post_Camera : register(b1)
 {
     float3 camera_pos;
 };
+
+cbuffer cb_Shadow_Info : register(b3)
+{
+    uint shadow_pass : packoffset(c0.x); 
+    float padding_0 : packoffset(c0.y);   
+    float padding_1 : packoffset(c0.z); 
+    float padding_2 : packoffset(c0.w); 
+
+    matrix gmtxLightCamera_View : packoffset(c1); 
+    matrix gmtxLightCamera_Projection : packoffset(c5);
+}
+
+SamplerState gssWrap : register(s0);
+SamplerState gssShadowSampler : register(s1);
 
 //==================================================================
 float4 GetDebugColorFromID(uint id)
@@ -104,6 +118,36 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     
     float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.xyz, materialID);
 
+    //float depth = T_Fixed_ShadowMap.Sample(gssWrap, input.uv);
+    //return float4(depth, depth, depth, 1.0f);
+    
+    //================================================================
+    
+    if (shadow_pass == 1)
+    { 
+        return float4(1.0f, 0.0f, 0.0f, 1.0f);
+
+        
+        // 그림자 연산
+        float4 lightViewPos = mul(float4(world_position.xyz, 1.0f), gmtxLightCamera_View);
+        float4 lightClipPos = mul(lightViewPos, gmtxLightCamera_Projection);
+        lightClipPos.xyz /= lightClipPos.w;
+
+        // Shadow map UV 변환
+        float2 shadowUV = lightClipPos.xy * 0.5f + 0.5f;
+
+        // Shadow map에서 깊이 샘플링
+        float shadowDepth = T_Fixed_ShadowMap.Sample(gssShadowSampler, shadowUV);
+        float currentDepth = lightClipPos.z;
+
+        // Bias 적용
+        float bias = 0.005f;
+        float shadowFactor = (currentDepth - bias > shadowDepth) ? 0.3f : 1.0f;
+
+        // 그림자 적용
+        Light_Color.rgb *= shadowFactor;
+    }
+    
     //================================================================    
     
     float2 baseUV = world_position.xz - camera_pos.xz;

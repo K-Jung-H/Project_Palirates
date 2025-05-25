@@ -61,21 +61,33 @@ struct Fog_Info
 	XMFLOAT2 padding0;
 };
 
+struct LightCamera_Info
+{
+	UINT shadow_pass;
+	float padding_0;
+	float padding_1;
+	float padding_2;
+
+	XMFLOAT4X4 LightCamera_View;
+	XMFLOAT4X4 LightCamera_Projection;
+};
 
 class Shadow_Camera : public CCamera
 {
 public:
 	static std::shared_ptr<CShader> shadow_map_shader;
-
+	bool shadow_active = true;
 private:
 	shared_ptr<CMaterial> shadow_map;
-
+	ID3D12Resource* m_pd3dcb_LightCamera = NULL;
+	LightCamera_Info* m_pcb_MappedLightCamera = NULL;
 public:
 	Shadow_Camera();
 	virtual ~Shadow_Camera();
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void SetupDirectionalLightCamera(LIGHT& directionalLight, float width = 3000.0f, float height = 3000.0f, float nearZ = 1.0f, float farZ = 5000.0f);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	void SetupDirectionalLightCamera(XMFLOAT3& light_directiont, float width = 3000.0f, float height = 3000.0f, float nearZ = 1.0f, float farZ = 5000.0f);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE Get_Shadow_Map_DSV() const;
 };
@@ -98,6 +110,7 @@ public:
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables_Light_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void ReleaseShaderVariables();
 
@@ -144,7 +157,6 @@ public:
 	bool bOBBRender{ false };
 
 protected:
-	static std::shared_ptr<ID3D12RootSignature> m_ShadowMap_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_MRT_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Transparent_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;

@@ -314,12 +314,20 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv{};
 	srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
+	DXGI_FORMAT originalFormat = desc.Format;
+	if (originalFormat == DXGI_FORMAT_R32_TYPELESS)
+		srv.Format = DXGI_FORMAT_R32_FLOAT;
+	else if (originalFormat == DXGI_FORMAT_R24G8_TYPELESS)
+		srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	else
+		srv.Format = originalFormat;
+
 	int type = GetTextureType(index);
 	switch (type)
 	{
 	case RESOURCE_TEXTURE2D:
 	case RESOURCE_TEXTURE2D_ARRAY:
-		srv.Format = desc.Format;
+		//srv.Format = desc.Format;
 		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srv.Texture2D.MipLevels = -1;
 		srv.Texture2D.MostDetailedMip = 0;
@@ -327,7 +335,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 		srv.Texture2D.ResourceMinLODClamp = 0.0f;
 		break;
 	case RESOURCE_TEXTURE2DARRAY:
-		srv.Format = desc.Format;
+		//srv.Format = desc.Format;
 		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
 		srv.Texture2DArray.MipLevels = -1;
 		srv.Texture2DArray.MostDetailedMip = 0;
@@ -337,7 +345,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 		srv.Texture2DArray.ArraySize = desc.DepthOrArraySize;
 		break;
 	case RESOURCE_TEXTURE_CUBE:
-		srv.Format = desc.Format;
+		//srv.Format = desc.Format;
 		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srv.TextureCube.MipLevels = 1;
 		srv.TextureCube.MostDetailedMip = 0;
@@ -2300,14 +2308,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 					{
-						int pipelineStateNum = pShader->Get_Num_PipelineState();
-						for (int j = 0; j < pipelineStateNum; ++j)
-						{
-							pShader->Setting_Render(pd3dCommandList, j);
-							material_ptr->UpdateShaderVariable(pd3dCommandList);
+						pShader->Setting_Render(pd3dCommandList, 0);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
 
-							m_pMesh->Render(pd3dCommandList, i);
-						}
+						m_pMesh->Render(pd3dCommandList, i);
 					}
 					else
 					{
@@ -2327,6 +2331,44 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 	if (m_pChild)
 		m_pChild->Render(pd3dCommandList, pCamera);
 
+}
+
+void CGameObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (Active && m_pMesh)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Material_list.size())
+		{
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+					{
+						pShader->Setting_Render(pd3dCommandList, 1);
+
+						m_pMesh->Render(pd3dCommandList, i);
+
+					}
+				}
+			}
+		}
+
+		if (m_pSibling)
+			m_pSibling->Render_Shadow(pd3dCommandList, pCamera);
+
+
+		if (m_pChild)
+			m_pChild->Render_Shadow(pd3dCommandList, pCamera);
+
+	}
 }
 
 void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -3751,6 +3793,24 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 
 }
 
+void CHeightMapTerrain::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && full_mesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
+		{
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); 
+
+			full_mesh->Render(pd3dCommandList, 0);
+
+		}
+	}
+
+}
 
 
 
@@ -3806,6 +3866,31 @@ void Plane_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
 
 }
+
+void Plane_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 1);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render_Shadow(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render_Shadow(pd3dCommandList, pCamera);
+
+}
+
 
 void Plane_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
 {
@@ -4112,6 +4197,37 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
 	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
+
+}
+
+void Wave_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
+
+	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 1);
+			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render_Shadow(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render_Shadow(pd3dCommandList, pCamera);
 
 }
 
@@ -4463,6 +4579,11 @@ void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
+void CMonsterObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CGameObject::Render_Shadow(pd3dCommandList, pCamera);
+
+}
 void CMonsterObject::SetupWeaponCollider()
 {
 	std::shared_ptr<CGameObject> model = FindFrame(WeaponName);

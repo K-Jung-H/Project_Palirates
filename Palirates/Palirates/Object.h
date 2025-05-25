@@ -666,7 +666,9 @@ public:
 
     virtual bool IsVisible(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
+    
     virtual void OnLateUpdate() {}
 
     virtual void Set_Last_Pos(XMFLOAT3 pos);
@@ -857,6 +859,7 @@ public:
 
     void Check_Culling(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);
     void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
@@ -934,6 +937,7 @@ public:
     virtual ~Plane_Object();
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
     void Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
@@ -971,6 +975,7 @@ public:
 
     void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
 
@@ -1037,6 +1042,8 @@ public:
     virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
     virtual void SetupWeaponCollider();
 };
 

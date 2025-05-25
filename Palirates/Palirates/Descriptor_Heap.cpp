@@ -48,6 +48,29 @@ void CDescriptor_Heap::CreateCbvSrvUavDescriptorHeaps(ID3D12Device* pd3dDevice, 
 
 }
 
+void CDescriptor_Heap::CreateDsvDescriptorHeap(ID3D12Device* pd3dDevice, int nDsvViews)
+{
+    CDescriptor_Heap* instance = Get_Instance(); 
+
+    if (instance->DsvDescriptorHeap) 
+        return; 
+
+    D3D12_DESCRIPTOR_HEAP_DESC dsvDesc = {};
+    dsvDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsvDesc.NumDescriptors = nDsvViews;
+    dsvDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+
+    HRESULT hr = pd3dDevice->CreateDescriptorHeap(&dsvDesc, IID_PPV_ARGS(&instance->DsvDescriptorHeap));
+    if (FAILED(hr))
+    {
+        OutputDebugStringA("Failed to create DSV Descriptor Heap.\n");
+        return;
+    }
+
+    instance->DsvDescriptorStartHandle = instance->DsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    instance->DsvDescriptorNextHandle = instance->DsvDescriptorStartHandle;
+}
+
 // Creates multiple constant buffer views
 void CDescriptor_Heap::CreateConstantBufferViews(ID3D12Device* pd3dDevice, int nConstantBufferViews, ID3D12Resource* pd3dConstantBuffers, UINT nStride)
 {
@@ -382,14 +405,27 @@ UINT CDescriptor_Heap::GetCreatedUavCount()
 }
 
 
-D3D12_CPU_DESCRIPTOR_HANDLE CDescriptor_Heap::CreateDsv(ID3D12Device* pd3dDevice)
+D3D12_CPU_DESCRIPTOR_HANDLE CDescriptor_Heap::CreateDsv(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT resourceIndex)
 {
-    auto* inst = Get_Instance();
+    CDescriptor_Heap* inst = Get_Instance();
+    ID3D12Resource* pResource = pTexture->GetResource(resourceIndex);
+
+    if (!pResource)
+    {
+        OutputDebugStringA("CreateDsv: Resource is null!\n");
+        return { 0 };
+    }
 
     D3D12_CPU_DESCRIPTOR_HANDLE handle = inst->DsvDescriptorNextHandle;
+    inst->DsvDescriptorNextHandle.ptr += ::gnDsvDescriptorIncrementSize;
 
-    // 다음 슬롯 위치로 증가
-    inst->DsvDescriptorNextHandle.ptr += inst->DsvIncrementSize;
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT; 
+    dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+    pd3dDevice->CreateDepthStencilView(pResource, &dsvDesc, handle);
 
     return handle;
 }
@@ -397,7 +433,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE CDescriptor_Heap::CreateDsv(ID3D12Device* pd3dDevice
 UINT CDescriptor_Heap::GetCreatedDsvCount()
 {
     auto* inst = Get_Instance();
-    return static_cast<UINT>((inst->DsvDescriptorNextHandle.ptr - inst->DsvDescriptorStartHandle.ptr) / inst->DsvIncrementSize);
+    return static_cast<UINT>((inst->DsvDescriptorNextHandle.ptr - inst->DsvDescriptorStartHandle.ptr) / ::gnDsvDescriptorIncrementSize);
 }
 
 //===========================================================

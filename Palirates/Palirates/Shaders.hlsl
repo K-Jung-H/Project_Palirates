@@ -140,6 +140,13 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
     return output;
 }
 
+float4 VS_Shadow_Standard(VS_STANDARD_INPUT input) : SV_POSITION
+{
+    float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
+    float4 clipPos = mul(mul(worldPos, gmtxView), gmtxProjection);
+    return clipPos;
+}
+
 //===========================================================
 
 PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
@@ -237,6 +244,14 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
     return output;
 }
 
+float4 VS_Shadow_Standard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input) : SV_POSITION
+{
+    float4 worldPos = mul(float4(input.position, 1.0f), input.instance_worldMatrix);
+    float4 clipPos = mul(mul(worldPos, gmtxView), gmtxProjection);
+    return clipPos;
+}
+
+
 //==================================================================
 
 #define MAX_VERTEX_INFLUENCES			4
@@ -300,6 +315,18 @@ VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     return output;
 }
 
+float4 VS_Shadow_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input) : SV_POSITION
+{
+    float4x4 mtxVertexToBoneWorld = (float4x4) 0.0f;
+    for (int i = 0; i < MAX_VERTEX_INFLUENCES; i++)
+    {
+        mtxVertexToBoneWorld += input.weights[i] * mul(gpmtxBoneOffsets[input.indices[i]], gpmtxBoneTransforms[input.indices[i]]);
+    }
+
+    float4 worldPos = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
+    float4 clipPos = mul(mul(worldPos, gmtxView), gmtxProjection);
+    return clipPos;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -323,7 +350,7 @@ struct VS_TERRAIN_OUTPUT
     
 };
 
-VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
+VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
 	VS_TERRAIN_OUTPUT output;
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
@@ -337,7 +364,16 @@ VS_TERRAIN_OUTPUT VSTerrain_Solid(VS_TERRAIN_INPUT input)
 }
 
 
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
+float4 VS_Shadow_Terrain(VS_TERRAIN_INPUT input) : SV_POSITION
+{
+    float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
+    float4 clipPos = mul(mul(worldPos, gmtxView), gmtxProjection);
+    return clipPos;
+}
+
+
+
+PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
@@ -359,39 +395,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Solid(VS_TERRAIN_OUTPUT input)
     return (output);
 }
 
-VS_TERRAIN_OUTPUT VSTerrain_Wireframe(VS_TERRAIN_INPUT input)
-{
-    VS_TERRAIN_OUTPUT output;
-    input.position.y -= 1.0f;
-    
-    output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
-    float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.position = mul(positionV, gmtxProjection);
-    
-    output.color = input.color;
-    output.uv0 = input.uv0;
-    output.uv1 = input.uv1;
-
-    return (output);
-}
-
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain_Wireframe(VS_TERRAIN_OUTPUT input)
-{
-    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 20.0f);
-    
-    output.Albedo_Color.xyz = input.color.xyz;
-    output.Albedo_Color.a = (float) (material_info.light_material_ID) / 255.0f;
-    
-    output.world_Position = float4(input.positionW, 1.0f);
-    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
-    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
-
-    return (output);
-}
 
 
 //=============================================================

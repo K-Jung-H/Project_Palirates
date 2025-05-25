@@ -94,6 +94,20 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
 }
 
 
+float4 VS_Shadow_Plane(VS_TERRAIN_INPUT input) : SV_POSITION
+{
+    float3 positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
+
+    float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f).x;
+    height -= 0.5f;
+    positionW.y += (height * 100.0f); // 동일한 디스플레이스먼트 적용
+
+    float4 worldPos = float4(positionW, 1.0f);
+    float4 clipPos = mul(mul(worldPos, gmtxView), gmtxProjection);
+
+    return clipPos;
+}
+
 float4 PS_Plane(VS_TERRAIN_OUTPUT input) : SV_Target
 {
     float4 Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);

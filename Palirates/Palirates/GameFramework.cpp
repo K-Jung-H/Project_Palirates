@@ -65,7 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 10);
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
@@ -1095,6 +1095,15 @@ void CGameFramework::FrameAdvance()
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
+	// ====================== [3.5] ShadowMap Phase ======================
+
+	BeginGPUStage(GPU_Stage::Render);
+	PrepareStage(GPU_Stage::Render);
+	{
+		scene_manager->Prepare_Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList);
+		scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList);
+	}
+	EndGPUStage(GPU_Stage::Render);
 
 	// ====================== [4] Render Phase ======================
 	BeginGPUStage(GPU_Stage::Render);
