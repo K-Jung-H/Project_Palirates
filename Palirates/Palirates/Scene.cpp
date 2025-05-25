@@ -254,7 +254,7 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
 	{
 		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
@@ -279,6 +279,12 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[4].Constants.Num32BitValues = 10; // float4 + float4 + float + bool + padding = 10
+		pd3dRootParameters[4].Constants.ShaderRegister = 3; // b3
+		pd3dRootParameters[4].Constants.RegisterSpace = 0;
+		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -762,6 +768,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
+	//Build_Texture_UI(pd3dDevice, pd3dCommandList, nullptr);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -852,6 +860,56 @@ void CScene::Update_UI()
 }
 
 #endif
+
+void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
+{
+	texture_ui_manager = new Texture_UI_Manager();
+    if (!texture_ui_manager) return;
+
+	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
+
+    std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
+    pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
+    texture_ui_manager->SetShader(std::move(pShader));
+
+	texture_ui_manager->SetRootSignature(pRootSignature);
+
+    CTexture* pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+    //pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Texture_01_C.dds", RESOURCE_TEXTURE2D, 0);
+    pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTexture, 0, 0);
+
+	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
+
+    D2D1_RECT_F screenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, pTexture);
+
+	std::unique_ptr<TextureBlock> block = std::make_unique<TextureBlock>(pTexture, screenRect, mesh);
+	block->onClick = []() {
+		OutputDebugStringW(L"[UI] 버튼이 클릭됨\n");
+		};
+	block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);      
+	block->borderColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	block->borderSize = 0.2f;
+    texture_ui_manager->Add_TextureBlock(std::move(block));
+
+	D2D1_RECT_F screenRect2 = MakeNormalizedRect(0.2f, 0.7f, 0.4f, pTexture, 1.5f);
+	std::unique_ptr<TextureBlock> block2 = std::make_unique<TextureBlock>(pTexture, screenRect2, mesh);
+
+	texture_ui_manager->Add_TextureBlock(std::move(block2));
+}
+
+std::vector<TextureBlock*> CScene::Get_Texture_List()
+{
+	if (texture_ui_manager)
+		return texture_ui_manager->GetTextureBlockPtrs(); 
+	else
+		return {};
+}
+
+void CScene::Update_Texture_UI()
+{
+
+}
 
 void CScene::ReleaseObjects()
 {
@@ -1557,6 +1615,8 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	//=====================================================
 	Object_Manager::Reserve_Update();
 
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -1647,6 +1707,45 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 		m_pLights[3].m_bEnable = true;
 		m_pLights[3].m_xmf3Position = character_pos;
 		m_pLights[3].m_xmf3Position.y += 15.0f;
+	}
+}
+
+bool Character_Select_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	if (nMessageID == WM_LBUTTONDOWN)
+	{
+		int mouseX = LOWORD(lParam);
+		int mouseY = HIWORD(lParam);
+		float fMouseX = static_cast<float>(mouseX);
+		float fMouseY = static_cast<float>(mouseY);
+
+		auto blocks = texture_ui_manager->GetTextureBlockPtrs();
+		for (auto& block : blocks)
+		{
+			if (block && IsPointInRect(block->screenRect, fMouseX, fMouseY))
+			{
+				if (block->onClick) block->onClick();
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+void Character_Select_Scene::UpdateUIHoverState(HWND hWnd)
+{
+	POINT ptMouse;
+	GetCursorPos(&ptMouse);
+	ScreenToClient(hWnd, &ptMouse);
+
+	float fMouseX = static_cast<float>(ptMouse.x);
+	float fMouseY = static_cast<float>(ptMouse.y);
+
+	auto blocks = texture_ui_manager->GetTextureBlockPtrs();
+	for (auto& block : blocks)
+	{
+		if (!block) continue;
+		block->bHovered = IsPointInRect(block->screenRect, fMouseX, fMouseY);
 	}
 }
 

@@ -32,6 +32,7 @@
 #include <array>
 #include <random>
 #include <optional>
+#include <functional>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -136,7 +137,7 @@ extern HINSTANCE						ghAppInstance;
 #define LOAD_SCENE
 #define USING_OBB
 #define RENDER_PARTICLE
-#define RENDER_WAVE
+//#define RENDER_WAVE
 
 #define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
@@ -208,6 +209,7 @@ extern void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, 
 
 extern XMFLOAT4 Get_Random_Color(float w);
 extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area);
+
 #define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 
 

@@ -14,7 +14,6 @@ Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12Comma
 #ifdef WRITE_TEXT_UI
     text_ui_renderer = make_shared<Text_UI_Renderer>(nFrames, pd3dDevice, pd3dCommandQueue, ppd3dRenderTargets, nWidth, nHeight);
 #endif
-
 }
 
 Scene_Manager::~Scene_Manager()
@@ -75,7 +74,7 @@ void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDe
 #ifdef WRITE_TEXT_UI
         it->second->Build_Text_UI(text_ui_renderer.get());
 #endif
-
+       // it->second->Build_Texture_UI(pd3dDevice, pd3dCommandList, texture_ui_renderer.get());
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Can't find " + std::string(sceneName));
@@ -231,6 +230,14 @@ void Scene_Manager::Update_UI()
 #endif
 }
 
+void Scene_Manager::Update_Texture_UI()
+{
+    if (activeScene)
+    {
+        activeScene->Update_Texture_UI();
+    }
+}
+
 void Scene_Manager::Unload_Scene()
 {
     activeScene.reset();
@@ -339,6 +346,17 @@ void Scene_Manager::Render_Scene_UI(UINT nFrame)
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 #endif
+}
+
+void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList)
+{
+    if (activeScene) {
+        if (activeScene->texture_ui_manager) {
+            activeScene->texture_ui_manager->RenderAll(cmdList);
+        }
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 }
 
 void Scene_Manager::ReleaseUploadBuffers()

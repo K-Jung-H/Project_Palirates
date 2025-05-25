@@ -396,3 +396,23 @@ public:
 };
 
 //============================================================================
+
+class CTextureToScreenShader : public CStandardShader
+{
+public:
+	CTextureToScreenShader();
+	virtual ~CTextureToScreenShader();
+
+	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
+	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	virtual void ReleaseUploadBuffers();
+
+public:
+
+	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
+};

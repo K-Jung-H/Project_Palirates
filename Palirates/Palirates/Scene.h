@@ -54,6 +54,7 @@ public:
     ~CScene();
 
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual void UpdateUIHoverState(HWND hWnd) {};
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
@@ -136,6 +137,11 @@ public:
 	std::vector<TextBlock*>* Get_Text_List();
 	void Update_UI();
 #endif
+
+	Texture_UI_Manager* texture_ui_manager = NULL;
+	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
+	std::vector<TextureBlock*> Get_Texture_List();
+	virtual void Update_Texture_UI();
 };
 
 class Test_Scene : public CScene
@@ -158,6 +164,8 @@ private:
 
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual void UpdateUIHoverState(HWND hWnd);
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void UpdatePlayerSelection(int new_index);
 };

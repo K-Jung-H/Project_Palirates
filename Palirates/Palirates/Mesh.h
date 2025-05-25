@@ -397,3 +397,18 @@ protected:
 	D3D12_VERTEX_BUFFER_VIEW m_d3dTrailSideBufferView = {};
 };
 
+class CTextureMesh : public CMesh
+{
+public:
+	CTextureMesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float width = 2.0f, float height = 2.0f);
+	virtual ~CTextureMesh();
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext) override;
+	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, int nSubSet) override;
+	virtual void ReleaseUploadBuffers() override;
+
+protected:
+	ID3D12Resource* m_pd3dVertexBuffer = nullptr;
+	ID3D12Resource* m_pd3dVertexUploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dVertexBufferView = {};
+};

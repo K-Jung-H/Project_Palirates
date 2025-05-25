@@ -456,3 +456,78 @@ float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
         
     return (cColor);
 }
+
+cbuffer UIConstants : register(b3) 
+{
+    float4 g_tintColor;
+    float4 g_borderColor;
+    float g_borderSize;
+    bool g_isHovered;
+    float2 padding;
+};
+
+
+struct VS_UI_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+};
+
+struct VS_UI_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD;
+};
+
+VS_UI_OUTPUT VS_UI(VS_UI_INPUT input)
+{
+    VS_UI_OUTPUT output;
+    output.position = float4(input.position.xy, 0.0f, 1.0f); 
+    output.uv = input.uv;
+    return output;
+}
+
+float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
+{
+    float2 uv = input.uv;
+    float4 texColor = gtxtAlbedoTexture.Sample(gssClamp, uv);
+
+    float2 borderDist = min(uv, 1.0f - uv);
+    float distToBorder = min(borderDist.x, borderDist.y);
+
+    float borderFade = 0.015f;
+    float glowIntensity = smoothstep(0.0f, g_borderSize + borderFade, g_borderSize - distToBorder);
+    
+    float pulse = 0.5f + 0.5f * sin(gfCurrentTime * 6.0f);
+    glowIntensity *= pulse;
+
+    float4 glowColor = g_borderColor * glowIntensity;
+
+    float4 baseColor = texColor;
+
+    if (g_isHovered)
+    {
+        baseColor *= g_tintColor; 
+        return baseColor + glowColor;
+    }
+    else
+    {
+        return baseColor;
+    }
+    
+    
+    // scan
+    //float2 uv = input.uv;
+    //float4 texColor = gtxtAlbedoTexture.Sample(gssClamp, uv);
+
+    //float scanY = fmod(gfCurrentTime * 0.5f, 1.0f); 
+
+    //float thickness = 0.02f;
+    //float scanGlow = smoothstep(thickness, 0.0f, abs(uv.y - scanY));
+
+    //float4 scanColor = g_borderColor * scanGlow;
+
+    //float4 baseColor = texColor * g_tintColor;
+
+    //return g_isHovered ? baseColor + scanColor : baseColor;
+}
