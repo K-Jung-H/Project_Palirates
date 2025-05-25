@@ -325,6 +325,28 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
     {
         if (!block || !block->pTexture || !block->mesh) continue;
 
+        struct UIConstants
+        {
+            XMFLOAT4 tintColor;
+            XMFLOAT4 borderColor;
+            float borderSize;
+            BOOL isHovered;
+            float padding[2]; 
+        };
+
+        UIConstants ui = {};
+        ui.tintColor = block->tintColor;
+        ui.borderColor = { 1.0f, 0.0f, 0.0f, 1.0f }; 
+        ui.borderSize = 0.02f;
+        ui.isHovered = block->bHovered;
+
+        cmdList->SetGraphicsRoot32BitConstants(
+            /* RootParameterIndex */ 4,                     
+            /* Num32BitValues     */ sizeof(UIConstants) / 4,
+            /* pSrcData           */ &ui,
+            /* DestOffset         */ 0
+        );
+
         cmdList->SetGraphicsRootDescriptorTable(3, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
 
         D3D12_VIEWPORT vp = {};

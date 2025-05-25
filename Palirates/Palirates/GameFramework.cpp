@@ -331,6 +331,7 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
 	if (main_scene) main_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+	if (main_scene) main_scene->UpdateUIHoverState(hWnd);
 	switch (nMessageID)
 	{
 		case WM_LBUTTONDOWN:

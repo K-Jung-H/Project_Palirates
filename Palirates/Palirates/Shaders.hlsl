@@ -457,6 +457,16 @@ float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
     return (cColor);
 }
 
+cbuffer UIConstants : register(b3) 
+{
+    float4 g_tintColor;
+    float4 g_borderColor;
+    float g_borderSize;
+    bool g_isHovered;
+    float2 padding;
+};
+
+
 struct VS_UI_INPUT
 {
     float3 position : POSITION;
@@ -479,5 +489,15 @@ VS_UI_OUTPUT VS_UI(VS_UI_INPUT input)
 
 float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 {
-    return gtxtAlbedoTexture.Sample(gssClamp, input.uv);
+    float2 uv = input.uv;
+    float4 texColor = gtxtAlbedoTexture.Sample(gssClamp, uv);
+
+    bool isBorder =
+        (uv.x < g_borderSize || uv.x > 1.0f - g_borderSize ||
+         uv.y < g_borderSize || uv.y > 1.0f - g_borderSize);
+
+    if (g_isHovered && isBorder)
+        return g_borderColor;
+    else
+        return texColor * g_tintColor;
 }

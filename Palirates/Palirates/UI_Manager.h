@@ -126,7 +126,15 @@ struct TextureBlock
     CTexture* pTexture = nullptr;
     D2D1_RECT_F screenRect;
     std::shared_ptr<CTextureMesh> mesh = nullptr;
+
     std::function<void()> onClick;
+
+    bool bHovered = false;
+    bool bClicked = false;
+
+    XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
+    XMFLOAT4 borderColor = { 1.0f, 0.0f, 0.0f, 1.0f };  
+    float borderSize = 0.02f;                     
 
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
         : pTexture(texture), screenRect(rect), mesh(meshPtr) {

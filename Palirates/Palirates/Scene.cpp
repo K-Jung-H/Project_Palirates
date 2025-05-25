@@ -254,7 +254,7 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
 	{
 		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
@@ -279,6 +279,12 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[4].Constants.Num32BitValues = 10; // float4 + float4 + float + bool + padding = 10
+		pd3dRootParameters[4].Constants.ShaderRegister = 3; // b3
+		pd3dRootParameters[4].Constants.RegisterSpace = 0;
+		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -1721,6 +1727,23 @@ bool Character_Select_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID
 		}
 	}
 	return false;
+}
+
+void Character_Select_Scene::UpdateUIHoverState(HWND hWnd)
+{
+	POINT ptMouse;
+	GetCursorPos(&ptMouse);
+	ScreenToClient(hWnd, &ptMouse);
+
+	float fMouseX = static_cast<float>(ptMouse.x);
+	float fMouseY = static_cast<float>(ptMouse.y);
+
+	auto blocks = texture_ui_manager->GetTextureBlockPtrs();
+	for (auto& block : blocks)
+	{
+		if (!block) continue;
+		block->bHovered = IsPointInRect(block->screenRect, fMouseX, fMouseY);
+	}
 }
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
