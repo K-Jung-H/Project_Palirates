@@ -142,6 +142,11 @@ public:
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 	std::vector<TextureBlock*> Get_Texture_List();
 	virtual void Update_Texture_UI();
+
+	std::function<void(const std::string&)> requestSceneChange;
+	void RequestSceneChange(const std::string& sceneName) {
+		if (requestSceneChange) requestSceneChange(sceneName);
+	}
 };
 
 class Test_Scene : public CScene

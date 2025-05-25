@@ -884,8 +884,8 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
     D2D1_RECT_F screenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, pTexture);
 
 	std::unique_ptr<TextureBlock> block = std::make_unique<TextureBlock>(pTexture, screenRect, mesh);
-	block->onClick = []() {
-		OutputDebugStringW(L"[UI] 버튼이 클릭됨\n");
+	block->onClick = [this]() {
+		RequestSceneChange("Game_Board");
 		};
 	block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);      
 	block->borderColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);

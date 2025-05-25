@@ -73,6 +73,12 @@ public:
 
     void ReleaseUploadBuffers();
 
+    std::function<void(const std::string&)> sceneChangeCallback;
+
+    void SetSceneChangeCallback(std::function<void(const std::string&)> fn) {
+        sceneChangeCallback = fn;
+    }
+
     //===============¼­¹ö===============
     //void AddPlayer(int playerId, CPlayer* player);
     CPlayer* GetPlayerById(int playerId);

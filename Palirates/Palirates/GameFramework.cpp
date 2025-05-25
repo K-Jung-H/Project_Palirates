@@ -689,6 +689,12 @@ void CGameFramework::Build_Scenes()
 
 
 	//========================================================
+	scene_manager->SetSceneChangeCallback([this](const std::string& nextSceneName) {
+		scene_manager->Set_Active_Scene(nextSceneName);
+		m_pPlayer = scene_manager->Get_Active_Scene_Player();
+		Object_Manager::Reserve_Update();
+		});
+
 	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
 	scene_manager->Register_Scene("In_Stage", in_stage_scene);
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);

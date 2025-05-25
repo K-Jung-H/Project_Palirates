@@ -34,6 +34,10 @@ bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<C
         return false;
     }
 
+    if (sceneChangeCallback) {
+        scene->requestSceneChange = sceneChangeCallback;
+    }
+
     sceneCache[std::string(sceneName)] = scene;
     return true;
 }
