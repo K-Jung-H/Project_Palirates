@@ -131,7 +131,7 @@ public:
     bool IsServerConnected();
     int GetServerPlayerID();
     void SendAnimationPacket(const AnimationWeightPacket& packet);
-    void SendMovePacket(int clientId, const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& shift);
+    //void SendMovePacket(int clientId, const DirectX::XMFLOAT3& position, const DirectX::XMFLOAT3& shift);
     Scene_Manager sceneManager;
     std::shared_ptr<Object_Manager> object_manager;
     bool bClientIdAssigned = false;

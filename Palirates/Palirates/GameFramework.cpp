@@ -805,7 +805,7 @@ void CGameFramework::ProcessInput()
 
 		if (IsServerConnected())
 		{
-			SendMovePacket(m_pPlayer->GetPlayerID(), m_pPlayer->GetPosition(), m_pPlayer->GetLookVector());
+			SendPacket();
 		}
 	}
 	
@@ -1583,18 +1583,18 @@ void CGameFramework::NetworkLoop()
 	}
 }
 
-void CGameFramework::SendMovePacket(int clientId, const XMFLOAT3& pos, const XMFLOAT3& shift)
-{
-	if (serverSocket == INVALID_SOCKET || ClientNum < 0 || !bClientIdAssigned) return;
-
-	char buffer[256];
-	sprintf_s(buffer, "MOVE,%d,%f,%f,%f,%f,%f,%f", clientId, pos.x, pos.y, pos.z, shift.x, shift.y, shift.z);
-
-	if (send(serverSocket, buffer, strlen(buffer), 0) == SOCKET_ERROR)
-		std::cerr << "[ERROR] 이동 패킷 전송 실패: " << WSAGetLastError() << std::endl;
-	else
-		std::cout << "[Client] 이동 패킷 전송: " << buffer << std::endl;
-}
+//void CGameFramework::SendMovePacket(int clientId, const XMFLOAT3& pos, const XMFLOAT3& shift)
+//{
+//	if (serverSocket == INVALID_SOCKET || ClientNum < 0 || !bClientIdAssigned) return;
+//
+//	char buffer[256];
+//	sprintf_s(buffer, "MOVE,%d,%f,%f,%f,%f,%f,%f", clientId, pos.x, pos.y, pos.z, shift.x, shift.y, shift.z);
+//
+//	if (send(serverSocket, buffer, strlen(buffer), 0) == SOCKET_ERROR)
+//		std::cerr << "[ERROR] 이동 패킷 전송 실패: " << WSAGetLastError() << std::endl;
+//	else
+//		std::cout << "[Client] 이동 패킷 전송: " << buffer << std::endl;
+//}
 
 bool CGameFramework::IsServerConnected()
 {
