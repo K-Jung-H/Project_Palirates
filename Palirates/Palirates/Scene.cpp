@@ -974,27 +974,39 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	texture_ui_manager->SetRootSignature(pRootSignature);
 
-    CTexture* pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-    pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/itachi.dds", RESOURCE_TEXTURE2D, 0);
-    //pTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTexture, 0, 0);
+    CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Startbuttton.dds", RESOURCE_TEXTURE2D, 0);
+  
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
 
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
-    D2D1_RECT_F screenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, pTexture);
+    D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
 
-	std::unique_ptr<TextureBlock> block = std::make_unique<TextureBlock>(pTexture, screenRect, mesh);
-	block->onClick = [this]() {
+	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh);
+	SbTblock->onClick = [this]() {
 		RequestSceneChange("Game_Board");
 		};
-	block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);      
-	block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-    texture_ui_manager->Add_TextureBlock(std::move(block));
+	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+    texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
+
+	CTexture* StartTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	StartTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/StartTxt.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartTxtTexture, 0, 0);
+
+	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartTxtTexture);
+
+	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh);
+	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
+	/*CTexture* pTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 
 	D2D1_RECT_F screenRect2 = MakeNormalizedRect(0.2f, 0.7f, 0.4f, pTexture, 1.5f);
 	std::unique_ptr<TextureBlock> block2 = std::make_unique<TextureBlock>(pTexture, screenRect2, mesh);
 
-	texture_ui_manager->Add_TextureBlock(std::move(block2));
+	texture_ui_manager->Add_TextureBlock(std::move(block2));*/
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()

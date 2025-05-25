@@ -345,8 +345,16 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
         cmdList->SetGraphicsRoot32BitConstants(
             2, sizeof(UIConstants) / 4, &ui, 0
         );
+        int textureCount = block->pTexture->GetTextures(); // 텍스처 개수
 
-        cmdList->SetGraphicsRootDescriptorTable(1, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
+        for (int i = 0; i < textureCount; ++i)
+        {
+            D3D12_GPU_DESCRIPTOR_HANDLE handle = block->pTexture->GetGraphicsSrvGpuDescriptorHandle(i);
+
+            // 예: 루트 파라미터 인덱스를 i + 1로 가정한 경우
+            cmdList->SetGraphicsRootDescriptorTable(1, handle);
+        }
+       // cmdList->SetGraphicsRootDescriptorTable(1, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
 
         D3D12_VIEWPORT vp = {};
         vp.TopLeftX = block->screenRect.left;
