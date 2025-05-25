@@ -336,8 +336,8 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
 
         UIConstants ui = {};
         ui.tintColor = block->tintColor;
-        ui.borderColor = { 1.0f, 0.0f, 0.0f, 1.0f }; 
-        ui.borderSize = 0.02f;
+        ui.borderColor = block->borderColor;
+        ui.borderSize = block->borderSize;
         ui.isHovered = block->bHovered;
 
         cmdList->SetGraphicsRoot32BitConstants(

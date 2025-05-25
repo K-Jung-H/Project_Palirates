@@ -887,6 +887,9 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	block->onClick = []() {
 		OutputDebugStringW(L"[UI] 버튼이 클릭됨\n");
 		};
+	block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);      
+	block->borderColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	block->borderSize = 0.2f;
     texture_ui_manager->Add_TextureBlock(std::move(block));
 
 	D2D1_RECT_F screenRect2 = MakeNormalizedRect(0.2f, 0.7f, 0.4f, pTexture, 1.5f);
