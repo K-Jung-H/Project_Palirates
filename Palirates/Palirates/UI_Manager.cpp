@@ -325,7 +325,7 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
     {
         if (!block || !block->pTexture || !block->mesh) continue;
 
-        cmdList->SetGraphicsRootDescriptorTable(0, block->srvGpuHandle);
+        cmdList->SetGraphicsRootDescriptorTable(3, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
 
         D3D12_VIEWPORT vp = {};
         vp.TopLeftX = block->screenRect.left;

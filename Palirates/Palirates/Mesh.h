@@ -408,14 +408,7 @@ public:
 	virtual void ReleaseUploadBuffers() override;
 
 protected:
-	XMFLOAT3* m_pxmf3Positions = nullptr;
-	XMFLOAT2* m_pxmf2TexCoords = nullptr;
-
-	ID3D12Resource* m_pd3dPositionBuffer = nullptr;
-	ID3D12Resource* m_pd3dPositionUploadBuffer = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dPositionBufferView = {};
-
-	ID3D12Resource* m_pd3dTexCoordBuffer = nullptr;
-	ID3D12Resource* m_pd3dTexCoordUploadBuffer = nullptr;
-	D3D12_VERTEX_BUFFER_VIEW m_d3dTexCoordBufferView = {};
+	ID3D12Resource* m_pd3dVertexBuffer = nullptr;
+	ID3D12Resource* m_pd3dVertexUploadBuffer = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dVertexBufferView = {};
 };

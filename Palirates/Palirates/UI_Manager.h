@@ -1,6 +1,29 @@
 #pragma once
 #include "Shader.h"
 
+inline D2D1_RECT_F MakeNormalizedRect(
+    float normCX, float normCY, float normW,
+    const CTexture* pTexture,
+    float scaleH = 1.0f 
+)
+{
+    if (!pTexture) return D2D1::RectF(0, 0, 0, 0);
+
+    UINT texW = pTexture->GetTextureWidth();
+    UINT texH = pTexture->GetTextureHeight();
+    if (texH == 0) texH = 1; 
+
+    float textureAspect = static_cast<float>(texW) / texH;
+
+    float cx = normCX * FRAME_BUFFER_WIDTH;
+    float cy = normCY * FRAME_BUFFER_HEIGHT;
+
+    float w = normW * FRAME_BUFFER_WIDTH;
+    float h = (w / textureAspect) * scaleH;
+
+    return D2D1::RectF(cx - w * 0.5f, cy - h * 0.5f, cx + w * 0.5f, cy + h * 0.5f);
+}
+
 struct TextDesign
 {
     std::string_view d_name;
@@ -89,13 +112,12 @@ public:
 
 struct TextureBlock
 {
-    ID3D12Resource* pTexture = nullptr;
-    D3D12_GPU_DESCRIPTOR_HANDLE srvGpuHandle = {};
+    CTexture* pTexture = nullptr;
     D2D1_RECT_F screenRect;
     std::shared_ptr<CTextureMesh> mesh = nullptr;
 
-    TextureBlock(ID3D12Resource* texture, D3D12_GPU_DESCRIPTOR_HANDLE handle, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
-        : pTexture(texture), srvGpuHandle(handle), screenRect(rect), mesh(meshPtr) {
+    TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
+        : pTexture(texture), screenRect(rect), mesh(meshPtr) {
     }
 };
 
@@ -122,6 +144,7 @@ private:
     std::vector<TextureBlock*> rawTextureBlockList;
     std::unique_ptr<CTextureToScreenShader> textureShader;
     std::unique_ptr<Texture_UI_Renderer> textureRenderer;
+    std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature = NULL;
 
 public:
     void SetShader(std::unique_ptr<CTextureToScreenShader> shader) {
@@ -130,6 +153,10 @@ public:
 
     void SetRenderer(std::unique_ptr<Texture_UI_Renderer> renderer) {
         textureRenderer = std::move(renderer);
+    }
+
+    void SetRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature) {
+        m_TextureUI_GraphicsRootSignature = rootSignature;
     }
 
     void Add_TextureBlock(std::unique_ptr<TextureBlock> block) {
@@ -142,6 +169,8 @@ public:
             std::vector<TextureBlock*> rawPtrs;
             for (auto& block : textureBlockList)
                 rawPtrs.push_back(block.get());
+
+            cmdList->SetGraphicsRootSignature(m_TextureUI_GraphicsRootSignature.get());
 
             textureShader->OnPrepareRender(cmdList, 0);
             textureRenderer->Render_UI_Textures(cmdList, &rawPtrs);

@@ -71,7 +71,6 @@ public:
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
-	ID3D12RootSignature* Create_TextureUI_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 
 	
 	shared_ptr<ID3D12RootSignature> Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
@@ -104,7 +103,6 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_MRT_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Transparent_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;
-	static std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature;
 
 public:
 	Particle_Manager* particle_manager = NULL;
@@ -140,7 +138,7 @@ public:
 #endif
 
 	Texture_UI_Manager* texture_ui_manager = NULL;
-	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Texture_UI_Renderer* texture_ui_renderer_ptr);
+	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 	std::vector<TextureBlock*>* Get_Texture_List();
 	virtual void Update_Texture_UI();
 };

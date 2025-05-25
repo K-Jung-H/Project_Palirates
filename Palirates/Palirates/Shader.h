@@ -397,30 +397,22 @@ public:
 
 //============================================================================
 
-class CTextureToScreenShader : public CShader
+class CTextureToScreenShader : public CStandardShader
 {
 public:
-	CTextureToScreenShader(int nMeshes);
+	CTextureToScreenShader();
 	virtual ~CTextureToScreenShader();
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
 	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
+	virtual D3D12_BLEND_DESC CreateBlendState(int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 	virtual void ReleaseUploadBuffers();
 
 public:
-	int								m_nMeshes = 0;
-	CMesh** m_ppMeshes = NULL;
-
-	CTexture* m_pTexture = NULL;
-
-	int mode_num = 0;
-
-	void SetMesh(UINT nIndex, CMesh* pMesh);
-	void SetTexture(CTexture* pTexture);
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 };

@@ -14,8 +14,6 @@ Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12Comma
 #ifdef WRITE_TEXT_UI
     text_ui_renderer = make_shared<Text_UI_Renderer>(nFrames, pd3dDevice, pd3dCommandQueue, ppd3dRenderTargets, nWidth, nHeight);
 #endif
-
-    texture_ui_renderer = make_shared<Texture_UI_Renderer>(pd3dDevice);
 }
 
 Scene_Manager::~Scene_Manager()

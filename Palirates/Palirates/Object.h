@@ -126,11 +126,26 @@ public:
     D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
     D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);
 
+    UINT GetTextureWidth(int index = 0) const {
+        if (index >= 0 && index < static_cast<int>(m_nTextureWidths.size()))
+            return m_nTextureWidths[index];
+        return 0;
+    }
+
+    UINT GetTextureHeight(int index = 0) const {
+        if (index >= 0 && index < static_cast<int>(m_nTextureHeights.size()))
+            return m_nTextureHeights[index];
+        return 0;
+    }
+
 private:
     int m_nReferences = 0;
     char m_pstrTextureName[64] = {};
 
     UINT m_nTextureType = 0;
+
+    std::vector<UINT> m_nTextureWidths;
+    std::vector<UINT> m_nTextureHeights;
 
     std::vector<UINT>                        m_pnResourceTypes;
     std::vector<ID3D12Resource*>             m_ppd3dTextures;
