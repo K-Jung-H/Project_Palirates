@@ -865,7 +865,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
-	//Build_Texture_UI(pd3dDevice, pd3dCommandList, nullptr);
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -970,27 +970,6 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->SetShader(std::move(pShader));
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
-
-	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Startbuttton.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
-	D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
-	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh);
-	SbTblock->onClick = [this]() {
-		RequestSceneChange("Game_Board");
-		};
-	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
-
-	CTexture* StartTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	StartTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/StartTxt.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartTxtTexture, 0, 0);
-	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartTxtTexture);
-	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh);
-	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1854,11 +1833,6 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 	}
 }
 
-bool Character_Select_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-	return false;
-}
-
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	switch (nMessageID)
@@ -1900,8 +1874,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, BackGround);
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh);
-	//BGblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	//BGblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
 	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -2143,6 +2115,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	Object_Manager::Reserve_Update();
 
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -2298,11 +2272,6 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 #endif
 
 	Fog_Trigger = false;
-}
-
-bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-	return(false);
 }
 
 bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
