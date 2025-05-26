@@ -1954,8 +1954,6 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_pLights[8].m_bEnable = true;
 
-
-
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
@@ -2339,7 +2337,50 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 	return(false);
 }
 
+void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
+{
+	texture_ui_manager = new Texture_UI_Manager();
+	if (!texture_ui_manager) return;
 
+	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
+	texture_ui_manager->GetRenderer()->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
+	pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
+	texture_ui_manager->SetShader(std::move(pShader));
+	texture_ui_manager->SetRootSignature(pRootSignature);
+	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
+
+	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downboardName.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
+	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.68f, BackGround);
+	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh);
+	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
+
+	CTexture* YesButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	YesButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
+	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
+	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable);
+	Yesblock->onClick = [this]() {
+		RequestSceneChange("In_Stage");
+		};
+	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
+
+	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
+	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
+	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable);
+	Noblock->onClick = [this]() {
+		//RequestSceneChange("Game_Board");
+		};
+	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
+}
 //==========================================================================================
 
 void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
