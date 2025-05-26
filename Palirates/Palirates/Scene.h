@@ -149,6 +149,8 @@ public:
 	void RequestSceneChange(const std::string& sceneName) {
 		if (requestSceneChange) requestSceneChange(sceneName);
 	}
+
+	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 };
 
 class Test_Scene : public CScene

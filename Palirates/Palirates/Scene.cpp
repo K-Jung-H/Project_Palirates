@@ -1076,7 +1076,7 @@ bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 
 		for (auto& block : blocks)
 		{
-			if (block) {
+			if (block && block->bActive) {
 				if ((static_cast<uint32_t>(block->layer) & mask) != 0) {
 					if (IsPointInRect(block->hitboxRect, fMouseX, fMouseY))
 					{
@@ -1107,9 +1107,10 @@ void CScene::UpdateUIHoverState(HWND hWnd)
 
 	for (auto& block : blocks)
 	{
-		if (!block) continue;
-		if ((static_cast<uint32_t>(block->layer) & mask) != 0)
-			block->bHovered = IsPointInRect(block->hitboxRect, fMouseX, fMouseY);
+		if (block && block->bActive) {
+			if ((static_cast<uint32_t>(block->layer) & mask) != 0)
+				block->bHovered = IsPointInRect(block->hitboxRect, fMouseX, fMouseY);
+		}
 	}
 }
 
@@ -1588,6 +1589,20 @@ void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	obj_manager->Post_Update_All();
 }
 
+void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable)
+{
+	uint32_t targetMask = static_cast<uint32_t>(targetLayer);
+
+	for (auto& block : blocks)
+	{
+		if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
+		{
+			block->bActive = bEnable;
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -2330,6 +2345,18 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			SetCameraTarget("Sailor_4");
 			break;
 
+		case VK_CONTROL: {
+			static bool currentActive = false; 
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue, currentActive);
+
+				currentActive = !currentActive;
+			}
+		}
+			break;
 		default:
 			break;
 		}
@@ -2354,14 +2381,14 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downboardName.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.68f, BackGround);
-	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh);
+	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Dialogue);
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
 	CTexture* YesButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	YesButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
 	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
-	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable);
+	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
 	Yesblock->onClick = [this]() {
 		RequestSceneChange("In_Stage");
 		};
@@ -2373,7 +2400,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
 	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
-	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable);
+	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
 	Noblock->onClick = [this]() {
 		//RequestSceneChange("Game_Board");
 		};

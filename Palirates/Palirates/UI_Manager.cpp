@@ -324,7 +324,7 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
     for (auto& block : *pTextureList)
     {
         if (!block || !block->pTexture || !block->mesh) continue;
-
+        if (!block->bActive) continue;
         struct UIConstants
         {
             XMFLOAT4 tintColor;

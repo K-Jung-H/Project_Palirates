@@ -130,8 +130,25 @@ enum class UILayer : uint32_t
     Debug = 1 << 2,   
     Menu = 1 << 3,  
     Tooltip = 1 << 4,   
+    Dialogue = 1 << 5,
     All = 0xFFFFFFFF
 };
+
+inline UILayer operator|(UILayer a, UILayer b)
+{
+    return static_cast<UILayer>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline UILayer operator&(UILayer a, UILayer b)
+{
+    return static_cast<UILayer>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline UILayer& operator|=(UILayer& a, UILayer b)
+{
+    a = a | b;
+    return a;
+}
 
 struct TextureBlock
 {
