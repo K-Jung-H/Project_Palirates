@@ -328,26 +328,25 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
         struct UIConstants
         {
             XMFLOAT4 tintColor;
-            XMFLOAT4 borderColor;
-            float borderSize;
-            BOOL isHovered;
-            float padding[2]; 
+            XMFLOAT4 hoverGlowColor;
+            float isHovered;
+            float padding[3];
         };
 
         UIConstants ui = {};
         ui.tintColor = block->tintColor;
-        ui.borderColor = block->borderColor;
-        ui.borderSize = block->borderSize;
-        ui.isHovered = block->bHovered;
+        ui.hoverGlowColor = block->hoverGlowColor;
+        ui.isHovered = block->bHovered ? 1.0f : 0.0f;
+
+        if (ui.isHovered == 1.0f) {
+            int a = 1;
+        }
 
         cmdList->SetGraphicsRoot32BitConstants(
-            /* RootParameterIndex */ 4,                     
-            /* Num32BitValues     */ sizeof(UIConstants) / 4,
-            /* pSrcData           */ &ui,
-            /* DestOffset         */ 0
+            2, sizeof(UIConstants) / 4, &ui, 0
         );
 
-        cmdList->SetGraphicsRootDescriptorTable(3, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
+        cmdList->SetGraphicsRootDescriptorTable(1, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
 
         D3D12_VIEWPORT vp = {};
         vp.TopLeftX = block->screenRect.left;
@@ -369,4 +368,32 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
         block->mesh->OnPreRender(cmdList, nullptr);
         block->mesh->Render(cmdList, 0);
     }
+}
+
+void Texture_UI_Renderer::CreateShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+    UINT cbSize = (sizeof(CB_FRAMEWORK_INFO) + 255) & ~255;
+    m_pd3dDevice = device;
+
+    m_pCBFrameInfo = CreateBufferResource(
+        device,
+        cmdList,
+        nullptr,
+        cbSize,
+        D3D12_HEAP_TYPE_UPLOAD,
+        D3D12_RESOURCE_FLAG_NONE,
+        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+    );
+
+    m_pCBFrameInfo->Map(0, nullptr, reinterpret_cast<void**>(&m_pMappedCBFrameInfo));
+}
+
+void Texture_UI_Renderer::UpdateShaderVariables(float currentTime, float elapsedTime, ID3D12GraphicsCommandList* cmdList)
+{
+    if (!m_pMappedCBFrameInfo) return;
+    m_pMappedCBFrameInfo->m_fCurrentTime = currentTime;
+    m_pMappedCBFrameInfo->m_fElapsedTime = elapsedTime;
+
+    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = m_pCBFrameInfo->GetGPUVirtualAddress();
+    cmdList->SetGraphicsRootConstantBufferView(0, gpuAddress); // b0에 해당
 }

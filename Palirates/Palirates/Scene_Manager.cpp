@@ -34,6 +34,10 @@ bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<C
         return false;
     }
 
+    if (sceneChangeCallback) {
+        scene->requestSceneChange = sceneChangeCallback;
+    }
+
     sceneCache[std::string(sceneName)] = scene;
     return true;
 }
@@ -348,11 +352,11 @@ void Scene_Manager::Render_Scene_UI(UINT nFrame)
 #endif
 }
 
-void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList)
+void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime)
 {
     if (activeScene) {
         if (activeScene->texture_ui_manager) {
-            activeScene->texture_ui_manager->RenderAll(cmdList);
+            activeScene->texture_ui_manager->RenderAll(cmdList, currentTime, elapsedTime);
         }
     }
     else
