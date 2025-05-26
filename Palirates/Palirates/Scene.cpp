@@ -970,6 +970,27 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->SetShader(std::move(pShader));
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
+
+	CTexture* HpBack = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Empty.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpBack, 0, 0);
+	D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
+	std::unique_ptr<TextureBlock> HBblock = std::make_unique<TextureBlock>(HpBack, HBscreenRect, mesh);
+	texture_ui_manager->Add_TextureBlock(std::move(HBblock));
+
+	CTexture* HpFront = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	HpFront->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Filled-Red.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpFront, 0, 0);
+	D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
+	std::unique_ptr<TextureBlock> HFblock = std::make_unique<TextureBlock>(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
+	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
+
+	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
+	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
+	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(captain_mug, CMscreenRect, mesh);
+	texture_ui_manager->Add_TextureBlock(std::move(CMblock));
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1306,7 +1327,23 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			obj_manager->Add_Object(humanObject_7, Object_Type::skinned);*/
 
 		}		break;
+		case VK_CONTROL: {
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty()) {
+				uint32_t targetMask = static_cast<uint32_t>(UILayer::HP_bar);
+				for (auto& block : blocks)
+				{
+					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
+					{
+						block->hp -= 0.01f; 
+						if (block->hp <= 0.0f)
+							block->hp = 1.0f;
 
+					}
+				}
+			}
+		}
+			break;
 		default:
 			break;
 		}

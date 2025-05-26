@@ -128,7 +128,7 @@ enum class UILayer : uint32_t
     Default = 1 << 0,   
     Interactable = 1 << 1,   
     Debug = 1 << 2,   
-    Menu = 1 << 3,  
+    HP_bar = 1 << 3,  
     Tooltip = 1 << 4,   
     Dialogue = 1 << 5,
     All = 0xFFFFFFFF
@@ -162,6 +162,8 @@ struct TextureBlock
     bool bHovered = false;
     bool bClicked = false;
     bool bActive = true;
+
+    float hp = 1.0f;
 
     UILayer layer = UILayer::Default;
 

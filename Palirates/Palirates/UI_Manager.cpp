@@ -330,13 +330,15 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
             XMFLOAT4 tintColor;
             XMFLOAT4 hoverGlowColor;
             float isHovered;
-            float padding[3];
+            float hp;
+            float padding[2];
         };
 
         UIConstants ui = {};
         ui.tintColor = block->tintColor;
         ui.hoverGlowColor = block->hoverGlowColor;
         ui.isHovered = block->bHovered ? 1.0f : 0.0f;
+        ui.hp = block->hp;
 
         if (ui.isHovered == 1.0f) {
             int a = 1;
