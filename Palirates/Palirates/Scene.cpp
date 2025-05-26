@@ -1078,7 +1078,7 @@ bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 		{
 			if (block) {
 				if ((static_cast<uint32_t>(block->layer) & mask) != 0) {
-					if (IsPointInRect(block->screenRect, fMouseX, fMouseY))
+					if (IsPointInRect(block->hitboxRect, fMouseX, fMouseY))
 					{
 						if (block->onClick) block->onClick();
 						return true;
@@ -1109,7 +1109,7 @@ void CScene::UpdateUIHoverState(HWND hWnd)
 	{
 		if (!block) continue;
 		if ((static_cast<uint32_t>(block->layer) & mask) != 0)
-			block->bHovered = IsPointInRect(block->screenRect, fMouseX, fMouseY);
+			block->bHovered = IsPointInRect(block->hitboxRect, fMouseX, fMouseY);
 	}
 }
 
@@ -1872,7 +1872,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
-	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, BackGround);
+	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.3f, BackGround);
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh);
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
@@ -1891,8 +1891,9 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CTexture* StartTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	StartTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/StartTxt.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartTxtTexture, 0, 0);
-	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartTxtTexture);
+	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.49f, 0.18f, StartTxtTexture);
 	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh, UILayer::Interactable);
+	STTblock->hitboxRect = SbTscreenRect;
 	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
