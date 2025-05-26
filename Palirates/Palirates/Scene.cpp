@@ -30,9 +30,6 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	//===============================================================
 
-	constexpr UINT width = 2048;
-	constexpr UINT height = 2048;
-
 	shadow_map = make_shared<CMaterial>(1);
 	CTexture* shadowTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 
@@ -40,7 +37,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
 	clearValue.DepthStencil = { 1.0f, 0 };
 
-	shadowTexture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, width, height, 1, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue);
+	shadowTexture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, _SHADOWMAP_WIDTH, _SHADOWMAP_HEIGHT, 1, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice, shadowTexture, 0);
 	shadowTexture->SetDSV(dsvHandle);
@@ -58,13 +55,27 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 
 	XMMATRIX view = XMLoadFloat4x4(&m_xmf4x4View);
 	XMMATRIX proj = XMLoadFloat4x4(&m_xmf4x4Projection);
-	XMMATRIX invView = XMMatrixInverse(nullptr, view);
 
-	XMStoreFloat4x4(&m_pcb_MappedLightCamera->LightCamera_View, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_pcb_MappedLightCamera->LightCamera_Projection, XMMatrixTranspose(proj));
-	m_pcb_MappedLightCamera->shadow_pass = true;
+	XMMATRIX texTransform = {
+		0.5f,  0.0f,  0.0f, 0.0f,
+		0.0f, -0.5f,  0.0f, 0.0f,
+		0.0f,  0.0f,  1.0f, 0.0f,
+		0.5f,  0.5f,  0.0f, 1.0f
+	};
 
-	
+	XMMATRIX viewProj = view * proj;
+	XMMATRIX viewProjTex = texTransform * viewProj;
+	XMStoreFloat4x4(&m_pcb_MappedLightCamera->LightViewProjTex, XMMatrixTranspose(viewProjTex));
+
+	m_pcb_MappedLightCamera->shadow_pass = 1;
+	m_pcb_MappedLightCamera->light_type = LIGHT_CAMERA_TYPE_DIRECTIONAL;
+	m_pcb_MappedLightCamera->LightDirectionWS = m_light_direction;
+	m_pcb_MappedLightCamera->LightPositionWS = m_light_position;
+
+	m_pcb_MappedLightCamera->shadow_bias = 0.001f;
+
+	m_pcb_MappedLightCamera->shadow_map_size = XMFLOAT2(static_cast<float>(_SHADOWMAP_WIDTH), static_cast<float>(_SHADOWMAP_HEIGHT));
+	m_pcb_MappedLightCamera->inv_shadow_map_size = XMFLOAT2(1.0f / _SHADOWMAP_WIDTH, 1.0f / _SHADOWMAP_HEIGHT);
 
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_SHADOW_INFO_CBV_INDEX, m_pd3dcb_LightCamera->GetGPUVirtualAddress());
 }
@@ -73,18 +84,25 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 
 void Shadow_Camera::SetupDirectionalLightCamera(XMFLOAT3& light_direction, float width, float height, float nearZ, float farZ)
 {
-	// Light direction (normalized)
-	XMFLOAT3 lightDir = Vector3::Normalize(light_direction);
+	m_light_direction = Vector3::Normalize(light_direction);
 
-	XMFLOAT3 lightPos = { 0.0f, 500.0f, 0.0f }; // Custom camera position
-	XMFLOAT3 target = { 1280.0f, 0.0f, 1280.0f }; // Custom look-at target
-	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f }; // World up
+	// 씬 중앙
+	XMFLOAT3 sceneCenter = { 1280.0f, 0.0f, 1280.0f }; // (2560 / 2)
 
-	// View matrix
-	GenerateViewMatrix(lightPos, target, up);
+	// 라이트 방향 기준 뒤쪽에서 씬을 바라보도록 위치 설정
+	XMFLOAT3 offset = Vector3::Scale(m_light_direction, -2000.0f); // 적당한 거리
+	m_light_position = Vector3::Add(sceneCenter, offset);
 
-	// Projection matrix (orthographic)
-	XMMATRIX ortho = XMMatrixOrthographicLH(width, height, nearZ, farZ);
+	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+	GenerateViewMatrix(m_light_position, sceneCenter, up);
+
+	// 씬 크기를 전부 포함하는 orthographic projection
+	float orthoWidth = 3000.0f;   // 씬보다 넉넉하게
+	float orthoHeight = 3000.0f;
+	float nearPlane = 1.0f;
+	float farPlane = 3000.0f;
+
+	XMMATRIX ortho = XMMatrixOrthographicLH(orthoWidth, orthoHeight, nearPlane, farPlane);
 	XMStoreFloat4x4(&m_xmf4x4Projection, ortho);
 }
 
@@ -571,9 +589,9 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 
-	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_bEnable = false;
 	m_pLights[0].m_nType = POINT_LIGHT;
 	m_pLights[0].m_fRange = 300.0f;
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -598,9 +616,9 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
 
 	m_pLights[3].m_bEnable = false;

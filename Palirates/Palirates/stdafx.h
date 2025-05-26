@@ -134,7 +134,7 @@ extern HINSTANCE						ghAppInstance;
 #define STR_LENGTH 64
 
 
-#define WRITE_TEXT_UI
+//#define WRITE_TEXT_UI
 #define LOAD_SCENE
 #define USING_OBB
 #define RENDER_PARTICLE

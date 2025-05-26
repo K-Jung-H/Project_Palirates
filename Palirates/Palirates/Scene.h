@@ -61,16 +61,29 @@ struct Fog_Info
 	XMFLOAT2 padding0;
 };
 
-struct LightCamera_Info
+struct alignas(16) LightCamera_Info
 {
 	UINT shadow_pass;
-	float padding_0;
-	float padding_1;
-	float padding_2;
+	UINT light_type;
+	UINT padding0;
+	UINT padding1;
 
-	XMFLOAT4X4 LightCamera_View;
-	XMFLOAT4X4 LightCamera_Projection;
+	XMFLOAT4X4 LightViewProjTex;
+
+	XMFLOAT3 LightDirectionWS;
+	float shadow_bias;
+
+	XMFLOAT3 LightPositionWS;
+	float padding2;
+
+	XMFLOAT2 shadow_map_size;
+	XMFLOAT2 inv_shadow_map_size;
 };
+
+#define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
+
+#define _SHADOWMAP_WIDTH 2048
+#define _SHADOWMAP_HEIGHT 2048
 
 class Shadow_Camera : public CCamera
 {
@@ -81,6 +94,11 @@ private:
 	shared_ptr<CMaterial> shadow_map;
 	ID3D12Resource* m_pd3dcb_LightCamera = NULL;
 	LightCamera_Info* m_pcb_MappedLightCamera = NULL;
+
+protected:
+	XMFLOAT3 m_light_direction = { 0.0f, -1.0f, 0.0f };
+	XMFLOAT3 m_light_position = { 0.0f, 0.0f, 0.0f };
+
 public:
 	Shadow_Camera();
 	virtual ~Shadow_Camera();

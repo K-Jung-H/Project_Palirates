@@ -28,19 +28,29 @@ cbuffer cb_Post_Camera : register(b1)
     float3 camera_pos;
 };
 
-cbuffer cb_Shadow_Info : register(b3)
+cbuffer LightCamera_Info : register(b3)
 {
-    uint shadow_pass : packoffset(c0.x); 
-    float padding_0 : packoffset(c0.y);   
-    float padding_1 : packoffset(c0.z); 
-    float padding_2 : packoffset(c0.w); 
+    uint shadow_pass;
+    uint light_type;
+    uint LightCamera_Info_padding0;
+    uint LightCamera_Info_padding1;
 
-    matrix gmtxLightCamera_View : packoffset(c1); 
-    matrix gmtxLightCamera_Projection : packoffset(c5);
-}
+    float4x4 LightViewProjTex;
+
+    float3 LightDirectionWS;
+    float shadow_bias;
+
+    float3 LightPositionWS;
+    float LightCamera_Info_padding2;
+
+    float2 shadow_map_size;
+    float2 inv_shadow_map_size;
+};
+
+
 
 SamplerState gssWrap : register(s0);
-SamplerState gssShadowSampler : register(s1);
+SamplerComparisonState gssShadowSampler : register(s1);
 
 //==================================================================
 float4 GetDebugColorFromID(uint id)
@@ -101,55 +111,66 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_Vertex
     return (output);
 }
 
+
+
+#define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
+
+#define DEBUG_SHADOWMAP_OUTPUT 0 //  셰도우맵 디버깅 모드
+
 float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
-    // 기본 텍스처 샘플링
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
     float4 world_position = T_World_Position.Sample(gssWrap, input.uv);
     float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
-    
+
     float3 wNormal = wNormal_CD.xyz;
     float Camera_Distance = wNormal_CD.w;
 
-    
-    uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
-    
-    //================================================================
-    
-    float4 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.xyz, materialID);
+#if DEBUG_SHADOWMAP_OUTPUT
+    float4 shadowCoord = mul(float4(world_position.xyz, 1.0f), LightViewProjTex);
+    shadowCoord /= shadowCoord.w;
 
-    //float depth = T_Fixed_ShadowMap.Sample(gssWrap, input.uv);
-    //return float4(depth, depth, depth, 1.0f);
-    
-    //================================================================
-    
-    if (shadow_pass == 1)
-    { 
-        return float4(1.0f, 0.0f, 0.0f, 1.0f);
+    float3 debugColor = float3(1.0f, 0.0f, 0.0f); // red = out of bounds
 
-        
-        // 그림자 연산
-        float4 lightViewPos = mul(float4(world_position.xyz, 1.0f), gmtxLightCamera_View);
-        float4 lightClipPos = mul(lightViewPos, gmtxLightCamera_Projection);
-        lightClipPos.xyz /= lightClipPos.w;
-
-        // Shadow map UV 변환
-        float2 shadowUV = lightClipPos.xy * 0.5f + 0.5f;
-
-        // Shadow map에서 깊이 샘플링
-        float shadowDepth = T_Fixed_ShadowMap.Sample(gssShadowSampler, shadowUV);
-        float currentDepth = lightClipPos.z;
-
-        // Bias 적용
-        float bias = 0.005f;
-        float shadowFactor = (currentDepth - bias > shadowDepth) ? 0.3f : 1.0f;
-
-        // 그림자 적용
-        Light_Color.rgb *= shadowFactor;
+    if (shadowCoord.x >= 0.0f && shadowCoord.x <= 1.0f &&
+        shadowCoord.y >= 0.0f && shadowCoord.y <= 1.0f &&
+        shadowCoord.z >= 0.0f && shadowCoord.z <= 1.0f)
+    {
+        float shadowDepth = T_Fixed_ShadowMap.SampleLevel(gssWrap, shadowCoord.xy, 0);
+        float currentDepth = shadowCoord.z;
+        float diff = saturate((currentDepth - shadowDepth) * 10.0f); // amplify for visibility
+        debugColor = float3(diff, 0.0f, 1.0f - diff); // blue when shadowed, red when lit
     }
+
+    return float4(debugColor, 1.0f);
+#endif
+
+    uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
+    float shadowFactor = 1.0f;
+
+    // Shadow calculation
+    if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
+    {
+        float4 shadowCoord = mul(float4(world_position.xyz, 1.0f), LightViewProjTex);
+        shadowCoord /= shadowCoord.w;
+
+        if (shadowCoord.x >= 0.0f && shadowCoord.x <= 1.0f &&
+            shadowCoord.y >= 0.0f && shadowCoord.y <= 1.0f &&
+            shadowCoord.z >= 0.0f && shadowCoord.z <= 1.0f)
+        {
+            float bias = shadow_bias;
+            shadowFactor = T_Fixed_ShadowMap.SampleCmpLevelZero(gssShadowSampler, shadowCoord.xy, shadowCoord.z - bias);
+        }
+        else
+        {
+            shadowFactor = 1.0f;
+        }
+    }
+
+    // Lighting
+    float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
     
-    //================================================================    
-    
+    // Fog + noise
     float2 baseUV = world_position.xz - camera_pos.xz;
 
     float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart));
@@ -172,20 +193,15 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float3 modFogColor = baseFogColor * (1.0 - tintStrength + smoothNoise * tintStrength * 2.0);
     float3 finalFogColor = modFogColor;
 
-    float3 foggedColor = lerp(Light_Color.rgb, finalFogColor, fogFactor);
-    
+    float3 foggedColor = lerp(Light_Color, finalFogColor, fogFactor);
+
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
     if (isEmptyPixel)
     {
-        return Fog_Trigger == 1 ? float4(finalFogColor, 1.0f) : float4(1, 1, 1, 1);
+        return Fog_Trigger == 1 ? float4(finalFogColor, 1.0f) : float4(1.0f, 1.0f, 1.0f, 1.0f);
     }
-    
-    
-    return Fog_Trigger == 1 ? float4(foggedColor, 1.0f) : Light_Color;
 
-
-
-    
+    return Fog_Trigger == 1 ? float4(foggedColor, 1.0f) : float4(Light_Color, 1.0f);
 }
 
 //=====================================================================
