@@ -69,7 +69,7 @@ public:
     void Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
     void Render_Scene_UI(UINT nFrame);
-    void Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList);
+    void Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime);
 
     void ReleaseUploadBuffers();
 

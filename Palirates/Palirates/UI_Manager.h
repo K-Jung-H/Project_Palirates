@@ -122,6 +122,17 @@ public:
 
 };
 
+enum class UILayer : uint32_t
+{
+    None = 0,
+    Default = 1 << 0,   // 0x0001
+    Interactable = 1 << 1,   // 0x0002
+    Debug = 1 << 2,   // 0x0004
+    Menu = 1 << 3,   // 0x0008
+    Tooltip = 1 << 4,   // 0x0016
+    All = 0xFFFFFFFF
+};
+
 struct TextureBlock
 {
     CTexture* pTexture = nullptr;
@@ -132,12 +143,15 @@ struct TextureBlock
 
     bool bHovered = false;
     bool bClicked = false;
+    bool bActive = true;
+
+    UILayer layer = UILayer::Default;
 
     XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
     XMFLOAT4 hoverGlowColor = { 1.0f, 0.0f, 0.0f, 1.0f };         
 
-    TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr)
-        : pTexture(texture), screenRect(rect), mesh(meshPtr) {
+    TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default)
+        : pTexture(texture), screenRect(rect), mesh(meshPtr), layer(layerMask) {
     }
 };
 
@@ -178,8 +192,6 @@ private:
 
 public:
 
-    CGameTimer               m_UI_Timer;
-
     void SetShader(std::unique_ptr<CTextureToScreenShader> shader) {
         textureShader = std::move(shader);
     }
@@ -199,7 +211,7 @@ public:
         textureBlockList.emplace_back(std::move(block));
     }
 
-    void RenderAll(ID3D12GraphicsCommandList* cmdList) {
+    void RenderAll(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime) {
         if (textureRenderer && textureShader)
         {
             std::vector<TextureBlock*> rawPtrs;
@@ -208,12 +220,9 @@ public:
 
             cmdList->SetGraphicsRootSignature(m_TextureUI_GraphicsRootSignature.get());
 
-            float a = m_UI_Timer.GetTotalTime();
-            float b = m_UI_Timer.GetTimeElapsed();
-
             textureRenderer->UpdateShaderVariables(
-                m_UI_Timer.GetTotalTime(),
-                m_UI_Timer.GetTimeElapsed(),
+                currentTime,
+                elapsedTime,
                 cmdList
             );
 
