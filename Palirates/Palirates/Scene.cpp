@@ -64,7 +64,7 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 	};
 
 	XMMATRIX viewProj = view * proj;
-	XMMATRIX viewProjTex = texTransform * viewProj;
+	XMMATRIX viewProjTex = viewProj * texTransform;
 	XMStoreFloat4x4(&m_pcb_MappedLightCamera->LightViewProjTex, XMMatrixTranspose(viewProjTex));
 
 	m_pcb_MappedLightCamera->shadow_pass = 1;
@@ -84,13 +84,9 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 
 void Shadow_Camera::SetupDirectionalLightCamera(XMFLOAT3& light_direction, float width, float height, float nearZ, float farZ)
 {
-	m_light_direction = Vector3::Normalize(light_direction);
-
-	// 씬 중앙
-	XMFLOAT3 sceneCenter = { 1280.0f, 0.0f, 1280.0f }; // (2560 / 2)
-
-	// 라이트 방향 기준 뒤쪽에서 씬을 바라보도록 위치 설정
-	XMFLOAT3 offset = Vector3::Scale(m_light_direction, -2000.0f); // 적당한 거리
+	m_light_direction = Vector3::Normalize(XMFLOAT3(-1.0f, -1.0f, -1.0f)); // 45도 아래
+	XMFLOAT3 sceneCenter = { 1280.0f, 0.0f, 1280.0f };
+	XMFLOAT3 offset = Vector3::Scale(m_light_direction, -2000.0f);
 	m_light_position = Vector3::Add(sceneCenter, offset);
 
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
@@ -100,7 +96,7 @@ void Shadow_Camera::SetupDirectionalLightCamera(XMFLOAT3& light_direction, float
 	float orthoWidth = 3000.0f;   // 씬보다 넉넉하게
 	float orthoHeight = 3000.0f;
 	float nearPlane = 1.0f;
-	float farPlane = 3000.0f;
+	float farPlane = 5000.0f;
 
 	XMMATRIX ortho = XMMatrixOrthographicLH(orthoWidth, orthoHeight, nearPlane, farPlane);
 	XMStoreFloat4x4(&m_xmf4x4Projection, ortho);
