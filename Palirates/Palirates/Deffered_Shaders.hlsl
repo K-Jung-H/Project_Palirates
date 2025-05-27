@@ -1,12 +1,18 @@
 #include "Light.hlsl"
 
+#define NUM_CASCADES 4
+
+
 Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Position: register(t1);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
 Texture2D<float4> T_Velocity : register(t3);
+Texture2D<float4> T_ViewSpace_Z : register(t4);
+
 // t4 = Light_Material_Info
-Texture2D<float4> T_Fog_Noise : register(t5);
-Texture2D<float> T_Fixed_ShadowMap : register(t6);
+Texture2D<float4> T_Fog_Noise : register(t6);
+//Texture2D<float> T_Fixed_ShadowMap : register(t7);
+Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7);
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -28,6 +34,9 @@ cbuffer cb_Post_Camera : register(b1)
     float3 camera_pos;
 };
 
+
+
+
 cbuffer LightCamera_Info : register(b3)
 {
     uint shadow_pass;
@@ -35,17 +44,16 @@ cbuffer LightCamera_Info : register(b3)
     uint LightCamera_Info_padding0;
     uint LightCamera_Info_padding1;
 
-    float4x4 LightViewProjTex;
+    float4x4 LightViewProjTex[NUM_CASCADES];
 
     float3 LightDirectionWS;
     float shadow_bias;
 
-    float3 LightPositionWS;
-    float LightCamera_Info_padding2;
-
     float2 shadow_map_size;
     float2 inv_shadow_map_size;
-};
+
+    float CascadeSplits[NUM_CASCADES]; 
+}
 
 
 
@@ -121,21 +129,31 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
     float4 world_position = T_World_Position.Sample(gssWrap, input.uv);
     float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
+    float viewspace_Z = T_ViewSpace_Z.Sample(gssWrap, input.uv).x;
 
     float3 wNormal = wNormal_CD.xyz;
     float Camera_Distance = wNormal_CD.w;
-
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
 
-    //float depth = T_Fixed_ShadowMap.Sample(gssWrap, input.uv);
-    //return float4(depth.xxx, 1.0f);
-
-    // ==================== Shadow Mapping ====================
     float shadowFactor = 1.0f;
 
+    // ======= 그림자 계산 시작 =======
     if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
     {
-        float4 shadowCoord = mul(float4(world_position.xyz, 1.0f), LightViewProjTex);
+        int cascadeIdx = 0;
+        float currentDepth = viewspace_Z;
+
+        [unroll]
+        for (int i = 0; i < NUM_CASCADES; ++i)
+        {
+            if (currentDepth < CascadeSplits[i])
+            {
+                cascadeIdx = i;
+                break;
+            }
+        }
+
+        float4 shadowCoord = mul(float4(world_position.xyz, 1.0f), LightViewProjTex[cascadeIdx]);
         shadowCoord /= shadowCoord.w;
 
         bool inShadowMap =
@@ -145,16 +163,21 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
         if (inShadowMap)
         {
-            shadowFactor = T_Fixed_ShadowMap.SampleCmpLevelZero(gssShadowSampler, shadowCoord.xy, shadowCoord.z - shadow_bias);
+            shadowFactor = gShadowMaps[cascadeIdx].SampleCmpLevelZero(gssShadowSampler, shadowCoord.xy, shadowCoord.z - shadow_bias);
         }
     }
-    
-    // ==================== Lighting ====================
 
-    // 조명 계산
-    float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
-    Light_Color = lerp(float3(0.0f, 0.0f, 0.0f), Light_Color, shadowFactor);
-    // ==================== FOG 처리 ====================
+    // ======= 조명 계산 =======
+    float3 Light_Color = Lighting(
+        world_position.xyz,
+        wNormal,
+        camera_pos,
+        colorTexture.rgb,
+        materialID,
+        shadowFactor
+    ).rgb;
+
+    // FOG 처리
     float2 baseUV = world_position.xz - camera_pos.xz;
     float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart));
     fogFactor = pow(fogFactor, fogDensity);
@@ -178,7 +201,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     float3 foggedColor = lerp(Light_Color, finalFogColor, fogFactor);
 
-    // ==================== 비어 있는 픽셀 처리 ====================
+    // 비어있는 픽셀 처리
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
     if (isEmptyPixel)
     {

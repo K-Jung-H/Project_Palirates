@@ -1097,13 +1097,16 @@ void CGameFramework::FrameAdvance()
 #endif
 	// ====================== [3.5] ShadowMap Phase ======================
 
-	BeginGPUStage(GPU_Stage::Render);
-	PrepareStage(GPU_Stage::Render);
+	for (int i = 0; i < NUM_CASCADES; i++)
 	{
-		scene_manager->Prepare_Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList);
-		scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList);
+		BeginGPUStage(GPU_Stage::Render);
+		PrepareStage(GPU_Stage::Render);
+		{
+			scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+		}
+		EndGPUStage(GPU_Stage::Render);
 	}
-	EndGPUStage(GPU_Stage::Render);
+	
 
 	// ====================== [4] Render Phase ======================
 	BeginGPUStage(GPU_Stage::Render);

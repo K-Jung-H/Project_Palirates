@@ -61,6 +61,10 @@ struct Fog_Info
 	XMFLOAT2 padding0;
 };
 
+
+
+#define NUM_CASCADES 4
+
 struct alignas(16) LightCamera_Info
 {
 	UINT shadow_pass;
@@ -68,22 +72,22 @@ struct alignas(16) LightCamera_Info
 	UINT padding0;
 	UINT padding1;
 
-	XMFLOAT4X4 LightViewProjTex;
+	XMFLOAT4X4 LightViewProjTex[NUM_CASCADES];
 
 	XMFLOAT3 LightDirectionWS;
 	float shadow_bias;
 
-	XMFLOAT3 LightPositionWS;
-	float padding2;
-
 	XMFLOAT2 shadow_map_size;
 	XMFLOAT2 inv_shadow_map_size;
+
+	float cascadeSplits[NUM_CASCADES];
 };
+
 
 #define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
-#define _SHADOWMAP_WIDTH FRAME_BUFFER_WIDTH*3 //512
-#define _SHADOWMAP_HEIGHT FRAME_BUFFER_HEIGHT*3 //512
+#define _SHADOWMAP_WIDTH FRAME_BUFFER_WIDTH * 3 
+#define _SHADOWMAP_HEIGHT FRAME_BUFFER_HEIGHT * 3 
 
 class Shadow_Camera : public CCamera
 {
@@ -95,6 +99,11 @@ private:
 	ID3D12Resource* m_pd3dcb_LightCamera = NULL;
 	LightCamera_Info* m_pcb_MappedLightCamera = NULL;
 
+	std::vector<XMFLOAT4X4> m_CascadeView;   
+	std::vector<XMFLOAT4X4> m_CascadeProj;
+
+	float m_CascadeSplits[NUM_CASCADES];
+
 protected:
 	XMFLOAT3 m_light_direction = { 0.0f, -1.0f, 0.0f };
 	XMFLOAT3 m_light_position = { 0.0f, 0.0f, 0.0f };
@@ -105,9 +114,15 @@ public:
 
 	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
-	void SetupDirectionalLightCamera(XMFLOAT3& light_directiont, float width = 3000.0f, float height = 3000.0f, float nearZ = 1.0f, float farZ = 5000.0f);
+	virtual void Update_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, int cascadeIdx);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE Get_Shadow_Map_DSV() const;
+
+	std::vector<XMFLOAT3> CalcFrustumCornersWorld(CCamera* mainCamera, float nearZ, float farZ);
+	void SetupCSMCascades(const XMFLOAT3& light_direction, const std::vector<float>& splitDepths, CCamera* mainCamera);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE Get_Shadow_Map_DSV(int n) const;
+	ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const;
+
 };
 
 
@@ -153,8 +168,7 @@ public:
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
 
-	virtual void Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);

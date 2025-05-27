@@ -236,20 +236,12 @@ void Scene_Manager::Unload_Scene()
     activeScene.reset();
 }
 
-void Scene_Manager::Prepare_Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+
+void Scene_Manager::Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
 {
     if (activeScene)
     {
-        activeScene->Prepare_Shadow_Map_Render(pd3dDevice, pd3dCommandList);
-    }
-    else
-        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
-}
-void Scene_Manager::Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-    if (activeScene)
-    {
-        activeScene->Shadow_Map_Render(pd3dDevice, pd3dCommandList);
+        activeScene->Shadow_Map_Render(pd3dDevice, pd3dCommandList, n);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");

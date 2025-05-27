@@ -71,7 +71,7 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
     float4 world_Position : SV_TARGET1;
     float4 world_Normal_and_Camera_Distance : SV_TARGET2;
     float4 Velocity_Mask_Obj_Id : SV_TARGET3;
-
+    float viewspace_z : SV_TARGET4;
 };
 
 
@@ -95,6 +95,7 @@ struct VS_STANDARD_OUTPUT
     float2 uv : TEXCOORD;
 
     float2 velocity : TEXCOORD1; // Velocity for Motion_Vector
+    float3 positionV : TEXCOORD2;
 };
 
 //===========================================================
@@ -103,15 +104,18 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
 {
     VS_STANDARD_OUTPUT output;
 
-    // 월드 공간 위치
     float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
     output.positionW = worldPos.xyz;
 
+    // View space position
+    float4 viewPos = mul(worldPos, gmtxView);
+    output.positionV = viewPos.xyz;
+
     // 현재 클립 위치 (카메라 이동 포함)
-    float4 clipCurr = mul(mul(worldPos, gmtxView), gmtxProjection);
+    float4 clipCurr = mul(viewPos, gmtxProjection);
     output.position = clipCurr;
     float2 currNDC = clipCurr.xy / clipCurr.w;
-
+    
     // 이전 프레임 카메라에서 본 위치 (같은 worldPos)
     float4 clipPrevCam = mul(worldPos, gmtx_Prev_ViewProj);
     float2 prevNDCCam = clipPrevCam.xy / clipPrevCam.w;
@@ -136,7 +140,6 @@ VS_STANDARD_OUTPUT VSStandard(VS_STANDARD_INPUT input)
     output.tangentW = mul(input.tangent, (float3x3) gmtxGameObject);
     output.bitangentW = mul(input.bitangent, (float3x3) gmtxGameObject);
     output.uv = input.uv;
-
     return output;
 }
 
@@ -197,6 +200,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.Velocity_Mask_Obj_Id.xy = input.velocity.xy;
     output.Velocity_Mask_Obj_Id.z = material_info.Blur_Mask; // mask
     output.Velocity_Mask_Obj_Id.w = material_info.Outline_Color_ID; // outline_id
+    output.viewspace_z = input.positionV.z;
     return (output);
 
 }
@@ -222,7 +226,10 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
     float4 worldPos = mul(float4(input.position, 1.0f), input.instance_worldMatrix);
     output.positionW = worldPos.xyz;
 
-    float4 currClip = mul(mul(worldPos, gmtxView), gmtxProjection);
+    float4 viewPos = mul(worldPos, gmtxView);
+    output.positionV = viewPos.xyz;
+
+    float4 currClip = mul(viewPos, gmtxProjection);
     output.position = currClip;
 
     float2 currUV = currClip.xy / currClip.w * 0.5f + 0.5f;
@@ -296,9 +303,13 @@ VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
     float4 worldPos = mul(float4(input.position, 1.0f), mtxVertexToBoneWorld);
     output.positionW = worldPos.xyz;
 
+    float4 viewPos = mul(worldPos, gmtxView);
+    output.positionV = viewPos.xyz;
+
     // 클립 공간 위치 계산
-    float4 clipCurr = mul(mul(worldPos, gmtxView), gmtxProjection);
+    float4 clipCurr = mul(viewPos, gmtxProjection);
     output.position = clipCurr;
+
 
     // 객체 이동에 의한 velocity (뷰-투영 후 클립 → NDC → 픽셀)
     float4 velocityClip = mul(mul(float4(gObjectVelocity, 0.0f), gmtxView), gmtxProjection);
@@ -344,6 +355,7 @@ struct VS_TERRAIN_OUTPUT
 	float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
+    float3 positionV : TEXCOORD2;
     
 	float4 color : COLOR;
 	float2 uv0 : TEXCOORD0;
@@ -353,9 +365,12 @@ struct VS_TERRAIN_OUTPUT
 
 VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
 {
-	VS_TERRAIN_OUTPUT output;
+    VS_TERRAIN_OUTPUT output;
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
+
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
+    output.positionV = positionV.xyz; 
+
     output.position = mul(positionV, gmtxProjection);
 	output.color = input.color;
 	output.uv0 = input.uv0;
@@ -394,7 +409,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = input.normalW;  //float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
-    
+    output.viewspace_z = input.positionV.z;
     return (output);
 }
 

@@ -40,7 +40,7 @@ struct Light_Material_Info
     float4 gEmissive;
 };
 
-StructuredBuffer<Light_Material_Info> Light_Material_Info_List : register(t4);
+StructuredBuffer<Light_Material_Info> Light_Material_Info_List : register(t5);
 
 cbuffer cbLights : register(b2)
 {

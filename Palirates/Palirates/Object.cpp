@@ -11,7 +11,7 @@
 
 CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	int nGraphicsSrvRootParameters, int nComputeUavRootParameters, int nComputeSrvRootParameters,
-	int nGraphicsSrvGpuHandles, int nComputeUavGpuHandles, int nComputeSrvGpuHandles) : m_nTextureType(nTextureType)
+	int nGraphicsSrvGpuHandles, int nComputeUavGpuHandles, int nComputeSrvGpuHandles, int nDsvHandles) : m_nTextureType(nTextureType)
 {
 	m_pnResourceTypes.resize(nTextures, 0);
 	m_ppd3dTextures.resize(nTextures, nullptr);
@@ -37,6 +37,8 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	m_pd3dComputeSrvRootParameterGpuDescriptorHandles.resize(nComputeSrvRootParameters, { 0 });
 
 	m_pd3dSamplerGpuDescriptorHandles.resize(nSamplers, { 0 });
+	m_d3dDsvCPUDescriptorHandles.resize(nDsvHandles, { 0 });
+
 }
 
 

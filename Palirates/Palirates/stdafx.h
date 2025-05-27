@@ -151,7 +151,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 4
+#define RTV_Format_Num 5
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;
