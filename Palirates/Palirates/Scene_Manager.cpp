@@ -340,3 +340,12 @@ void Scene_Manager::RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainP
 {
     players[playerId] = player.get();
 }
+
+void Scene_Manager::RemoveRemotePlayer(int playerId)
+{
+    auto it = players.find(playerId);
+    if (it != players.end())
+    {
+        players.erase(it);
+    }
+}

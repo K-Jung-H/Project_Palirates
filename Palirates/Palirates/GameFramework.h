@@ -244,6 +244,8 @@ public:
     std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
+	void PlayerLeave(int playerId);
+
 
     //=================서버=================
 
@@ -251,5 +253,3 @@ public:
     Text_UI_Renderer* text_ui_renderer = NULL;
 #endif 
 };
-
-extern CGameFramework* g_pFramework;

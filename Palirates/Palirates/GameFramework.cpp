@@ -1434,7 +1434,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 	}
-	else if (receivedData.rfind("PLAYER_LEAVE,", 0) == 0)
+	if (tokens[0] == "PLAYER_LEAVE")
 	{
 		int leaveId;
 		if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &leaveId) == 1)
@@ -1452,6 +1452,55 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 	}
+	if (tokens[0] == "MONSTER_UPDATE")
+	{
+		int monsterId = std::stoi(tokens[1]);
+		float px = std::stof(tokens[2]);
+		float py = std::stof(tokens[3]);
+		float pz = std::stof(tokens[4]);
+		float lookX = std::stof(tokens[5]);
+		float lookY = std::stof(tokens[6]);
+		float lookZ = std::stof(tokens[7]);
+		int state = std::stoi(tokens[8]);
+
+		XMFLOAT3 pos(px, py, pz);
+		XMFLOAT3 look(lookX, lookY, lookZ);
+
+		ServerAnimationSyncData syncData;
+		syncData.position = pos;
+		syncData.lookVector = look;
+		syncData.currentState = static_cast<State>(state);
+
+		if (tokens.size() > 9) 
+		{
+			int trackCount = std::stoi(tokens[9]);
+			for (int i = 0; i < trackCount; ++i)
+			{
+				int baseIdx = 10 + i * 2;
+				if (baseIdx + 1 < tokens.size())
+				{
+					float animPos = std::stof(tokens[baseIdx]);
+					float animWeight = std::stof(tokens[baseIdx + 1]);
+					syncData.trackPositions.push_back(animPos);
+					syncData.Weights.push_back(animWeight);
+				}
+			}
+		}
+		auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+		for (auto& obj : *monsterList)
+		{
+			if (obj && obj->GetID() == monsterId)
+			{
+				obj->SetPosition(pos);
+				obj->SetLookDirection(look);
+
+				obj->ApplySyncData(syncData); // 애니메이션 트랙 등 추가 동기화
+				break;
+			}
+		}
+
+	}
+	
 }
 
 void CGameFramework::CreateRemotePlayer(int playerId)
@@ -1522,6 +1571,9 @@ void CGameFramework::Disconnect()
 	if (!isRunning) return;
 
 	isRunning = false;
+
+	PlayerLeave(ClientNum);
+
 	if (networkThread.joinable())
 		networkThread.join();
 	closesocket(serverSocket);
@@ -1604,4 +1656,19 @@ bool CGameFramework::IsServerConnected()
 int CGameFramework::GetServerPlayerID()
 {
 	return ClientNum;
+}
+
+void CGameFramework::PlayerLeave(int playerId)
+{
+	if (!IsServerConnected()) return;
+	std::string packet = "PLAYER_LEAVE," + std::to_string(playerId) + "\n";
+	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
+	if (result == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] PLAYER_LEAVE 전송 실패: " << WSAGetLastError() << std::endl;
+	}
+	else
+	{
+		std::cout << "[SEND] " << packet << std::endl;
+	}
 }

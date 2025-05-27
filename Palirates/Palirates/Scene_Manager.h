@@ -74,5 +74,6 @@ public:
     //void AddPlayer(int playerId, CPlayer* player);
     CPlayer* GetPlayerById(int playerId);
     void RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainPlayer> player);
+	void RemoveRemotePlayer(int playerId);
     void CreateRemotePlayer(int id, const DirectX::XMFLOAT3& pos, int state);
 };
