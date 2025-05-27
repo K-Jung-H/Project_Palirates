@@ -41,5 +41,6 @@ public:
     void SendInitialStates(int clientId);
     void BroadcastAllStates();
     void NotifyExistingPlayersAboutNew(int clientId);
+	void MonsterUpdate(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, float aniPos, float aniWei);
     //bool ValidatePosition(float x, float y, float z);
 };

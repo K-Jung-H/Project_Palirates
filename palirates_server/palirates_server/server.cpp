@@ -163,35 +163,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     BroadcastPacket(oss.str(), clientId);
                 }
             }
-            //else if (packet.rfind("MOVE,", 0) == 0)
-            //{
-            //    if (sscanf_s(packet.c_str(), "MOVE,%d,%f,%f,%f,%f,%f,%f,%d", &id, &x, &y, &z, &lookX, &lookY, &lookZ, &state) == 8)
-            //    {
-            //        Scene* scene = sceneManager.getScene(clientId);
-            //        if (!scene) continue;
-            //
-            //        if (!scene->getPlayer(clientId)) {
-            //            scene->addPlayer(clientId);
-            //        }
-            //
-            //        if (scene->getState() != In_Stage)
-            //        {
-            //            logger.Log("씬 상태가 IN_STAGE가 아니어서 패킷 무시");
-            //            continue;
-            //        }
-            //
-            //        scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
-            //
-            //        float safeLookY = (lookY == 0.0f) ? 1.0f : lookY;
-            //
-            //        std::string response = "PLAYER_UPDATE," + std::to_string(clientId) + "," +
-            //            std::to_string(x) + "," + std::to_string(y) + "," +
-            //            std::to_string(z) + "," + std::to_string(lookX) + "," + std::to_string(safeLookY) + "," +
-            //            std::to_string(lookZ) + "," + std::to_string(state) + "\n";
-            //
-            //        BroadcastPacket(response, clientId);
-            //    }
-            //}
+     
             else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
             {
                 // 나중에 반드시 추가
@@ -335,6 +307,15 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
 
     logger.Log("[서버] 기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
     logger.Log("[서버] (NotifyExistingPlayersAboutNew) PLAYER_CREATE 전송: " + createPacket);
+}
+
+void Server::MonsterUpdate(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, float aniPos, float aniWei )
+{
+    std::string packet = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
+        std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z) + "," +
+        std::to_string(lookX) + "," + std::to_string(lookY) + "," + std::to_string(lookZ) + "," +
+		std::to_string(aniPos) + "," + std::to_string(aniWei) + "\n";
+    BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
 }
 
 
