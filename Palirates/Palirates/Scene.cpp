@@ -12,11 +12,33 @@ shared_ptr<CShader> Shadow_Camera::shadow_map_shader = NULL;
 
 Shadow_Camera::Shadow_Camera() : CCamera()
 {
+	SetViewport(0, 0, _SHADOWMAP_WIDTH, _SHADOWMAP_HEIGHT, 0.0f, 1.0f);
+	SetScissorRect(0, 0, _SHADOWMAP_WIDTH, _SHADOWMAP_HEIGHT);
 }
 
 Shadow_Camera::~Shadow_Camera()
 {
 
+}
+
+void Shadow_Camera::SetupDirectionalLightCamera(XMFLOAT3& light_direction, float width, float height, float nearZ, float farZ)
+{
+	m_light_direction = Vector3::Normalize(XMFLOAT3(-1.0f, -1.0f, -1.0f)); // 45도 아래
+	XMFLOAT3 sceneCenter = { 1280.0f, 0.0f, 1280.0f };
+	XMFLOAT3 offset = Vector3::Scale(m_light_direction, -2000.0f);
+	m_light_position = Vector3::Add(sceneCenter, offset);
+
+	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+	GenerateViewMatrix(m_light_position, sceneCenter, up);
+
+	// 씬 크기를 전부 포함하는 orthographic projection
+	float orthoWidth = 3000.0f;   
+	float orthoHeight = 3000.0f;
+	float nearPlane = 1.0f;
+	float farPlane = 5000.0f;
+
+	XMMATRIX ortho = XMMatrixOrthographicLH(orthoWidth, orthoHeight, nearPlane, farPlane);
+	XMStoreFloat4x4(&m_xmf4x4Projection, ortho);
 }
 
 void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -82,25 +104,6 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 
 
 
-void Shadow_Camera::SetupDirectionalLightCamera(XMFLOAT3& light_direction, float width, float height, float nearZ, float farZ)
-{
-	m_light_direction = Vector3::Normalize(XMFLOAT3(-1.0f, -1.0f, -1.0f)); // 45도 아래
-	XMFLOAT3 sceneCenter = { 1280.0f, 0.0f, 1280.0f };
-	XMFLOAT3 offset = Vector3::Scale(m_light_direction, -2000.0f);
-	m_light_position = Vector3::Add(sceneCenter, offset);
-
-	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
-	GenerateViewMatrix(m_light_position, sceneCenter, up);
-
-	// 씬 크기를 전부 포함하는 orthographic projection
-	float orthoWidth = 3000.0f;   // 씬보다 넉넉하게
-	float orthoHeight = 3000.0f;
-	float nearPlane = 1.0f;
-	float farPlane = 5000.0f;
-
-	XMMATRIX ortho = XMMatrixOrthographicLH(orthoWidth, orthoHeight, nearPlane, farPlane);
-	XMStoreFloat4x4(&m_xmf4x4Projection, ortho);
-}
 
 D3D12_CPU_DESCRIPTOR_HANDLE Shadow_Camera::Get_Shadow_Map_DSV() const
 {
@@ -1518,6 +1521,8 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 		pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 		fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList);
+		fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+
 	}
 }
 
