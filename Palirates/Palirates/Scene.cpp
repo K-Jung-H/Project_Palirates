@@ -1706,7 +1706,6 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 
 
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
@@ -1720,27 +1719,29 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
 
 	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
-	m_pPlayer->Render_Shadow(pd3dCommandList, fixed_shadow_camera.get());
-	//for (int i = 0; i < NUM_CASCADES; ++i)
-	//{
-	//	ID3D12Resource* depthResource = fixed_shadow_camera->Get_Shadow_Map_Resource(i);
-	//	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV(i);
+//	m_pPlayer->Render_Shadow(pd3dCommandList, fixed_shadow_camera.get()); - 플레이어한테 메시가 없음
 
-	//	::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-	//	fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+	/* {
+		for (int i = 0; i < NUM_CASCADES; ++i)
+		{
+			ID3D12Resource* depthResource = fixed_shadow_camera->Get_Shadow_Map_Resource(i);
+			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV(i);
+			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-	//	// 2. 렌더 타겟 설정 및 클리어
-	//	pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-	//	pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-	//	// 3. 쉐이더 상수 업데이트 및 렌더링
-	//	fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
-	//	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
+			// 2. 렌더 타겟 설정 및 클리어
+			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
+			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	//	::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	//}
+			// 3. 쉐이더 상수 업데이트 및 렌더링
+			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
+			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
 
+			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		}
+	} */
 
 
 }

@@ -405,6 +405,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     output.Albedo_Color.xyz = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
     //output.Albedo_Color.xyz = float3(1.0f, 1.0f, 1.0f);
     output.Albedo_Color.a = (float) (material_info.light_material_ID) / 255.0f;
+
     
     output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = input.normalW;  //float3(0.0f, 1.0f, 0.0f);

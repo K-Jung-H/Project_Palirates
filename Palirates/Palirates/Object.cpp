@@ -428,6 +428,8 @@ CMaterial::CMaterial(int nTextures)
 	m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
 	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = NULL;
 	for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
+
+
 }
 
 CMaterial::~CMaterial()
@@ -3461,6 +3463,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 		pTerrainMaterial->SetShader(pTerrainShader);
+
+		Light_Material_Info light_info;
+		light_info.gSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f);
+		pTerrainMaterial->m_Material_ID = Light_Material_Manager::Add_Material(light_info);
 
 		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
