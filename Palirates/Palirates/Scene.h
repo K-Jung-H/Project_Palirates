@@ -1,16 +1,16 @@
-//-----------------------------------------------------------------------------
-// File: Scene.h
-//-----------------------------------------------------------------------------
-
 #pragma once
-#include "UI_Manager.h"
+#include "Descriptor_Heap.h"
 #include "Object_Manager.h"
 #include "Particle_Manager.h"
-#include "Descriptor_Heap.h"
+#include "UI_Manager.h"
 
 #include "Shader.h"
 #include "Shader_Compute.h"
 #include "Player.h"
+
+
+
+
 
 #define MAX_LIGHTS						16 
 
@@ -18,9 +18,12 @@
 #define SPOT_LIGHT						2
 #define DIRECTIONAL_LIGHT				3
 
+class Object_Manager;
 class Particle_Manager;
 class ParticleObject;
 class Particle_Shape_Mesh;
+class Texture_UI_Manager;
+class TextureBlock;
 
 struct LIGHT
 {

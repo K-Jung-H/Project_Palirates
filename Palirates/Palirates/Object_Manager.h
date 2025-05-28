@@ -5,7 +5,7 @@
 #include "Shader.h"
 
 #define DEFAULT_INSTANCE_NUM 1
-#define MAX_INSTANCING_NUM 10000  // ÃÖ´ë ÀÎ½ºÅÏ½º °³¼ö Á¦ÇÑ 
+#define MAX_INSTANCING_NUM 10000  // ìµœëŒ€ ì¸ìŠ¤í„´ìŠ¤ ê°œìˆ˜ ì œí•œ 
 
 struct BoundingBox_Instance_Info;
 struct Fixed_Object_Info;
