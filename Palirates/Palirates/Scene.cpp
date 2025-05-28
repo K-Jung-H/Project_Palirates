@@ -105,6 +105,15 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 			max.z = std::max(max.z, p.z);
 		}
 
+		const float overlapRatio = 0.05f; // 
+		float expandX = (max.x - min.x) * overlapRatio * 0.5f;
+		float expandY = (max.y - min.y) * overlapRatio * 0.5f;
+
+		min.x -= expandX;
+		max.x += expandX;
+		min.y -= expandY;
+		max.y += expandY;
+
 		// 5. Expand Z bounds to prevent shadow clipping
 		min.z -= 100.0f;
 		max.z += 100.0f;
@@ -148,6 +157,19 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 	}
 }
 
+std::vector<float> Shadow_Camera::GenerateCSMSplitDepths(float nearZ, float farZ, int numCascades, float lambda)
+{
+	std::vector<float> splits(numCascades + 1);
+	splits[0] = nearZ;
+	for (int i = 1; i <= numCascades; ++i)
+	{
+		float p = float(i) / float(numCascades);
+		float logSplit = nearZ * powf(farZ / nearZ, p);
+		float linearSplit = nearZ + (farZ - nearZ) * p;
+		splits[i] = lambda * logSplit + (1.0f - lambda) * linearSplit;
+	}
+	return splits;
+}
 
 void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -1255,8 +1277,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'Q':
 			{
 				m_pPlayer->SetBlurMask(test_button);
-
 			}		break;
+
 
 		case 'R':
 		{
@@ -1671,17 +1693,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	{
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
-			std::vector<float> splits(NUM_CASCADES + 1);
 			float nearZ = main_Camera->GetNearPlane();
 			float farZ = main_Camera->GetFarPlane();
-			float lambda = 0.75f;
-			for (int c = 0; c <= NUM_CASCADES; ++c)
-			{
-				float p = float(c) / NUM_CASCADES;
-				float logSplit = nearZ * powf(farZ / nearZ, p);
-				float linearSplit = nearZ + (farZ - nearZ) * p;
-				splits[c] = lambda * logSplit + (1.0f - lambda) * linearSplit;
-			}
+			int numCascades = NUM_CASCADES;
+			float lambda = 0.7f;
+			std::vector<float> splits = fixed_shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
 
 			fixed_shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
 			fixed_shadow_camera->shadow_active = true;
@@ -1704,7 +1720,7 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
 
 	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
-
+	m_pPlayer->Render_Shadow(pd3dCommandList, fixed_shadow_camera.get());
 	//for (int i = 0; i < NUM_CASCADES; ++i)
 	//{
 	//	ID3D12Resource* depthResource = fixed_shadow_camera->Get_Shadow_Map_Resource(i);

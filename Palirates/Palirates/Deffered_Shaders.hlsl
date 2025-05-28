@@ -61,6 +61,27 @@ SamplerState gssWrap : register(s0);
 SamplerComparisonState gssShadowSampler : register(s1);
 
 //==================================================================
+
+// PCF 필터링 함수 (3x3 커널)
+float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
+{
+    float shadowSum = 0.0f;
+    int kernelSize = 1;
+    int count = 0;
+    [unroll]
+    for (int dx = -kernelSize; dx <= kernelSize; ++dx)
+    {
+        [unroll]
+        for (int dy = -kernelSize; dy <= kernelSize; ++dy)
+        {
+            float2 offset = float2(dx, dy) * invShadowMapSize;
+            shadowSum += shadowMap.SampleCmpLevelZero(shadow_sampler, uv + offset, depth);
+            count++;
+        }
+    }
+    return shadowSum / count;
+}
+
 float4 GetDebugColorFromID(uint id)
 {
     // Hashing을 이용해 간단한 무작위 색상 생성
@@ -135,47 +156,67 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float Camera_Distance = wNormal_CD.w;
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
 
-    float shadowFactor = 1.0f;
+    int cascadeIdx = 0;
+    float currentDepth = viewspace_Z;
 
-    // ======= 그림자 계산 시작 =======
-    if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
+[unroll]
+    for (int i = 0; i < NUM_CASCADES; ++i)
     {
-        int cascadeIdx = 0;
-        float currentDepth = viewspace_Z;
-
-        [unroll]
-        for (int i = 0; i < NUM_CASCADES; ++i)
+        if (currentDepth < CascadeSplits[i])
         {
-            if (currentDepth < CascadeSplits[i])
-            {
-                cascadeIdx = i;
-                break;
-            }
-        }
-
-        float4 shadowCoord = mul(float4(world_position.xyz, 1.0f), LightViewProjTex[cascadeIdx]);
-        shadowCoord /= shadowCoord.w;
-
-        bool inShadowMap =
-            shadowCoord.x >= 0.0f && shadowCoord.x <= 1.0f &&
-            shadowCoord.y >= 0.0f && shadowCoord.y <= 1.0f &&
-            shadowCoord.z >= 0.0f && shadowCoord.z <= 1.0f;
-
-        if (inShadowMap)
-        {
-            shadowFactor = gShadowMaps[cascadeIdx].SampleCmpLevelZero(gssShadowSampler, shadowCoord.xy, shadowCoord.z - shadow_bias);
+            cascadeIdx = i;
+            break;
         }
     }
 
+    float shadowFactor = 1.0f;
+
+    if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
+    {
+        const float transitionRange = 0.05f;
+
+        float splitPrev = (cascadeIdx == 0) ? 0.0f : CascadeSplits[cascadeIdx - 1];
+        float splitCurr = CascadeSplits[cascadeIdx];
+
+        float blendWeight = 0.0f;
+        if (cascadeIdx > 0)
+            blendWeight = saturate((currentDepth - (splitCurr - transitionRange)) / transitionRange);
+
+        float4 shadowCoord0 = mul(float4(world_position.xyz, 1.0f), LightViewProjTex[cascadeIdx]);
+        shadowCoord0 /= shadowCoord0.w;
+
+        float shadow0 = 1.0f;
+        if (
+        shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f &&
+        shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f &&
+        shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
+        {
+        // PCF 적용
+            shadow0 = SampleShadowPCF(gShadowMaps[cascadeIdx], gssShadowSampler, shadowCoord0.xy, shadowCoord0.z - shadow_bias, inv_shadow_map_size);
+        }
+
+        float shadow1 = shadow0;
+        if (cascadeIdx > 0)
+        {
+            float4 shadowCoord1 = mul(float4(world_position.xyz, 1.0f), LightViewProjTex[cascadeIdx - 1]);
+            shadowCoord1 /= shadowCoord1.w;
+
+            if (
+            shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f &&
+            shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f &&
+            shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
+            {
+            // PCF 적용
+                shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx-1], gssShadowSampler, shadowCoord1.xy, shadowCoord1.z - shadow_bias, inv_shadow_map_size);
+
+            }
+        }
+
+        shadowFactor = lerp(shadow0, shadow1, blendWeight);
+    }
+
     // ======= 조명 계산 =======
-    float3 Light_Color = Lighting(
-        world_position.xyz,
-        wNormal,
-        camera_pos,
-        colorTexture.rgb,
-        materialID,
-        shadowFactor
-    ).rgb;
+    float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
     // FOG 처리
     float2 baseUV = world_position.xz - camera_pos.xz;

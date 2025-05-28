@@ -86,8 +86,8 @@ struct alignas(16) LightCamera_Info
 
 #define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
-#define _SHADOWMAP_WIDTH FRAME_BUFFER_WIDTH * 3 
-#define _SHADOWMAP_HEIGHT FRAME_BUFFER_HEIGHT * 3 
+#define _SHADOWMAP_WIDTH 2048 * 2
+#define _SHADOWMAP_HEIGHT 2048 * 2
 
 class Shadow_Camera : public CCamera
 {
@@ -119,6 +119,7 @@ public:
 
 	std::vector<XMFLOAT3> CalcFrustumCornersWorld(CCamera* mainCamera, float nearZ, float farZ);
 	void SetupCSMCascades(const XMFLOAT3& light_direction, const std::vector<float>& splitDepths, CCamera* mainCamera);
+	std::vector<float> GenerateCSMSplitDepths(float nearZ, float farZ, int numCascades, float lambda = 0.75f);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE Get_Shadow_Map_DSV(int n) const;
 	ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const;
@@ -222,6 +223,7 @@ public:
 	bool test_button = false;
 	bool particle_test_button = false;
 
+	float test_value = 0.5f;
 #ifdef WRITE_TEXT_UI
 	Text_UI_Manager* text_ui_manager = NULL;
 	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);

@@ -56,15 +56,7 @@ cbuffer cbLights : register(b2)
 
 //--------------------------------------------------------------------------------------
 // Diffuse + Specular 조명 계산
-float4 ComputeDiffuseSpecular(
-    float3 vToLight,
-    float3 vNormal,
-    float3 vToCamera,
-    float3 albedoColor,
-    Light_Material_Info lightMaterial,
-    int Light_ID,
-    float shadowFactor // 그림자 영향
-)
+float4 ComputeDiffuseSpecular(float3 vToLight, float3 vNormal, float3 vToCamera, float3 albedoColor, Light_Material_Info lightMaterial, int Light_ID, float shadowFactor)
 {
     LIGHT light = gLights[Light_ID];
     float fDiffuseFactor = max(dot(vToLight, vNormal), 0.0f);
@@ -90,27 +82,20 @@ float4 ComputeDiffuseSpecular(
         fSpecularFactor = pow(max(dot(vHalf, vNormal), 0.0f), shininess);
     }
 
-    float4 ambient = light.m_cAmbient * float4(diffuseColor, 1.0f);
-    float4 diffuse = light.m_cDiffuse * fDiffuseFactor * float4(diffuseColor, 1.0f);
-    float4 specular = light.m_cSpecular * fSpecularFactor * float4(specularColor, 1.0f);
+    float shadowStrength = 0.8f; // 더 어둡게 - / 더 밝게 +
+    float ambientShadow = lerp(1.0f, shadowFactor, shadowStrength);
 
-    // 그림자 영향은 Diffuse + Specular 에만 적용
-    diffuse *= shadowFactor;
-    specular *= shadowFactor;
+    float4 ambient = light.m_cAmbient * float4(diffuseColor, 1.0f) * ambientShadow;
+    float4 diffuse = light.m_cDiffuse * fDiffuseFactor * float4(diffuseColor, 1.0f) * shadowFactor;
+    float4 specular = light.m_cSpecular * fSpecularFactor * float4(specularColor, 1.0f) * shadowFactor;
+
 
     return ambient + diffuse + specular;
 }
 
 //--------------------------------------------------------------------------------------
 
-float4 DirectionalLight(
-    int Light_ID,
-    float3 vNormal,
-    float3 vToCamera,
-    float3 albedoColor,
-    Light_Material_Info lightMaterial,
-    float shadowFactor
-)
+float4 DirectionalLight(int Light_ID, float3 vNormal, float3 vToCamera, float3 albedoColor, Light_Material_Info lightMaterial, float shadowFactor)
 {
     float3 vToLight = -gLights[Light_ID].m_vDirection;
     return ComputeDiffuseSpecular(vToLight, vNormal, vToCamera, albedoColor, lightMaterial, Light_ID, shadowFactor);
@@ -118,14 +103,7 @@ float4 DirectionalLight(
 
 //--------------------------------------------------------------------------------------
 
-float4 PointLight(
-    int Light_ID,
-    float3 vPosition,
-    float3 vNormal,
-    float3 vToCamera,
-    float3 albedoColor,
-    Light_Material_Info lightMaterial
-)
+float4 PointLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamera, float3 albedoColor, Light_Material_Info lightMaterial)
 {
     float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float3 vToLight = gLights[Light_ID].m_vPosition - vPosition;
@@ -142,14 +120,7 @@ float4 PointLight(
 
 //--------------------------------------------------------------------------------------
 
-float4 SpotLight(
-    int Light_ID,
-    float3 vPosition,
-    float3 vNormal,
-    float3 vToCamera,
-    float3 albedoColor,
-    Light_Material_Info lightMaterial
-)
+float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamera, float3 albedoColor, Light_Material_Info lightMaterial)
 {
     float4 result = float4(0.0f, 0.0f, 0.0f, 0.0f);
     float3 vToLight = gLights[Light_ID].m_vPosition - vPosition;
@@ -167,14 +138,7 @@ float4 SpotLight(
 
 //--------------------------------------------------------------------------------------
 
-float4 Lighting(
-    float3 wPosition,
-    float3 wNormal,
-    float3 camera_pos,
-    float3 albedoColor,
-    uint materialID,
-    float shadowFactor
-)
+float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID, float shadowFactor)
 {
     if (materialID == 0)
         return float4(albedoColor, 1.0f);
