@@ -217,15 +217,21 @@ void Server::BroadcastAllStates()
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
 
-        //for (const auto& [id, m] : scene.getMonsters()) 
-        //{
-        //    std::string packet = "MONSTER_UPDATE," + std::to_string(m.id) + "," +
-        //        std::to_string(m.x) + "," + std::to_string(m.y) + "," + std::to_string(m.z) + "," +
-        //        std::to_string(m.lookX) + "," + std::to_string(m.lookY) + "," + std::to_string(m.lookZ) + "," +
-        //        std::to_string(m.hp) + "," + std::to_string(m.state) + "," + std::to_string((int)m.type) + "\n";
-        //
-        //    BroadcastPacket(packet, -1);
-        //}
+        for (const auto& [monsterId, monster] : scene.getMonsters())
+        {
+            std::ostringstream oss;
+            oss << "MONSTER_UPDATE," << monster.id << ","
+                << monster.x << "," << monster.y << "," << monster.z << ","
+                << monster.lookX << "," << monster.lookY << "," << monster.lookZ << ","
+                << monster.hp << "," << monster.state << "," << static_cast<int>(monster.type);
+
+            int trackCount = static_cast<int>(monster.trackPositions.size());
+            oss << "," << trackCount;
+            for (int i = 0; i < trackCount; ++i)
+                oss << "," << monster.trackPositions[i] << "," << monster.trackWeights[i];
+
+            BroadcastPacket(oss.str(), -1);
+        }
     }
 }
 
