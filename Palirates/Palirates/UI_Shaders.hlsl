@@ -14,7 +14,8 @@ cbuffer UIConstants : register(b1)
     float4 g_tintColor;
     float4 g_hoverGlowColor;
     float g_isHovered;
-    float3 padding;
+    float g_hp;
+    float2 padding;
 };
 
 
@@ -58,6 +59,10 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
     float2 uv = input.uv;
 
     float4 texColor = gtxtAlbedoTexture.Sample(gssClamp, uv);
+    
+    if (uv.x > g_hp)
+        discard;
+    
     float4 result = texColor;
 
     if (g_isHovered)
