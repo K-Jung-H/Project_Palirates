@@ -257,6 +257,20 @@ void Scene_Manager::Unload_Scene()
 {
     activeScene.reset();
 }
+
+
+void Scene_Manager::Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
+{
+    if (activeScene)
+    {
+        activeScene->Shadow_Map_Render(pd3dDevice, pd3dCommandList, n);
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+}
+
+
+
 void Scene_Manager::Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle)
 {
     if (MRT_shader)
@@ -269,7 +283,6 @@ void Scene_Manager::Prepare_MRT_G_Buffer(ID3D12GraphicsCommandList* pd3dCommandL
         DebugOutput("[Scene_Manager] ERROR:  MRT_shader is not exist");
 
 }
-
 void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
@@ -280,8 +293,6 @@ void Scene_Manager::Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphic
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 }
-
-
 void Scene_Manager::Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
@@ -291,6 +302,7 @@ void Scene_Manager::Render_MRT_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 }
+
 
 void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -302,8 +314,6 @@ void Scene_Manager::Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, I
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 }
-
-
 void Scene_Manager::Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
@@ -314,13 +324,14 @@ void Scene_Manager::Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12Gra
 
 }
 
+
+
 void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3dCommandList)
 {
     //	Change Used RenderTarget Resource State
     if (MRT_shader)
         MRT_shader->OnPostRenderTarget(pd3dCommandList);
 }
-
 void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if(MRT_shader)
@@ -330,11 +341,12 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
     if (activeScene)
     {
         activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
-        
+        activeScene->UpdateShaderVariables_Fog_Info(pd3dCommandList);
+        activeScene->UpdateShaderVariables_ShadowMap(pd3dCommandList);
         activeScene->main_Camera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
     }
 
-        Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
+    Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
 
 
     if(MRT_shader)

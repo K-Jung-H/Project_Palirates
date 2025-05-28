@@ -65,7 +65,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 50);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 10);
+	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
@@ -943,9 +944,6 @@ void CGameFramework::Update_Scene()
 }
 
 
-
-
-
 void CGameFramework::After_Update_Scene()
 {
 	scene_manager->After_Update_Active_Objects();
@@ -1160,6 +1158,18 @@ void CGameFramework::FrameAdvance()
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
+	// ====================== [3.5] ShadowMap Phase ======================
+
+	for (int i = 0; i < NUM_CASCADES; i++)
+	{
+		BeginGPUStage(GPU_Stage::Render);
+		PrepareStage(GPU_Stage::Render);
+		{
+			scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+		}
+		EndGPUStage(GPU_Stage::Render);
+	}
+	
 
 	//scene_manager->Update_Texture_UI();
 
@@ -1217,9 +1227,9 @@ void CGameFramework::FrameAdvance()
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
-		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
+		//post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
+		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
 		
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);

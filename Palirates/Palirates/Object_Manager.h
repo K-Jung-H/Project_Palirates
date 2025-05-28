@@ -258,6 +258,11 @@ public:
 	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
 	void Check_Culling_All(CCamera* pCamera);
 
+	// ShadowMapping
+	void Render_Terrain_Shadow(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+	void Render_Objects_Shadow(Object_Type type, ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+	void Render_Objects_Shadow_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+
 	// Rendering
 	void Render_Terrain(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);

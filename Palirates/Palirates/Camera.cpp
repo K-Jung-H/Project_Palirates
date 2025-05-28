@@ -15,6 +15,8 @@ CCamera::CCamera()
 	m_fPitch = 0.0f;
 	m_fRoll = 0.0f;
 	m_fYaw = 0.0f;
+	m_fNearPlane = 1.0f;
+	m_fFarPlane = 5000.0f;
 	m_xmf3Offset = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	m_fTimeLag = 0.0f;
 	m_xmf3LookAtWorld = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -76,6 +78,8 @@ void CCamera::GenerateProjectionMatrix(float fNearPlaneDistance, float fFarPlane
 {
 	m_xmf4x4Projection = Matrix4x4::PerspectiveFovLH(XMConvertToRadians(fFOVAngle), fAspectRatio, fNearPlaneDistance, fFarPlaneDistance);
 
+	m_fNearPlane = fNearPlaneDistance;
+	m_fFarPlane = fFarPlaneDistance;
 }
 
 void CCamera::GenerateViewMatrix(XMFLOAT3 xmf3Position, XMFLOAT3 xmf3LookAt, XMFLOAT3 xmf3Up)
@@ -165,10 +169,7 @@ void CCamera::Update_Last_Frame_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void CCamera::Update_Deffered_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {	
-
-	//pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &m_xmf3Position, 0);
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 3, &m_xmf3Position, 0);
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 1, &Fog_Trigger, 3);
 }
 
 
