@@ -28,7 +28,6 @@ public:
     std::shared_ptr<CScene>Load_Scene(std::string_view sceneName);
 
     bool Set_Active_Scene(std::string_view sceneName);
-    bool Find_Scene(std::string_view sceneName);
     std::shared_ptr<CScene> Get_Active_Scene() { return activeScene; }
     CScene* Get_Active_Scene_Ptr() { return activeScene.get(); }
 
@@ -62,7 +61,9 @@ public:
     void Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     void Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-    
+    void Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
+
+
     void Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3dCommandList);
     void Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 

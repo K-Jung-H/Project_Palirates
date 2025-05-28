@@ -309,14 +309,14 @@
 				<Materials>: 1
 					<Material>: 0
 						<AlbedoColor>: 1 1 1 1
-						<EmissiveColor>: 0 0 0 1
+						<EmissiveColor>: 0 0 0 0
 						<SpecularColor>: 0.1999999 0.1999999 0.1999999 1
-						<Glossiness>: 0
-						<Smoothness>: 0.5
+						<Glossiness>: 0.25
+						<Smoothness>: 0.25
 						<Metallic>: 0
 						<SpecularHighlight>: 1
-						<GlossyReflection>: 0
-						<AlbedoMap>: Texture_04_A
+						<GlossyReflection>: 1
+						<AlbedoMap>: @Texture_01_A
 						<SpecularMap>: null
 						<MetallicMap>: null
 						<NormalMap>: null

@@ -490,6 +490,15 @@ D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dS
 		return CShader::CompileShaderFromFile(L"Particles_Update_Sand_CS.hlsl", "Sand_Storm_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
+//------------------------------------------------------------------------------------------------
+
+D3D12_SHADER_BYTECODE Interval_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Interval_CS", "cs_5_1", ppd3dShaderBlob);
+}
 
 
 //===================================================================
@@ -506,13 +515,42 @@ Particle_Manager::~Particle_Manager()
 
 void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	if (!is_cs_shader_compiled)
+	if (is_cs_shader_compiled)
+		return;
+	else
 	{
 		Build_Shader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		is_cs_shader_compiled = true;
 	}
-	grid_builder = std::make_unique<Grid_Builder>();
-	return;
+
+	Build_Particle_Mesh(pd3dDevice, pd3dCommandList);
+
+	Particle_Format bleeding_info;
+	{
+		bleeding_info.shader_type = Particle_Type::interval;
+		bleeding_info.particle_type = 6;
+		bleeding_info.max_particles = 30;
+		bleeding_info.MaxLifetime = 3.0f;
+
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+		bleeding_info.EmitFaceIndex = 5;
+
+		bleeding_info.main_direction = XMFLOAT3(0.0f, 0.8f, 0.5f);
+		bleeding_info.init_velocity_value = 50.0f;
+		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
+
+		bleeding_info.size = 0.3f;
+		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	}
+
+
+	ParticleData bleeding_particle_data;
+	bleeding_particle_data.particle_shape_mesh = particle_mesh_map["tetrahedron"];
+	bleeding_particle_data.particle_format = bleeding_info;
+
+	particle_data_map["bleeding"] = bleeding_particle_data;
+
+
 }
 
 void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
@@ -523,8 +561,11 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	ParticleShader* sand_shader = new Sand_ParticleShader();
 	sand_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
-	ParticleShader* interval_shader = new Spread_ParticleShader();
+	ParticleShader* interval_shader = new Interval_ParticleShader();
 	interval_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	grid_builder = std::make_unique<Grid_Builder>();
+
 	//===================================================================
 
 	particle_shader_map[Particle_Type::loop] = loop_shader;
@@ -534,6 +575,16 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	particle_shader_map[Particle_Type::sample_1] = NULL;
 	particle_shader_map[Particle_Type::sample_2] = NULL;
 }
+
+void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	particle_mesh_map["cube"] = make_shared<Cube_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+	particle_mesh_map["cube_dust"] = make_shared<Cube_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
+	particle_mesh_map["billboard"] = make_shared<Billboard_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
+	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+}
+
 
 void Particle_Manager::Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const std::vector<GPU_OBB>& obb_container)
 {
@@ -602,7 +653,7 @@ void Particle_Manager::Release_OBB_Data_ShaderVariables()
 }
 
 
-std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
+std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<Particle_Shape_Mesh> particle_shape_mesh, Particle_Format particle_info)
 {
 	std::shared_ptr<ParticleObject> new_particle_obj = nullptr;
 
@@ -637,7 +688,20 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 	return new_particle_obj;
 }
 
-std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info)
+std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, string particle_data_name)
+{
+	auto it = particle_data_map.find(particle_data_name);
+	if (it != particle_data_map.end())
+	{
+		Particle_Format  particle_format = it->second.particle_format;
+		shared_ptr<Particle_Shape_Mesh> particle_mesh = it->second.particle_shape_mesh;
+		return Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, particle_format);
+	}
+
+	return nullptr;
+}
+
+std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(shared_ptr<Particle_Shape_Mesh>  particle_shape_mesh, Particle_Format particle_info)
 {
 	std::vector<std::shared_ptr<ParticleObject>> target_particle_list = particle_object_list_map[particle_info.shader_type];
 
@@ -648,12 +712,22 @@ std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(Particle_Shap
 		else
 		{
 			particle_obj->Set_Active(true);
-			particle_obj->Reset_Interval();
+			particle_obj->Reset_Interval(); // ResetFlag true Once
 			return particle_obj;
 		}
 	}
 
 	return NULL;
+}
+
+
+shared_ptr<Particle_Shape_Mesh> Particle_Manager::Get_Particle_Mesh(string mesh_name)
+{
+	auto it = particle_mesh_map.find(mesh_name);
+	if (it != particle_mesh_map.end())
+		return it->second;
+
+	return nullptr;
 }
 
 void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -700,9 +774,7 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
-			// continue 대신 Reset_Flag를 전달하고, 발생시, 모두 타입별 생성 초기값으로 초기화하기
-
-			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed);
+			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed, true);
 			update_info.obb_num = OBB_num;
 
 			particle_obj->Update_Compute_ShaderVariables(pd3dCommandList); // binding particle_data
@@ -725,13 +797,11 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
-			// continue 대신 Reset_Flag를 전달하고, 발생시, 모두 타입별 생성 초기값으로 초기화하기
-
 			if (type == Particle_Type::sand)
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
 
 
-			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed);
+			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed, false);
 			update_info.obb_num = OBB_num;
 
 			particle_obj->Update_Compute_ShaderVariables(pd3dCommandList); // binding particle_data
@@ -817,11 +887,11 @@ void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 
 	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 	{
-		Particle_Shape_Mesh* particle_mesh = particle_obj->Get_Shape();
+		shared_ptr<Particle_Shape_Mesh> particle_mesh = particle_obj->Get_Shape();
 		if (!particle_mesh) 
 			continue;
 
-		int currentPipelineIndex = dynamic_cast<Billboard_Shape_Mesh*>(particle_mesh) ? 1 : 0;
+		int currentPipelineIndex = dynamic_cast<Billboard_Shape_Mesh*>(particle_mesh.get()) ? 1 : 0;
 
 		if (currentPipelineIndex != prevPipelineIndex)
 		{

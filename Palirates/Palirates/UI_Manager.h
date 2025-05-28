@@ -125,36 +125,18 @@ public:
 enum class UILayer : uint32_t
 {
     None = 0,
-    Default = 1 << 0,   
-    Interactable = 1 << 1,   
-    Debug = 1 << 2,   
-    HP_bar = 1 << 3,  
-    Menu = 1 << 4,   
-    Dialogue = 1 << 5,
+    Default = 1 << 0,   // 0x0001
+    Interactable = 1 << 1,   // 0x0002
+    Debug = 1 << 2,   // 0x0004
+    Menu = 1 << 3,   // 0x0008
+    Tooltip = 1 << 4,   // 0x0016
     All = 0xFFFFFFFF
 };
-
-inline UILayer operator|(UILayer a, UILayer b)
-{
-    return static_cast<UILayer>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
-}
-
-inline UILayer operator&(UILayer a, UILayer b)
-{
-    return static_cast<UILayer>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
-}
-
-inline UILayer& operator|=(UILayer& a, UILayer b)
-{
-    a = a | b;
-    return a;
-}
 
 struct TextureBlock
 {
     CTexture* pTexture = nullptr;
     D2D1_RECT_F screenRect;
-    D2D1_RECT_F hitboxRect;
     std::shared_ptr<CTextureMesh> mesh = nullptr;
 
     std::function<void()> onClick;
@@ -163,34 +145,13 @@ struct TextureBlock
     bool bClicked = false;
     bool bActive = true;
 
-    float hp = 1.0f;
-
     UILayer layer = UILayer::Default;
 
     XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
-    XMFLOAT4 hoverGlowColor = { 1.0f, 0.0f, 0.0f, 1.0f };      
+    XMFLOAT4 hoverGlowColor = { 1.0f, 0.0f, 0.0f, 1.0f };         
 
-    TextureBlock(
-        CTexture* texture,
-        const D2D1_RECT_F& rect,
-        std::shared_ptr<CTextureMesh> meshPtr,
-        UILayer layerMask = UILayer::Default,
-        const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f },
-        const XMFLOAT2& scale = { 1.0f, 1.0f })
-        : pTexture(texture), screenRect(rect), mesh(meshPtr), layer(layerMask)
-    {
-        float cx = (rect.left + rect.right) * 0.5f;
-        float cy = (rect.top + rect.bottom) * 0.5f;
-        float width = (rect.right - rect.left) * scale.x;
-        float height = (rect.bottom - rect.top) * scale.y;
-
-        float offsetX = offsetNormalized.x * FRAME_BUFFER_WIDTH;
-        float offsetY = offsetNormalized.y * FRAME_BUFFER_HEIGHT;
-
-        hitboxRect.left = cx - width * 0.5f + offsetX;
-        hitboxRect.right = cx + width * 0.5f + offsetX;
-        hitboxRect.top = cy - height * 0.5f + offsetY;
-        hitboxRect.bottom = cy + height * 0.5f + offsetY;
+    TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default)
+        : pTexture(texture), screenRect(rect), mesh(meshPtr), layer(layerMask) {
     }
 };
 

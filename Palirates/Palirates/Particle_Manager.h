@@ -58,7 +58,6 @@ public:
 
 class Spread_ParticleShader : public ParticleShader
 {
-
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
@@ -69,7 +68,20 @@ class Sand_ParticleShader : public ParticleShader
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
+class Interval_ParticleShader : public ParticleShader
+{
+
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+};
+
+
 //==============================================================================
+
+struct ParticleData
+{
+	shared_ptr<Particle_Shape_Mesh> particle_shape_mesh;
+	Particle_Format particle_format;
+};
 
 class Grid_Builder;
 
@@ -81,6 +93,8 @@ private:
 	unique_ptr<Grid_Builder> grid_builder;
 
 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
+	std::unordered_map<string, shared_ptr<Particle_Shape_Mesh>> particle_mesh_map;
+	std::unordered_map<string, ParticleData> particle_data_map; // for re-use particle
 	CTexture* m_OBBBufferTexture = NULL;
 	UINT OBB_num = 0;
 
@@ -96,6 +110,7 @@ public:
 	void Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
 	void Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+	void Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Create_OBB_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);
 	void Update_OBB_Data_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, const vector<GPU_OBB>& obb_container);
@@ -118,8 +133,13 @@ public:
 	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 
-	std::shared_ptr<ParticleObject> Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
-	std::shared_ptr<ParticleObject> Recycle_Particle(Particle_Shape_Mesh* particle_shape_mesh, Particle_Format particle_info);
+	std::shared_ptr<ParticleObject> Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<Particle_Shape_Mesh> particle_shape_mesh, Particle_Format particle_info);
+	std::shared_ptr<ParticleObject> Add_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, string particle_data_name);
+
+	std::shared_ptr<ParticleObject> Recycle_Particle(shared_ptr<Particle_Shape_Mesh>  particle_shape_mesh, Particle_Format particle_info);
+
+	std::unordered_map<string, shared_ptr<Particle_Shape_Mesh>> Get_Particle_Mesh_Map() {return particle_mesh_map;	}
+	shared_ptr<Particle_Shape_Mesh> Get_Particle_Mesh(string mesh_name);
 
 	void Clear_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);

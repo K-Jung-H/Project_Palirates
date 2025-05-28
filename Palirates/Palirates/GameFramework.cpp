@@ -65,7 +65,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 50);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 10);
+	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
@@ -691,74 +692,20 @@ void CGameFramework::Build_Scenes()
 
 	//========================================================
 	scene_manager->SetSceneChangeCallback([this](const std::string& nextSceneName) {
-		
-		if (nextSceneName == "In_Stage") {
-			if (!scene_manager->Find_Scene("In_Stage")) {
-				if (!Active_CommandList) {
-					OutputDebugString(L"Active_CommandList is nullptr!\n");
-					return 0;
-				}
-
-				HRESULT hr = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-				if (FAILED(hr)) {
-					OutputDebugString(L"CommandList Reset Failed!\n");
-					return 0;
-				}
-
-				std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
-				scene_manager->Register_Scene("In_Stage", in_stage_scene);
-				scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
-				std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
-				pPlayer->Set_Child(pPlayer->m_pRootModel);
-				pPlayer->SetupWeaponCollider();
-				pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
-				in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
-				scene_manager->Set_Scene_Player("In_Stage", pPlayer);
-				scene_manager->Set_Active_Scene(nextSceneName);
-				m_pPlayer = scene_manager->Get_Active_Scene_Player();
-
-				//scene_manager->Set_Active_Scene(nextSceneName);
-				////scene_manager->Get_Active_Scene_Player().reset();
-				//std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get(), Deckhand);
-				//pPlayer->Set_Child(pPlayer->m_pRootModel);
-				//pPlayer->SetupWeaponCollider();
-				//pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
-				//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
-				//scene_manager->Set_Scene_Player("In_Stage", pPlayer);
-				//m_pPlayer = scene_manager->Get_Active_Scene_Player();
-
-				//scene_manager->ReleaseUploadBuffers();
-				//pPlayer->ReleaseUploadBuffers();
-
-				scene_manager->Set_Active_Scene(nextSceneName);
-				m_pPlayer = scene_manager->Get_Active_Scene_Player();
-
-				Active_CommandList->Close();
-				ID3D12CommandList* ppCommandLists[] = { Active_CommandList };
-				p_CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-			}
-			else {
-				scene_manager->Set_Active_Scene(nextSceneName);
-				m_pPlayer = scene_manager->Get_Active_Scene_Player();
-			}
-		}
-		else {
-			scene_manager->Set_Active_Scene(nextSceneName);
-			m_pPlayer = scene_manager->Get_Active_Scene_Player();
-		}
-			
+		scene_manager->Set_Active_Scene(nextSceneName);
+		m_pPlayer = scene_manager->Get_Active_Scene_Player();
 		Object_Manager::Reserve_Update();
 		});
 
-	//std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
-	//scene_manager->Register_Scene("In_Stage", in_stage_scene);
-	//scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
-	//std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
-	//pPlayer->Set_Child(pPlayer->m_pRootModel);
-	//pPlayer->SetupWeaponCollider();
-	//pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
-	//in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
-	//scene_manager->Set_Scene_Player("In_Stage", pPlayer);
+	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
+	scene_manager->Register_Scene("In_Stage", in_stage_scene);
+	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
+	std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
+	pPlayer->Set_Child(pPlayer->m_pRootModel);
+	pPlayer->SetupWeaponCollider();
+	pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
+	in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+	scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 
 
 	std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
@@ -941,9 +888,6 @@ void CGameFramework::Update_Scene()
 
 	}
 }
-
-
-
 
 
 void CGameFramework::After_Update_Scene()
@@ -1160,6 +1104,18 @@ void CGameFramework::FrameAdvance()
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
+	// ====================== [3.5] ShadowMap Phase ======================
+
+	for (int i = 0; i < NUM_CASCADES; i++)
+	{
+		BeginGPUStage(GPU_Stage::Render);
+		PrepareStage(GPU_Stage::Render);
+		{
+			scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+		}
+		EndGPUStage(GPU_Stage::Render);
+	}
+	
 
 	//scene_manager->Update_Texture_UI();
 
@@ -1217,9 +1173,9 @@ void CGameFramework::FrameAdvance()
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
-		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		//D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
+		//post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
+		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
 		
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);

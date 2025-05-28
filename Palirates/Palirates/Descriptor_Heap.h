@@ -10,6 +10,8 @@ class CDescriptor_Heap
 private:
     static CDescriptor_Heap* instance;
     ID3D12DescriptorHeap* CbvSrvUavDescriptorHeap = nullptr;
+    ID3D12DescriptorHeap* DsvDescriptorHeap = nullptr;
+
     bool isInitialized = false;
 
     D3D12_CPU_DESCRIPTOR_HANDLE         CbvCPUDescriptorStartHandle{};
@@ -26,13 +28,18 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE			UavCPUDescriptorNextHandle;
 	D3D12_GPU_DESCRIPTOR_HANDLE			UavGPUDescriptorNextHandle;
 
+    D3D12_CPU_DESCRIPTOR_HANDLE           DsvDescriptorStartHandle{};
+    D3D12_CPU_DESCRIPTOR_HANDLE           DsvDescriptorNextHandle{};
+
+
     CDescriptor_Heap() {}
 
     void CreateCbvSrvUavDescriptorHeaps(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews, int nUnorderedAccessViews);
+    void CreateDsvDescriptorHeap(ID3D12Device* pd3dDevice, int nDsvViews);
 
 public:
 
-    static void Init(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews, int nUnorderedAccessViews)
+    static void Init(ID3D12Device* pd3dDevice, int nConstantBufferViews, int nShaderResourceViews, int nUnorderedAccessViews, int nDsvViews)
     {
         if (!instance)
             instance = new CDescriptor_Heap();
@@ -40,6 +47,9 @@ public:
         {
             instance->isInitialized = true;
             instance->CreateCbvSrvUavDescriptorHeaps(pd3dDevice, nConstantBufferViews, nShaderResourceViews, nUnorderedAccessViews);
+
+            instance->CreateDsvDescriptorHeap(pd3dDevice, nDsvViews);
+
         }
     }
 
@@ -80,6 +90,9 @@ public:
     static void CreateGraphicsShaderResourceView(ID3D12Device* device, CTexture* texture, UINT textureIndex, UINT rootParameterIndex);
     static D3D12_GPU_DESCRIPTOR_HANDLE CreateShaderResourceView(ID3D12Device* pd3dDevice, ID3D12Resource* pd3dResource, DXGI_FORMAT dxgiSrvFormat);
 
+    D3D12_CPU_DESCRIPTOR_HANDLE CreateDsv(ID3D12Device* pd3dDevice, CTexture* pTexture, UINT resourceIndex);
+    UINT GetCreatedDsvCount();
+
     //    Uitility
     //    static void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex, UINT nRootParameterStartIndex);
     //    static void CreateShaderResourceView(ID3D12Device* pd3dDevice, CTexture* pTexture, int nIndex);
@@ -118,10 +131,21 @@ public:
             CbvSrvUavDescriptorHeap->Release();
             CbvSrvUavDescriptorHeap = nullptr;
         }
+
+        if (DsvDescriptorHeap)
+        {
+            DsvDescriptorHeap->Release();
+            DsvDescriptorHeap = nullptr;
+        }
     }
 
     CDescriptor_Heap(const CDescriptor_Heap&) = delete;
     CDescriptor_Heap& operator=(const CDescriptor_Heap&) = delete;
     CDescriptor_Heap(CDescriptor_Heap&&) = delete;
     CDescriptor_Heap& operator=(CDescriptor_Heap&&) = delete;
+
+    public:
+        static UINT GetCreatedCbvCount();
+        static UINT GetCreatedSrvCount();
+        static UINT GetCreatedUavCount();
 };

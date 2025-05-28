@@ -27,6 +27,9 @@ class CPlayer;
 class CCamera
 {
 protected:
+	float m_fNearPlane = 1.0f; 
+	float m_fFarPlane = 5000.0f;
+
 	XMFLOAT3						m_xmf3Position;
 	XMFLOAT3						m_xmf3Right;
 	XMFLOAT3						m_xmf3Up;
@@ -137,6 +140,9 @@ public:
 	float& GetPitch() { return(m_fPitch); }
 	float& GetRoll() { return(m_fRoll); }
 	float& GetYaw() { return(m_fYaw); }
+
+	float GetNearPlane() const { return m_fNearPlane; }
+	float GetFarPlane() const { return m_fFarPlane; }
 
 	void SetOffset(XMFLOAT3 xmf3Offset) { m_xmf3Offset = xmf3Offset; }
 	XMFLOAT3& GetOffset() { return(m_xmf3Offset); }
