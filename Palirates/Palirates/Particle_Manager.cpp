@@ -515,12 +515,13 @@ Particle_Manager::~Particle_Manager()
 
 void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	if (!is_cs_shader_compiled)
+	if (is_cs_shader_compiled)
+		return;
+	else
 	{
 		Build_Shader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 		is_cs_shader_compiled = true;
 	}
-	grid_builder = std::make_unique<Grid_Builder>();
 
 	Build_Particle_Mesh(pd3dDevice, pd3dCommandList);
 
@@ -548,6 +549,8 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 	bleeding_particle_data.particle_format = bleeding_info;
 
 	particle_data_map["bleeding"] = bleeding_particle_data;
+
+
 }
 
 void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
@@ -560,6 +563,9 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	ParticleShader* interval_shader = new Interval_ParticleShader();
 	interval_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	grid_builder = std::make_unique<Grid_Builder>();
+
 	//===================================================================
 
 	particle_shader_map[Particle_Type::loop] = loop_shader;
