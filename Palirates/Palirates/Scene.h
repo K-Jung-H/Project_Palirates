@@ -20,7 +20,7 @@
 
 class Particle_Manager;
 class ParticleObject;
-
+class Particle_Shape_Mesh;
 
 struct LIGHT
 {
@@ -46,9 +46,92 @@ struct LIGHTS
 	int									m_nLights;
 };
 
+struct Fog_Info
+{
+	XMFLOAT3 fogColor;
+	int Fog_Trigger;
+
+	float fogStart;
+	float fogEnd;
+	float fogDensity;
+	float noiseScale;
+
+	float noiseStrength;
+	float time;
+	XMFLOAT2 padding0;
+};
+
+
+
+#define NUM_CASCADES 4
+
+struct alignas(16) LightCamera_Info
+{
+	UINT shadow_pass;
+	UINT light_type;
+	UINT padding0;
+	UINT padding1;
+
+	XMFLOAT4X4 LightViewProjTex[NUM_CASCADES];
+
+	XMFLOAT3 LightDirectionWS;
+	float shadow_bias;
+
+	XMFLOAT2 shadow_map_size;
+	XMFLOAT2 inv_shadow_map_size;
+
+	float cascadeSplits[NUM_CASCADES];
+};
+
+
+#define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
+
+#define _SHADOWMAP_WIDTH 2048 * 2
+#define _SHADOWMAP_HEIGHT 2048 * 2
+
+class Shadow_Camera : public CCamera
+{
+public:
+	static std::shared_ptr<CShader> shadow_map_shader;
+	bool shadow_active = true;
+private:
+	shared_ptr<CMaterial> shadow_map;
+	ID3D12Resource* m_pd3dcb_LightCamera = NULL;
+	LightCamera_Info* m_pcb_MappedLightCamera = NULL;
+
+	std::vector<XMFLOAT4X4> m_CascadeView;   
+	std::vector<XMFLOAT4X4> m_CascadeProj;
+
+	float m_CascadeSplits[NUM_CASCADES];
+
+protected:
+	XMFLOAT3 m_light_direction = { 0.0f, -1.0f, 0.0f };
+	XMFLOAT3 m_light_position = { 0.0f, 0.0f, 0.0f };
+
+public:
+	Shadow_Camera();
+	virtual ~Shadow_Camera();
+
+	virtual void CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Update_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, int cascadeIdx);
+
+
+	std::vector<XMFLOAT3> CalcFrustumCornersWorld(CCamera* mainCamera, float nearZ, float farZ);
+	void SetupCSMCascades(const XMFLOAT3& light_direction, const std::vector<float>& splitDepths, CCamera* mainCamera);
+	std::vector<float> GenerateCSMSplitDepths(float nearZ, float farZ, int numCascades, float lambda = 0.75f);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE Get_Shadow_Map_DSV(int n) const;
+	ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const;
+
+};
+
 
 class CScene
 {
+private:
+	std::shared_ptr<Shadow_Camera> fixed_shadow_camera;
+
 public:
     CScene();
     ~CScene();
@@ -58,9 +141,12 @@ public:
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
+
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void UpdateShaderVariables_Light_Info(ID3D12GraphicsCommandList* pd3dCommandList);
-	
+	virtual void UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void UpdateShaderVariables_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList);
+
 	virtual void ReleaseShaderVariables();
 
 	virtual void BuildDefaultLightsAndMaterials();
@@ -69,6 +155,8 @@ public:
 
 	void ReleaseObjects();
 
+	
+	ID3D12RootSignature* Create_ShadowMap_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
@@ -82,6 +170,8 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);	
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
+
+	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
@@ -113,7 +203,7 @@ public:
 	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
 	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
-
+	Particle_Shape_Mesh* dust_shape_mesh = NULL;
 	Object_Manager* obj_manager = NULL;
 
 	std::vector<std::shared_ptr<CShader>> Shader_list;
@@ -130,9 +220,13 @@ public:
 	ID3D12Resource						*m_pd3dcbLights = NULL;
 	LIGHTS								*m_pcbMappedLights = NULL;
 
+	shared_ptr<Fog_Info> fog_info = NULL;
+	shared_ptr<CMaterial>fog_noise = NULL;
+
 	bool test_button = false;
 	bool particle_test_button = false;
 
+	float test_value = 0.5f;
 #ifdef WRITE_TEXT_UI
 	Text_UI_Manager* text_ui_manager = NULL;
 	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);

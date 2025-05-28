@@ -8,6 +8,8 @@ struct VS_INSTANCE_PARTICLE_DRAW_INPUT
     float4 Position_and_Scale : INSTANCE_POS_SCALE;
     float4 velocity_and_Rotate : INSTANCE_VELOCITY; // xyz = 회전축, w = 회전각
     float4 color : INSTANCE_COLOR;
+    
+    uint instanceID : SV_InstanceID;
 };
 
 struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
@@ -17,6 +19,14 @@ struct VS_INSTANCE_PARTICLE_DRAW_OUTPUT
     float4 color : COLOR;
     float2 velocity : VELOCITY;
 };
+
+float3 PseudoRandomAxis(uint seed)
+{
+    float x = frac(sin(seed * 12.9898f) * 43758.5453f);
+    float y = frac(sin(seed * 78.233f) * 12345.6789f);
+    float z = frac(sin(seed * 45.164f) * 98765.4321f);
+    return normalize(float3(x, y, z)); // 정규화된 임의 축 반환
+}
 
 float3x3 AxisAngleToMatrix(float3 axis, float angle)
 {
@@ -36,15 +46,26 @@ float3x3 AxisAngleToMatrix(float3 axis, float angle)
 }
 
 
+
 VS_INSTANCE_PARTICLE_DRAW_OUTPUT VSParticleDraw(VS_INSTANCE_PARTICLE_DRAW_INPUT input)
 {
     VS_INSTANCE_PARTICLE_DRAW_OUTPUT output = (VS_INSTANCE_PARTICLE_DRAW_OUTPUT) 0;
 
     // 1. 회전 행렬 생성 (Axis-Angle → Matrix)
-    float3 axis = normalize(input.velocity_and_Rotate.xyz); // 회전 축
-    float angle = input.velocity_and_Rotate.w; // 회전 각도
-    float3x3 rotation = AxisAngleToMatrix(axis, angle); // 회전 행렬
+    float3 axis = float3(0.0f, 0.0f, 0.0f);
+    if (all(input.velocity_and_Rotate.xyz == float3(0.0f, 0.0f, 0.0f)))
+    {
+        axis = PseudoRandomAxis(input.instanceID);
+    }
+    else
+    {
+        axis = normalize(input.velocity_and_Rotate.xyz);
+    }
 
+    float angle = input.velocity_and_Rotate.w;
+    float3x3 rotation = AxisAngleToMatrix(axis, angle); // 회전 행렬
+    
+    
     // 2. 크기 적용 및 회전
     float scale = input.Position_and_Scale.w; // 입자 크기
     float3 localPos = input.position * scale; // 스케일 적용

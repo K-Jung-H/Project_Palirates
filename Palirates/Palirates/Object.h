@@ -54,7 +54,8 @@ public:
         int nComputeSrvRootParameters,
         int nGraphicsSrvGpuHandles,
         int nComputeUavGpuHandles,
-        int nComputeSrvGpuHandles);
+        int nComputeSrvGpuHandles,
+        int nDsvHandles = 0);
 
     virtual ~CTexture();
 
@@ -77,6 +78,7 @@ public:
     D3D12_GPU_DESCRIPTOR_HANDLE GetGraphicsSrvGpuDescriptorHandle(int index) const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetComputeUavGpuDescriptorHandle(int index) const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetComputeSrvGpuDescriptorHandle(int index) const;
+    D3D12_CPU_DESCRIPTOR_HANDLE GetDSVDescriptorHandle(int index) const { return m_d3dDsvCPUDescriptorHandles[index]; }
 
     void SetGraphicsSrvGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
     void SetComputeUavGpuDescriptorHandle(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
@@ -107,6 +109,8 @@ public:
     void ReleaseUploadBuffers();
 
     void SetSampler(int index, D3D12_GPU_DESCRIPTOR_HANDLE handle);
+    void SetDSV(int index, D3D12_CPU_DESCRIPTOR_HANDLE handle) { m_d3dDsvCPUDescriptorHandles[index] = handle; }
+
 
     void LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, wchar_t* filename, UINT resourceType, UINT index);
     void LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index);
@@ -172,6 +176,11 @@ private:
     std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dComputeSrvRootParameterGpuDescriptorHandles;
 
     std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> m_pd3dSamplerGpuDescriptorHandles;
+
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_d3dDsvCPUDescriptorHandles;
+
+
+    //D3D12_CPU_DESCRIPTOR_HANDLE m_d3dDsvCPUDescriptorHandle{}; // only one
 };
 
 
@@ -254,6 +263,7 @@ public:
     void SetTexture(CTexture* pTexture, UINT nTexture = 0);
 
     virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void ReleaseUploadBuffers();
 
 
@@ -650,7 +660,9 @@ public:
 
     virtual bool IsVisible(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
+    
     virtual void OnLateUpdate() {}
 
     virtual void Set_Last_Pos(XMFLOAT3 pos);
@@ -838,6 +850,7 @@ public:
 
     void Check_Culling(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Reset_Obj_List_Height(std::vector<std::shared_ptr<CGameObject>> obj_list);
     void Reset_Obj_List_Up_Vector(std::vector<std::shared_ptr<CGameObject>> obj_list);
@@ -915,6 +928,7 @@ public:
     virtual ~Plane_Object();
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
     void Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
@@ -952,6 +966,7 @@ public:
 
     void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
     void Synchronize_Wave_to_Boat(Boat_Object* boat_ptr);
 
@@ -1018,6 +1033,8 @@ public:
     virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
     virtual void SetupWeaponCollider();
 };
 

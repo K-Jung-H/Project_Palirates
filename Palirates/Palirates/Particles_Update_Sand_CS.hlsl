@@ -145,8 +145,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         ParticleBuffer_Update[index] = p;
         return;
     }
-    
-    if (worldPos.y <= 10.0f)
+        else if (worldPos.y <= 10.0f)
     {
         p.Velocity = float3(0.0f, 0.0f, 0.0f);
         p.Lifetime = 0.5f;

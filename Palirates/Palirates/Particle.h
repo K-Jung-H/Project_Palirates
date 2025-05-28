@@ -68,7 +68,7 @@ struct Particle_Info
 	float Size;            
 	UINT Type;
 	UINT Active;
-	float Padding;
+	UINT Sleep;
 };
 
 struct CB_Particle_Update_Info
@@ -237,6 +237,9 @@ class Particle_Manager;
 
 class ParticleObject : public CGameObject
 {
+private:
+	bool wasResetFlagSent = false;
+
 protected:
 	XMFLOAT3 m_xmf3Direction = { 0.0f, 0.0f, 1.0f }; // 기본 전방
 	float m_fSpeed = 0.0f;
@@ -245,8 +248,8 @@ protected:
 private:
 	Particle_Manager* owner_manager = nullptr;
 	Particle* particle_data = NULL;
-	Particle_Shape_Mesh* shape_mesh = NULL;
 
+	shared_ptr<Particle_Shape_Mesh>  shape_mesh = NULL;
 	shared_ptr<CMaterial> particle_Material = NULL;
 	bool is_textured = false;
 	//=============================
@@ -271,8 +274,8 @@ public:
 
 	void ReleaseUploadBuffers();
 
-	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
-	Particle_Shape_Mesh* Get_Shape() { return shape_mesh; }
+	void Set_Shape(shared_ptr<Particle_Shape_Mesh>  mesh_ptr) { shape_mesh = mesh_ptr; }
+	shared_ptr<Particle_Shape_Mesh>  Get_Shape() { return shape_mesh; }
 	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
 	void Set_Max_Interval(float new_max_lifetime) { Max_Lifetime = new_max_lifetime; }
 	void Init_Info(Particle_Format particle_info);
@@ -286,13 +289,13 @@ public:
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Update_Interval(float fTimeElapsed);
-	void Reset_Interval() { ElapsedTime = 0.0f, Max_Lifetime = 0.0f; }
+	void Reset_Interval() { wasResetFlagSent = false, ElapsedTime = 0.0f, Max_Lifetime = 0.0f; }
 
 	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	Particle* Get_Particle_Data() { return particle_data; }
-	CB_Particle_Update_Info Get_Particle_Update_Info(float fTimeElapsed);
+	CB_Particle_Update_Info Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage);
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 
 	void Set_Local_Coordinate() { is_local = true; }
