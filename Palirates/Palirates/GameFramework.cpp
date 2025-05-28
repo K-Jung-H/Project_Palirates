@@ -332,6 +332,8 @@ void CGameFramework::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
 	if (main_scene) main_scene->OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+	if (main_scene) main_scene->UpdateUIHoverState(hWnd);
+
 	switch (nMessageID)
 	{
 		case WM_LBUTTONDOWN:
@@ -689,6 +691,12 @@ void CGameFramework::Build_Scenes()
 
 
 	//========================================================
+	scene_manager->SetSceneChangeCallback([this](const std::string& nextSceneName) {
+		scene_manager->Set_Active_Scene(nextSceneName);
+		m_pPlayer = scene_manager->Get_Active_Scene_Player();
+		Object_Manager::Reserve_Update();
+		});
+
 	std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
 	scene_manager->Register_Scene("In_Stage", in_stage_scene);
 	scene_manager->Build_Scene("In_Stage", m_pd3dDevice, Active_CommandList);
@@ -1109,6 +1117,8 @@ void CGameFramework::FrameAdvance()
 	}
 	
 
+	//scene_manager->Update_Texture_UI();
+
 	// ====================== [4] Render Phase ======================
 	BeginGPUStage(GPU_Stage::Render);
 	PrepareStage(GPU_Stage::Render);
@@ -1192,6 +1202,8 @@ void CGameFramework::FrameAdvance()
 			m_pPlayer->Record_Last_Pos();
 		}
 
+		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
+
 #ifndef WRITE_TEXT_UI
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -1203,6 +1215,8 @@ void CGameFramework::FrameAdvance()
 #ifdef WRITE_TEXT_UI
 	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
 #endif
+
+	
 
 	// ====================== [7] Present ======================
 #ifdef _WITH_PRESENT_PARAMETERS

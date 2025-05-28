@@ -19,6 +19,8 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	m_pdxgiBufferFormats.resize(nTextures, DXGI_FORMAT_UNKNOWN);
 	m_pnBufferElements.resize(nTextures, 0);
 	m_pnBufferStrides.resize(nTextures, 0);
+	m_nTextureWidths.resize(nTextures, 0);
+	m_nTextureHeights.resize(nTextures, 0);
 
 	m_pd3dGraphicsSrvGpuDescriptorHandles.resize(nGraphicsSrvGpuHandles, { 0 });
 	m_pd3dComputeUavGpuDescriptorHandles.resize(nComputeUavGpuHandles, { 0 });
@@ -250,6 +252,9 @@ void CTexture::LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsComman
 	Get_File_Name_From_Address(filename, m_pstrTextureName);
 	m_pnResourceTypes[index] = resourceType;
 	m_ppd3dTextures[index] = CreateTextureResourceFromDDSFile(device, commandList, filename, &m_ppd3dTextureUploadBuffers[index], D3D12_RESOURCE_STATE_GENERIC_READ);
+	D3D12_RESOURCE_DESC texDesc = m_ppd3dTextures[index]->GetDesc();
+	m_nTextureWidths[index] = static_cast<UINT>(texDesc.Width);
+	m_nTextureHeights[index] = static_cast<UINT>(texDesc.Height);
 }
 
 void CTexture::LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index)
@@ -2020,12 +2025,6 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
 }
 
-void CGameObject::SetRootMotion(bool bRootMotion)
-{
-	if (m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
-}
-
 void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
@@ -3411,7 +3410,6 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 
 	pWeapon = new WeaponObject();
 	pWeapon->pWeapon.push_back(swordClone);
-	pWeapon->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
 	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
 	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
 	swordClone->Object_type = 10;
@@ -3426,7 +3424,8 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 		sword->Set_Active(true);
 	if (!pWeapon->pWeapon.empty()) {
 		for (auto& obj : pWeapon->pWeapon) {
-			obj->Set_Active(false);
+			//obj->Set_Active(false);
+			//obj.reset();
 		}
 	}
 }

@@ -129,11 +129,27 @@ public:
 
     D3D12_SHADER_RESOURCE_VIEW_DESC GetShaderResourceViewDesc(int index);
     D3D12_UNORDERED_ACCESS_VIEW_DESC GetUnorderedAccessViewDesc(int index);
+
+    UINT GetTextureWidth(int index = 0) const {
+        if (index >= 0 && index < static_cast<int>(m_nTextureWidths.size()))
+            return m_nTextureWidths[index];
+        return 0;
+    }
+
+    UINT GetTextureHeight(int index = 0) const {
+        if (index >= 0 && index < static_cast<int>(m_nTextureHeights.size()))
+            return m_nTextureHeights[index];
+        return 0;
+    }
+
 private:
     int m_nReferences = 0;
     char m_pstrTextureName[64] = {};
 
     UINT m_nTextureType = 0;
+
+    std::vector<UINT> m_nTextureWidths;
+    std::vector<UINT> m_nTextureHeights;
 
     std::vector<UINT>                        m_pnResourceTypes;
     std::vector<ID3D12Resource*>             m_ppd3dTextures;
@@ -370,8 +386,8 @@ public:
     int                        m_nAnimationSets = 0;
     CAnimationSet** m_pAnimationSet_list = NULL;
 
-    std::vector<int> m_vecUpperBodyBoneIndices;  // 상체
-    std::vector<int> m_vecLowerBodyBoneIndices;  // 하체
+    std::vector<int> m_vecUpperBodyBoneIndices;  
+    std::vector<int> m_vecLowerBodyBoneIndices;  
 
     int                        m_nBoneFrames = 0;
     std::vector< CGameObject*>   m_ppBoneFrameCaches;
@@ -482,13 +498,7 @@ public:
     void ServerAdvanceTime(const ServerAnimationSyncData& syncData);
 
 public:
-    bool                     m_bRootMotion = false;
     std::shared_ptr<CGameObject>            m_pModelRootObject = NULL;
-
-    std::shared_ptr<CGameObject>            m_pRootMotionObject = NULL;
-    XMFLOAT3                  m_xmf3FirstRootMotionPosition = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-    void SetRootMotion(bool bRootMotion) { m_bRootMotion = bRootMotion; }
 
     virtual void OnRootMotion(CGameObject* pRootGameObject) {}
     virtual void OnAnimationIK(CGameObject* pRootGameObject) {}
@@ -515,26 +525,6 @@ public:
     WeaponObject() {};
     ~WeaponObject() {};
     std::vector<std::shared_ptr<CGameObject>> pWeapon;
-    XMVECTOR target_dir{};
-
-    XMVECTOR m_vVelocity = XMVectorZero();  // 현재 속도
-    bool    m_bInAir = false;           // 공중에 떠 있는 중인지
-    float   m_fGravity = 9.8f;            // 중력 가속도
-    float   m_fInitialUpSpeed = 5.0f;            // 점프 초기 속도
-    float   m_fMoveSpeed = 3.0f;
-
-    void Launch(const XMVECTOR& target_dir)
-    {
-        XMVECTOR dirNorm = XMVector3Normalize(target_dir);
-        // X/Y/Z 속도를 한꺼번에 세팅 (w는 0)
-        m_vVelocity = XMVectorSet(
-            XMVectorGetX(dirNorm) * m_fMoveSpeed,
-            m_fInitialUpSpeed,
-            XMVectorGetZ(dirNorm) * m_fMoveSpeed,
-            0.0f
-        );
-        m_bInAir = true;
-    }
 };
 
 class CGameObject : public std::enable_shared_from_this<CGameObject>
@@ -746,9 +736,6 @@ public:
 
     void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
     void SetTrackAnimationPosition(int nAnimationTrack, float fPosition);
-
-    void SetRootMotion(bool bRootMotion);
-
     
     void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
 

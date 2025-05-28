@@ -137,6 +137,7 @@ public:
     ~CScene();
 
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual void UpdateUIHoverState(HWND hWnd);
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
@@ -159,6 +160,7 @@ public:
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
+	ID3D12RootSignature* Create_UI_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 
 	
 	shared_ptr<ID3D12RootSignature> Get_MRT_GraphicsRootSignature() { return(m_MRT_GraphicsRootSignature); }
@@ -193,6 +195,7 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_MRT_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Transparent_GraphicsRootSignature;
 	static std::shared_ptr<ID3D12RootSignature> m_Plane_GraphicsRootSignature;
+	static std::shared_ptr<ID3D12RootSignature> m_UI_GraphicsRootSignature;
 
 public:
 	Particle_Manager* particle_manager = NULL;
@@ -230,6 +233,16 @@ public:
 	std::vector<TextBlock*>* Get_Text_List();
 	void Update_UI();
 #endif
+
+	Texture_UI_Manager* texture_ui_manager = NULL;
+	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
+	std::vector<TextureBlock*> Get_Texture_List();
+	virtual void Update_Texture_UI();
+
+	std::function<void(const std::string&)> requestSceneChange;
+	void RequestSceneChange(const std::string& sceneName) {
+		if (requestSceneChange) requestSceneChange(sceneName);
+	}
 };
 
 class Test_Scene : public CScene
@@ -254,6 +267,8 @@ private:
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void UpdatePlayerSelection(int new_index);
+
+	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 };
 
 class Board_Scene : public CScene
@@ -279,8 +294,9 @@ public:
 
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+
+	//virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature) {};
 };
 
 class Weapon_Select_Scene : public CScene

@@ -262,3 +262,138 @@ void Text_UI_Renderer::Render(UINT nFrame, std::vector<TextBlock*>* block_list_p
     m_pd3d11DeviceContext->Flush();
 }
 
+////////////////////////////////////////////////////////
+
+Texture_UI_Renderer::Texture_UI_Renderer(ID3D12Device* device)
+{
+    m_pd3dDevice = device;
+
+    struct Vertex { XMFLOAT3 pos; XMFLOAT2 uv; };
+    Vertex vertices[] = {
+        {{ -1.0f,  1.0f, 0.0f }, { 0.0f, 0.0f }},
+        {{  1.0f,  1.0f, 0.0f }, { 1.0f, 0.0f }},
+        {{ -1.0f, -1.0f, 0.0f }, { 0.0f, 1.0f }},
+        {{  1.0f, -1.0f, 0.0f }, { 1.0f, 1.0f }},
+    };
+
+    const UINT vbSize = sizeof(vertices);
+
+    D3D12_HEAP_PROPERTIES heapProps = {};
+    heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+    heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+    heapProps.CreationNodeMask = 1;
+    heapProps.VisibleNodeMask = 1;
+
+    D3D12_RESOURCE_DESC resDesc = {};
+    resDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+    resDesc.Alignment = 0;
+    resDesc.Width = vbSize;
+    resDesc.Height = 1;
+    resDesc.DepthOrArraySize = 1;
+    resDesc.MipLevels = 1;
+    resDesc.Format = DXGI_FORMAT_UNKNOWN;
+    resDesc.SampleDesc.Count = 1;
+    resDesc.SampleDesc.Quality = 0;
+    resDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+    resDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    m_pd3dDevice->CreateCommittedResource(
+        &heapProps, D3D12_HEAP_FLAG_NONE,
+        &resDesc, D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr, IID_PPV_ARGS(&m_pVertexBuffer)
+    );
+
+    void* mappedData = nullptr;
+    m_pVertexBuffer->Map(0, nullptr, &mappedData);
+    memcpy(mappedData, vertices, vbSize);
+    m_pVertexBuffer->Unmap(0, nullptr);
+
+    m_VertexBufferView.BufferLocation = m_pVertexBuffer->GetGPUVirtualAddress();
+    m_VertexBufferView.SizeInBytes = vbSize;
+    m_VertexBufferView.StrideInBytes = sizeof(Vertex);
+}
+
+Texture_UI_Renderer::~Texture_UI_Renderer()
+{
+
+}
+
+void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList, std::vector<TextureBlock*>* pTextureList)
+{
+    for (auto& block : *pTextureList)
+    {
+        if (!block || !block->pTexture || !block->mesh) continue;
+
+        struct UIConstants
+        {
+            XMFLOAT4 tintColor;
+            XMFLOAT4 hoverGlowColor;
+            float isHovered;
+            float padding[3];
+        };
+
+        UIConstants ui = {};
+        ui.tintColor = block->tintColor;
+        ui.hoverGlowColor = block->hoverGlowColor;
+        ui.isHovered = block->bHovered ? 1.0f : 0.0f;
+
+        if (ui.isHovered == 1.0f) {
+            int a = 1;
+        }
+
+        cmdList->SetGraphicsRoot32BitConstants(
+            2, sizeof(UIConstants) / 4, &ui, 0
+        );
+
+        cmdList->SetGraphicsRootDescriptorTable(1, block->pTexture->GetGraphicsSrvGpuDescriptorHandle(0));
+
+        D3D12_VIEWPORT vp = {};
+        vp.TopLeftX = block->screenRect.left;
+        vp.TopLeftY = block->screenRect.top;
+        vp.Width = block->screenRect.right - block->screenRect.left;
+        vp.Height = block->screenRect.bottom - block->screenRect.top;
+        vp.MinDepth = 0.0f;
+        vp.MaxDepth = 1.0f;
+        cmdList->RSSetViewports(1, &vp);
+
+        D3D12_RECT scissor = {
+            (LONG)block->screenRect.left,
+            (LONG)block->screenRect.top,
+            (LONG)block->screenRect.right,
+            (LONG)block->screenRect.bottom
+        };
+        cmdList->RSSetScissorRects(1, &scissor);
+
+        block->mesh->OnPreRender(cmdList, nullptr);
+        block->mesh->Render(cmdList, 0);
+    }
+}
+
+void Texture_UI_Renderer::CreateShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+    UINT cbSize = (sizeof(CB_FRAMEWORK_INFO) + 255) & ~255;
+    m_pd3dDevice = device;
+
+    m_pCBFrameInfo = CreateBufferResource(
+        device,
+        cmdList,
+        nullptr,
+        cbSize,
+        D3D12_HEAP_TYPE_UPLOAD,
+        D3D12_RESOURCE_FLAG_NONE,
+        D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+    );
+
+    m_pCBFrameInfo->Map(0, nullptr, reinterpret_cast<void**>(&m_pMappedCBFrameInfo));
+}
+
+void Texture_UI_Renderer::UpdateShaderVariables(float currentTime, float elapsedTime, ID3D12GraphicsCommandList* cmdList)
+{
+    if (!m_pMappedCBFrameInfo) return;
+    m_pMappedCBFrameInfo->m_fCurrentTime = currentTime;
+    m_pMappedCBFrameInfo->m_fElapsedTime = elapsedTime;
+
+    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = m_pCBFrameInfo->GetGPUVirtualAddress();
+    cmdList->SetGraphicsRootConstantBufferView(0, gpuAddress); // b0에 해당
+}

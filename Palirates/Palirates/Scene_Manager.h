@@ -11,6 +11,7 @@ private:
     std::unordered_map<std::string, std::shared_ptr<CScene>> sceneCache;
     
     std::shared_ptr<Text_UI_Renderer> text_ui_renderer;
+    std::shared_ptr<Texture_UI_Renderer> texture_ui_renderer;
 
     PostProcessBaseShader* MRT_shader = NULL;
 
@@ -49,7 +50,7 @@ public:
 
 
     void Update_UI();
-
+    void Update_Texture_UI();
 
     void Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     
@@ -70,8 +71,15 @@ public:
     void Post_Update_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
     void Render_Scene_UI(UINT nFrame);
+    void Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime);
 
     void ReleaseUploadBuffers();
+
+    std::function<void(const std::string&)> sceneChangeCallback;
+
+    void SetSceneChangeCallback(std::function<void(const std::string&)> fn) {
+        sceneChangeCallback = fn;
+    }
 
     //===============¼­¹ö===============
     //void AddPlayer(int playerId, CPlayer* player);

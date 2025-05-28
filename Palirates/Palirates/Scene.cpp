@@ -291,6 +291,7 @@ ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const
 std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
+std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
 
 
 CScene::CScene()
@@ -549,6 +550,12 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		//pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		//pd3dRootParameters[4].Constants.Num32BitValues = 10; // float4 + float4 + float + bool + padding = 10
+		//pd3dRootParameters[4].Constants.ShaderRegister = 3; // b3
+		//pd3dRootParameters[4].Constants.RegisterSpace = 0;
+		//pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -750,6 +757,99 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 	return(pd3dGraphicsRootSignature);
 }
 
+ID3D12RootSignature* CScene::Create_UI_GraphicsRootSignature(ID3D12Device* pd3dDevice)
+{
+	ID3D12RootSignature* pd3dGraphicsRootSignature = NULL;
+
+	// SRV Descriptor Table: t0 (Base Texture)
+	D3D12_DESCRIPTOR_RANGE descriptorRanges[1] = {};
+	descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptorRanges[0].NumDescriptors = 1;
+	descriptorRanges[0].BaseShaderRegister = 0; // t0
+	descriptorRanges[0].RegisterSpace = 0;
+	descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+	D3D12_ROOT_PARAMETER pd3dRootParameters[3] = {};
+
+	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
+	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	pd3dRootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
+	pd3dRootParameters[1].DescriptorTable.pDescriptorRanges = &descriptorRanges[0];
+	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+	pd3dRootParameters[2].Constants.Num32BitValues = 12;
+	pd3dRootParameters[2].Constants.ShaderRegister = 1; // b1
+	pd3dRootParameters[2].Constants.RegisterSpace = 0;
+	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// Static Samplers
+	D3D12_STATIC_SAMPLER_DESC samplerDescs[2] = {};
+
+	samplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDescs[0].MipLODBias = 0;
+	samplerDescs[0].MaxAnisotropy = 1;
+	samplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	samplerDescs[0].MinLOD = 0;
+	samplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
+	samplerDescs[0].ShaderRegister = 0;
+	samplerDescs[0].RegisterSpace = 0;
+	samplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	samplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	samplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	samplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	samplerDescs[1].MipLODBias = 0;
+	samplerDescs[1].MaxAnisotropy = 1;
+	samplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	samplerDescs[1].MinLOD = 0;
+	samplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
+	samplerDescs[1].ShaderRegister = 1;
+	samplerDescs[1].RegisterSpace = 0;
+	samplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	// Root Signature Description
+	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+	rootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
+	rootSignatureDesc.pParameters = pd3dRootParameters;
+	rootSignatureDesc.NumStaticSamplers = _countof(samplerDescs);
+	rootSignatureDesc.pStaticSamplers = samplerDescs;
+	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+	ID3DBlob* signatureBlob = nullptr;
+	ID3DBlob* errorBlob = nullptr;
+	HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+
+	if (FAILED(hr))
+	{
+		if (errorBlob)
+		{
+			OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+			errorBlob->Release();
+		}
+		return nullptr;
+	}
+
+	hr = pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dGraphicsRootSignature));
+
+	if (FAILED(hr)) {
+		OutputDebugStringA("[UI RS] Root Signature creation failed!\n");
+	}
+
+	if (signatureBlob) signatureBlob->Release();
+
+	return pd3dGraphicsRootSignature;
+}
+
+
 void CScene::BuildDefaultLightsAndMaterials()
 {
 	m_nLights = 5;
@@ -855,6 +955,9 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	if (!m_Plane_GraphicsRootSignature)
 		m_Plane_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_Plane_GraphicsRootSignature(pd3dDevice), com_deleter);
+
+	if (!m_UI_GraphicsRootSignature)
+		m_UI_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_UI_GraphicsRootSignature(pd3dDevice), com_deleter);
 
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
@@ -1071,6 +1174,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -1161,6 +1266,33 @@ void CScene::Update_UI()
 }
 
 #endif
+
+void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
+{
+	texture_ui_manager = new Texture_UI_Manager();
+	if (!texture_ui_manager) return;
+
+	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
+	texture_ui_manager->GetRenderer()->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
+	pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
+	texture_ui_manager->SetShader(std::move(pShader));
+	texture_ui_manager->SetRootSignature(pRootSignature);
+	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
+}
+
+std::vector<TextureBlock*> CScene::Get_Texture_List()
+{
+	if (texture_ui_manager)
+		return texture_ui_manager->GetTextureBlockPtrs(); 
+	else
+		return {};
+}
+
+void CScene::Update_Texture_UI()
+{
+
+}
 
 void CScene::ReleaseObjects()
 {
@@ -1264,7 +1396,56 @@ void CScene::ReleaseUploadBuffers()
 
 bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	return(false);
+	if (nMessageID == WM_LBUTTONDOWN)
+	{
+		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+		if (blocks.empty()) return false;
+
+		int mouseX = LOWORD(lParam);
+		int mouseY = HIWORD(lParam);
+		float fMouseX = static_cast<float>(mouseX);
+		float fMouseY = static_cast<float>(mouseY);
+
+		
+		uint32_t mask = static_cast<uint32_t>(UILayer::Interactable);
+
+		for (auto& block : blocks)
+		{
+			if (block) {
+				if ((static_cast<uint32_t>(block->layer) & mask) != 0) {
+					if (IsPointInRect(block->screenRect, fMouseX, fMouseY))
+					{
+						if (block->onClick) block->onClick();
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
+
+void CScene::UpdateUIHoverState(HWND hWnd)
+{
+	POINT ptMouse;
+	GetCursorPos(&ptMouse);
+	ScreenToClient(hWnd, &ptMouse);
+
+	float fMouseX = static_cast<float>(ptMouse.x);
+	float fMouseY = static_cast<float>(ptMouse.y);
+
+	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+	if (blocks.empty()) return;
+
+	uint32_t mask = static_cast<uint32_t>(UILayer::Interactable);
+
+	for (auto& block : blocks)
+	{
+		if (!block) continue;
+		if ((static_cast<uint32_t>(block->layer) & mask) != 0)
+			block->bHovered = IsPointInRect(block->screenRect, fMouseX, fMouseY);
+	}
 }
 
 bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -1964,6 +2145,8 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	//=====================================================
 	Object_Manager::Reserve_Update();
 
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -2083,6 +2266,48 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		}
 	}
 	return(false);
+}
+
+void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
+{
+	texture_ui_manager = new Texture_UI_Manager();
+	if (!texture_ui_manager) return;
+
+	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
+	texture_ui_manager->GetRenderer()->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
+	pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
+	texture_ui_manager->SetShader(std::move(pShader));
+	texture_ui_manager->SetRootSignature(pRootSignature);
+	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
+
+	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
+	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, BackGround);
+	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh);
+	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
+
+	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downPart.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
+	D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
+	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh, UILayer::Interactable);
+	SbTblock->onClick = [this]() {
+		RequestSceneChange("Game_Board");
+		};
+	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
+
+	CTexture* StartTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	StartTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/StartTxt.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartTxtTexture, 0, 0);
+	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartTxtTexture);
+	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh, UILayer::Interactable);
+	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
 }
 
 //==========================================================================================
@@ -2305,6 +2530,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	Object_Manager::Reserve_Update();
 
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -2461,11 +2688,6 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
 
-}
-
-bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
-{
-	return(false);
 }
 
 bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
