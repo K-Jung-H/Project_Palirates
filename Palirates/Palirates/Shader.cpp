@@ -2059,3 +2059,100 @@ D3D12_DEPTH_STENCIL_DESC CShadowMapShader::CreateDepthStencilState(int nPipeline
 
 	return d3dDepthStencilDesc;
 }
+
+//==================================================================
+
+CTextureToScreenShader::CTextureToScreenShader()
+{
+}
+
+CTextureToScreenShader::~CTextureToScreenShader()
+{
+}
+
+D3D12_INPUT_LAYOUT_DESC CTextureToScreenShader::CreateInputLayout(int nPipelineState)
+{
+	UINT nInputElementDescs = 2;
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
+	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
+	d3dInputLayoutDesc.NumElements = nInputElementDescs;
+
+	return(d3dInputLayoutDesc);
+}
+
+D3D12_DEPTH_STENCIL_DESC CTextureToScreenShader::CreateDepthStencilState(int nPipelineState)
+{
+	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
+	d3dDepthStencilDesc.DepthEnable = FALSE;
+	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_NEVER;
+	d3dDepthStencilDesc.StencilEnable = FALSE;
+	d3dDepthStencilDesc.StencilReadMask = 0xff;
+	d3dDepthStencilDesc.StencilWriteMask = 0xff;
+	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_INCR;
+	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_DECR;
+	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+
+	return(d3dDepthStencilDesc);
+}
+
+D3D12_BLEND_DESC CTextureToScreenShader::CreateBlendState(int nPipelineState)
+{
+	D3D12_BLEND_DESC d3dBlendDesc;
+	ZeroMemory(&d3dBlendDesc, sizeof(D3D12_BLEND_DESC));
+
+	d3dBlendDesc.AlphaToCoverageEnable = FALSE;
+	d3dBlendDesc.IndependentBlendEnable = FALSE;
+
+	D3D12_RENDER_TARGET_BLEND_DESC& rtDesc = d3dBlendDesc.RenderTarget[0];
+	rtDesc.BlendEnable = TRUE;
+	rtDesc.LogicOpEnable = FALSE;
+	rtDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+	rtDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+	rtDesc.BlendOp = D3D12_BLEND_OP_ADD;
+	rtDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+	rtDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+	rtDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+	rtDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+	rtDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+	return d3dBlendDesc;
+}
+
+D3D12_SHADER_BYTECODE CTextureToScreenShader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"UI_Shaders.hlsl", "VS_UI", "vs_5_1", VertexShaderBlob));
+}
+
+D3D12_SHADER_BYTECODE CTextureToScreenShader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"UI_Shaders.hlsl", "PS_UI", "ps_5_1", PixelShaderBlob));
+}
+
+void CTextureToScreenShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0);
+}
+
+void CTextureToScreenShader::ReleaseUploadBuffers()
+{
+}
+
+void CTextureToScreenShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
+{
+	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
+		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
+}

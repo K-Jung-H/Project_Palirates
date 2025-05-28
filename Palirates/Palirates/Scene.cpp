@@ -1,7 +1,3 @@
-﻿//-----------------------------------------------------------------------------
-// File: CScene.cpp
-//-----------------------------------------------------------------------------
-
 #include "stdafx.h"
 #include "Scene.h"
 
@@ -913,29 +909,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 
 	fixed_shadow_camera = std::make_shared<Shadow_Camera>();
-	//fixed_shadow_camera->shadow_active = false;
-	//for (int i = 0; i < m_nLights; ++i)
-	//{
-	//	if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
-	//	{
-	//		std::vector<float> splits(NUM_CASCADES + 1);
-	//		float nearZ = main_Camera->GetNearPlane();
-	//		float farZ = main_Camera->GetFarPlane();
-	//		float lambda = 0.95f; 
-	//		for (int c = 0; c <= NUM_CASCADES; ++c)
-	//		{
-	//			float p = float(c) / NUM_CASCADES;
-	//			float logSplit = nearZ * powf(farZ / nearZ, p);
-	//			float linearSplit = nearZ + (farZ - nearZ) * p;
-	//			splits[c] = lambda * logSplit + (1.0f - lambda) * linearSplit;
-	//		}
 
-	//		fixed_shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
-	//		fixed_shadow_camera->shadow_active = true;
-	//		break;
-
-	//	}
-	//}
 }
 
 void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
