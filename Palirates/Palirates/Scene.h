@@ -151,6 +151,8 @@ public:
 	}
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
+
+	static UINT select_index;
 };
 
 class Test_Scene : public CScene
@@ -165,7 +167,6 @@ class Character_Select_Scene : public CScene
 {
 private:
 	UINT prev_index = -1;
-	UINT select_index = 0;
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);

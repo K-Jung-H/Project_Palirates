@@ -67,6 +67,17 @@ bool Scene_Manager::Set_Active_Scene(std::string_view sceneName)
     return false;
 }
 
+bool Scene_Manager::Find_Scene(std::string_view sceneName)
+{
+    auto it = sceneCache.find(std::string(sceneName));
+    if (it != sceneCache.end())
+    {
+        return true;
+    }
+
+    DebugOutput("[Scene_Manager] ERROR:  Can't find " + std::string(sceneName));
+    return false;
+}
 
 void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {

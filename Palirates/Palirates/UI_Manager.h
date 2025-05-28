@@ -129,7 +129,7 @@ enum class UILayer : uint32_t
     Interactable = 1 << 1,   
     Debug = 1 << 2,   
     HP_bar = 1 << 3,  
-    Tooltip = 1 << 4,   
+    Menu = 1 << 4,   
     Dialogue = 1 << 5,
     All = 0xFFFFFFFF
 };

@@ -11,6 +11,7 @@ std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
+UINT CScene::select_index = 0;
 
 
 CScene::CScene()
@@ -986,11 +987,34 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
+	if (select_index == 0)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == 1)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == 2)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == 3)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == 4)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == 5)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
 	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
 	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(captain_mug, CMscreenRect, mesh);
 	texture_ui_manager->Add_TextureBlock(std::move(CMblock));
+
+	CTexture* replay = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	replay->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/undo-arrow.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
+	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, replay);
+	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable);
+	REblock->onClick = [this]() {
+		RequestSceneChange("Character_Select");
+		};
+	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(REblock));
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1480,7 +1504,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	//Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 
 	if (m_pPlayer->GetTrailOn())
@@ -1848,7 +1872,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	//Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 }
 
 
@@ -1899,8 +1923,18 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		case 'C':
 			UpdatePlayerSelection(select_index + 1);
 			break;
+		case VK_CONTROL: {
+			static bool currentActive = false;
 
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Menu, currentActive);
 
+				currentActive = !currentActive;
+			}
+		}
+					   break;
 		default:
 			break;
 		}
@@ -1925,14 +1959,14 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.3f, BackGround);
-	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh);
+	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Menu);
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
 	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downPart.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
 	D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
-	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh, UILayer::Interactable);
+	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	SbTblock->onClick = [this]() {
 		RequestSceneChange("Game_Board");
 		};
@@ -1944,7 +1978,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	StartTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/StartTxt.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartTxtTexture, 0, 0);
 	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.49f, 0.18f, StartTxtTexture);
-	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh, UILayer::Interactable);
+	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	STTblock->hitboxRect = SbTscreenRect;
 	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -2235,7 +2269,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 #endif
 
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	//Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -2439,7 +2473,11 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
 	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
 	Noblock->onClick = [this]() {
-		//RequestSceneChange("Game_Board");
+		/*std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+		if (!blocks.empty())
+		{
+			Set_UI_Layer_Active(blocks, UILayer::Dialogue, false);
+		}*/
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
