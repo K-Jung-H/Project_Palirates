@@ -28,7 +28,6 @@ public:
     std::shared_ptr<CScene>Load_Scene(std::string_view sceneName);
 
     bool Set_Active_Scene(std::string_view sceneName);
-    bool Find_Scene(std::string_view sceneName);
     std::shared_ptr<CScene> Get_Active_Scene() { return activeScene; }
     CScene* Get_Active_Scene_Ptr() { return activeScene.get(); }
 
