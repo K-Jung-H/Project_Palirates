@@ -379,7 +379,7 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -543,7 +543,7 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -668,7 +668,7 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -1619,65 +1619,9 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		}		break;
 
-		case 'V':
+
+		case VK_CONTROL: 
 		{
-			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
-			if (it && it->size() > 5) {
-				auto multiPlayerObj = std::dynamic_pointer_cast<CMultiPlayerObject>((*it)[5]);
-				if (multiPlayerObj) {
-					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
-					multiPlayerObj->SetStateElapsedTime(0.0f);
-				}
-			}
-
-			if (it && it->size() > 6) {
-				auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
-				if (multiPlayerObj) {
-					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
-					multiPlayerObj->SetStateElapsedTime(0.0f);
-				}
-			}*/
-
-		}		break;
-		case 'B': 
-		{
-			//auto it = obj_manager->Get_Object_List(Object_Type::skinned);
-			//if (it && it->size() > 6) {
-			//	auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
-			//	if (multiPlayerObj) {
-			//		//multiPlayerObj->SetCamera(m_pPlayer->GetCamera());
-			//		//m_pPlayer->DelCamera();
-			//	/*	std::shared_ptr<CPlayer> tempShared = multiPlayerObj;  
-			//		multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>(std::shared_ptr<CPlayer>(m_pPlayer));
-			//		m_pPlayer = tempShared.get();*/
-
-			//		std::weak_ptr<CTerrainPlayer> weakMultiPlayer = multiPlayerObj;  // weak_ptr로 참조 유지
-			//		std::shared_ptr<CPlayer> tempShared = multiPlayerObj;  // 기존 shared_ptr을 유지
-			//		multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>(tempShared); // 안전한 캐스팅
-			//		m_pPlayer = tempShared.get(); // raw pointer 할당
-
-			//		if (auto locked = weakMultiPlayer.lock()) {
-			//			multiPlayerObj = locked;  // 원본 shared_ptr을 다시 참조
-			//		}
-			//	}
-			//}
-		}		break;
-		case '+':
-		{
-			/*CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
-			string obj_name_7 = "test_palyer7";
-
-
-			std::string_view name_view = obj_name_7;
-
-			std::shared_ptr<CMultiPlayerObject> humanObject_7 = std::make_shared<CMultiPlayerObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel6, 12);
-			humanObject_7->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 10.0f), 10.0f);
-			humanObject_7->Set_Name(obj_name_7);
-			humanObject_7->test_num = 7;
-			obj_manager->Add_Object(humanObject_7, Object_Type::skinned);*/
-
-		}		break;
-		case VK_CONTROL: {
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty()) {
 				uint32_t targetMask = static_cast<uint32_t>(UILayer::HP_bar);
@@ -1896,7 +1840,11 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		test_bleeding->SetPosition(p_pos);
 		test_bleeding->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, 1.0f));
 
+
+		m_pPlayer->Set_Color_Blending(XMFLOAT3(1.0f, 0.0f, 0.0f), 1.0f);
 	}
+
+	m_pPlayer->Update_Color_Blending(-0.01f);
 }
 
 void CScene::After_Update_Objects()
