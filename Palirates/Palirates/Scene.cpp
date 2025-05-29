@@ -1265,6 +1265,15 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
+	CTexture* BDSCR = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	BDSCR->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/bloodscreen.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BDSCR, 0, 0);
+	D2D1_RECT_F BDSCRscreenRect = MakeNormalizedRect(0.5f, 0.5f, 1.0f, BDSCR);
+	std::unique_ptr<TextureBlock> BDSCRblock = std::make_unique<TextureBlock>(BDSCR, BDSCRscreenRect, mesh, UILayer::screen);
+	BDSCRblock->ui_type = 2;
+	BDSCRblock->hp = 1.5f;
+	texture_ui_manager->Add_TextureBlock(std::move(BDSCRblock));
+
 	CTexture* HpBack = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Empty.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpBack, 0, 0);
@@ -1308,6 +1317,17 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
+}
+
+void CScene::Bind_Player_UI_Callback()
+{
+	if (m_pPlayer && m_pPlayer->GetStateMachine())
+	{
+		m_pPlayer->GetStateMachine()->onGetHitEffect = [this](bool bEnable) {
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
+			};
+	}
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1599,8 +1619,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -1694,6 +1714,35 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			}
 		}
 			break;
+		case 'J': {
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty()) {
+				uint32_t targetMask = static_cast<uint32_t>(UILayer::screen);
+				for (auto& block : blocks)
+				{
+					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
+					{
+						block->start_time = currentTime;
+						block->bActive = true;
+					}
+				}
+			}
+		}
+					   break;
+		case 'K': {
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty()) {
+				uint32_t targetMask = static_cast<uint32_t>(UILayer::screen);
+				for (auto& block : blocks)
+				{
+					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
+					{
+						block->bActive = false;
+					}
+				}
+			}
+		}
+				break;
 		default:
 			break;
 		}
@@ -2047,6 +2096,7 @@ void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer tar
 		if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
 		{
 			block->bActive = bEnable;
+			block->start_time = currentTime;
 		}
 	}
 }
@@ -2379,6 +2429,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
+
 }
 
 //==========================================================================================

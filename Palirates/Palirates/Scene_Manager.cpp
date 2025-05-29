@@ -379,6 +379,7 @@ void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, 
 {
     if (activeScene) {
         if (activeScene->texture_ui_manager) {
+            activeScene->currentTime = currentTime;
             activeScene->texture_ui_manager->RenderAll(cmdList, currentTime, elapsedTime);
         }
     }

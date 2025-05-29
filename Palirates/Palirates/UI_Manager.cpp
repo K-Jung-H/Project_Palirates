@@ -331,7 +331,8 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
             XMFLOAT4 hoverGlowColor;
             float isHovered;
             float hp;
-            float padding[2];
+            float ui_type;
+            float start_time;
         };
 
         UIConstants ui = {};
@@ -339,6 +340,8 @@ void Texture_UI_Renderer::Render_UI_Textures(ID3D12GraphicsCommandList* cmdList,
         ui.hoverGlowColor = block->hoverGlowColor;
         ui.isHovered = block->bHovered ? 1.0f : 0.0f;
         ui.hp = block->hp;
+        ui.ui_type = block->ui_type;
+        ui.start_time = block->start_time;
 
         if (ui.isHovered == 1.0f) {
             int a = 1;
