@@ -250,6 +250,7 @@ public:
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 
 	static UINT select_index;
+	float currentTime{ 0.0f };
 };
 
 class Test_Scene : public CScene

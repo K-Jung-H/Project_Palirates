@@ -15,7 +15,8 @@ cbuffer UIConstants : register(b1)
     float4 g_hoverGlowColor;
     float g_isHovered;
     float g_hp;
-    float2 padding;
+    float ui_type;
+    float start_time;
 };
 
 
@@ -60,8 +61,6 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 
     float4 texColor = gtxtAlbedoTexture.Sample(gssClamp, uv);
     
-    if (uv.x > g_hp)
-        discard;
     
     float4 result = texColor;
 
@@ -75,5 +74,25 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
         result *= g_tintColor;
     }
 
+    int type = (int) (ui_type + 0.5f);
+    if (type == 1)
+    {
+        if (uv.x > g_hp)
+            discard;
+    }
+    else if (type == 2)
+    {
+        float elapsed = gfCurrentTime - start_time;
+
+        // fadeSpeed = 전체 지속 시간에 따라 감쇠 조절
+        float fadeSpeed = 3.0f / g_hp;
+        float alpha = exp(-fadeSpeed * elapsed);
+
+        if (elapsed < 0.0f || elapsed > g_hp || alpha <= 0.01f)
+            discard;
+
+        result.a *= alpha;
+    }
+    
     return result;
 }

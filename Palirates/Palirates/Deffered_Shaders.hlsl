@@ -216,7 +216,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     }
 
     // ======= 조명 계산 =======
-    float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
+    float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, 1.0f).rgb;
 
     // FOG 처리
     float2 baseUV = world_position.xz - camera_pos.xz;
