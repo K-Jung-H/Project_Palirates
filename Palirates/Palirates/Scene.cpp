@@ -1309,6 +1309,17 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
 }
 
+void CScene::Bind_Player_UI_Callback()
+{
+	if (m_pPlayer && m_pPlayer->GetStateMachine())
+	{
+		m_pPlayer->GetStateMachine()->onGetHitEffect = [this](bool bEnable) {
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
+			};
+	}
+}
+
 std::vector<TextureBlock*> CScene::Get_Texture_List()
 {
 	if (texture_ui_manager)
@@ -1598,8 +1609,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -2075,6 +2086,7 @@ void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer tar
 		if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
 		{
 			block->bActive = bEnable;
+			block->start_time = currentTime;
 		}
 	}
 }

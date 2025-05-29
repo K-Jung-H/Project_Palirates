@@ -239,6 +239,7 @@ public:
 
 	Texture_UI_Manager* texture_ui_manager = NULL;
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
+	virtual void Bind_Player_UI_Callback();
 	std::vector<TextureBlock*> Get_Texture_List();
 	virtual void Update_Texture_UI();
 

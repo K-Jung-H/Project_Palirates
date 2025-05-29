@@ -716,6 +716,7 @@ void CGameFramework::Build_Scenes()
 				in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
 				scene_manager->Set_Scene_Player("In_Stage", pPlayer);
 				scene_manager->Set_Active_Scene(nextSceneName);
+				scene_manager->Get_Active_Scene()->Bind_Player_UI_Callback();
 				m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
 				//scene_manager->Set_Active_Scene(nextSceneName);
