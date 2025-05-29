@@ -1002,7 +1002,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 
 void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 {
-//	Animate_Objects(Object_Type::skinned, fTimeElapsed);
+	Animate_Objects(Object_Type::skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
 	Animate_Objects(Object_Type::trail, fTimeElapsed);
@@ -1038,7 +1038,6 @@ void Object_Manager::Check_Culling_All(CCamera* pCamera)
 {
 }
 
-
 void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	switch (type)
@@ -1073,8 +1072,8 @@ void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsComma
 		{
 			if (instance_info.rendering_num == 0 || !instance_info.obj_mesh)
 				continue;
-			
-			instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
+			int max_instance_num = instance_info.fixed_obj_list.size();
+			instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, max_instance_num);
 
 		}
 	}

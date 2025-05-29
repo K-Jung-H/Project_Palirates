@@ -132,8 +132,8 @@ public:
 
 class CScene
 {
-private:
-	std::shared_ptr<Shadow_Camera> fixed_shadow_camera;
+protected:
+	std::shared_ptr<Shadow_Camera> shadow_camera;
 
 public:
     CScene();

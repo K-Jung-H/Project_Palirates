@@ -523,7 +523,6 @@ void CStandardShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList
 
 }
 
-
 CStandard_Instance_Shader::CStandard_Instance_Shader()
 {
 }
