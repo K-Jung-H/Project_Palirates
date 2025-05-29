@@ -132,6 +132,9 @@ public:
 
 class CScene
 {
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 protected:
 	std::shared_ptr<Shadow_Camera> shadow_camera;
 
@@ -154,7 +157,6 @@ public:
 
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 
 	void ReleaseObjects();
 
@@ -183,6 +185,8 @@ public:
 
 
 	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual Change_Signal Get_Change_Signal();
 
 	void ReleaseUploadBuffers();
 
@@ -228,7 +232,6 @@ public:
 	bool test_button = false;
 	bool particle_test_button = false;
 
-	float test_value = 0.5f;
 #ifdef WRITE_TEXT_UI
 	Text_UI_Manager* text_ui_manager = NULL;
 	void Build_Text_UI(Text_UI_Renderer* text_ui_renderer_ptr);
@@ -241,10 +244,6 @@ public:
 	std::vector<TextureBlock*> Get_Texture_List();
 	virtual void Update_Texture_UI();
 
-	std::function<void(const std::string&)> requestSceneChange;
-	void RequestSceneChange(const std::string& sceneName) {
-		if (requestSceneChange) requestSceneChange(sceneName);
-	}
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 
@@ -253,7 +252,10 @@ public:
 
 class Test_Scene : public CScene
 {
+public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+private:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -261,10 +263,12 @@ class Test_Scene : public CScene
 
 class Character_Select_Scene : public CScene
 {
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 private:
 	UINT prev_index = -1;
 	virtual void BuildDefaultLightsAndMaterials();
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -274,10 +278,16 @@ private:
 	void UpdatePlayerSelection(int new_index);
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
+
+	virtual Change_Signal Get_Change_Signal();
+
 };
 
 class Board_Scene : public CScene
 {
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 private:
 	std::shared_ptr<Boat_Object> pirate_ship;
 	std::shared_ptr<Wave_Object> wave_plane;
@@ -286,10 +296,10 @@ private:
 
 	string camera_position = "";
 	bool focus_button = false;
-public:
+
+private:
 	virtual void BuildDefaultLightsAndMaterials();
 
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -302,12 +312,17 @@ public:
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
+
+	virtual Change_Signal Get_Change_Signal();
+
 };
 
 class Weapon_Select_Scene : public CScene
 {
+public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+private:
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam) {}
 };

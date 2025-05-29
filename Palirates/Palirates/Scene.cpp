@@ -1302,9 +1302,9 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
 	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, replay);
 	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable);
-	REblock->onClick = [this]() {
-		RequestSceneChange("Character_Select");
-		};
+	//REblock->onClick = [this]() {
+	//	RequestSceneChange("Character_Select");
+	//	};
 	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
@@ -1980,10 +1980,18 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 }
 
-
 void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Post_Update_All();
+}
+
+Change_Signal CScene::Get_Change_Signal()
+{
+	Change_Signal c_signal;
+	c_signal.scene_name = "in_game";
+	c_signal.type = etc;
+
+	return c_signal;
 }
 
 void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable)
@@ -2038,6 +2046,7 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 }
+
 
 //==========================================================================================
 
@@ -2311,9 +2320,9 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
 	D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
 	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	SbTblock->onClick = [this]() {
-		RequestSceneChange("Game_Board");
-		};
+	//SbTblock->onClick = [this]() {
+	//	RequestSceneChange("Game_Board");
+	//	};
 	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
@@ -2328,6 +2337,16 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
 }
+
+Change_Signal Character_Select_Scene::Get_Change_Signal()
+{
+	Change_Signal c_signal;
+	c_signal.scene_name = "in_game";
+	c_signal.type = etc;
+
+	return c_signal;
+}
+
 
 //==========================================================================================
 
@@ -2819,9 +2838,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
 	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
 	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
-	Yesblock->onClick = [this]() {
-		RequestSceneChange("In_Stage");
-		};
+
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
@@ -2842,6 +2859,18 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
 }
+
+
+Change_Signal Board_Scene::Get_Change_Signal()
+{
+	Change_Signal c_signal;
+	c_signal.scene_name = "in_game";
+	c_signal.type = Stage_1;
+
+	return c_signal;
+}
+
+
 //==========================================================================================
 
 void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
