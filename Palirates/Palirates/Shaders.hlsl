@@ -14,16 +14,22 @@ struct Material_Info
     uint light_material_ID;
     uint Outline_Color_ID;
     uint Blur_Mask;
-    uint padding0;
+    uint padding;
 };
 
 cbuffer cbGameObjectInfo : register(b1)
 {
-    matrix gmtxGameObject : packoffset(c0); // 16개 (c0 ~ c3)
-    Material_Info material_info : packoffset(c4); // 8개 (c4 ~ c5)
-    float3 gObjectVelocity : packoffset(c6); // 3개 (c6.xyz)
-    uint gnTexturesMask : packoffset(c6.w); // 1개 (c6.w)
+    matrix gmtxGameObject : packoffset(c0); // 0~15
+    
+    Material_Info material_info : packoffset(c4); // 16~23
+    
+    uint gnTexturesMask : packoffset(c6.x); // 24
+    float3 gObjectVelocity : packoffset(c6.y); // 25~27
+    
+    float blending_value : packoffset(c7.x); // 28
+    float3 blending_color : packoffset(c7.y); // 29~31
 };
+
 
 cbuffer cbCameraInfo : register(b2)
 {
@@ -189,7 +195,15 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
         normalW = normalize(input.normalW);
     }
     
+    if (blending_value > 0.0f)
+    {
+        float3 baseColor = blending_color;
+        float3 finalColor = baseColor;
+
+        cColor.xyz = lerp(cColor.xyz, baseColor, blending_value);
+    }
     
+
     output.Albedo_Color.xyz = cColor.xyz;
     output.Albedo_Color.a = (float) (material_info.light_material_ID) / 255.0f;
     
@@ -286,7 +300,7 @@ struct VS_SKINNED_STANDARD_INPUT
 };
 
 
-// 픽셀 좌표계 기반
+
 
 VS_STANDARD_OUTPUT VS_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input)
 {

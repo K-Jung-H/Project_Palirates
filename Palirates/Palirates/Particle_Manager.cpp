@@ -503,6 +503,7 @@ D3D12_SHADER_BYTECODE Interval_ParticleShader::CreateComputeShader(ID3DBlob** pp
 
 //===================================================================
  bool Particle_Manager::is_cs_shader_compiled = false;
+ std::unordered_map<Particle_Type, ParticleShader*>Particle_Manager::particle_shader_map;
 
 Particle_Manager::Particle_Manager()
 {

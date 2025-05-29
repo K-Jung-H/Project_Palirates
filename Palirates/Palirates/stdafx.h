@@ -167,6 +167,21 @@ enum Control_BufferType
 	BUFFER_COUNTER_RESET = 2
 };
 
+enum Scene_Type
+{
+	Lobby,
+	Board,
+	Stage_1,
+	Stage_2,
+	etc
+};
+
+struct Change_Signal
+{
+	Scene_Type type;
+	std::string scene_name;
+};
+
 struct GPU_OBB
 {
 	XMFLOAT3 Center;

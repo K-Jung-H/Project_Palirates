@@ -1158,6 +1158,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 			if (!instance_info.fixed_obj_list.empty())
 			{
 				const auto& first_obj = instance_info.fixed_obj_list.front();
+				first_obj->UpdateShaderVariables(pd3dCommandList);
 				if (!first_obj->Material_list.empty() && first_obj->Material_list[0])
 					first_obj->Material_list[0]->UpdateShaderVariable(pd3dCommandList);
 			}

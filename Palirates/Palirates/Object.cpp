@@ -617,7 +617,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.Blur_Mask = Blur_Mask_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
@@ -1970,6 +1970,33 @@ void CGameObject::SetBlurMask(bool value)
 		m_pChild->SetBlurMask(value);
 }
 
+void CGameObject::Set_Color_Blending(XMFLOAT3& blending_color, float blending_value)
+{
+	blending_value = std::clamp(blending_value, 0.0f, 1.0f);
+	
+	Blending_value = blending_value;
+	Blending_color = blending_color;
+
+	if (m_pSibling)
+		m_pSibling->Set_Color_Blending(blending_color, blending_value);
+
+	if (m_pChild)
+		m_pChild->Set_Color_Blending(blending_color, blending_value);
+}
+
+void CGameObject::Update_Color_Blending(float update_bleeding_value)
+{
+	Blending_value += update_bleeding_value;
+	Blending_value = std::clamp(Blending_value, 0.0f, 1.0f);
+
+	if (m_pSibling)
+		m_pSibling->Update_Color_Blending(update_bleeding_value);
+
+	if (m_pChild)
+		m_pChild->Update_Color_Blending(update_bleeding_value);
+}
+
+
 void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
 {
 	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
@@ -2380,6 +2407,8 @@ void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphics
 
 void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &Blending_value, 28);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &Blending_color, 29);
 }
 
 void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* pxmf4x4World)
@@ -2395,7 +2424,10 @@ void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandLis
 		now_position.y - previous_position.y,
 		now_position.z - previous_position.z
 	};
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &velocity, 24);      // 24~26
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &velocity, 25);      // 25~27
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &Blending_value, 28); 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &Blending_color, 29); 
 
 }
 
@@ -3429,6 +3461,7 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 		}
 	}
 }
+
 
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;

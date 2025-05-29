@@ -223,7 +223,7 @@ struct Material_GPU_Packet
     UINT light_material_ID;
     UINT Outline_Color_ID;
     UINT Blur_Mask;
-    UINT padding0;
+    UINT  padding0;
 };
 
 class CMaterial
@@ -572,6 +572,9 @@ public:
     float    m_fInitialUpSpeed = 10.0f;
     float    m_fGravity = 9.8f;
 
+    XMFLOAT3 Blending_color{};
+    float   Blending_value = 0.0f;
+    
     void SetMoveSpeed(float s) { m_fMoveSpeed = s; }
     void SetRotationSpeed2(float s) { m_fRotationSpeed = s; }
     void SetInitialUpSpeed(float s) { m_fInitialUpSpeed = s; }
@@ -644,6 +647,8 @@ public:
     void SetMaterial(int nMaterial, CMaterial* pMaterial);
     void SetOutlineColor(int id);
     void SetBlurMask(bool value);
+    void Set_Color_Blending(XMFLOAT3& color = XMFLOAT3(1.0f, 1.0f, 1.0), float blending_value = 1.0f);
+    void Update_Color_Blending(float update_bleeding_value = 1.0f);
 
 
     void Set_Child(std::shared_ptr<CGameObject> pChild);
@@ -787,6 +792,8 @@ public:
     int m_nPlayerId = -1;
     void SetID(int id) { m_nPlayerId = id; }
     int GetID() const { return m_nPlayerId; }
+
+
 };
 
 //==================================================================================
