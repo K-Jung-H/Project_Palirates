@@ -3,7 +3,6 @@
 
 //=============================================================================================
 
-shared_ptr<CShader> Shadow_Camera::shadow_map_shader = NULL;
 
 
 Shadow_Camera::Shadow_Camera() : CCamera()
@@ -21,32 +20,43 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 {
 	std::vector<XMFLOAT3> corners(8);
 
-	XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
-	XMMATRIX view = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
-	XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
+	// 1. Roll이 제거된 View 행렬 만들기 (up=(0,1,0) 강제)
+	XMFLOAT3 eye = mainCamera->GetPosition();
+	XMFLOAT3 lookVec = mainCamera->GetLookVector();
+	XMVECTOR eyeV = XMLoadFloat3(&eye);
+	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec); // LookAt 좌표
+	XMVECTOR upV = XMVectorSet(0, 1, 0, 0);
+	XMMATRIX stableView = XMMatrixLookAtLH(eyeV, atV, upV);
 
+	// 2. Projection 행렬은 그대로 사용
+	XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	XMMATRIX invViewProj = XMMatrixInverse(nullptr, stableView * proj);
+
+	// 3. NDC 코너 정의 (-1~+1, z: 0=near, 1=far)
 	float ndc[8][3] = {
 		{-1, -1, 0}, { 1, -1, 0}, { 1,  1, 0}, {-1,  1, 0},
 		{-1, -1, 1}, { 1, -1, 1}, { 1,  1, 1}, {-1,  1, 1}
 	};
 
+	// 4. NDC → World 변환
 	for (int i = 0; i < 8; ++i)
 	{
-		float z = (i < 4) ? nearZ : farZ;
 		float ndcZ = (i < 4) ? 0.0f : 1.0f;
 		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndcZ, 1.0f);
 		pt = XMVector4Transform(pt, invViewProj);
-		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt));
-		XMVECTOR camPos = XMLoadFloat3(&mainCamera->GetPosition());
-		XMVECTOR dir = XMVector3Normalize(pt - camPos);
-		XMVECTOR cornerWS = camPos + dir * z;
+		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt)); // 투영 분할
+
+		// 실제 거리 보정: 카메라에서 방향벡터 * near/farZ
+		XMVECTOR dir = XMVector3Normalize(pt - eyeV);
+		float z = (i < 4) ? nearZ : farZ;
+		XMVECTOR cornerWS = eyeV + dir * z;
+
 		XMFLOAT3 outCorner;
 		XMStoreFloat3(&outCorner, cornerWS);
 		corners[i] = outCorner;
 	}
 	return corners;
 }
-
 
 void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std::vector<float>& splitDepths, CCamera* mainCamera)
 {
@@ -101,7 +111,7 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 			max.z = std::max(max.z, p.z);
 		}
 
-		const float overlapRatio = 0.05f; // 
+		const float overlapRatio = 0.5f; // 
 		float expandX = (max.x - min.x) * overlapRatio * 0.5f;
 		float expandY = (max.y - min.y) * overlapRatio * 0.5f;
 
@@ -133,6 +143,8 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 		XMVECTOR snappedCenterWS = XMVector3TransformCoord(frustumCenterLS, lightViewInv);
 		lightPosV = snappedCenterWS + XMLoadFloat3(&light_direction) * -1000.0f;
 		lightView = XMMatrixLookAtLH(lightPosV, snappedCenterWS, XMVectorSet(0, 1, 0, 0));
+
+
 
 		// 7. Final orthographic projection
 		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, min.z, max.z);
@@ -908,7 +920,7 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
 
-	fixed_shadow_camera = std::make_shared<Shadow_Camera>();
+	shadow_camera = std::make_shared<Shadow_Camera>();
 
 }
 
@@ -957,10 +969,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
-	Shadow_Camera::shadow_map_shader = std::make_shared<CShadowMapShader>();
-	Shadow_Camera::shadow_map_shader->CreateShader(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-	Shadow_Camera::shadow_map_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	fixed_shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	if(shadow_camera)
+		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 
 	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
@@ -1398,8 +1408,8 @@ void CScene::UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dComma
 
 void CScene::UpdateShaderVariables_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if(fixed_shadow_camera)
-		fixed_shadow_camera->UpdateShaderVariables(pd3dCommandList);
+	if(shadow_camera)
+		shadow_camera->UpdateShaderVariables(pd3dCommandList);
 
 }
 
@@ -1952,7 +1962,7 @@ void CScene::After_Update_Objects()
 
 void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
 {
-	if (!fixed_shadow_camera || fixed_shadow_camera->shadow_active == false)
+	if (!shadow_camera || shadow_camera->shadow_active == false)
 		return;
 
 	for (int i = 0; i < m_nLights; ++i)
@@ -1963,10 +1973,10 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 			float farZ = main_Camera->GetFarPlane();
 			int numCascades = NUM_CASCADES;
 			float lambda = 0.7f;
-			std::vector<float> splits = fixed_shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
 
-			fixed_shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
-			fixed_shadow_camera->shadow_active = true;
+			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
+			shadow_camera->shadow_active = true;
 			break;
 		}
 	}
@@ -1975,17 +1985,17 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
-	fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV(n);
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
 
 	pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 	pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-	fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
+	shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
 
-	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
-//	m_pPlayer->Render_Shadow(pd3dCommandList, fixed_shadow_camera.get()); - 플레이어한테 메시가 없음
+	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, shadow_camera.get());
+	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get()); 
 
 
 	/* {
@@ -2469,13 +2479,17 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+	//shadow_camera = std::make_shared<Shadow_Camera>();
+
 }
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
-	m_pLights[8].m_bEnable = true;
+	if (shadow_camera)
+		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
@@ -2747,8 +2761,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		
 		auto pCamera = m_pPlayer->GetCamera();
 		pCamera->SetPosition(Fixed_Position);
-		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 0.0f, 0.0f), UpVector); 
-		pCamera->RegenerateViewMatrix();
+		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
+
 		}
 
 }
