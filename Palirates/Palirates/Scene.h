@@ -245,6 +245,10 @@ public:
 	void RequestSceneChange(const std::string& sceneName) {
 		if (requestSceneChange) requestSceneChange(sceneName);
 	}
+
+	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
+
+	static UINT select_index;
 };
 
 class Test_Scene : public CScene
@@ -259,7 +263,6 @@ class Character_Select_Scene : public CScene
 {
 private:
 	UINT prev_index = -1;
-	UINT select_index = 0;
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
@@ -298,7 +301,7 @@ public:
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-	//virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature) {};
+	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 };
 
 class Weapon_Select_Scene : public CScene
