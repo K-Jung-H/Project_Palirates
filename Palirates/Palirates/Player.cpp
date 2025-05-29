@@ -599,6 +599,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
+
 	}
 
 	if (On_Ground)
@@ -658,6 +659,10 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 	GetStateMachine()->SetState(syncData.currentState);
 	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
+	{
+		return;
+	}
 	for (int i = 0; i < n_Animation; i++) {
 		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
 		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];

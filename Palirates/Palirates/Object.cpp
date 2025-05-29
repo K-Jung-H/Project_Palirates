@@ -3321,7 +3321,10 @@ ServerAnimationSyncData CGameObject::MakeSyncData()
 
 void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
-
+	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
+	{
+		return;
+	}
 	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
 }
@@ -4450,6 +4453,28 @@ void CMonsterObject::Animate(float fTimeElapsed)
 		child_ptr->Animate(fTimeElapsed);
 
 	GetStateMachine()->update(fTimeElapsed);
+}
+
+void CMonsterObject::ApplySyncData(const ServerAnimationSyncData& syncData)
+{
+	CGameObject::ApplySyncData(syncData);
+	SetPosition(syncData.position);
+	GetStateMachine()->SetState(syncData.currentState);
+	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
+
+	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
+	{
+		return;
+	}
+
+	if (GetSkinnedAnimationController())
+	{
+		for (int i = 0; i < n_Animation; i++) {
+			GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
+			GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+		}
+	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
+	}
 }
 
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {

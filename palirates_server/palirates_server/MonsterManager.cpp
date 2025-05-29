@@ -19,7 +19,7 @@ void MonsterManager::UpdateAI(float deltaTime)
             m.stateElapsedTime = 0.0f;
             m.stateChangeInterval = 1.0f + (id % 5);
         }
-
+        
         std::fill(m.trackWeights.begin(), m.trackWeights.end(), 0.0f);
 
         if (m.state == 0)      m.trackWeights[0] = 1.0f; // Idle

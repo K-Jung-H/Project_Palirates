@@ -1486,37 +1486,52 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				}
 			}
 		}
+
+
+		int type = std::stoi(tokens[10]);
+
+		// 몬스터 찾기
 		auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-		for (auto& obj : *monsterList)
-		{
-			if (obj && obj->GetID() == monsterId)
-			{
-				obj->SetPosition(pos);
-				obj->SetLookDirection(look);
-
-				obj->ApplySyncData(syncData); // 애니메이션 트랙 등 추가 동기화
-				break;
-			}
-		}
-
 		auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
 			return obj && obj->GetID() == monsterId;
 			});
 
-		if (found == monsterList->end()) {
-			std::shared_ptr<CFishManObject> pMonster = std::make_shared<CFishManObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+		if (found == monsterList->end())
+		{
+			std::shared_ptr<CGameObject> pMonster;
+
+			switch (static_cast<Monster_Type>(type))
+			{
+			case Monster_Type::Fishman:
+				pMonster = std::make_shared<CFishManObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+				break;
+			case Monster_Type::Anubis:
+				pMonster = std::make_shared<CAnubisObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+				break;
+			case Monster_Type::Dragon:
+				pMonster = std::make_shared<CDragonObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+				break;
+			default:
+				return;
+			}
 
 			pMonster->SetID(monsterId);
 			pMonster->SetPosition(pos);
 			pMonster->SetLookDirection(look);
-			pMonster->Object_type = OBJECT_TPYE_MONSTER;
+			pMonster->Object_type = OBJECT_TPYE_MONSTER_SERVER;
 			pMonster->Set_Child(pMonster->m_pRootModel);
 			pMonster->Set_Active(true);
-			pMonster->SetScale(10.0f, 10.0f, 10.0f);
-			pMonster->Set_Name("Fishman_" + std::to_string(monsterId));
+			pMonster->SetScale(1.0f, 1.0f, 1.0f);
+			pMonster->Set_Name("Monster_" + std::to_string(monsterId));
 
 			scene_manager->Get_Active_Scene()->obj_manager->Add_Object(pMonster, Object_Type::skinned);
 			pMonster->ApplySyncData(syncData);
+		}
+		else
+		{
+			auto monster = std::dynamic_pointer_cast<CMonsterObject>(*found);
+			if (monster)
+				monster->ApplySyncData(syncData);
 		}
 
 	}
