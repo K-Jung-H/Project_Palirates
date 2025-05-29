@@ -5,10 +5,10 @@
 
 enum class Monster_Type : int
 {
-    jJol,
-    midBoss,
-    Boss,
-    ETC
+    ETC,
+    Fishman,
+    Anubis,
+    Dragon
 };
 
 

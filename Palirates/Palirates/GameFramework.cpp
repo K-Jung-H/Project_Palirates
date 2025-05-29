@@ -1499,6 +1499,26 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 
+		auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
+			return obj && obj->GetID() == monsterId;
+			});
+
+		if (found == monsterList->end()) {
+			std::shared_ptr<CFishManObject> pMonster = std::make_shared<CFishManObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+
+			pMonster->SetID(monsterId);
+			pMonster->SetPosition(pos);
+			pMonster->SetLookDirection(look);
+			pMonster->Object_type = OBJECT_TPYE_MONSTER;
+			pMonster->Set_Child(pMonster->m_pRootModel);
+			pMonster->Set_Active(true);
+			pMonster->SetScale(10.0f, 10.0f, 10.0f);
+			pMonster->Set_Name("Fishman_" + std::to_string(monsterId));
+
+			scene_manager->Get_Active_Scene()->obj_manager->Add_Object(pMonster, Object_Type::skinned);
+			pMonster->ApplySyncData(syncData);
+		}
+
 	}
 	
 }
@@ -1572,7 +1592,7 @@ void CGameFramework::Disconnect()
 
 	isRunning = false;
 
-	PlayerLeave(ClientNum);
+	//PlayerLeave(ClientNum);
 
 	if (networkThread.joinable())
 		networkThread.join();
