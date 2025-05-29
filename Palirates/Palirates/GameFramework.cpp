@@ -1190,6 +1190,7 @@ void CGameFramework::FrameAdvance()
 
 		if (m_pPlayer)
 			m_pPlayer->Render(Active_CommandList, scene_camera.get());
+		
 
 		{
 			std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);

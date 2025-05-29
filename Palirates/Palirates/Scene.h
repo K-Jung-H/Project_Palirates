@@ -95,8 +95,8 @@ struct alignas(16) LightCamera_Info
 class Shadow_Camera : public CCamera
 {
 public:
-	static std::shared_ptr<CShader> shadow_map_shader;
 	bool shadow_active = true;
+
 private:
 	shared_ptr<CMaterial> shadow_map;
 	ID3D12Resource* m_pd3dcb_LightCamera = NULL;
@@ -132,8 +132,8 @@ public:
 
 class CScene
 {
-private:
-	std::shared_ptr<Shadow_Camera> fixed_shadow_camera;
+protected:
+	std::shared_ptr<Shadow_Camera> shadow_camera;
 
 public:
     CScene();
@@ -159,7 +159,6 @@ public:
 	void ReleaseObjects();
 
 	
-	ID3D12RootSignature* Create_ShadowMap_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature *Create_MRT_GraphicsRootSignature(ID3D12Device *pd3dDevice);
 	ID3D12RootSignature* Create_Transparent_GraphicsRootSignature(ID3D12Device* pd3dDevice);
 	ID3D12RootSignature* Create_Plane_GraphicsRootSignature(ID3D12Device* pd3dDevice);
