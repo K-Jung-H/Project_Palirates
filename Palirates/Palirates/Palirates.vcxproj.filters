@@ -172,5 +172,6 @@
     <FxCompile Include="Wave.hlsl" />
     <FxCompile Include="Particles_Update_Sand_CS.hlsl" />
     <FxCompile Include="UI_Shaders.hlsl" />
+    <FxCompile Include="ShadowMap.hlsl" />
   </ItemGroup>
 </Project>
