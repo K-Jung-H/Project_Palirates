@@ -1073,7 +1073,7 @@ void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsComma
 		{
 			if (instance_info.rendering_num == 0 || !instance_info.obj_mesh)
 				continue;
-
+			
 			instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
 
 		}

@@ -1,6 +1,7 @@
 #include "Light.hlsl"
 
 #define NUM_CASCADES 4
+#define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
 
 Texture2D<float4> T_Albedo_Color : register(t0);
@@ -82,19 +83,49 @@ float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_
     return shadowSum / count;
 }
 
-float4 GetDebugColorFromID(uint id)
+float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint lightType, float shadowBias, float2 invShadowMapSize, float4x4 LightViewProjTex[NUM_CASCADES], Texture2D<float> gShadowMaps[NUM_CASCADES], SamplerComparisonState shadowSampler, float CascadeSplits[NUM_CASCADES])
 {
-    // Hashing을 이용해 간단한 무작위 색상 생성
-    uint hash = id * 1664525u + 1013904223u;
+    int cascadeIdx = 0;
+    [unroll]
+    for (int i = 0; i < NUM_CASCADES; ++i)
+    {
+        if (viewZ < CascadeSplits[i])
+        {
+            cascadeIdx = i;
+            break;
+        }
+    }
 
-    float r = ((hash >> 16) & 0xFF) / 255.0f;
-    float g = ((hash >> 8) & 0xFF) / 255.0f;
-    float b = (hash & 0xFF) / 255.0f;
+    float shadowFactor = 1.0f;
 
-    if (id == 0)
-        return float4(1.0f, 1.0f, 1.0f, 1.0f);
-    return float4(r, g, b, 1.0f);
+    if (shadowPass == 1 && lightType == LIGHT_CAMERA_TYPE_DIRECTIONAL)
+    {
+        const float transitionRange = 0.05f;
+        float splitCurr = CascadeSplits[cascadeIdx];
+        float blendWeight = 0.0f;
+        if (cascadeIdx > 0)
+            blendWeight = saturate((viewZ - (splitCurr - transitionRange)) / transitionRange);
+
+        float4 shadowCoord0 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx]);
+        shadowCoord0 /= shadowCoord0.w;
+
+        float shadow0 = 1.0f;
+        if (shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f && shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f && shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
+            shadow0 = SampleShadowPCF(gShadowMaps[cascadeIdx], shadowSampler, shadowCoord0.xy, shadowCoord0.z - shadowBias, invShadowMapSize);
+
+        float shadow1 = shadow0;
+        if (cascadeIdx > 0)
+        {
+            float4 shadowCoord1 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx - 1]);
+            shadowCoord1 /= shadowCoord1.w;
+            if (shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f && shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f && shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
+                shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], shadowSampler, shadowCoord1.xy, shadowCoord1.z - shadowBias, invShadowMapSize);
+        }
+        shadowFactor = lerp(shadow0, shadow1, blendWeight);
+    }
+    return shadowFactor;
 }
+
 
 struct VS_TEXTURED_SCREEN_RECT_OUTPUT
 {
@@ -142,7 +173,6 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_Vertex
 
 
 
-#define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
 
 float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
@@ -156,69 +186,12 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float Camera_Distance = wNormal_CD.w;
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
 
-    int cascadeIdx = 0;
-    float currentDepth = viewspace_Z;
+    float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z, shadow_pass, light_type, shadow_bias, inv_shadow_map_size, LightViewProjTex, gShadowMaps, gssShadowSampler, CascadeSplits);
 
-[unroll]
-    for (int i = 0; i < NUM_CASCADES; ++i)
-    {
-        if (currentDepth < CascadeSplits[i])
-        {
-            cascadeIdx = i;
-            break;
-        }
-    }
-
-    float shadowFactor = 1.0f;
-
-    if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
-    {
-        const float transitionRange = 0.05f;
-
-        float splitPrev = (cascadeIdx == 0) ? 0.0f : CascadeSplits[cascadeIdx - 1];
-        float splitCurr = CascadeSplits[cascadeIdx];
-
-        float blendWeight = 0.0f;
-        if (cascadeIdx > 0)
-            blendWeight = saturate((currentDepth - (splitCurr - transitionRange)) / transitionRange);
-
-        float4 shadowCoord0 = mul(float4(world_position.xyz, 1.0f), LightViewProjTex[cascadeIdx]);
-        shadowCoord0 /= shadowCoord0.w;
-
-        float shadow0 = 1.0f;
-        if (
-        shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f &&
-        shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f &&
-        shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
-        {
-        // PCF 적용
-            shadow0 = SampleShadowPCF(gShadowMaps[cascadeIdx], gssShadowSampler, shadowCoord0.xy, shadowCoord0.z - shadow_bias, inv_shadow_map_size);
-        }
-
-        float shadow1 = shadow0;
-        if (cascadeIdx > 0)
-        {
-            float4 shadowCoord1 = mul(float4(world_position.xyz, 1.0f), LightViewProjTex[cascadeIdx - 1]);
-            shadowCoord1 /= shadowCoord1.w;
-
-            if (
-            shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f &&
-            shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f &&
-            shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
-            {
-            // PCF 적용
-                shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx-1], gssShadowSampler, shadowCoord1.xy, shadowCoord1.z - shadow_bias, inv_shadow_map_size);
-
-            }
-        }
-
-        shadowFactor = lerp(shadow0, shadow1, blendWeight);
-    }
-
-    // ======= 조명 계산 =======
+    // ======= Lighting calculation =======
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
-    // FOG 처리
+    // FOG calculation
     float2 baseUV = world_position.xz - camera_pos.xz;
     float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart));
     fogFactor = pow(fogFactor, fogDensity);
@@ -242,16 +215,14 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     float3 foggedColor = lerp(Light_Color, finalFogColor, fogFactor);
 
-    // 비어있는 픽셀 처리
+    // Handle empty pixels
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
     if (isEmptyPixel)
     {
         return Fog_Trigger == 1 ? float4(finalFogColor, 1.0f) : float4(1.0f, 1.0f, 1.0f, 1.0f);
     }
-
     return Fog_Trigger == 1 ? float4(foggedColor, 1.0f) : float4(Light_Color, 1.0f);
 }
-
 
 
 //-------------------------------------------------------------------------------------------------------------
