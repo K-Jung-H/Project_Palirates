@@ -63,7 +63,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 
 //==================================================================
 
-// PCF ���͸� �Լ� (3x3 Ŀ��)
+// PCF ÇÊÅÍ¸µ ÇÔ¼ö (3x3 Ä¿³Î)
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
 {
     float shadowSum = 0.0f;

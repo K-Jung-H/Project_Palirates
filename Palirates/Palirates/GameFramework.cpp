@@ -701,6 +701,7 @@ void CGameFramework::Build_Default_Scenes()
 	Build_Scene(Scene_Type::Board, "Game_Board");
 //	Build_Scene(Scene_Type::Stage_1, "In_Stage");
 
+
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
