@@ -111,11 +111,12 @@ D3D12_SHADER_BYTECODE BoundingBox_Shader::CreatePixelShader(ID3DBlob** PixelShad
 	}
 }
 
+//=============================================================================
 
-CubeMesh* OBB_Drawer::obb_Mesh = nullptr;
-BoundingBox_Shader* OBB_Drawer::obb_shader = nullptr;
+CubeMesh* OBB_Renderer::obb_Mesh = nullptr;
+BoundingBox_Shader* OBB_Renderer::obb_shader = nullptr;
 
-OBB_Drawer::OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+OBB_Renderer::OBB_Renderer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	if (!obb_Mesh)
 		obb_Mesh = new CubeMesh(device, cmdList);
@@ -126,16 +127,18 @@ OBB_Drawer::OBB_Drawer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList,
 		obb_shader->CreateShader(device, cmdList, pd3dGraphicsRootSignature);
 		obb_shader->CreateShaderVariables(device, cmdList);
 	}
+
+	Create_OBB_Data_ShaderVariables(device, cmdList);
 }
 
-OBB_Drawer::~OBB_Drawer()
+OBB_Renderer::~OBB_Renderer()
 {
 	Release_OBB_Data_ShaderVariables();
-	if (obb_Mesh) obb_Mesh->Release();
+	if (obb_Mesh) 	obb_Mesh->Release();
 	delete obb_shader;
 }
 
-void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+void OBB_Renderer::Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
 	UINT bufferSize = sizeof(BoundingBox_Instance_Info) * obb_instance_buffer_max_num;
 	bufferSize = (bufferSize + 255) & ~255;
@@ -152,7 +155,7 @@ void OBB_Drawer::Create_OBB_Data_ShaderVariables(ID3D12Device* device, ID3D12Gra
 
 }
 
-void OBB_Drawer::Release_OBB_Data_ShaderVariables()
+void OBB_Renderer::Release_OBB_Data_ShaderVariables()
 {
 
 	if (Instance_info)
@@ -163,149 +166,10 @@ void OBB_Drawer::Release_OBB_Data_ShaderVariables()
 	}
 }
 
-
-void OBB_Drawer::Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, Object_Type type, Object_Manager* obj_mgr)
-{
-	switch (type)
-	{
-	case Object_Type::fixed:
-		if (auto map_ptr = obj_mgr->Get_Object_List_Map(type))
-			Update_From_Map(device, cmdList, *map_ptr);
-		break;
-
-	case Object_Type::skinned:
-	case Object_Type::non_skinned:
-		if (auto vec_ptr = obj_mgr->Get_Object_List(type))
-			Update_From_Vector(device, cmdList, *vec_ptr);
-		break;
-
-	default:
-		break;
-	}
-}
-
-
-struct ObjectOBB
-{
-	std::shared_ptr<CGameObject> obj;
-	BoundingOrientedBox obb;
-	XMFLOAT4X4 worldMatrix;
-};
-
-void OBB_Drawer::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list)
-{
-	std::vector<std::shared_ptr<CGameObject>> obb_list;
-	std::unordered_set<CGameObject*> visited;
-
-
-	for (auto& obj : obj_list)
-		FindOBBObjects(obj, obb_list, visited);
-
-	int count = static_cast<int>(obb_list.size());
-	if (count > obb_instance_buffer_max_num)
-	{
-		Release_OBB_Data_ShaderVariables();
-		obb_instance_buffer_max_num = std::min(count * 2, MAX_INSTANCING_NUM);
-		Create_OBB_Data_ShaderVariables(device, cmdList);
-	}
-
-	std::vector<ObjectOBB> col_obb_list;
-	int visible_count = 0;
-	for (auto& obj : obb_list)
-	{
-		XMFLOAT4X4 world_matrix;
-
-		if (!obj->GetbUpdateOBB())
-			continue;
-
-		std::optional<BoundingOrientedBox> obb = Get_OBB_WorldMatrix(obj.get(), &world_matrix);
-
-		if (!obb.has_value())
-			continue;
-
-		Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
-		XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color, obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
-		++visible_count;
-
-		col_obb_list.push_back(ObjectOBB{ obj, obb.value(), world_matrix });
-	}
-
-	rendering_num = visible_count;
-
-	for (size_t i = 0; i < col_obb_list.size(); ++i)
-	{
-		for (size_t j = i + 1; j < col_obb_list.size(); ++j)
-		{
-			auto typeA = col_obb_list[i].obj->Object_type;
-			auto typeB = col_obb_list[j].obj->Object_type;
-
-			bool validPair =
-				(typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) ||
-				(typeA == OBJECT_TPYE_MONSTER_WEAPON && typeB == OBJECT_TPYE_MAIN_PLAYER) ||
-
-				(typeA == OBJECT_TPYE_MONSTER && typeB == OBJECT_TPYE_PLAYER_WEAPON) ||
-				(typeA == OBJECT_TPYE_PLAYER_WEAPON && typeB == OBJECT_TPYE_MONSTER);
-
-			if (!validPair) continue; 
-
-			const BoundingOrientedBox& a = col_obb_list[i].obb;
-			const BoundingOrientedBox& b = col_obb_list[j].obb;
-
-			if (a.Intersects(b))
-			{
-				/*const char* nameA = col_obb_list[i].obj->Get_Name();
-				const char* nameB = col_obb_list[j].obj->Get_Name();
-
-				char buffer[256];
-				sprintf_s(buffer, "OBB 충돌 감지: [%s] <--> [%s]\n", nameA, nameB);
-				OutputDebugStringA(buffer);*/
-
-				if (typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) {
-					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[i].obj);
-					if (p)
-					{
-						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
-							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
-					}
-					continue;
-				}
-				if (typeA == OBJECT_TPYE_MONSTER_WEAPON && typeB == OBJECT_TPYE_MAIN_PLAYER) {
-					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[j].obj);
-					if (p)
-					{
-						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
-							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
-					}
-					continue;
-				}
-
-				if (typeA == OBJECT_TPYE_MONSTER && typeB == OBJECT_TPYE_PLAYER_WEAPON) {
-					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[i].obj);
-					if (monster)
-					{
-						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
-							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-					}
-					continue;
-				}
-				if (typeA == OBJECT_TPYE_PLAYER_WEAPON && typeB == OBJECT_TPYE_MONSTER) {
-					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[j].obj);
-					if (monster)
-					{
-						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
-							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-					}
-					continue;
-				}
-			}
-		}
-	}
-}
-
-void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::unordered_map<std::string, Fixed_Object_Info>& obj_map)
+void OBB_Renderer::Update_Fixed(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map)
 {
 	int total = 0;
-	for (const auto& [_, info] : obj_map)
+	for (const auto& [_, info] : fixed_obj_info_map)
 		total += static_cast<int>(info.fixed_obj_list.size());
 
 	if (total > obb_instance_buffer_max_num)
@@ -316,19 +180,20 @@ void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList
 	}
 
 	int visible_count = 0;
-	for (const auto& [_, info] : obj_map)
+
+	for (const auto& [_, info] : fixed_obj_info_map)
 	{
-		if (_.find("Bld") == std::string::npos && _.find("Rock") == std::string::npos)
+		if (!info.obj_mesh || !info.obj_mesh->Get_BoundingBox())
 			continue;
 
-		if (!info.obj_mesh || !info.obj_mesh->Get_BoundingBox()) continue;
-		const BoundingOrientedBox& meshOBB = *info.obj_mesh->Get_BoundingBox();
+		const BoundingOrientedBox& localOBB = *info.obj_mesh->Get_BoundingBox();
 
 		for (const auto& obj : info.fixed_obj_list)
 		{
+			if (!obj) continue;
 
 			XMFLOAT4X4 world;
-			if (!Compute_Fixed_OBB_WorldMatrix(meshOBB, obj->m_xmf4x4World, world))
+			if (!OBB_Manager::Compute_Fixed_OBB_WorldMatrix(localOBB, obj->m_xmf4x4World, world))
 				continue;
 
 			Mapped_Instance_info[visible_count].world_4x4transform = world;
@@ -341,147 +206,558 @@ void OBB_Drawer::Update_From_Map(ID3D12Device* device, ID3D12GraphicsCommandList
 	rendering_num = visible_count;
 }
 
-//bool OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
-//{
-//	if (!g_obj || !g_obj->Get_Collider())
-//		return false;
-//
-//	CGameObject* target = g_obj;
-//	if (target)
-//	{
-//		CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(target->m_pMesh);
-//		if (skinnedMesh)
-//		{
-//			BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
-//			XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents) * 2.0f);
-//			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
-//			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
-//
-//			XMMATRIX finalMatrix = scaleMatrix * g_obj->customRotation * rotationMatrix * translationMatrix;
-//			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
-//			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
-//
-//			return true;
-//		}
-//		else
-//		{
-//			BoundingOrientedBox localOBB = *g_obj->Get_Collider();
-//			BoundingOrientedBox worldOBB = {};
-//			XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
-//			localOBB.Transform(worldOBB, world);
-//
-//			XMVECTOR scale, rotQuat, trans;
-//			if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
-//				rotQuat = XMQuaternionIdentity();
-//
-//			XMStoreFloat4(&worldOBB.Orientation, rotQuat);
-//
-//			if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f)
-//				return false;
-//
-//
-//			XMMATRIX obbMatrix =
-//				XMMatrixScaling(worldOBB.Extents.x * 2.0f, worldOBB.Extents.y * 2.0f, worldOBB.Extents.z * 2.0f) *
-//				XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation)) *
-//				XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
-//
-//			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
-//			XMStoreFloat4x4(&g_obj->WeaponMatrix, obbMatrix);
-//			return true;
-//		}
-//	}
-//	return false;
-//}
-
-std::optional<BoundingOrientedBox> OBB_Drawer::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
+void OBB_Renderer::Update_Dynamic(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<std::shared_ptr<CGameObject>>& obj_list)
 {
-	if (!g_obj || !g_obj->Get_Collider())
-		return std::nullopt;
+	std::vector<std::shared_ptr<CGameObject>> obb_targets;
+	std::unordered_set<CGameObject*> visited;
 
-	if (!g_obj->GetbUpdateOBB())
-		return std::nullopt;
+	for (const auto& obj : obj_list)
+		OBB_Manager::FindOBBObjects(obj, obb_targets, visited);
 
-	CGameObject* target = g_obj;
-
-	if (target)
+	int count = static_cast<int>(obb_targets.size());
+	if (count > obb_instance_buffer_max_num)
 	{
-		CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(target->m_pMesh);
-		if (skinnedMesh)
+		Release_OBB_Data_ShaderVariables();
+		obb_instance_buffer_max_num = std::min(count * 2, MAX_INSTANCING_NUM);
+		Create_OBB_Data_ShaderVariables(device, cmdList);
+	}
+
+	int visible_count = 0;
+
+	for (const auto& obj : obb_targets)
+	{
+		if (!obj || !obj->Get_Active())
+			continue;
+
+		XMFLOAT4X4 world_matrix;
+		auto obb = OBB_Manager::Get_OBB_WorldMatrix(obj.get(), &world_matrix);
+		if (!obb)
+			continue;
+
+		Mapped_Instance_info[visible_count].world_4x4transform = world_matrix;
+		XMStoreFloat4(&Mapped_Instance_info[visible_count].box_color,
+			obj->Get_Active() ? Colors::LimeGreen : Colors::Crimson);
+		++visible_count;
+	}
+
+	rendering_num = visible_count;
+}
+
+
+void OBB_Renderer::Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<std::shared_ptr<CGameObject>>& obj_list)
+{
+	Update_Dynamic(device, cmdList, obj_list);
+}
+
+void OBB_Renderer::Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map)
+{
+	Update_Fixed(device, cmdList, fixed_obj_info_map);
+}
+
+
+void OBB_Renderer::Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera)
+{
+	obb_shader->Setting_Render(cmdList, 0);
+	if (obb_Mesh)
+		obb_Mesh->Render(cmdList, m_d3dInstancingBufferView, rendering_num);
+}
+
+//=============================================================================
+
+void OBBCollision_Manager::Clear()
+{
+	obb_objects.clear();
+	uniform_cell_map.clear();
+}
+
+void OBBCollision_Manager::Add_OBB(const OBB_Info& info)
+{
+	UINT index = static_cast<UINT>(obb_objects.size());
+	obb_objects.push_back(info);
+	Register_OBB_To_Cells(info.obb, index);
+}
+
+void OBBCollision_Manager::Register_OBB_To_Cells(const BoundingOrientedBox& obb, UINT index)
+{
+	XMINT3 min_cell, max_cell;
+	Compute_CellBounds_From_OBB(obb, min_cell, max_cell);
+
+	for (int x = min_cell.x; x <= max_cell.x; ++x)
+		for (int y = min_cell.y; y <= max_cell.y; ++y)
+			for (int z = min_cell.z; z <= max_cell.z; ++z)
+			{
+				XMINT3 cell = { x, y, z };
+				uniform_cell_map[cell].push_back(index);
+			}
+}
+
+void OBBCollision_Manager::Update_OBB_Data(const std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map)
+{
+	Clear();
+
+	for (const auto& [meshName, info] : fixed_obj_info_map)
+	{
+		if (meshName.find("Env") != std::string::npos) continue;
+		if (!info.obj_mesh || !info.obj_mesh->Get_BoundingBox()) continue;
+
+		const BoundingOrientedBox& localOBB = *info.obj_mesh->Get_BoundingBox();
+
+		for (const auto& obj : info.fixed_obj_list)
 		{
-			BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
+			if (!obj || !obj->Get_Active()) continue;
 
-			XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents) * 2.0f);
-			XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
-			XMMATRIX translationMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
+			BoundingOrientedBox worldOBB;
+			localOBB.Transform(worldOBB, XMLoadFloat4x4(&obj->m_xmf4x4World));
 
-			XMMATRIX finalMatrix = scaleMatrix * g_obj->customRotation * rotationMatrix * translationMatrix;
-			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
-			XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
+			OBB_Info obb_info;
+			obb_info.object = obj;
+			obb_info.mesh = info.obj_mesh;
+			obb_info.obb = worldOBB;
+			obb_info.type = static_cast<UINT>(obj->Object_type);
 
-			if (XMVector3NearEqual(XMLoadFloat3(&obb.Center), XMVectorZero(), XMVectorReplicate(0.001f)) &&
-				XMVector4NearEqual(XMLoadFloat4(&obb.Orientation), XMVectorSet(1, 0, 0, 0), XMVectorReplicate(0.001f)))
-				return std::nullopt;
-			return obb;
+			Add_OBB(obb_info);
 		}
-		else
+	}
+}
+
+void OBBCollision_Manager::Build_UniformGrid(float cellSize)
+{
+	grid_cell_size = cellSize;
+	uniform_cell_map.clear();
+
+	for (UINT i = 0; i < obb_objects.size(); ++i)
+		Register_OBB_To_Cells(obb_objects[i].obb, i);
+}
+
+std::vector<OBB_Info> OBBCollision_Manager::Check_OBB_Collisions(const BoundingOrientedBox& obb) const
+{
+	std::vector<OBB_Info> collided;
+	XMINT3 min_cell, max_cell;
+
+	Compute_CellBounds_From_OBB(obb, min_cell, max_cell);
+	std::unordered_set<UINT> tested;
+
+	for (int x = min_cell.x; x <= max_cell.x; ++x)
+		for (int y = min_cell.y; y <= max_cell.y; ++y)
+			for (int z = min_cell.z; z <= max_cell.z; ++z)
+			{
+				XMINT3 cell = { x, y, z };
+				auto it = uniform_cell_map.find(cell);
+				if (it == uniform_cell_map.end()) 
+					continue;
+
+				for (UINT idx : it->second)
+				{
+					if (tested.insert(idx).second) 
+					{
+						const auto& other = obb_objects[idx];
+						if (obb.Intersects(other.obb))
+						{
+							collided.push_back(other); 
+#ifdef DEBUG_MESSAGE
+							DebugOutput(other.mesh->Get_Name() + " is Collision!\n");
+#endif
+						}
+					}
+				}
+			}
+
+	return collided;
+}
+
+std::vector<OBB_Info> OBBCollision_Manager::Get_Nearby_OBBs(const BoundingOrientedBox& obb) const
+{
+	std::vector<OBB_Info> result;
+	XMINT3 min_cell, max_cell;
+	Compute_CellBounds_From_OBB(obb, min_cell, max_cell);
+	std::unordered_set<UINT> inserted;
+
+	for (int x = min_cell.x; x <= max_cell.x; ++x)
+		for (int y = min_cell.y; y <= max_cell.y; ++y)
+			for (int z = min_cell.z; z <= max_cell.z; ++z)
+			{
+				XMINT3 cell = { x, y, z };
+				auto it = uniform_cell_map.find(cell);
+				if (it == uniform_cell_map.end()) continue;
+
+				for (UINT idx : it->second)
+				{
+					if (inserted.insert(idx).second)
+					{
+						result.push_back(obb_objects[idx]);
+					}
+				}
+			}
+	return result;
+}
+
+XMINT3 OBBCollision_Manager::Get_CellIndexFromPosition(const XMFLOAT3& pos) const
+{
+	return {
+		static_cast<int>(std::floor(pos.x / grid_cell_size)),
+		static_cast<int>(std::floor(pos.y / grid_cell_size)),
+		static_cast<int>(std::floor(pos.z / grid_cell_size))
+	};
+}
+
+void OBBCollision_Manager::Compute_CellBounds_From_OBB(const BoundingOrientedBox& obb, XMINT3& out_min_cell, XMINT3& out_max_cell) const
+{
+	XMFLOAT3 corners[8];
+	obb.GetCorners(corners);
+
+	BoundingBox aabb;
+	BoundingBox::CreateFromPoints(aabb, 8, corners, sizeof(XMFLOAT3));
+
+	XMFLOAT3 min = {
+		aabb.Center.x - aabb.Extents.x,
+		aabb.Center.y - aabb.Extents.y,
+		aabb.Center.z - aabb.Extents.z
+	};
+	XMFLOAT3 max = {
+		aabb.Center.x + aabb.Extents.x,
+		aabb.Center.y + aabb.Extents.y,
+		aabb.Center.z + aabb.Extents.z
+	};
+
+	out_min_cell = Get_CellIndexFromPosition(min);
+	out_max_cell = Get_CellIndexFromPosition(max);
+}
+
+std::vector<OBB_Info> OBBCollision_Manager::Get_Visible_OBBs_From_CameraFrustum(const BoundingFrustum& frustum) const
+{
+	std::vector<OBB_Info> result;
+	std::unordered_set<UINT> visibleIndices;
+
+	for (const auto& [cellIdx, obbIndices] : uniform_cell_map)
+	{
+		BoundingBox cellAABB;
+
+		float cellSize = grid_cell_size;
+
+		XMFLOAT3 minPos = {
+			cellIdx.x * cellSize,
+			cellIdx.y * cellSize,
+			cellIdx.z * cellSize
+		};
+
+		XMFLOAT3 maxPos = {
+			minPos.x + cellSize,
+			minPos.y + cellSize,
+			minPos.z + cellSize
+		};
+
+		cellAABB.Center = {
+			(minPos.x + maxPos.x) * 0.5f,
+			(minPos.y + maxPos.y) * 0.5f,
+			(minPos.z + maxPos.z) * 0.5f
+		};
+
+		cellAABB.Extents = {
+			(maxPos.x - minPos.x) * 0.5f,
+			(maxPos.y - minPos.y) * 0.5f,
+			(maxPos.z - minPos.z) * 0.5f
+		};
+
+		if (!frustum.Intersects(cellAABB))
+			continue;
+
+		for (UINT idx : obbIndices)
 		{
-			BoundingOrientedBox localOBB = *g_obj->Get_Collider();
-			BoundingOrientedBox worldOBB = {};
-			XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
-			localOBB.Transform(worldOBB, world);
+			if (idx >= obb_objects.size()) continue;
 
-			XMVECTOR scale, rotQuat, trans;
-			if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
-				rotQuat = XMQuaternionIdentity();
+			const auto& obbInfo = obb_objects[idx];
+			if (!obbInfo.object || !obbInfo.mesh) continue;
 
-			XMStoreFloat4(&worldOBB.Orientation, rotQuat);
+			BoundingOrientedBox worldOBB = obbInfo.obb;
 
-			if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f)
-				return std::nullopt;
-
-			XMMATRIX obbMatrix =
-				XMMatrixScaling(worldOBB.Extents.x * 2.0f, worldOBB.Extents.y * 2.0f, worldOBB.Extents.z * 2.0f) *
-				XMMatrixRotationQuaternion(XMLoadFloat4(&worldOBB.Orientation)) *
-				XMMatrixTranslationFromVector(XMLoadFloat3(&worldOBB.Center));
-
-			XMStoreFloat4x4(world_matrix, XMMatrixTranspose(obbMatrix));
-			XMStoreFloat4x4(&g_obj->WeaponMatrix, obbMatrix);
-
-			if (XMVector3NearEqual(XMLoadFloat3(&worldOBB.Center), XMVectorZero(), XMVectorReplicate(0.001f)) &&
-				XMVector4NearEqual(XMLoadFloat4(&worldOBB.Orientation), XMVectorSet(1, 0, 0, 0), XMVectorReplicate(0.001f)))
-				return std::nullopt;
-			return worldOBB;
+			if (frustum.Intersects(worldOBB))
+				visibleIndices.insert(idx);
 		}
 	}
 
-	return std::nullopt;
+	result.reserve(visibleIndices.size());
+	for (UINT idx : visibleIndices)
+		result.push_back(obb_objects[idx]);
+
+	return result;
 }
 
-bool OBB_Drawer::Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world)
+
+//=============================================================================
+
+OBB_Manager::OBB_Manager(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	XMMATRIX objWorld = XMLoadFloat4x4(&objectWorld);
+	fixed_obb_renderer = make_unique<OBB_Renderer>(device, cmdList, pd3dGraphicsRootSignature);
+	dynamic_obb_renderer = make_unique<OBB_Renderer>(device, cmdList, pd3dGraphicsRootSignature);
+	collision_manager = make_unique<OBBCollision_Manager>();
+}
 
-	XMVECTOR scale = XMVectorSet(
-		localOBB.Extents.x * 2.0f,
-		localOBB.Extents.y * 2.0f,
-		localOBB.Extents.z * 2.0f,
-		0.0f
-	);
-
-	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(scale);
-	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&localOBB.Orientation));
-	XMMATRIX offsetMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&localOBB.Center));
-
-	XMMATRIX localOBBMatrix = scaleMatrix * rotMatrix * offsetMatrix;
-
-	XMMATRIX finalMatrix = localOBBMatrix * objWorld;
-
-	XMStoreFloat4x4(&out_world, XMMatrixTranspose(finalMatrix));
-	return true;
+OBB_Manager::~OBB_Manager()
+{
 
 }
 
-void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited)
+
+void OBB_Manager::Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::vector<shared_ptr<CGameObject>>& obj_list)
+{
+	dynamic_obb_renderer->Update_OBB_Data(device, cmdList, obj_list);
+}
+
+void OBB_Manager::Update_OBB_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, std::unordered_map<std::string, Fixed_Object_Info>& fixed_obj_info_map)
+{
+	fixed_obb_renderer->Update_OBB_Data(device, cmdList, fixed_obj_info_map);
+	collision_manager->Update_OBB_Data(fixed_obj_info_map);
+}
+
+void OBB_Manager::Render_OBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* camera)
+{
+	fixed_obb_renderer->Render(pd3dCommandList, camera);
+	dynamic_obb_renderer->Render(pd3dCommandList, camera);
+}
+
+
+bool OBB_Manager::Check_Collision(const BoundingOrientedBox& obb) const
+{
+	vector<OBB_Info> collided_obb_list = collision_manager->Check_OBB_Collisions(obb);
+	if (collided_obb_list.empty())
+		return false;
+	else
+		return true;
+}
+
+bool OBB_Manager::Resolve_Slide_On_Collision(BoundingOrientedBox& playerOBB, XMVECTOR& inOutMoveDir) const
+{
+	const int maxIterations = 4;
+	float originalSpeed = XMVectorGetX(XMVector3Length(inOutMoveDir));
+	if (originalSpeed <= 0.0001f) return false;
+
+	XMVECTOR moveDir = XMVector3Normalize(inOutMoveDir);
+	XMVECTOR originalCenter = XMLoadFloat3(&playerOBB.Center);
+	bool collisionOccurred = false;
+
+	for (int i = 0; i < maxIterations; ++i)
+	{
+		XMVECTOR testCenter = originalCenter + moveDir * originalSpeed;
+
+		BoundingOrientedBox testOBB = playerOBB;
+		XMStoreFloat3(&testOBB.Center, testCenter);
+
+		std::vector<OBB_Info> collisions = collision_manager->Check_OBB_Collisions(testOBB);
+		if (collisions.empty()) break;
+
+		XMVECTOR bestNormal = XMVectorZero();
+		float maxDot = -1.0f;
+
+		for (size_t j = 0; j < collisions.size(); ++j)
+		{
+			const BoundingOrientedBox& otherOBB = collisions[j].obb;
+			XMVECTOR toOther = XMLoadFloat3(&otherOBB.Center) - testCenter;
+			XMVECTOR normal = XMVector3Normalize(toOther);
+			float dot = fabsf(XMVectorGetX(XMVector3Dot(normal, moveDir)));
+
+			if (dot > maxDot)
+			{
+				maxDot = dot;
+				bestNormal = normal;
+			}
+		}
+
+		if (XMVector3Equal(bestNormal, XMVectorZero()))
+			break;
+
+		float projection = XMVectorGetX(XMVector3Dot(moveDir, bestNormal));
+		XMVECTOR slideDir = moveDir - bestNormal * projection;
+		slideDir = XMVectorSet(XMVectorGetX(slideDir), 0.0f, XMVectorGetZ(slideDir), 0.0f);
+		moveDir = XMVector3Normalize(slideDir);
+
+		originalSpeed *= 0.9f;
+		collisionOccurred = true;
+	}
+
+	XMVECTOR finalCenter = originalCenter + moveDir * originalSpeed;
+	BoundingOrientedBox finalOBB = playerOBB;
+	XMStoreFloat3(&finalOBB.Center, finalCenter);
+
+	std::vector<OBB_Info> stillColliding = collision_manager->Check_OBB_Collisions(finalOBB);
+	if (!stillColliding.empty())
+	{
+		XMVECTOR pushBack = XMVectorZero();
+
+		for (size_t j = 0; j < stillColliding.size(); ++j)
+		{
+			const BoundingOrientedBox& otherOBB = stillColliding[j].obb;
+			XMVECTOR toOutside = finalCenter - XMLoadFloat3(&otherOBB.Center);
+			pushBack += XMVector3Normalize(toOutside);
+		}
+
+		if (!XMVector3Equal(pushBack, XMVectorZero()))
+		{
+			float pushStrength = 1.5f + 0.25f * static_cast<float>(stillColliding.size());
+			pushBack = XMVector3Normalize(pushBack) * pushStrength;
+			inOutMoveDir = pushBack;
+			return true;
+		}
+	}
+
+	inOutMoveDir = moveDir * originalSpeed;
+	return collisionOccurred;
+}
+
+
+
+//struct ObjectOBB
+//{
+//	std::shared_ptr<CGameObject> obj;
+//	BoundingOrientedBox obb;
+//	XMFLOAT4X4 worldMatrix;
+//};
+
+//void OBB_Manager::Update_From_Vector(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList, const std::vector<std::shared_ptr<CGameObject>>& obj_list)
+//{
+
+//	for (size_t i = 0; i < col_obb_list.size(); ++i)
+//	{
+//		for (size_t j = i + 1; j < col_obb_list.size(); ++j)
+//		{
+//			auto typeA = col_obb_list[i].obj->Object_type;
+//			auto typeB = col_obb_list[j].obj->Object_type;
+//
+//			bool validPair =
+//				(typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) ||
+//				(typeA == OBJECT_TPYE_MONSTER_WEAPON && typeB == OBJECT_TPYE_MAIN_PLAYER) ||
+//
+//				(typeA == OBJECT_TPYE_MONSTER && typeB == OBJECT_TPYE_PLAYER_WEAPON) ||
+//				(typeA == OBJECT_TPYE_PLAYER_WEAPON && typeB == OBJECT_TPYE_MONSTER);
+//
+//			if (!validPair) continue; 
+//
+//			const BoundingOrientedBox& a = col_obb_list[i].obb;
+//			const BoundingOrientedBox& b = col_obb_list[j].obb;
+//
+//			if (a.Intersects(b))
+//			{
+//				/*const char* nameA = col_obb_list[i].obj->Get_Name();
+//				const char* nameB = col_obb_list[j].obj->Get_Name();
+//
+//				char buffer[256];
+//				sprintf_s(buffer, "OBB 충돌 감지: [%s] <--> [%s]\n", nameA, nameB);
+//				OutputDebugStringA(buffer);*/
+//
+//				if (typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) {
+//					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[i].obj);
+//					if (p)
+//					{
+//						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
+//							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+//					}
+//					continue;
+//				}
+//				if (typeA == OBJECT_TPYE_MONSTER_WEAPON && typeB == OBJECT_TPYE_MAIN_PLAYER) {
+//					std::shared_ptr<CTerrainPlayer> p = std::dynamic_pointer_cast<CTerrainPlayer>(col_obb_list[j].obj);
+//					if (p)
+//					{
+//						if (p->GetStateMachine()->Get_State() != State::Get_Hit_F2)
+//							p->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+//					}
+//					continue;
+//				}
+//
+//				if (typeA == OBJECT_TPYE_MONSTER && typeB == OBJECT_TPYE_PLAYER_WEAPON) {
+//					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[i].obj);
+//					if (monster)
+//					{
+//						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
+//							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+//					}
+//					continue;
+//				}
+//				if (typeA == OBJECT_TPYE_PLAYER_WEAPON && typeB == OBJECT_TPYE_MONSTER) {
+//					std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(col_obb_list[j].obj);
+//					if (monster)
+//					{
+//						if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
+//							monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
+//					}
+//					continue;
+//				}
+//			}
+//		}
+//	}
+//}
+
+
+
+XMMATRIX OBB_Manager::Build_OBB_WorldMatrix(const BoundingOrientedBox& obb, bool transpose)
+{
+	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents) * 2.0f);
+	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
+	XMMATRIX transMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
+
+	XMMATRIX world = scaleMatrix * rotMatrix * transMatrix;
+	return transpose ? XMMatrixTranspose(world) : world;
+}
+
+XMMATRIX OBB_Manager::Build_Weapon_OBB_WorldMatrix(const BoundingOrientedBox& obb, CXMMATRIX customRot, bool transpose)
+{
+	XMMATRIX scaleMatrix = XMMatrixScalingFromVector(XMLoadFloat3(&obb.Extents) * 2.0f);
+	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(XMLoadFloat4(&obb.Orientation));
+	XMMATRIX transMatrix = XMMatrixTranslationFromVector(XMLoadFloat3(&obb.Center));
+
+	XMMATRIX world = scaleMatrix * customRot * rotMatrix * transMatrix;
+	return transpose ? XMMatrixTranspose(world) : world;
+}
+
+bool OBB_Manager::Get_OBB_WorldMatrix(CGameObject* g_obj, XMFLOAT4X4* world_matrix)
+{
+	if (!g_obj || !g_obj->Get_Collider())
+		return false;
+
+	CSkinnedMesh* skinnedMesh = dynamic_cast<CSkinnedMesh*>(g_obj->m_pMesh);
+	if (skinnedMesh)
+	{
+		BoundingOrientedBox obb = skinnedMesh->Get_WorldOBB();
+
+		XMMATRIX finalMatrix = Build_Weapon_OBB_WorldMatrix(obb, g_obj->customRotation, false);
+
+		XMStoreFloat4x4(world_matrix, XMMatrixTranspose(finalMatrix));
+		XMStoreFloat4x4(&g_obj->WeaponMatrix, finalMatrix);
+		return true;
+	}
+	else
+	{
+		BoundingOrientedBox localOBB = *g_obj->Get_Collider();
+		BoundingOrientedBox worldOBB;
+		XMMATRIX world = XMLoadFloat4x4(&g_obj->m_xmf4x4World);
+		localOBB.Transform(worldOBB, world);
+
+		XMVECTOR scale, rotQuat, trans;
+		if (!XMMatrixDecompose(&scale, &rotQuat, &trans, world))
+			rotQuat = XMQuaternionIdentity();
+
+		XMStoreFloat4(&worldOBB.Orientation, rotQuat);
+
+		if (worldOBB.Extents.x <= 0.0f || worldOBB.Extents.y <= 0.0f || worldOBB.Extents.z <= 0.0f)
+			return false;
+
+		XMMATRIX obbMatrix = Build_OBB_WorldMatrix(worldOBB, true); 
+		XMStoreFloat4x4(world_matrix, obbMatrix);
+		XMStoreFloat4x4(&g_obj->WeaponMatrix, XMMatrixTranspose(obbMatrix));
+		return true;
+	}
+}
+
+bool OBB_Manager::Compute_Fixed_OBB_WorldMatrix(const BoundingOrientedBox& localOBB, const XMFLOAT4X4& objectWorld, XMFLOAT4X4& out_world)
+{
+	XMMATRIX localMat = Build_OBB_WorldMatrix(localOBB, false);
+	XMMATRIX objMat = XMLoadFloat4x4(&objectWorld);
+	XMMATRIX finalMat = localMat * objMat;
+
+	XMStoreFloat4x4(&out_world, XMMatrixTranspose(finalMat));
+	return true;
+}
+
+
+void OBB_Manager::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<std::shared_ptr<CGameObject>>& obb_list, std::unordered_set<CGameObject*>& visited)
 {
 	if (!obj || visited.count(obj.get()) > 0) return;
 
@@ -493,13 +769,6 @@ void OBB_Drawer::FindOBBObjects(std::shared_ptr<CGameObject> obj, std::vector<st
 	FindOBBObjects(obj->Get_Sibling(), obb_list, visited);
 }
 
-
-void OBB_Drawer::Render(ID3D12GraphicsCommandList* cmdList, CCamera* camera)
-{
-	obb_shader->Setting_Render(cmdList, 0);
-	if (obb_Mesh)
-		obb_Mesh->Render(cmdList, m_d3dInstancingBufferView, rendering_num);
-}
 
 //==================================================
 
@@ -516,8 +785,6 @@ void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dD
 	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 정렬된 크기 사용
 
 }
-
-
 
 void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -616,13 +883,6 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 {
 	string name = obj_ptr->Get_Mesh_Name();
 
-	//if (name == "SM_Env_Beach_02" ||
-	//	name == "SM_Env_Beach_03" ||
-	//	name == "SM_Env_Beach_04" ||
-	//	name == "SM_Env_Beach_06" ||
-	//	name == "SM_Env_Flat_Sand_02")
-	//	name = "None";
-
 	if (name != "None") 
 	{
 		container[name].fixed_obj_list.push_back(obj_ptr);
@@ -685,7 +945,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 			if (obj_ptr->Get_Active()) {
-				if ((obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER) && (obj_ptr->Object_type != OBJECT_TPYE_MONSTER_SERVER))
+				if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
 				obj_ptr->Animate(fTimeElapsed);
 			}
 	}
@@ -772,116 +1032,92 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 {
-	switch (obj_type)
-	{
-	case Object_Type::skinned:
-	{
-		bool Is_Visible = false;
-		for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
-		{
-			Is_Visible = obj_ptr->IsVisible(pCamera);
-			obj_ptr->Set_Active(Is_Visible);
-			
-		}
-	} break;
-
-	case Object_Type::non_skinned:
-	{
-		bool Is_Visible = false;
-		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
-		{
-			Is_Visible = obj_ptr->IsVisible(pCamera);
-			if (obj_ptr->Object_type != 10)
-				obj_ptr->Set_Active(Is_Visible);
-
-		}
-	} break;
-
-	case Object_Type::fixed:
-	{
-		if(terrain_ptr)
-			Synchronize_Active_Objects_and_Tile();
-	} break;
-
-	case Object_Type::player:
-	{
-		bool Is_Visible = false;
-		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
-		{
-			Is_Visible = obj_ptr->IsVisible(pCamera);
-			obj_ptr->Set_Active(Is_Visible);
-
-		}
-	} break;
-
-	case Object_Type::etc:
-		break;
-	}
-
-
-
 }
 
 void Object_Manager::Check_Culling_All(CCamera* pCamera)
 {
-	/// 타일맵 컬링하기
-	//if (terrain_ptr != NULL)	
-	//	terrain_ptr->Check_Culling(pCamera);
-
-	//Check_Culling(pCamera, Object_Type::skinned);
-	//Check_Culling(pCamera, Object_Type::non_skinned);
-	//Check_Culling(pCamera, Object_Type::fixed);
 }
 
-void Object_Manager::Classify_Objects_By_Tile()
-{	
-	// 객체들의 위치에 따라 타일로 분류하는 함수
-	
-	//=============================== 
-	for (auto& [tile_num, obj_list] : obj_list_in_tile)
-		obj_list.clear();
-	obj_list_in_tile.clear();
-	//===============================
-
-	CHeightMapTerrain* last_checked_tile = NULL;
-	int Tile_Num = 0;
-
-	for (auto& [meshName, instance_info] : fixed_obj_info_map)
+void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	switch (type)
 	{
-		for (std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
 		{
-			XMFLOAT3 obj_pos = obj_ptr->GetPosition();
-			Tile_Num = terrain_ptr->Get_Tile(obj_pos.x, obj_pos.z, last_checked_tile);
-			obj_list_in_tile[Tile_Num].push_back(obj_ptr);
+			if (skinned_obj_ptr->Get_Active())
+			{
+				skinned_obj_ptr->UpdateTransform(NULL);
+				skinned_obj_ptr->Render_Shadow(pd3dCommandList, pCamera);
+			}
 		}
 	}
+	break;
 
-	Reserve_Update();
-}
-
-void Object_Manager::Synchronize_Active_Objects_and_Tile()
-{
-	// 활성화된 타일 번호 리스트 생성
-	std::vector<int> active_tile_num_list;
-	terrain_ptr->Get_Active_TileNum_List(active_tile_num_list);
-	std::unordered_set<int> active_tile_set(active_tile_num_list.begin(), active_tile_num_list.end());
-
-	// 객체를 갖고 있는 타일 중에서,
-	// 활성화된 타일이 갖는 객체들은 활성화
-	// 비활성화된 타일의 객체들은 비활성화
-	for (auto& [tile_num, obj_list] : obj_list_in_tile)
+	case Object_Type::non_skinned:
 	{
-		bool tile_active = true;
-		if (active_tile_set.find(tile_num) != active_tile_set.end()) // 활성화 타일 리스트에 포함된 타일인 경우
-			tile_active = true;
-		else
-			tile_active = false;
+		for (std::shared_ptr<CGameObject>& obj_ptr : non_skinned_object_list)
+			if (obj_ptr->Get_Active())
+				obj_ptr->Render_Shadow(pd3dCommandList, pCamera);
+	}
+	break;
 
-		for (std::shared_ptr<CGameObject> obj_ptr : obj_list)
-			obj_ptr->Set_Active(tile_active);		
+	case Object_Type::fixed:
+	{
+		if (instance_shader)
+			instance_shader->Setting_Render(pd3dCommandList, 1);
+
+		for (auto& [meshName, instance_info] : fixed_obj_info_map)
+		{
+			if (instance_info.rendering_num == 0 || !instance_info.obj_mesh)
+				continue;
+			int max_instance_num = instance_info.fixed_obj_list.size();
+			instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, max_instance_num);
+
+		}
+	}
+	break;
+
+	case Object_Type::player:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
+		{
+			if (obj_ptr->Get_Active())
+			{
+				obj_ptr->UpdateTransform(NULL);
+				obj_ptr->Render_Shadow(pd3dCommandList, pCamera);
+			}
+		}
+	}
+	break;
+
+	case Object_Type::trail:
+	case Object_Type::etc:
+	default:
+	{
+		DebugOutput("Object_Manager::Render_Objects() - Using_Wrong_Type");
+		::PostQuitMessage(0);
+	}
+	break;
 	}
 
-	Reserve_Update();
+
+}
+
+void Object_Manager::Render_Terrain_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (terrain_ptr)
+		terrain_ptr->Render_Shadow(pd3dCommandList, pCamera);
+}
+
+void Object_Manager::Render_Objects_Shadow_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	Render_Terrain_Shadow(pd3dCommandList, pCamera);
+	Render_Objects_Shadow(Object_Type::skinned, pd3dCommandList, pCamera);
+	Render_Objects_Shadow(Object_Type::non_skinned, pd3dCommandList, pCamera);
+	Render_Objects_Shadow(Object_Type::player, pd3dCommandList, pCamera);
+	Render_Objects_Shadow(Object_Type::fixed, pd3dCommandList, pCamera);
 }
 
 void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -911,39 +1147,24 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 	case Object_Type::fixed:
 	{
-		if (terrain_ptr)
-		{
-			//terrain_ptr->Render(pd3dCommandList, pCamera); // 렌더링과 + 활성화 타일 선별
-//			Synchronize_Active_Objects_and_Tile();
-		}
-
 		if (instance_shader)
 			instance_shader->Setting_Render(pd3dCommandList, 0);
 
 		for (auto& [meshName, instance_info] : fixed_obj_info_map)
 		{
-			for(std::shared_ptr<CGameObject> obj_ptr : instance_info.fixed_obj_list)
+			if (instance_info.rendering_num == 0 || !instance_info.obj_mesh)
+				continue;
+
+			if (!instance_info.fixed_obj_list.empty())
 			{
-				for(std::shared_ptr<CMaterial> obj_material : obj_ptr->Material_list)
-				{
-					if (obj_material)
-					{
-						// 재료(Material) 셰이더 변수 업데이트
-						// 현재 의미 없음, 결국 메테리얼 하나의 정보를 기반으로 인스턴싱
-						// -> 한번만 동작해야 함 
-						// -> 하나의 머테리얼을 모두에게 적용하게 됨
-						// -> 각각 다른머테리얼을 하려면, 인스턴싱을 하면 안됨 or 인스턴싱 넘버 기반으로 셰이더에서 처리하기
-						// 아니면 인스턴싱 정보에 재질 ID 전달 및 ID 기반 조명 렌더링
-						obj_material->UpdateShaderVariable(pd3dCommandList);
-							
-						// 메쉬 렌더링
-						if (instance_info.obj_mesh)
-							instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
-					}
-					break;
-				}
-				break;
+				const auto& first_obj = instance_info.fixed_obj_list.front();
+				first_obj->UpdateShaderVariables(pd3dCommandList);
+				if (!first_obj->Material_list.empty() && first_obj->Material_list[0])
+					first_obj->Material_list[0]->UpdateShaderVariable(pd3dCommandList);
 			}
+
+			instance_info.obj_mesh->Instancing_Render(pd3dCommandList, instance_info.m_d3dInstancingBufferView, instance_info.rendering_num);
+
 		}
 	}
 	break;
@@ -989,18 +1210,24 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 
 
 }
+
 void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (terrain_ptr) 
 		terrain_ptr->Render(pd3dCommandList, pCamera);
 }
+
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	Render_Terrain(pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::fixed, pd3dCommandList, pCamera);
 }
+
+
+
 
 void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
@@ -1093,11 +1320,16 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 
 std::vector<std::shared_ptr<CGameObject>> Object_Manager::Gather_All_Fixed_Objects()
 {
+	size_t totalSize = 0;
+	for (const auto& [name, info] : fixed_obj_info_map)
+		totalSize += info.fixed_obj_list.size();
+
 	std::vector<std::shared_ptr<CGameObject>> result;
-	for (auto& [name, info] : fixed_obj_info_map)
-	{
+	result.reserve(totalSize);
+
+	for (const auto& [name, info] : fixed_obj_info_map)
 		result.insert(result.end(), info.fixed_obj_list.begin(), info.fixed_obj_list.end());
-	}
+
 	return result;
 }
 
@@ -1164,9 +1396,6 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 
 	for (const auto& [meshName, fixedInfo] : fixed_obj_info_map)
 	{
-		if (meshName.find("Bld") == std::string::npos && meshName.find("Rock") == std::string::npos)
-			continue;
-
 		if (!fixedInfo.obj_mesh || !fixedInfo.obj_mesh->Get_BoundingBox()) continue;
 
 		const BoundingOrientedBox& localOBB = *fixedInfo.obj_mesh->Get_BoundingBox();
@@ -1215,40 +1444,125 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 }
 
 //==================================================
-void Object_Manager::Create_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+
+void Object_Manager::Create_OBB_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	if (obb_drawer_map.find(type) != obb_drawer_map.end())
+	if (obb_manager != NULL)
 		return;
 
-	auto drawer = std::make_shared<OBB_Drawer>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-	drawer->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
-	obb_drawer_map[type] = drawer;
+	obb_manager = std::make_unique<OBB_Manager>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
 }
 
-void Object_Manager::Create_OBB_Drawers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
-{
-	std::vector<Object_Type> types = { Object_Type::fixed, Object_Type::skinned, Object_Type::non_skinned };
-	for (Object_Type type : types)
-		Create_OBB_Drawer(type, pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-}
 
-void Object_Manager::Update_OBB_Drawer(Object_Type type, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Object_Manager::Update_OBB_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Object_Type type)
 {
-	auto it = obb_drawer_map.find(type);
-	if (it != obb_drawer_map.end())
+	if (type == Object_Type::fixed)
+		obb_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, fixed_obj_info_map);
+	else
 	{
-		it->second->Update_OBB_Data(pd3dDevice, pd3dCommandList, type, this);
+		std::vector<std::shared_ptr<CGameObject>> merged;
+		merged.reserve(skinned_object_list.size() + non_skinned_object_list.size());
+
+		merged.insert(merged.end(), skinned_object_list.begin(), skinned_object_list.end());
+		merged.insert(merged.end(), non_skinned_object_list.begin(), non_skinned_object_list.end());
+
+		obb_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, merged);
+	}
+
+
+}
+
+void Object_Manager::Check_OBB_Collision()
+{
+	for (shared_ptr<CGameObject> obj_ptr : skinned_object_list)
+	{
+		if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
+			continue;
+
+		auto* player = dynamic_cast<CTerrainPlayer*>(obj_ptr.get());
+		if (!player) continue;
+
+		const BoundingOrientedBox* localOBB = player->Get_Collider();
+		if (!localOBB) continue;
+
+		BoundingOrientedBox worldOBB;
+		localOBB->Transform(worldOBB, XMLoadFloat4x4(&player->m_xmf4x4World));
+
+		XMFLOAT3 velocity = player->GetVelocity();
+		XMVECTOR moveDir = XMLoadFloat3(&velocity);
+		float speed = XMVectorGetX(XMVector3Length(moveDir));
+
+		if (speed <= 0.0001f) continue;
+
+		moveDir = XMVector3Normalize(moveDir);
+
+		if (obb_manager->Resolve_Slide_On_Collision(worldOBB, moveDir))
+		{
+			XMFLOAT3 slideDir;
+			XMStoreFloat3(&slideDir, moveDir);
+			player->EnableSliding(slideDir);
+		}
 	}
 }
 
-void Object_Manager::Update_OBB_Drawers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Object_Manager::Check_OBB_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* camera)
 {
-	for (auto& [type, drawer] : obb_drawer_map)
-		drawer->Update_OBB_Data(pd3dDevice, pd3dCommandList, type, this);
+	if (!obb_manager || !camera) 
+		return;
+
+	BoundingFrustum camera_frustum = camera->Get_Frustum(); 
+
+	std::vector<OBB_Info> visibleOBBs = obb_manager->Get_Collision_Manager()->Get_Visible_OBBs_From_CameraFrustum(camera_frustum);
+
+	ApplyCulledOBBsToInstanceBuffers(visibleOBBs);
 }
 
-void Object_Manager::Render_OBB_Drawers(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* camera)
+void Object_Manager::ApplyCulledOBBsToInstanceBuffers(const std::vector<OBB_Info>& culledOBBs)
 {
-	for (auto& [type, drawer] : obb_drawer_map)
-		drawer->Render(pd3dCommandList, camera);
+	std::unordered_map<std::string, std::vector<std::shared_ptr<CGameObject>>> visibleObjectsByMesh;
+
+	// 1. 메시 이름 기준으로 가시 오브젝트 그룹화
+	for (const auto& obb : culledOBBs)
+	{
+		if (!obb.object || !obb.mesh)
+			continue;
+
+		visibleObjectsByMesh[obb.mesh->Get_Name()].push_back(obb.object);
+	}
+
+	int totalVisibleInstances = 0;
+
+	// 2. fixed_obj_info_map 순회하면서 인스턴스 버퍼 채우기 or 렌더링 0 처리
+	for (auto& [meshName, info] : fixed_obj_info_map)
+	{
+		auto it = visibleObjectsByMesh.find(meshName);
+
+		if (it == visibleObjectsByMesh.end())
+		{
+			// 컬링된 메시인 경우 렌더링 제외
+			info.rendering_num = 0;
+			continue;
+		}
+
+		const auto& objList = it->second;
+		int visibleCount = static_cast<int>(objList.size());
+
+		for (int i = 0; i < visibleCount; ++i)
+		{
+			XMFLOAT4X4 worldMatrix = objList[i]->m_xmf4x4World;
+			XMStoreFloat4x4(&worldMatrix, XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix)));
+			info.Mapped_Instance_info[i] = { worldMatrix };
+		}
+
+		info.rendering_num = visibleCount;
+		totalVisibleInstances += visibleCount;
+	}
+
+	//DebugOutput("Total Visible Instances: " + std::to_string(totalVisibleInstances) + "\n");
+}
+
+void Object_Manager::Render_OBB(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* camera)
+{
+	obb_manager->Render_OBB(pd3dCommandList, camera);
 }
