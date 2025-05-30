@@ -615,6 +615,9 @@ public:
 
     bool Test_Mode{ false };
 
+    float maxHP{ 100.0f };
+    float currentHP{ 100.0f };
+
 public:
     CGameObject(const std::string_view& name = "No_name");
     CGameObject(int nMaterials, const std::string_view& name = "No_name");

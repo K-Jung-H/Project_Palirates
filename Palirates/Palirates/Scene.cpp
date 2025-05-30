@@ -1337,6 +1337,19 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 			}
 		}
 		if (!block) continue;
+		if (UpdateUI)
+		{
+			uint32_t layerMask = static_cast<uint32_t>(UILayer::HP_bar);
+			if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
+			{
+				float targetHP = m_pPlayer->currentHP / m_pPlayer->maxHP;
+				float speed = 15.0f; 
+				block->hp = block->hp + (targetHP - block->hp) * (elapsedTime * speed);
+
+				if (abs(block->hp - targetHP) < 0.001f)
+					block->hp = targetHP;
+			}
+		}
 	}
 }
 
@@ -1635,26 +1648,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			bOBBRender = !bOBBRender;
 
 		}		break;
-
-
-		case VK_CONTROL: 
-		{
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty()) {
-				uint32_t targetMask = static_cast<uint32_t>(UILayer::HP_bar);
-				for (auto& block : blocks)
-				{
-					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
-					{
-						block->hp -= 0.01f; 
-						if (block->hp <= 0.0f)
-							block->hp = 1.0f;
-
-					}
-				}
-			}
-		}
-			break;
 		default:
 			break;
 		}
@@ -2036,6 +2029,7 @@ void CScene::Bind_Player_UI_Callback()
 		m_pPlayer->GetStateMachine()->onGetHitEffect = [this](bool bEnable) {
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
+			UpdateUI = bEnable;
 			};
 	}
 }
