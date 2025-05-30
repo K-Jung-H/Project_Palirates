@@ -919,9 +919,6 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
 
-
-	shadow_camera = std::make_shared<Shadow_Camera>();
-
 }
 
 void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -968,6 +965,8 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	shadow_camera = std::make_shared<Shadow_Camera>();
 
 	if(shadow_camera)
 		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -2053,7 +2052,7 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 {
-	m_nLights = 4;
+	m_nLights = 5;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
@@ -2095,6 +2094,12 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 2.0f, 15.0f);
 	m_pLights[3].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.2f, 0.05f);
 
+	m_pLights[4].m_bEnable = true;
+	m_pLights[4].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[4].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[4].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[4].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
 
 }
 
@@ -2107,6 +2112,10 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	m_pLights[2].m_bEnable = true;
 	m_pLights[3].m_bEnable = false;
 
+	shadow_camera = std::make_shared<Shadow_Camera>();
+
+	if (shadow_camera)
+		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
@@ -2227,7 +2236,6 @@ void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12Grap
 void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	CScene::Render(pd3dDevice, pd3dCommandList);
-	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
 void Character_Select_Scene::UpdatePlayerSelection(int new_index)
@@ -2395,6 +2403,8 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+//	shadow_camera = std::make_shared<Shadow_Camera>();
 
 	if (shadow_camera)
 		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
