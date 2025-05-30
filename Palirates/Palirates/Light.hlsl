@@ -70,6 +70,7 @@ float4 ComputeDiffuseSpecular(float3 vToLight, float3 vNormal, float3 vToCamera,
     float3 dielectricF0 = float3(0.04f, 0.04f, 0.04f);
     float3 specularColor = lerp(dielectricF0, albedoColor, metalFactor);
     float3 diffuseColor = lerp(albedoColor, float3(0, 0, 0), metalFactor);
+
 #else
     float shininess = lightMaterial.gSpecular.w;
     float3 specularColor = lightMaterial.gSpecular.rgb;
@@ -90,7 +91,8 @@ float4 ComputeDiffuseSpecular(float3 vToLight, float3 vNormal, float3 vToCamera,
     float4 specular = light.m_cSpecular * fSpecularFactor * float4(specularColor, 1.0f) * shadowFactor;
 
 
-    return ambient + diffuse + specular;
+   return ambient + diffuse + specular;
+    //return ambientShadow.xxxx;
 }
 
 //--------------------------------------------------------------------------------------
@@ -140,6 +142,7 @@ float4 SpotLight(int Light_ID, float3 vPosition, float3 vNormal, float3 vToCamer
 
 float4 Lighting(float3 wPosition, float3 wNormal, float3 camera_pos, float3 albedoColor, uint materialID, float shadowFactor)
 {
+
     if (materialID == 0)
         return float4(albedoColor, 1.0f);
 

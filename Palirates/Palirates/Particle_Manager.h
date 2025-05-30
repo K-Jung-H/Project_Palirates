@@ -89,10 +89,10 @@ class Particle_Manager
 {
 private:
 	static bool is_cs_shader_compiled;
+	static 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
 
 	unique_ptr<Grid_Builder> grid_builder;
 
-	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
 	std::unordered_map<string, shared_ptr<Particle_Shape_Mesh>> particle_mesh_map;
 	std::unordered_map<string, ParticleData> particle_data_map; // for re-use particle
 	CTexture* m_OBBBufferTexture = NULL;

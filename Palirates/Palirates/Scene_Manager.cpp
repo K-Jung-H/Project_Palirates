@@ -26,6 +26,11 @@ Scene_Manager::~Scene_Manager()
 
 }
 
+void Build_Scene(Scene_Type scene_type, string scene_name)
+{
+
+}
+
 bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene)
 {
     if (sceneCache.find(std::string(sceneName)) != sceneCache.end())
@@ -34,9 +39,9 @@ bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<C
         return false;
     }
 
-    if (sceneChangeCallback) {
-        scene->requestSceneChange = sceneChangeCallback;
-    }
+    //if (sceneChangeCallback) {
+    //    scene->requestSceneChange = sceneChangeCallback;
+    //}
 
     sceneCache[std::string(sceneName)] = scene;
     return true;
@@ -79,20 +84,67 @@ bool Scene_Manager::Find_Scene(std::string_view sceneName)
     return false;
 }
 
-void Scene_Manager::Build_Scene(std::string_view sceneName, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-    auto it = sceneCache.find(std::string(sceneName));
-    if (it != sceneCache.end())
+
+    switch (scene_type)
     {
-        it->second->BuildObjects(pd3dDevice, pd3dCommandList);
+
+    case Lobby:
+    {
+        std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
+        character_select_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+
+        Register_Scene(scene_name, character_select_scene);
+        std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
+        select_scene_observer->SetPosition(XMFLOAT3{ 52.0f, 0.0f, 35.0f });
+        select_scene_observer->Rotate(0.0f, -120.0f, 0.0f);
+        Set_Scene_Player(scene_name, select_scene_observer);
+    }
+    break;
+
+    case Board:
+    {
+        std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
+        game_board_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+
+        Register_Scene(scene_name, game_board_scene);
+        std::shared_ptr<Observer> game_board_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
+        Set_Scene_Player(scene_name, game_board_observer);
+    }
+    break;
+
+    case Stage_1:
+    {
+        std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
+        in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+
+        Register_Scene(scene_name, in_stage_scene);
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
+        pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetupWeaponCollider();
+        pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
+        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
+    }
+    break;
+
+    case Stage_2:
+    {
+    }
+    break;
+
+    case etc:
+    default:
+        break;
+    }
+
+
 
 #ifdef WRITE_TEXT_UI
         it->second->Build_Text_UI(text_ui_renderer.get());
 #endif
-       // it->second->Build_Texture_UI(pd3dDevice, pd3dCommandList, texture_ui_renderer.get());
-    }
-    else
-        DebugOutput("[Scene_Manager] ERROR:  Can't find " + std::string(sceneName));
+
 
 }
 
@@ -128,6 +180,23 @@ shared_ptr<CCamera> Scene_Manager::Get_Active_Scene_Main_Camera()
         DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
     return NULL;
 
+}
+
+bool Scene_Manager::Check_Scene_Change_Signal()
+{
+    bool result = false;
+
+    if (activeScene)
+    {
+        Change_Signal signal = activeScene->Get_Change_Signal();
+        if (signal.type != etc && signal.scene_name != "")
+            result = true;
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
+
+
+    return result;
 }
 
 void Scene_Manager::Set_Active_Scene_Main_Camera(const std::shared_ptr<CCamera>& newCamera)
