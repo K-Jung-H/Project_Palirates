@@ -53,7 +53,7 @@ public:
 
 
     void Update_UI();
-    void Update_Texture_UI();
+    void Update_Texture_UI(float currentTime, float elapsedTime);
 
     void Prepare_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     

@@ -126,6 +126,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
+        in_stage_scene->Bind_Player_UI_Callback();
     }
     break;
 
@@ -314,11 +315,11 @@ void Scene_Manager::Update_UI()
 #endif
 }
 
-void Scene_Manager::Update_Texture_UI()
+void Scene_Manager::Update_Texture_UI(float currentTime, float elapsedTime)
 {
     if (activeScene)
     {
-        activeScene->Update_Texture_UI();
+        activeScene->Update_Texture_UI(currentTime, elapsedTime);
     }
 }
 
@@ -449,6 +450,7 @@ void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, 
     if (activeScene) {
         if (activeScene->texture_ui_manager) {
             activeScene->texture_ui_manager->RenderAll(cmdList, currentTime, elapsedTime);
+            activeScene->current_time = currentTime;
         }
     }
     else

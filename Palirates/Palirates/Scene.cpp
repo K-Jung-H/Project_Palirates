@@ -1257,6 +1257,15 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
+	CTexture* BDSCR = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	BDSCR->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/bloodscreen.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BDSCR, 0, 0);
+	D2D1_RECT_F BDSCRscreenRect = MakeNormalizedRect(0.5f, 0.5f, 1.0f, BDSCR);
+	std::unique_ptr<TextureBlock> BDSCRblock = std::make_unique<TextureBlock>(BDSCR, BDSCRscreenRect, mesh, UILayer::screen);
+	BDSCRblock->ui_type = 2;
+	BDSCRblock->hp = 1.5f;
+	texture_ui_manager->Add_TextureBlock(std::move(BDSCRblock));
+
 	CTexture* HpBack = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Empty.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpBack, 0, 0);
@@ -1269,6 +1278,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpFront, 0, 0);
 	D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
 	std::unique_ptr<TextureBlock> HFblock = std::make_unique<TextureBlock>(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
+	HFblock->ui_type = 1;
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -1312,9 +1322,22 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 		return {};
 }
 
-void CScene::Update_Texture_UI()
+void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
+	std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
+	for (auto& block : blocks)
+	{
+		if (block->bPendingActivation) {
+			float elapsed = currentTime - block->start_time;
+			if (elapsed >= block->hp)
+			{
+				block->bActive = true;
+				block->bPendingActivation = false;
+			}
+		}
+		if (!block) continue;
+	}
 }
 
 void CScene::ReleaseObjects()
@@ -1593,8 +1616,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -1986,10 +2009,37 @@ void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer tar
 	{
 		if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
 		{
-			block->bActive = bEnable;
+			block->start_time = current_time;
+			if (bEnable)
+			{
+				if ((static_cast<uint32_t>(block->layer) & static_cast<uint32_t>(UILayer::Dialogue_Button)) != 0)
+				{
+					block->bPendingActivation = true;
+					continue;
+				}
+				block->bActive = true;
+				block->bPendingActivation = false;
+			}
+			else
+			{
+				block->bActive = false;
+				block->bPendingActivation = false;
+			}
 		}
 	}
 }
+
+void CScene::Bind_Player_UI_Callback()
+{
+	if (m_pPlayer && m_pPlayer->GetStateMachine())
+	{
+		m_pPlayer->GetStateMachine()->onGetHitEffect = [this](bool bEnable) {
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
+			};
+	}
+}
+
 
 Change_Signal CScene::Get_Change_Signal()
 {
@@ -2796,7 +2846,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
-				Set_UI_Layer_Active(blocks, UILayer::Dialogue, currentActive);
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, currentActive);
 
 				currentActive = !currentActive;
 			}
@@ -2827,13 +2877,15 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.68f, BackGround);
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Dialogue);
+	BGblock->ui_type = 3;
+	BGblock->hp = 1;
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
 	CTexture* YesButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	YesButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
 	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
-	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
+	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue | UILayer::Dialogue_Button);
 	Yesblock->onClick = [this]() {
 		c_signal.change = true;
 		c_signal.scene_name = "Stage_1";
@@ -2842,22 +2894,24 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	Yesblock->hp = 1;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
 
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
 	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
-	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
+	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue | UILayer::Dialogue_Button);
 	Noblock->onClick = [this]() {
 		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 		if (!blocks.empty())
 		{
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue, false);
+			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 		}
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	Noblock->hp = 1;
 	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
 }
 
@@ -2869,4 +2923,3 @@ void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 }
-
