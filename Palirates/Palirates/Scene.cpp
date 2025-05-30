@@ -20,33 +20,28 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 {
 	std::vector<XMFLOAT3> corners(8);
 
-	// 1. RollÏù¥ Ï†úÍ±∞Îêú View ÌñâÎ†¨ ÎßåÎì§Í∏∞ (up=(0,1,0) Í∞ïÏ†ú)
 	XMFLOAT3 eye = mainCamera->GetPosition();
 	XMFLOAT3 lookVec = mainCamera->GetLookVector();
 	XMVECTOR eyeV = XMLoadFloat3(&eye);
-	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec); // LookAt Ï¢åÌëú
+	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec); 
 	XMVECTOR upV = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX stableView = XMMatrixLookAtLH(eyeV, atV, upV);
 
-	// 2. Projection ÌñâÎ†¨ÏùÄ Í∑∏ÎåÄÎ°ú ÏÇ¨Ïö©
 	XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
 	XMMATRIX invViewProj = XMMatrixInverse(nullptr, stableView * proj);
 
-	// 3. NDC ÏΩîÎÑà Ï†ïÏùò (-1~+1, z: 0=near, 1=far)
 	float ndc[8][3] = {
 		{-1, -1, 0}, { 1, -1, 0}, { 1,  1, 0}, {-1,  1, 0},
 		{-1, -1, 1}, { 1, -1, 1}, { 1,  1, 1}, {-1,  1, 1}
 	};
 
-	// 4. NDC ‚Üí World Î≥ÄÌôò
 	for (int i = 0; i < 8; ++i)
 	{
 		float ndcZ = (i < 4) ? 0.0f : 1.0f;
 		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndcZ, 1.0f);
 		pt = XMVector4Transform(pt, invViewProj);
-		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt)); // Ìà¨ÏòÅ Î∂ÑÌï†
+		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt)); 
 
-		// Ïã§Ï†ú Í±∞Î¶¨ Î≥¥Ï†ï: Ïπ¥Î©îÎùºÏóêÏÑú Î∞©Ìñ•Î≤°ÌÑ∞ * near/farZ
 		XMVECTOR dir = XMVector3Normalize(pt - eyeV);
 		float z = (i < 4) ? nearZ : farZ;
 		XMVECTOR cornerWS = eyeV + dir * z;
@@ -183,7 +178,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 {
 	CCamera::CreateShaderVariables(pd3dDevice, pd3dCommandList); 
 
-	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256Ïùò Î∞∞Ïàò
+	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256¿« πËºˆ
 	m_pd3dcb_LightCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcb_LightCamera->Map(0, NULL, (void**)&m_pcb_MappedLightCamera);
@@ -277,7 +272,6 @@ D3D12_CPU_DESCRIPTOR_HANDLE Shadow_Camera::Get_Shadow_Map_DSV(int n) const
 			return shadowTex->GetDSVDescriptorHandle(n);
 	}
 
-	// Í∏∞Î≥∏Í∞í Î∞òÌôò (nullptr Î∞©ÏßÄÏö©)
 	return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
 }
 
@@ -290,7 +284,6 @@ ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const
 			return shadowTex->GetResource(n);
 	}
 
-	// Í∏∞Î≥∏Í∞í Î∞òÌôò (nullptr Î∞©ÏßÄÏö©)
 	return 0;
 }
 
@@ -1074,7 +1067,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> ÌèâÏßÄ
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> ∆Ú¡ˆ
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -1153,8 +1146,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // ÎØ∏Î¶¨ ÌïúÎ≤à ÏóÖÎç∞Ïù¥Ìä∏ Ìï¥Ïïº ÌååÌã∞ÌÅ¥ Î©îÎãàÏ†ÄÏóêÏÑú fixed ÌÉÄÏûÖ Ï†ïÎ≥¥ ÏñªÏùÑ Ïàò ÏûàÏùå
-	obj_manager->Update_Fixed_OBBs(); // ÎÇ¥Î∂ÄÏóêÏÑú m_OBBDataArray ÏÉùÏÑ±
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // πÃ∏Æ «—π¯ æ˜µ•¿Ã∆Æ «ÿæﬂ ∆ƒ∆º≈¨ ∏ﬁ¥œ¿˙ø°º≠ fixed ≈∏¿‘ ¡§∫∏ æÚ¿ª ºˆ ¿÷¿Ω
+	obj_manager->Update_Fixed_OBBs(); // ≥ª∫Œø°º≠ m_OBBDataArray ª˝º∫
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
@@ -1301,9 +1294,11 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
 	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, replay);
 	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable);
-	//REblock->onClick = [this]() {
-	//	RequestSceneChange("Character_Select");
-	//	};
+	REblock->onClick = [this]() {
+		c_signal.change = true;
+		c_signal.scene_name = "Character_Select";
+		c_signal.type = Scene_Type::Lobby;
+		};
 	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
@@ -1567,12 +1562,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						{
 							XMFLOAT3 anubisPos = anu->GetPosition();
 
-							// focus_pointÎßå ÏÑ§Ï†ï (1Î≤à Í≥µÌÜµ Ï≤òÎ¶¨)
+							// focus_point∏∏ º≥¡§ (1π¯ ∞¯≈Î √≥∏Æ)
 							test_sand->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
 							test_sand->Set_Focus_Point(anubisPos);
 							test_sand->Set_Speed(0.0f);
 
-							// 2Î≤à Ï†ÑÏö© Ï≤òÎ¶¨
+							// 2π¯ ¿¸øÎ √≥∏Æ
 							if (test_sand->Update_Func_Index == 2)
 							{
 								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
@@ -1904,11 +1899,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-			// 2. Î†åÎçî ÌÉÄÍ≤ü ÏÑ§Ï†ï Î∞è ÌÅ¥Î¶¨Ïñ¥
+			// 2. ∑ª¥ı ≈∏∞Ÿ º≥¡§ π◊ ≈¨∏ÆæÓ
 			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-			// 3. ÏâêÏù¥Îçî ÏÉÅÏàò ÏóÖÎç∞Ïù¥Ìä∏ Î∞è Î†åÎçîÎßÅ
+			// 3. Ω¶¿Ã¥ı ªÛºˆ æ˜µ•¿Ã∆Æ π◊ ∑ª¥ı∏µ
 			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
 			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
 
@@ -1928,7 +1923,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
 
-	//Ïî¨Ïùò Í∞ùÏ≤¥Îì§ ÌîÑÎü¨Ïä§ÌÖÄ Ïª¨ÎßÅ
+	//æ¿¿« ∞¥√ºµÈ «¡∑ØΩ∫≈“ ƒ√∏µ
 	//obj_manager->Check_Culling_All(pCamera);
 
 	// Light Update
@@ -2395,7 +2390,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -0.7f, 0.7f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
 
 
 }
