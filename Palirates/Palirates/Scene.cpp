@@ -1829,9 +1829,9 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
-	if (test_button)
+	if (bHitSignal)
 	{
-		test_button = false;
+		bHitSignal = false;
 
 		int  cbv = CDescriptor_Heap::GetCreatedCbvCount();
 		int  srv = CDescriptor_Heap::GetCreatedSrvCount();
@@ -2030,6 +2030,7 @@ void CScene::Bind_Player_UI_Callback()
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
 			UpdateUI = bEnable;
+			bHitSignal = bEnable;
 			};
 	}
 }

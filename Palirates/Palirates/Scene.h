@@ -138,6 +138,7 @@ public:
 	Change_Signal c_signal;
 	float current_time = 0.0f;
 	bool UpdateUI{ false };
+	bool bHitSignal{ false };
 protected:
 	std::shared_ptr<Shadow_Camera> shadow_camera;
 
