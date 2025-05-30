@@ -1145,7 +1145,8 @@ CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12Graph
 	m_pModelRootObject = pModel->m_pModelRootObject;
 
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	m_ppSkinnedMeshes.resize(m_nSkinnedMeshes);
+	//m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 		m_ppSkinnedMeshes[i] = pModel->m_ppSkinnedMeshes[i];
@@ -1185,8 +1186,9 @@ CAnimationController::~CAnimationController()
 	if (m_pAnimationSets)
 		m_pAnimationSets->Release();
 
-	if (m_ppSkinnedMeshes)
-		delete[] m_ppSkinnedMeshes;
+	m_ppSkinnedMeshes.clear();
+	//if (m_ppSkinnedMeshes)
+	//	delete[] m_ppSkinnedMeshes;
 }
 
 void CAnimationController::SetCallbackKeys(int nAnimationTrack, int nCallbackKeys)
@@ -1558,15 +1560,18 @@ void CAnimationController::Bone_Info()
 //
 CLoadedModelInfo::~CLoadedModelInfo()
 {
-	if (m_ppSkinnedMeshes)
-		delete[] m_ppSkinnedMeshes;
+	m_ppSkinnedMeshes.clear();
+	//if (m_ppSkinnedMeshes)
+	//	delete[] m_ppSkinnedMeshes;
 }
 
 void CLoadedModelInfo::PrepareSkinning()
 {
 	int nSkinnedMesh = 0;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
+	m_ppSkinnedMeshes.clear();
+	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes);
+//	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+//	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
@@ -1646,7 +1651,7 @@ CGameObject::CGameObject(const CGameObject& other)
 
 
 	if (other.m_pMesh != nullptr)
-		m_pMesh = new CMesh(*other.m_pMesh);
+		m_pMesh = other.m_pMesh;
 
 
 	if (other.m_pSkinnedAnimationController != nullptr)
@@ -1706,9 +1711,7 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 
 	if (other.m_pMesh != nullptr)
 	{
-		if (m_pMesh != nullptr)
-			delete m_pMesh;
-		m_pMesh = new CMesh(*other.m_pMesh);
+		m_pMesh = other.m_pMesh;
 	}
 
 	if (other.m_pSkinnedAnimationController != nullptr)
@@ -1733,7 +1736,7 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 	std::memcpy(clone->m_pstrFrameName, this->m_pstrFrameName, sizeof(this->m_pstrFrameName));
 
 	if (this->m_pMesh)
-		clone->m_pMesh = new CMesh(*this->m_pMesh);
+		clone->m_pMesh = m_pMesh;
 
 	for (const auto& material : this->Material_list)
 	{
@@ -1915,7 +1918,7 @@ void CGameObject::Set_Active(bool active, bool IsRoot)
 		m_pSibling->Set_Active(active, false);
 }
 
-void CGameObject::SetMesh(CMesh* pMesh)
+void CGameObject::SetMesh(std::shared_ptr<CMesh> pMesh)
 {
 	if (m_pMesh) m_pMesh->Release();
 	m_pMesh = pMesh;
@@ -2001,17 +2004,22 @@ void CGameObject::Update_Color_Blending(float update_bleeding_value)
 }
 
 
-void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
+void CGameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes)
 {
-	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
-		ppSkinnedMeshes[(*pnSkinnedMesh)++] = (CSkinnedMesh*)m_pMesh;
+	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) {
+		auto pSkinned = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
+		if (pSkinned) {
+			outSkinnedMeshes.push_back(pSkinned);
+		}
+	}
 
 	if (m_pSibling)
-		m_pSibling->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
+		m_pSibling->FindAndSetSkinnedMesh(outSkinnedMeshes);
 
 	if (m_pChild)
-		m_pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
+		m_pChild->FindAndSetSkinnedMesh(outSkinnedMeshes);
 }
+
 
 
 std::shared_ptr<CGameObject> CGameObject::FindFrame(const char* pstrFrameName)
@@ -3044,7 +3052,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
 
-			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
+//			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
+			shared_ptr<CStandardMesh> pMesh = make_shared<CStandardMesh>(pd3dDevice, pd3dCommandList);
 			pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			pGameObject->SetMesh(pMesh);
 		}
@@ -3052,7 +3061,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
 
-			CSkinnedMesh* pSkinnedMesh = new CSkinnedMesh(pd3dDevice, pd3dCommandList);
+			//CSkinnedMesh* pSkinnedMesh = new CSkinnedMesh(pd3dDevice, pd3dCommandList);
+			shared_ptr<CSkinnedMesh> pSkinnedMesh = make_shared<CSkinnedMesh>(pd3dDevice, pd3dCommandList);
 			pSkinnedMesh->LoadSkinInfoFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -3131,7 +3141,7 @@ std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Dev
 
 				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
 				if (sharedMesh)
-					pGameObject->SetMesh(sharedMesh.get());
+					pGameObject->SetMesh(sharedMesh);
 			}
 		}
 		else if (!strcmp(pstrToken, "<Materials>:"))
@@ -3396,7 +3406,9 @@ void CGameObject::Add_Collider(float cube_length)
 void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
 	if (m_pMesh == NULL)
-		m_pMesh = new OBBContainer();
+		m_pMesh = make_shared<OBBContainer>();
+//		m_pMesh = new OBBContainer();
+
 	m_pMesh->Set_BoundingBox(ptr);
 }
 
@@ -3539,7 +3551,9 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	}
 	else if (m_nDepth == 0) // Leaf node: used for height/normal
 	{
-		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, 
+		//CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, 
+		//	nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
+		shared_ptr<CHeightMapGridMesh> part_mesh = make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos,
 			nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);  // local terrain 
 	}
@@ -3873,7 +3887,8 @@ Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 	}
 
 	int side_vertex_n = 10;
-	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+//	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
 	Plane_Material = new CMaterial(2);
@@ -4007,7 +4022,9 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
 	desiredTexelSize = 20.0f;
-	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+
+//	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
 	int tex_Length = static_cast<int>(ceil(nLength / desiredTexelSize));
@@ -4482,7 +4499,9 @@ void Boat_Object::Change_Model(bool is_stay_mode)
 // 
 CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) : CGameObject(1)
 {
-	CSkyBoxMesh* pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+//	CSkyBoxMesh* pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+	shared_ptr<CSkyBoxMesh> pSkyBoxMesh = make_shared<CSkyBoxMesh>(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+
 	SetMesh(pSkyBoxMesh);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
