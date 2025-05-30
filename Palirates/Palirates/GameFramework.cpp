@@ -698,9 +698,7 @@ void CGameFramework::Build_Default_Scenes()
 		return;
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
-	Build_Scene(Scene_Type::Board, "Game_Board");
-//	Build_Scene(Scene_Type::Stage_1, "In_Stage");
-
+	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
 
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
@@ -717,41 +715,39 @@ void CGameFramework::Build_Default_Scenes()
 
 void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 {
-	BeginGPUStage(GPU_Stage::Render);
+	BeginGPUStage(GPU_Stage::Compute);
 
 	scene_manager->Build_Scene(scene_type, scene_name, m_pd3dDevice, Active_CommandList);
 
 
-	EndGPUStage(GPU_Stage::Render);
-	WaitForGpuComplete(GPU_Stage::Render);
+	EndGPUStage(GPU_Stage::Compute);
+	WaitForGpuComplete(GPU_Stage::Compute);
 }
 
 bool CGameFramework::Change_Scene()
 {
-	if (scene_manager->Check_Scene_Change_Signal())
+	//scene_manager->Check_Scene_Change_Signal()
+	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
+	if (c_signal.change)
 	{
-		Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
-
-		// 이미 등록된 씬이라면
-		// 씬만 변경
-
-		// 그게 아니라면?
-		// 새로운 씬 빌드 명령
-		if (scene_manager->Find_Scene(c_signal.scene_name))
+		if (scene_manager->Find_Scene(c_signal.scene_name)) // 이미 생성된 씬이라면?
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
-		else
+		else // 새로 만들어야 하는 경우
 		{
-			BeginGPUStage(GPU_Stage::Render);
+			BeginGPUStage(GPU_Stage::Compute);
 			{
 				scene_manager->Build_Scene(c_signal.type, c_signal.scene_name, m_pd3dDevice, Active_CommandList);
 			}
+			EndGPUStage(GPU_Stage::Compute);
+			WaitForGpuComplete(GPU_Stage::Compute);
 
-			EndGPUStage(GPU_Stage::Render);
-			WaitForGpuComplete(GPU_Stage::Render);
+			scene_manager->Set_Active_Scene(c_signal.scene_name);
+			m_pPlayer = scene_manager->Get_Active_Scene_Player();
+			Object_Manager::Reserve_Update();
 		}
 
 		return true;
@@ -1153,8 +1149,8 @@ void CGameFramework::FrameAdvance()
 
 		shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 
-		if (m_pPlayer)
-			m_pPlayer->Render(Active_CommandList, scene_camera.get());
+		//if (m_pPlayer)
+		//	m_pPlayer->Render(Active_CommandList, scene_camera.get());
 		
 
 		{
@@ -1194,8 +1190,8 @@ void CGameFramework::FrameAdvance()
 
 		// Reserve Effects
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
 		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
 		
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);

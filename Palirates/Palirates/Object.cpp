@@ -616,6 +616,7 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.Outline_Color_ID = Outline_Color_ID;
 	material_packet.Blur_Mask = Blur_Mask_ID;
 
+
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
 
@@ -748,7 +749,7 @@ void Light_Material_Manager::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID
 {
 	if (material_info_buffer)
 	{
-		delete material_info_buffer;
+		material_info_buffer->Release();
 		material_info_buffer = nullptr;
 	}
 
@@ -771,7 +772,10 @@ void Light_Material_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		return;
 
 	if (material_info_buffer)
-		delete material_info_buffer;
+	{
+		material_info_buffer->Release();
+		material_info_buffer = nullptr;
+	}
 
 	CreateStructuredBuffer(pd3dDevice, pd3dCommandList);
 

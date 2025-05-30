@@ -178,8 +178,13 @@ enum Scene_Type
 
 struct Change_Signal
 {
+	bool change;
 	Scene_Type type;
 	std::string scene_name;
+
+	Change_Signal(
+		bool change = false,		Scene_Type type = Scene_Type::etc,		const std::string& scene_name = "")		
+		:	change(change), type(type), scene_name(scene_name) {}
 };
 
 struct GPU_OBB

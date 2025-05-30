@@ -1143,8 +1143,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #endif
 		//=====================================================
 
-
 		Object_Manager::Reserve_Update();
+		Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 #ifdef USING_OBB
 		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
@@ -1265,15 +1265,6 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
-	CTexture* BDSCR = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	BDSCR->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/bloodscreen.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BDSCR, 0, 0);
-	D2D1_RECT_F BDSCRscreenRect = MakeNormalizedRect(0.5f, 0.5f, 1.0f, BDSCR);
-	std::unique_ptr<TextureBlock> BDSCRblock = std::make_unique<TextureBlock>(BDSCR, BDSCRscreenRect, mesh, UILayer::screen);
-	BDSCRblock->ui_type = 2;
-	BDSCRblock->hp = 1.5f;
-	texture_ui_manager->Add_TextureBlock(std::move(BDSCRblock));
-
 	CTexture* HpBack = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Empty.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpBack, 0, 0);
@@ -1317,17 +1308,6 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
-}
-
-void CScene::Bind_Player_UI_Callback()
-{
-	if (m_pPlayer && m_pPlayer->GetStateMachine())
-	{
-		m_pPlayer->GetStateMachine()->onGetHitEffect = [this](bool bEnable) {
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
-			};
-	}
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1619,8 +1599,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			//m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -1658,35 +1638,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			}
 		}
 			break;
-		case 'J': {
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty()) {
-				uint32_t targetMask = static_cast<uint32_t>(UILayer::screen);
-				for (auto& block : blocks)
-				{
-					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
-					{
-						block->start_time = currentTime;
-						block->bActive = true;
-					}
-				}
-			}
-		}
-					   break;
-		case 'K': {
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty()) {
-				uint32_t targetMask = static_cast<uint32_t>(UILayer::screen);
-				for (auto& block : blocks)
-				{
-					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
-					{
-						block->bActive = false;
-					}
-				}
-			}
-		}
-				break;
 		default:
 			break;
 		}
@@ -1826,7 +1777,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	//Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 
 	if (m_pPlayer->GetTrailOn())
@@ -2034,15 +1984,6 @@ void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	obj_manager->Post_Update_All();
 }
 
-Change_Signal CScene::Get_Change_Signal()
-{
-	Change_Signal c_signal;
-	c_signal.scene_name = "in_game";
-	c_signal.type = etc;
-
-	return c_signal;
-}
-
 void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable)
 {
 	uint32_t targetMask = static_cast<uint32_t>(targetLayer);
@@ -2052,9 +1993,19 @@ void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer tar
 		if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
 		{
 			block->bActive = bEnable;
-			block->start_time = currentTime;
 		}
 	}
+}
+
+Change_Signal CScene::Get_Change_Signal()
+{
+	if (c_signal.change)
+	{
+		Change_Signal temp = c_signal;
+		c_signal.change = false;
+		return temp;
+	}
+	return c_signal;
 }
 
 //==========================================================================================
@@ -2210,6 +2161,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	//=====================================================
 	Object_Manager::Reserve_Update();
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
@@ -2269,7 +2221,6 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	//Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 }
 
 
@@ -2370,9 +2321,11 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
 	D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
 	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	//SbTblock->onClick = [this]() {
-	//	RequestSceneChange("Game_Board");
-	//	};
+	SbTblock->onClick = [this]() {
+		c_signal.change = true;
+		c_signal.scene_name = "Game_Stage_Board";
+		c_signal.type = Scene_Type::Board;
+		};
 	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
@@ -2386,18 +2339,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
-
 }
-
-Change_Signal Character_Select_Scene::Get_Change_Signal()
-{
-	Change_Signal c_signal;
-	c_signal.scene_name = "in_game";
-	c_signal.type = etc;
-
-	return c_signal;
-}
-
 
 //==========================================================================================
 
@@ -2447,7 +2389,6 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 
-	//shadow_camera = std::make_shared<Shadow_Camera>();
 
 }
 
@@ -2620,9 +2561,9 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 
 	Object_Manager::Reserve_Update();
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
-
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
@@ -2692,7 +2633,6 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 #endif
 
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	//Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -2905,20 +2845,15 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		{
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue, false);
 		}*/
+
+		c_signal.change = true;
+		c_signal.scene_name = "Stage_1";
+		c_signal.type = Scene_Type::Stage_1;
+
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
-}
-
-
-Change_Signal Board_Scene::Get_Change_Signal()
-{
-	Change_Signal c_signal;
-	c_signal.scene_name = "in_game";
-	c_signal.type = Stage_1;
-
-	return c_signal;
 }
 
 

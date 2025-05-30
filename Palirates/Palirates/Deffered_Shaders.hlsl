@@ -63,7 +63,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 
 //==================================================================
 
-// PCF ÇÊÅÍ¸µ ÇÔ¼ö (3x3 Ä¿³Î)
+// PCF ���͸� �Լ� (3x3 Ŀ��)
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
 {
     float shadowSum = 0.0f;
@@ -122,7 +122,9 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint li
                 shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], shadowSampler, shadowCoord1.xy, shadowCoord1.z - shadowBias, invShadowMapSize);
         }
         shadowFactor = lerp(shadow0, shadow1, blendWeight);
+        
     }
+    
     return shadowFactor;
 }
 
