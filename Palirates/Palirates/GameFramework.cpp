@@ -584,6 +584,7 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
+	Disconnect();
 	Release_Scenes();
 
 	delete MRT_shader;
@@ -1613,7 +1614,6 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 void CGameFramework::Disconnect()
 {
-	if (!isRunning) return;
 
 	isRunning = false;
 
@@ -1651,10 +1651,20 @@ void CGameFramework::NetworkLoop()
 			buffer[bytesReceived] = '\0';
 			std::string receivedData(buffer);
 
+			static std::string recvBuffer;
+			recvBuffer += receivedData;
+
+			size_t pos = 0;
+			while ((pos = recvBuffer.find('\n')) != std::string::npos) 
 			{
-				std::lock_guard<std::mutex> lock(recvQueueMutex);
-				recvQueue.push(receivedData);
-				std::cout << "[recvQueue] 데이터 push 완료, 현재 큐 크기: " << recvQueue.size() << std::endl;
+				std::string line = recvBuffer.substr(0, pos);
+				recvBuffer.erase(0, pos + 1);
+				if (!line.empty())
+				{
+					std::lock_guard<std::mutex> lock(recvQueueMutex);
+					recvQueue.push(line);
+					std::cout << "[recvQueue] 데이터 push 완료, 현재 큐 크기: " << recvQueue.size() << std::endl;
+				}
 			}
 		}
 
@@ -1717,7 +1727,6 @@ void CGameFramework::ChangeServerState()
 
 void CGameFramework::PlayerLeave(int playerId)
 {
-	if (!IsServerConnected()) return;
 	std::string packet = "PLAYER_LEAVE," + std::to_string(playerId) + "\n";
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)
