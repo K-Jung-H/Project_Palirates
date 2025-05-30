@@ -135,6 +135,8 @@ class CScene
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	Change_Signal c_signal;
+
 protected:
 	std::shared_ptr<Shadow_Camera> shadow_camera;
 
@@ -186,9 +188,9 @@ public:
 
 	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual Change_Signal Get_Change_Signal();
-
 	void ReleaseUploadBuffers();
+
+	virtual Change_Signal Get_Change_Signal();
 
 	Particle_Manager* Get_Particle_Manager() { return particle_manager; }
 
@@ -241,7 +243,6 @@ public:
 
 	Texture_UI_Manager* texture_ui_manager = NULL;
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
-	virtual void Bind_Player_UI_Callback();
 	std::vector<TextureBlock*> Get_Texture_List();
 	virtual void Update_Texture_UI();
 
@@ -249,7 +250,6 @@ public:
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 
 	static UINT select_index;
-	float currentTime{ 0.0f };
 };
 
 class Test_Scene : public CScene
@@ -281,7 +281,6 @@ private:
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
-	virtual Change_Signal Get_Change_Signal();
 
 };
 
@@ -315,7 +314,6 @@ private:
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
-	virtual Change_Signal Get_Change_Signal();
 
 };
 
