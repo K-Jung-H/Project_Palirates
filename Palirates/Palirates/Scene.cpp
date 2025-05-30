@@ -2395,7 +2395,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -0.7f, 0.7f);
 
 
 }
@@ -2404,7 +2404,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
-//	shadow_camera = std::make_shared<Shadow_Camera>();
+	shadow_camera = std::make_shared<Shadow_Camera>();
 
 	if (shadow_camera)
 		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -2669,18 +2669,18 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 		player_camera->UpdateFocusTracking(new_camera_pos);
 	}
-	else
-	{
-		XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
-		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
+	//else
+	//{
+	//	XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
+	//	XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
-		//m_pPlayer->SetPosition(Fixed_Position);
-		
-		auto pCamera = m_pPlayer->GetCamera();
-		pCamera->SetPosition(Fixed_Position);
-		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
+	//	//m_pPlayer->SetPosition(Fixed_Position);
+	//	
+	//	auto pCamera = m_pPlayer->GetCamera();
+	//	pCamera->SetPosition(Fixed_Position);
+	//	pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
 
-		}
+	//	}
 
 }
 
@@ -2839,7 +2839,12 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
 	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
 	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
+	Yesblock->onClick = [this]() {
+		c_signal.change = true;
+		c_signal.scene_name = "Stage_1";
+		c_signal.type = Scene_Type::Stage_1;
 
+		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
@@ -2850,16 +2855,11 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
 	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
 	Noblock->onClick = [this]() {
-		/*std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 		if (!blocks.empty())
 		{
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue, false);
-		}*/
-
-		c_signal.change = true;
-		c_signal.scene_name = "Stage_1";
-		c_signal.type = Scene_Type::Stage_1;
-
+		}
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
