@@ -160,12 +160,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     }
                     oss << "\n";
 
-                    clients.erase(clientId);
-
                     BroadcastPacket(oss.str(), clientId);
                 }
             }
-     
             else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
             {
                 logger.Log("클라이언트 " + std::to_string(clientId) + " 퇴장 처리");
@@ -229,21 +226,21 @@ void Server::BroadcastAllStates()
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
 
-        for (const auto& [monsterId, monster] : scene.getMonsters())
-        {
-            std::ostringstream oss;
-            oss << "MONSTER_UPDATE," << monster.id << ","
-                << monster.x << "," << monster.y << "," << monster.z << ","
-                << monster.lookX << "," << monster.lookY << "," << monster.lookZ << ","
-                << monster.hp << "," << monster.state << "," << static_cast<int>(monster.type);
-
-            int trackCount = static_cast<int>(monster.trackPositions.size());
-            oss << "," << trackCount;
-            for (int i = 0; i < trackCount; ++i)
-                oss << "," << monster.trackPositions[i] << "," << monster.trackWeights[i];
-
-            BroadcastPacket(oss.str(), -1);
-        }
+        //for (const auto& [monsterId, monster] : scene.getMonsters())
+        //{
+        //    std::ostringstream oss;
+        //    oss << "MONSTER_UPDATE," << monster.id << ","
+        //        << monster.x << "," << monster.y << "," << monster.z << ","
+        //        << monster.lookX << "," << monster.lookY << "," << monster.lookZ << ","
+        //        << monster.hp << "," << monster.state << "," << static_cast<int>(monster.type);
+        //
+        //    int trackCount = static_cast<int>(monster.trackPositions.size());
+        //    oss << "," << trackCount;
+        //    for (int i = 0; i < trackCount; ++i)
+        //        oss << "," << monster.trackPositions[i] << "," << monster.trackWeights[i];
+        //
+        //    BroadcastPacket(oss.str(), -1);
+        //}
     }
 }
 
@@ -360,7 +357,20 @@ void Server::Start()
     Scene* scene = sceneManager.getScene(0);
     if (!scene) return;
 
-   
+   // for (int i = 0; i < 10; ++i)
+   // {
+   //     std::cout << "몬스터 생성됨" << std::endl;
+   //     int id = i + 100;
+   //     float x = 10 * i;
+   //     float y = 0.0f;
+   //     float z = 5 * i;
+   //     float lookX = 0.0f, lookY = 1.0f, lookZ = 0.0f;
+   //     int hp = 100;
+   //     int state = 0;
+   //     Monster_Type type = static_cast<Monster_Type>(0);
+   //
+   //     scene->addMonster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
+   // }
     BroadcastAllStates();
 
 }
@@ -370,12 +380,10 @@ int main()
     Server server(9000);
     server.Start();
 
-	MonsterManager monsterManager;
+
 
     while (true)
     {
-        monsterManager.UpdateAI(1.0f);
-
         server.BroadcastAllStates();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }

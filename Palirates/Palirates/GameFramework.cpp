@@ -6,8 +6,8 @@
 #include "GameFramework.h"
 #include "Object_Manager.h"
 
-std::unordered_map<int, RemotePlayer> remotePlayers;
-CGameFramework* g_pFramework = nullptr;
+//std::unordered_map<int, RemotePlayer> remotePlayers;
+//CGameFramework* g_pFramework = nullptr;
 
 
 CGameFramework::CGameFramework()
@@ -440,9 +440,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
-				case VK_F12:
-					ChangeServerState();
-					break;
 				default:
 					break;
 			}
@@ -584,6 +581,8 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
+
+	Disconnect();
 	Release_Scenes();
 
 	delete MRT_shader;
@@ -1353,7 +1352,35 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		tokens.push_back(item);
 	}
 
-	if (tokens.size() < 9) return;
+	if (tokens.empty()) return;
+
+	if (tokens[0] == "PLAYER_LEAVE" && tokens.size() >= 2)
+	{
+		int leaveId = std::stoi(tokens[1]);
+		std::cout << "[디버그] PLAYER_LEAVE 감지됨: " << leaveId << std::endl;
+
+		std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
+
+		auto it = m_pRemotePlayers.find(leaveId);
+		if (it != m_pRemotePlayers.end())
+		{
+			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+			if (scene && scene->obj_manager)
+			{
+				auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+				playerList->erase(
+					std::remove_if(playerList->begin(), playerList->end(),
+						[leaveId](const std::shared_ptr<CGameObject>& obj) {
+							return obj && obj->GetID() == leaveId;
+						}),
+					playerList->end()
+				);
+			}
+
+			m_pRemotePlayers.erase(it);
+		}
+		return; // 여기서 끝내야 PLAYER_UPDATE 안 감
+	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
 	{
@@ -1437,114 +1464,90 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 	}
-	if (tokens[0] == "PLAYER_LEAVE")
-	{
-		int leaveId;
-		if (sscanf_s(receivedData.c_str(), "PLAYER_LEAVE,%d", &leaveId) == 1)
-		{
-			std::cout << "[디버그] PLAYER_LEAVE 감지됨: " << leaveId << std::endl;
-			auto it = m_pRemotePlayers.find(leaveId);
-			if (it != m_pRemotePlayers.end())
-			{
-				CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-				if (scene && scene->obj_manager)
-				{
-					auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
-					playerList->erase(
-						std::remove_if(playerList->begin(), playerList->end(),
-							[leaveId](const std::shared_ptr<CGameObject>& obj) {
-						return obj && obj->GetID() == leaveId;
-					}),
-						playerList->end()
-					);
-				}
-				m_pRemotePlayers.erase(it);
-			}
-		}
-	}
-	if (tokens[0] == "MONSTER_UPDATE")
-	{
-		int monsterId = std::stoi(tokens[1]);
-		float px = std::stof(tokens[2]);
-		float py = std::stof(tokens[3]);
-		float pz = std::stof(tokens[4]);
-		float lookX = std::stof(tokens[5]);
-		float lookY = std::stof(tokens[6]);
-		float lookZ = std::stof(tokens[7]);
-		int state = std::stoi(tokens[8]);
-
-		XMFLOAT3 pos(px, py, pz);
-		XMFLOAT3 look(lookX, lookY, lookZ);
-
-		ServerAnimationSyncData syncData;
-		syncData.position = pos;
-		syncData.lookVector = look;
-		syncData.currentState = static_cast<State>(state);
-
-		if (tokens.size() > 9) 
-		{
-			int trackCount = std::stoi(tokens[9]);
-			for (int i = 0; i < trackCount; ++i)
-			{
-				int baseIdx = 10 + i * 2;
-				if (baseIdx + 1 < tokens.size())
-				{
-					float animPos = std::stof(tokens[baseIdx]);
-					float animWeight = std::stof(tokens[baseIdx + 1]);
-					syncData.trackPositions.push_back(animPos);
-					syncData.Weights.push_back(animWeight);
-				}
-			}
-		}
-
-
-		int type = std::stoi(tokens[10]);
-
-		// 몬스터 찾기
-		auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-		auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
-			return obj && obj->GetID() == monsterId;
-			});
-
-		if (found == monsterList->end())
-		{
-			std::shared_ptr<CGameObject> pMonster;
-
-			switch (static_cast<Monster_Type>(type))
-			{
-			case Monster_Type::Fishman:
-				pMonster = std::make_shared<CFishManObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
-				break;
-			case Monster_Type::Anubis:
-				pMonster = std::make_shared<CAnubisObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
-				break;
-			case Monster_Type::Dragon:
-				pMonster = std::make_shared<CDragonObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
-				break;
-			default:
-				return;
-			}
-
-			pMonster->SetID(monsterId);
-			pMonster->SetPosition(pos);
-			pMonster->SetLookDirection(look);
-			pMonster->Object_type = OBJECT_TPYE_MONSTER_SERVER;
-			pMonster->Set_Child(pMonster->m_pRootModel);
-			pMonster->Set_Active(true);
-			pMonster->SetScale(1.0f, 1.0f, 1.0f);
-			pMonster->Set_Name("Monster_" + std::to_string(monsterId));
-
-			scene_manager->Get_Active_Scene()->obj_manager->Add_Object(pMonster, Object_Type::skinned);
-			pMonster->ApplySyncData(syncData);
-		}
-		else
-		{
-			auto monster = std::dynamic_pointer_cast<CMonsterObject>(*found);
-			if (monster)
-				monster->ApplySyncData(syncData);
-		}
-
-	}
+	
+	//if (tokens[0] == "MONSTER_UPDATE")
+	//{
+	//	int monsterId = std::stoi(tokens[1]);
+	//	float px = std::stof(tokens[2]);
+	//	float py = std::stof(tokens[3]);
+	//	float pz = std::stof(tokens[4]);
+	//	float lookX = std::stof(tokens[5]);
+	//	float lookY = std::stof(tokens[6]);
+	//	float lookZ = std::stof(tokens[7]);
+	//	int state = std::stoi(tokens[8]);
+	//
+	//	XMFLOAT3 pos(px, py, pz);
+	//	XMFLOAT3 look(lookX, lookY, lookZ);
+	//
+	//	ServerAnimationSyncData syncData;
+	//	syncData.position = pos;
+	//	syncData.lookVector = look;
+	//	syncData.currentState = static_cast<State>(state);
+	//
+	//	if (tokens.size() > 9) 
+	//	{
+	//		int trackCount = std::stoi(tokens[9]);
+	//		for (int i = 0; i < trackCount; ++i)
+	//		{
+	//			int baseIdx = 10 + i * 2;
+	//			if (baseIdx + 1 < tokens.size())
+	//			{
+	//				float animPos = std::stof(tokens[baseIdx]);
+	//				float animWeight = std::stof(tokens[baseIdx + 1]);
+	//				syncData.trackPositions.push_back(animPos);
+	//				syncData.Weights.push_back(animWeight);
+	//			}
+	//		}
+	//	}
+	//
+	//
+	//	int type = std::stoi(tokens[10]);
+	//
+	//	// 몬스터 찾기
+	//	auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
+	//	auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
+	//		return obj && obj->GetID() == monsterId;
+	//		});
+	//
+	//	if (found == monsterList->end())
+	//	{
+	//		std::shared_ptr<CGameObject> pMonster;
+	//
+	//		switch (static_cast<Monster_Type>(type))
+	//		{
+	//		case Monster_Type::Fishman:
+	//			pMonster = std::make_shared<CFishManObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+	//			break;
+	//		case Monster_Type::Anubis:
+	//			pMonster = std::make_shared<CAnubisObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+	//			break;
+	//		case Monster_Type::Dragon:
+	//			pMonster = std::make_shared<CDragonObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
+	//			break;
+	//		default:
+	//			return;
+	//		}
+	//
+	//		pMonster->SetID(monsterId);
+	//		pMonster->SetPosition(pos);
+	//		pMonster->SetLookDirection(look);
+	//		pMonster->Object_type = OBJECT_TPYE_MONSTER_SERVER;
+	//		pMonster->Set_Child(pMonster->m_pRootModel);
+	//		pMonster->Set_Active(true);
+	//		pMonster->SetScale(1.0f, 1.0f, 1.0f);
+	//		pMonster->Set_Name("Monster_" + std::to_string(monsterId));
+	//
+	//		scene_manager->Get_Active_Scene()->obj_manager->Add_Object(pMonster, Object_Type::skinned);
+	//		pMonster->ApplySyncData(syncData);
+	//	}
+	//	else
+	//	{
+	//		auto monster = std::dynamic_pointer_cast<CMonsterObject>(*found);
+	//		if (monster)
+	//			monster->ApplySyncData(syncData);
+	//	}
+	//
+	//}
 	
 }
 
@@ -1613,8 +1616,6 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 void CGameFramework::Disconnect()
 {
-	if (!isRunning) return;
-
 	isRunning = false;
 
 	PlayerLeave(ClientNum);
@@ -1703,21 +1704,8 @@ int CGameFramework::GetServerPlayerID()
 	return ClientNum;
 }
 
-void CGameFramework::ChangeServerState()
-{
-	if(isRunning)
-	{
-		Disconnect();
-	}
-	else
-	{
-		ConnectToServer(SERVER_IP, SERVER_PORT);
-	}
-}
-
 void CGameFramework::PlayerLeave(int playerId)
 {
-	if (!IsServerConnected()) return;
 	std::string packet = "PLAYER_LEAVE," + std::to_string(playerId) + "\n";
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)
