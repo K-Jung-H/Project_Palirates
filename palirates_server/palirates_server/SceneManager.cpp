@@ -19,7 +19,7 @@ void Scene_Manager::addScene(int clientId)
             float y = 0.0f;
             float lookX = 0.0f, lookY = 0.0f, lookZ = 1.0f;
 
-             scene->addMonster(monsterId, x, y, z, lookX, lookY, lookZ, 100, 0, Monster_Type::Fishman);
+            scene->addMonster(monsterId, x, y, z, lookX, lookY, lookZ, 100, 0, Monster_Type::Fishman);
         }
 
         scene->addMonster(11000 + 1, 500.0f, 0, 250.0f, 0, 0, 1, 120, 0, Monster_Type::Anubis);

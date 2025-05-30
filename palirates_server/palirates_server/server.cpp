@@ -160,6 +160,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     }
                     oss << "\n";
 
+                    clients.erase(clientId);
+
                     BroadcastPacket(oss.str(), clientId);
                 }
             }
@@ -172,9 +174,6 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
                 Scene* scene = sceneManager.getScene(clientId);
                 if (scene) scene->removePlayer(clientId);
-
-                std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId) + "\n";
-                BroadcastPacket(leavePacket, clientId);
 
                 break;
             }
@@ -368,10 +367,12 @@ int main()
     Server server(9000);
     server.Start();
 
-
+	MonsterManager monsterManager;
 
     while (true)
     {
+        monsterManager.UpdateAI(1.0f);
+
         server.BroadcastAllStates();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }

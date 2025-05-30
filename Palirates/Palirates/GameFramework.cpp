@@ -584,7 +584,6 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
-	Disconnect();
 	Release_Scenes();
 
 	delete MRT_shader;
@@ -1540,6 +1539,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		}
 		else
 		{
+
+		}
+		{
 			auto monster = std::dynamic_pointer_cast<CMonsterObject>(*found);
 			if (monster)
 				monster->ApplySyncData(syncData);
@@ -1614,6 +1616,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 
 void CGameFramework::Disconnect()
 {
+	if (!isRunning) return;
 
 	isRunning = false;
 
@@ -1655,11 +1658,11 @@ void CGameFramework::NetworkLoop()
 			recvBuffer += receivedData;
 
 			size_t pos = 0;
-			while ((pos = recvBuffer.find('\n')) != std::string::npos) 
+			while ((pos = recvBuffer.find('\n')) != std::string::npos)
 			{
 				std::string line = recvBuffer.substr(0, pos);
 				recvBuffer.erase(0, pos + 1);
-				if (!line.empty())
+				if (!line.empty()) 
 				{
 					std::lock_guard<std::mutex> lock(recvQueueMutex);
 					recvQueue.push(line);
@@ -1727,6 +1730,7 @@ void CGameFramework::ChangeServerState()
 
 void CGameFramework::PlayerLeave(int playerId)
 {
+	if (!IsServerConnected()) return;
 	std::string packet = "PLAYER_LEAVE," + std::to_string(playerId) + "\n";
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)

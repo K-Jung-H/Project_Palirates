@@ -9,6 +9,7 @@
 #include "Player.h"
 #include <sstream>
 #include <vector>
+#include "MonsterManager.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -27,7 +28,7 @@ private:
     Scene_Manager sceneManager;
     //DatabaseManager dbManager;
     Logger logger;
-
+	MonsterManager monsterManager;
 public:
     Server(int port);
     ~Server();
