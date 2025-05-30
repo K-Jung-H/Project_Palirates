@@ -440,6 +440,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				case VK_F9:
 					ChangeSwapChainState();
 					break;
+				case VK_F12:
+					ChangeServerState();
+					break;
 				default:
 					break;
 			}
@@ -1446,7 +1449,14 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				CScene* scene = scene_manager->Get_Active_Scene_Ptr();
 				if (scene && scene->obj_manager)
 				{
-					//scene->obj_manager->Remove_Object(it->second);
+					auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+					playerList->erase(
+						std::remove_if(playerList->begin(), playerList->end(),
+							[leaveId](const std::shared_ptr<CGameObject>& obj) {
+						return obj && obj->GetID() == leaveId;
+					}),
+						playerList->end()
+					);
 				}
 				m_pRemotePlayers.erase(it);
 			}
@@ -1607,7 +1617,7 @@ void CGameFramework::Disconnect()
 
 	isRunning = false;
 
-	//PlayerLeave(ClientNum);
+	PlayerLeave(ClientNum);
 
 	if (networkThread.joinable())
 		networkThread.join();
@@ -1691,6 +1701,18 @@ bool CGameFramework::IsServerConnected()
 int CGameFramework::GetServerPlayerID()
 {
 	return ClientNum;
+}
+
+void CGameFramework::ChangeServerState()
+{
+	if(isRunning)
+	{
+		Disconnect();
+	}
+	else
+	{
+		ConnectToServer(SERVER_IP, SERVER_PORT);
+	}
 }
 
 void CGameFramework::PlayerLeave(int playerId)

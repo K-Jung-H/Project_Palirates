@@ -166,7 +166,14 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
      
             else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
             {
-                // 나중에 반드시 추가
+                logger.Log("클라이언트 " + std::to_string(clientId) + " 퇴장 처리");
+                clients[clientId].is_connected = false;
+                closesocket(clients[clientId].socket);
+
+                Scene* scene = sceneManager.getScene(clientId);
+                if (scene) scene->removePlayer(clientId);
+
+                break;
             }
             else
             {
@@ -348,20 +355,7 @@ void Server::Start()
     Scene* scene = sceneManager.getScene(0);
     if (!scene) return;
 
-   // for (int i = 0; i < 10; ++i)
-   // {
-   //     std::cout << "몬스터 생성됨" << std::endl;
-   //     int id = i + 100;
-   //     float x = 10 * i;
-   //     float y = 0.0f;
-   //     float z = 5 * i;
-   //     float lookX = 0.0f, lookY = 1.0f, lookZ = 0.0f;
-   //     int hp = 100;
-   //     int state = 0;
-   //     Monster_Type type = static_cast<Monster_Type>(0);
-   //
-   //     scene->addMonster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
-   // }
+   
     BroadcastAllStates();
 
 }
