@@ -443,8 +443,11 @@ public:
 
     std::shared_ptr<CGameObject>                  m_pModelRootObject = NULL;
 
+    //int                      m_nSkinnedMeshes = 0;
+    //CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+
     int                      m_nSkinnedMeshes = 0;
-    CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+    std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
 
     CAnimationSets* m_pAnimationSets = NULL;
 
@@ -467,8 +470,10 @@ public:
 
     CAnimationSets* m_pAnimationSets = NULL;
 
+    //int                      m_nSkinnedMeshes = 0;
+    //CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
     int                      m_nSkinnedMeshes = 0;
-    CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+    std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
 
     ID3D12Resource** m_ppd3dcbSkinningBoneTransforms = NULL; //[SkinnedMeshes]
     XMFLOAT4X4** m_ppcbxmf4x4MappedSkinningBoneTransforms = NULL; //[SkinnedMeshes]
@@ -542,7 +547,7 @@ public:
     static std::shared_ptr<CMesh> LoadMeshWithCache(const std::string& meshPath, ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
     static void ClearMeshCache();
 
-    CMesh* m_pMesh = NULL;
+    std::shared_ptr<CMesh> m_pMesh = NULL;
 
     std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
@@ -641,7 +646,7 @@ public:
     void Set_Active(bool active, bool bIsRoot = true);
     bool Get_Active() { return Active; }
 
-    void SetMesh(CMesh* pMesh);
+    void SetMesh(std::shared_ptr<CMesh> pMesh);
     void SetShader(CShader* pShader);
     void SetShader(int nMaterial, CShader* pShader);
     void SetMaterial(int nMaterial, CMaterial* pMaterial);
@@ -737,8 +742,8 @@ public:
     UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
 
 public:
-    void FindAndSetSkinnedMesh(CSkinnedMesh** ppSkinnedMeshes, int* pnSkinnedMesh);
-
+    //void FindAndSetSkinnedMesh(CSkinnedMesh** ppSkinnedMeshes, int* pnSkinnedMesh);
+    void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet);
     void SetTrackAnimationPosition(int nAnimationTrack, float fPosition);
     
