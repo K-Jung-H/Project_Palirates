@@ -187,7 +187,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
 
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z, shadow_pass, light_type, shadow_bias, inv_shadow_map_size, LightViewProjTex, gShadowMaps, gssShadowSampler, CascadeSplits);
-
+    //float shadowFactor = 1.0f;
     // ======= Lighting calculation =======
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
