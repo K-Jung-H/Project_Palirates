@@ -65,7 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 10);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 20);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
@@ -699,6 +699,7 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
+
 
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();

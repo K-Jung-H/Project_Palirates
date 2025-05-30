@@ -1,306 +1,15 @@
+//-----------------------------------------------------------------------------
+// File: CScene.cpp
+//-----------------------------------------------------------------------------
+
 #include "stdafx.h"
 #include "Scene.h"
 
-//=============================================================================================
-
-
-
-Shadow_Camera::Shadow_Camera() : CCamera()
-{
-	SetViewport(0, 0, _SHADOWMAP_WIDTH, _SHADOWMAP_HEIGHT, 0.0f, 1.0f);
-	SetScissorRect(0, 0, _SHADOWMAP_WIDTH, _SHADOWMAP_HEIGHT);
-}
-
-Shadow_Camera::~Shadow_Camera()
-{
-
-}
-
-std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera, float nearZ, float farZ)
-{
-	std::vector<XMFLOAT3> corners(8);
-
-	// 1. Roll이 제거된 View 행렬 만들기 (up=(0,1,0) 강제)
-	XMFLOAT3 eye = mainCamera->GetPosition();
-	XMFLOAT3 lookVec = mainCamera->GetLookVector();
-	XMVECTOR eyeV = XMLoadFloat3(&eye);
-	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec); // LookAt 좌표
-	XMVECTOR upV = XMVectorSet(0, 1, 0, 0);
-	XMMATRIX stableView = XMMatrixLookAtLH(eyeV, atV, upV);
-
-	// 2. Projection 행렬은 그대로 사용
-	XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
-	XMMATRIX invViewProj = XMMatrixInverse(nullptr, stableView * proj);
-
-	// 3. NDC 코너 정의 (-1~+1, z: 0=near, 1=far)
-	float ndc[8][3] = {
-		{-1, -1, 0}, { 1, -1, 0}, { 1,  1, 0}, {-1,  1, 0},
-		{-1, -1, 1}, { 1, -1, 1}, { 1,  1, 1}, {-1,  1, 1}
-	};
-
-	// 4. NDC → World 변환
-	for (int i = 0; i < 8; ++i)
-	{
-		float ndcZ = (i < 4) ? 0.0f : 1.0f;
-		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndcZ, 1.0f);
-		pt = XMVector4Transform(pt, invViewProj);
-		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt)); // 투영 분할
-
-		// 실제 거리 보정: 카메라에서 방향벡터 * near/farZ
-		XMVECTOR dir = XMVector3Normalize(pt - eyeV);
-		float z = (i < 4) ? nearZ : farZ;
-		XMVECTOR cornerWS = eyeV + dir * z;
-
-		XMFLOAT3 outCorner;
-		XMStoreFloat3(&outCorner, cornerWS);
-		corners[i] = outCorner;
-	}
-	return corners;
-}
-
-void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std::vector<float>& splitDepths, CCamera* mainCamera)
-{
-	m_CascadeView.clear();
-	m_CascadeProj.clear();
-	m_light_direction = light_direction;
-
-	float cameraNear = mainCamera->GetNearPlane();
-	float cameraFar = mainCamera->GetFarPlane();
-	float cameraRange = cameraFar - cameraNear;
-
-	for (int i = 0; i < NUM_CASCADES; ++i)
-	{
-		float nearZ = splitDepths[i];
-		float farZ = splitDepths[i + 1];
-
-		// 1. Frustum corners in world space
-		std::vector<XMFLOAT3> frustumCorners = CalcFrustumCornersWorld(mainCamera, nearZ, farZ);
-
-		// 2. Calculate frustum center
-		XMFLOAT3 frustumCenter = { 0, 0, 0 };
-		for (const auto& corner : frustumCorners)
-		{
-			frustumCenter.x += corner.x;
-			frustumCenter.y += corner.y;
-			frustumCenter.z += corner.z;
-		}
-		frustumCenter.x /= 8.0f;
-		frustumCenter.y /= 8.0f;
-		frustumCenter.z /= 8.0f;
-
-		// 3. Build light view matrix
-		XMFLOAT3 lightPos = Vector3::Add(frustumCenter, Vector3::Scale(light_direction, -1000.0f));
-		XMVECTOR lightPosV = XMLoadFloat3(&lightPos);
-		XMVECTOR frustumCenterV = XMLoadFloat3(&frustumCenter);
-		XMMATRIX lightView = XMMatrixLookAtLH(lightPosV, frustumCenterV, XMVectorSet(0, 1, 0, 0));
-
-		// 4. Transform corners to light space and compute AABB
-		XMFLOAT3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
-		XMFLOAT3 max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-		for (const auto& corner : frustumCorners)
-		{
-			XMVECTOR cornerLS = XMVector3TransformCoord(XMLoadFloat3(&corner), lightView);
-			XMFLOAT3 p;
-			XMStoreFloat3(&p, cornerLS);
-
-			min.x = std::min(min.x, p.x);
-			min.y = std::min(min.y, p.y);
-			min.z = std::min(min.z, p.z);
-			max.x = std::max(max.x, p.x);
-			max.y = std::max(max.y, p.y);
-			max.z = std::max(max.z, p.z);
-		}
-
-		const float overlapRatio = 0.5f; // 
-		float expandX = (max.x - min.x) * overlapRatio * 0.5f;
-		float expandY = (max.y - min.y) * overlapRatio * 0.5f;
-
-		min.x -= expandX;
-		max.x += expandX;
-		min.y -= expandY;
-		max.y += expandY;
-
-		// 5. Expand Z bounds to prevent shadow clipping
-		min.z -= 100.0f;
-		max.z += 100.0f;
-
-		// 6. Texel snapping
-		const float shadowMapSize = 2048.0f;
-		float orthoWidth = max.x - min.x;
-		float orthoHeight = max.y - min.y;
-		float texelSizeX = orthoWidth / shadowMapSize;
-		float texelSizeY = orthoHeight / shadowMapSize;
-
-		XMVECTOR frustumCenterLS = XMVector3TransformCoord(frustumCenterV, lightView);
-		frustumCenterLS = XMVectorSet(
-			floorf(XMVectorGetX(frustumCenterLS) / texelSizeX) * texelSizeX,
-			floorf(XMVectorGetY(frustumCenterLS) / texelSizeY) * texelSizeY,
-			XMVectorGetZ(frustumCenterLS),
-			1.0f
-		);
-
-		XMMATRIX lightViewInv = XMMatrixInverse(nullptr, lightView);
-		XMVECTOR snappedCenterWS = XMVector3TransformCoord(frustumCenterLS, lightViewInv);
-		lightPosV = snappedCenterWS + XMLoadFloat3(&light_direction) * -1000.0f;
-		lightView = XMMatrixLookAtLH(lightPosV, snappedCenterWS, XMVectorSet(0, 1, 0, 0));
-
-
-
-		// 7. Final orthographic projection
-		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(min.x, max.x, min.y, max.y, min.z, max.z);
-
-		// 8. Store matrices
-		XMFLOAT4X4 viewMat, projMat;
-		XMStoreFloat4x4(&viewMat, lightView);
-		XMStoreFloat4x4(&projMat, lightProj);
-		m_CascadeView.push_back(viewMat);
-		m_CascadeProj.push_back(projMat);
-
-		// 9. Store split depth for shader (normalize if needed)
-		// Option A: View space split (matching viewspace_Z in shader)
-		m_CascadeSplits[i] = farZ;
-
-		// Option B (alternative): Normalized [0~1] depth
-		// m_CascadeSplits[i] = (farZ - cameraNear) / cameraRange;
-	}
-}
-
-std::vector<float> Shadow_Camera::GenerateCSMSplitDepths(float nearZ, float farZ, int numCascades, float lambda)
-{
-	std::vector<float> splits(numCascades + 1);
-	splits[0] = nearZ;
-	for (int i = 1; i <= numCascades; ++i)
-	{
-		float p = float(i) / float(numCascades);
-		float logSplit = nearZ * powf(farZ / nearZ, p);
-		float linearSplit = nearZ + (farZ - nearZ) * p;
-		splits[i] = lambda * logSplit + (1.0f - lambda) * linearSplit;
-	}
-	return splits;
-}
-
-void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	CCamera::CreateShaderVariables(pd3dDevice, pd3dCommandList); 
-
-	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256의 배수
-	m_pd3dcb_LightCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
-
-	m_pd3dcb_LightCamera->Map(0, NULL, (void**)&m_pcb_MappedLightCamera);
-
-	//===============================================================
-
-	shadow_map = make_shared<CMaterial>(1);
-	CTexture* shadowTexture = new CTexture(NUM_CASCADES, RESOURCE_TEXTURE2D, 0, 1, 0, 0, NUM_CASCADES, 0, 0, NUM_CASCADES);
-
-	D3D12_CLEAR_VALUE clearValue{};
-	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
-	clearValue.DepthStencil = { 1.0f, 0 };
-
-	for (int i = 0; i < NUM_CASCADES; i++)
-	{
-		shadowTexture->CreateTexture(pd3dDevice, pd3dCommandList, i, RESOURCE_TEXTURE2D, _SHADOWMAP_WIDTH, _SHADOWMAP_HEIGHT, 1, 1, DXGI_FORMAT_R32_TYPELESS, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, &clearValue);
-	}
-
-	for (int i = 0; i < NUM_CASCADES; i++)
-	{
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice, shadowTexture, i);
-		shadowTexture->SetDSV(i, dsvHandle);
-	}
-
-
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, shadowTexture, 0, ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX); 
-
-	shadow_map->SetTexture(shadowTexture, 0);
-
-
-}
-
-void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	if (m_CascadeView.size() == 0 || m_CascadeProj.size() == 0)
-		return;
-
-	shadow_map->Update_TextureShaderVariables(pd3dCommandList);
-
-	XMMATRIX texTransform = XMMatrixSet(
-		0.5f, 0, 0, 0,
-		0, -0.5f, 0, 0,
-		0, 0, 1, 0,
-		0.5f, 0.5f, 0, 1
-	);
-
-	for (int i = 0; i < NUM_CASCADES; ++i)
-	{
-		XMMATRIX view = XMLoadFloat4x4(&m_CascadeView[i]);
-		XMMATRIX proj = XMLoadFloat4x4(&m_CascadeProj[i]);
-		XMMATRIX viewProj = view * proj;
-		XMMATRIX viewProjTex = XMMatrixTranspose(viewProj * texTransform);
-
-		XMFLOAT4X4 viewProjTexFloat4x4;
-		XMStoreFloat4x4(&viewProjTexFloat4x4, viewProjTex);
-		m_pcb_MappedLightCamera->LightViewProjTex[i] = viewProjTexFloat4x4;
-		m_pcb_MappedLightCamera->cascadeSplits[i] = m_CascadeSplits[i];
-	}
-
-	m_pcb_MappedLightCamera->shadow_pass = 1;
-	m_pcb_MappedLightCamera->light_type = LIGHT_CAMERA_TYPE_DIRECTIONAL;
-	m_pcb_MappedLightCamera->LightDirectionWS = m_light_direction;
-	m_pcb_MappedLightCamera->shadow_bias = 0.005f;
-	m_pcb_MappedLightCamera->shadow_map_size = XMFLOAT2(static_cast<float>(_SHADOWMAP_WIDTH), static_cast<float>(_SHADOWMAP_HEIGHT));
-	m_pcb_MappedLightCamera->inv_shadow_map_size = XMFLOAT2(1.0f / _SHADOWMAP_WIDTH, 1.0f / _SHADOWMAP_HEIGHT);
-
-	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_SHADOW_INFO_CBV_INDEX, m_pd3dcb_LightCamera->GetGPUVirtualAddress());
-
-}
-
-void Shadow_Camera::Update_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, int cascadeIdx)
-{
-	XMMATRIX view = XMLoadFloat4x4(&m_CascadeView[cascadeIdx]);
-	XMMATRIX proj = XMLoadFloat4x4(&m_CascadeProj[cascadeIdx]);
-	XMMATRIX invView = XMMatrixInverse(nullptr, view);
-
-	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4View, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4Projection, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&m_pcbMappedCamera->m_xmf4x4InverseView, XMMatrixTranspose(invView));
-
-	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_CAMERA_CBV_INDEX, m_pd3dcbCamera->GetGPUVirtualAddress());
-}
-
-
-D3D12_CPU_DESCRIPTOR_HANDLE Shadow_Camera::Get_Shadow_Map_DSV(int n) const
-{
-	if (shadow_map)
-	{
-		CTexture* shadowTex = shadow_map->m_ppTextures[0];
-		if (shadowTex)
-			return shadowTex->GetDSVDescriptorHandle(n);
-	}
-
-	// 기본값 반환 (nullptr 방지용)
-	return D3D12_CPU_DESCRIPTOR_HANDLE{ 0 };
-}
-
-ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const
-{
-	if (shadow_map)
-	{
-		CTexture* shadowTex = shadow_map->m_ppTextures[0];
-		if (shadowTex)
-			return shadowTex->GetResource(n);
-	}
-
-	// 기본값 반환 (nullptr 방지용)
-	return 0;
-}
 
 //=============================================================================================
-
 std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
-std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
-UINT CScene::select_index = 0;
 
 
 CScene::CScene()
@@ -316,7 +25,7 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 {
 	ID3D12RootSignature* pd3dGraphicsRootSignature = NULL;
 
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[8];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[9];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[0].NumDescriptors = 1;
@@ -366,10 +75,15 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 		pd3dDescriptorRanges[7].RegisterSpace = 0;
 		pd3dDescriptorRanges[7].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+		pd3dDescriptorRanges[8].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[8].NumDescriptors = 1;
+		pd3dDescriptorRanges[8].BaseShaderRegister = 8; //t8: random value for particle move
+		pd3dDescriptorRanges[8].RegisterSpace = 0;
+		pd3dDescriptorRanges[8].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 		//=======================================================================
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[14];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[15];
 	{
 		// n = 0, b0 = Frame_Info
 		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -379,7 +93,7 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -446,7 +160,7 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[5]);
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		// n = 12, t6 = Terrain_Detail_Texture
+		// n = 12, t6 = Terrain_Base_Texture
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[6]);
@@ -457,6 +171,12 @@ ID3D12RootSignature* CScene::Create_MRT_GraphicsRootSignature(ID3D12Device* pd3d
 		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[7]);
 		pd3dRootParameters[ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+		// n = 14,  t8 = RandomValue
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[8]);
+		pd3dRootParameters[ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY;
 
 	}
 
@@ -543,7 +263,7 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -559,12 +279,6 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-		//pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		//pd3dRootParameters[4].Constants.Num32BitValues = 10; // float4 + float4 + float + bool + padding = 10
-		//pd3dRootParameters[4].Constants.ShaderRegister = 3; // b3
-		//pd3dRootParameters[4].Constants.RegisterSpace = 0;
-		//pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -668,7 +382,7 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 
 		// n = 1, b1 = GameObject
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
+		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 28;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -766,108 +480,15 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 	return(pd3dGraphicsRootSignature);
 }
 
-ID3D12RootSignature* CScene::Create_UI_GraphicsRootSignature(ID3D12Device* pd3dDevice)
-{
-	ID3D12RootSignature* pd3dGraphicsRootSignature = NULL;
-
-	// SRV Descriptor Table: t0 (Base Texture)
-	D3D12_DESCRIPTOR_RANGE descriptorRanges[1] = {};
-	descriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	descriptorRanges[0].NumDescriptors = 1;
-	descriptorRanges[0].BaseShaderRegister = 0; // t0
-	descriptorRanges[0].RegisterSpace = 0;
-	descriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-	D3D12_ROOT_PARAMETER pd3dRootParameters[3] = {};
-
-	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
-	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.RegisterSpace = 0;
-	pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-	pd3dRootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	pd3dRootParameters[1].DescriptorTable.NumDescriptorRanges = 1;
-	pd3dRootParameters[1].DescriptorTable.pDescriptorRanges = &descriptorRanges[0];
-	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-	pd3dRootParameters[2].Constants.Num32BitValues = 12;
-	pd3dRootParameters[2].Constants.ShaderRegister = 1; // b1
-	pd3dRootParameters[2].Constants.RegisterSpace = 0;
-	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	// Static Samplers
-	D3D12_STATIC_SAMPLER_DESC samplerDescs[2] = {};
-
-	samplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	samplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	samplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	samplerDescs[0].MipLODBias = 0;
-	samplerDescs[0].MaxAnisotropy = 1;
-	samplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	samplerDescs[0].MinLOD = 0;
-	samplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
-	samplerDescs[0].ShaderRegister = 0;
-	samplerDescs[0].RegisterSpace = 0;
-	samplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	samplerDescs[1].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDescs[1].AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	samplerDescs[1].AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	samplerDescs[1].AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-	samplerDescs[1].MipLODBias = 0;
-	samplerDescs[1].MaxAnisotropy = 1;
-	samplerDescs[1].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	samplerDescs[1].MinLOD = 0;
-	samplerDescs[1].MaxLOD = D3D12_FLOAT32_MAX;
-	samplerDescs[1].ShaderRegister = 1;
-	samplerDescs[1].RegisterSpace = 0;
-	samplerDescs[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	// Root Signature Description
-	D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-	rootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
-	rootSignatureDesc.pParameters = pd3dRootParameters;
-	rootSignatureDesc.NumStaticSamplers = _countof(samplerDescs);
-	rootSignatureDesc.pStaticSamplers = samplerDescs;
-	rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-	ID3DBlob* signatureBlob = nullptr;
-	ID3DBlob* errorBlob = nullptr;
-	HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
-
-	if (FAILED(hr))
-	{
-		if (errorBlob)
-		{
-			OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-			errorBlob->Release();
-		}
-		return nullptr;
-	}
-
-	hr = pd3dDevice->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&pd3dGraphicsRootSignature));
-
-	if (FAILED(hr)) {
-		OutputDebugStringA("[UI RS] Root Signature creation failed!\n");
-	}
-
-	if (signatureBlob) signatureBlob->Release();
-
-	return pd3dGraphicsRootSignature;
-}
-
-
 void CScene::BuildDefaultLightsAndMaterials()
 {
 	m_nLights = 5;
 	m_pLights = new LIGHT[m_nLights];
 	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
 
-	m_xmf4GlobalAmbient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_xmf4GlobalAmbient = XMFLOAT4(0.15f, 0.15f, 0.15f, 1.0f);
 
-	m_pLights[0].m_bEnable = false;
+	m_pLights[0].m_bEnable = true;
 	m_pLights[0].m_nType = POINT_LIGHT;
 	m_pLights[0].m_fRange = 300.0f;
 	m_pLights[0].m_xmf4Ambient = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -892,11 +513,11 @@ void CScene::BuildDefaultLightsAndMaterials()
 
 	m_pLights[2].m_bEnable = true;
 	m_pLights[2].m_nType = DIRECTIONAL_LIGHT;
-	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
-	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
-	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[2].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
+	m_pLights[2].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	m_pLights[2].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
-
+//	m_pLights[2].m_xmf3Direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 	m_pLights[3].m_bEnable = false;
 	m_pLights[3].m_nType = SPOT_LIGHT;
 	m_pLights[3].m_fRange = 600.0f;
@@ -918,10 +539,6 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights[4].m_xmf4Specular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
 	m_pLights[4].m_xmf3Position = XMFLOAT3(600.0f, 250.0f, 700.0f);
 	m_pLights[4].m_xmf3Attenuation = XMFLOAT3(1.0f, 0.001f, 0.0001f);
-
-
-	shadow_camera = std::make_shared<Shadow_Camera>();
-
 }
 
 void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -933,7 +550,6 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	auto com_deleter = [](ID3D12RootSignature* p) { if (p) p->Release(); };
 
-
 	if (!m_MRT_GraphicsRootSignature)
 		m_MRT_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_MRT_GraphicsRootSignature(pd3dDevice), com_deleter);
 
@@ -943,35 +559,12 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	if (!m_Plane_GraphicsRootSignature)
 		m_Plane_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_Plane_GraphicsRootSignature(pd3dDevice), com_deleter);
 
-	if (!m_UI_GraphicsRootSignature)
-		m_UI_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_UI_GraphicsRootSignature(pd3dDevice), com_deleter);
-
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
-
-	fog_info = make_shared<Fog_Info>();
-	{
-		fog_info->fogColor = XMFLOAT3(0.8f, 0.6f, 0.3f);
-		fog_info->Fog_Trigger = false;
-
-		fog_info->fogStart = 5.0f;
-		fog_info->fogEnd = 200.0f;
-		fog_info->fogDensity = 2.0f;
-		fog_info->noiseScale = 0.001f;
-
-		fog_info->noiseStrength = 0.5f;
-		fog_info->time = 0.0f;
-		fog_info->padding0 = XMFLOAT2(0.0f, 0.0f);
-	}
-
 }
 
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
-
-	if(shadow_camera)
-		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
 
 	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
 	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
@@ -992,12 +585,14 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_manager = new Particle_Manager();
 	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 
-//	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
-//	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
+	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
+	Particle_Shape_Mesh* cube_dust_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
+
 
 	Particle_Format test_dragon_fire_info;
 	{
-		test_dragon_fire_info.shader_type = Particle_Type::loop;
+		test_dragon_fire_info.shader_type = Particle_Type::spread;
 		test_dragon_fire_info.particle_type = 5;
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
@@ -1032,57 +627,27 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
-	Particle_Format bleeding_info;
-	{
-		bleeding_info.shader_type = Particle_Type::interval;
-		bleeding_info.particle_type = 6;
-		bleeding_info.max_particles = 30;
-		bleeding_info.MaxLifetime = 3.0f;
-
-		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
-		bleeding_info.EmitFaceIndex = 5;
-
-		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		bleeding_info.init_velocity_value = 50.0f;
-		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		bleeding_info.size = 0.3f;
-		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
-	}
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
-	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
+	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_dragon_fire_info);
 	test_dragonfire->Set_Active(false);
 
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("billboard");
-	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_sand_storm_info);
-	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds");
-	test_sand->Set_Local_Coordinate();
+	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, test_sand_storm_info);
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
-	test_bleeding->Set_World_Coordinate();
-
-
 #endif
 
 
-#ifdef USING_OBB
-	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> 평지
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f);
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f);
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
 	obj_manager->Set_Terrain_Object(m_pTerrain);
-
 
 	{
 		string obj_name_1 = "Anubis";
@@ -1095,7 +660,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		string obj_name_8 = "test_palyer6";
 
 
-	/*	
 		std::string_view name_view = obj_name_1;
 		std::shared_ptr<CMonsterObject> AnubisObject = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		AnubisObject->SetPosition(1450.0f, m_pTerrain->Get_Mesh_Height(1450.0f, 650.0f), 650.0f);
@@ -1104,7 +668,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		AnubisObject->Set_Child(AnubisObject->m_pRootModel);
 		AnubisObject->SetupWeaponCollider();
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
-	*/
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
@@ -1117,7 +680,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);
 
 
-		/*for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 5; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
@@ -1126,7 +689,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			m->Set_Name(obj_name_3);
 			m->test_num = i + 4;
 			obj_manager->Add_Object(m, Object_Type::skinned);
-		}*/
+		}
 
 #ifdef LOAD_SCENE
 
@@ -1143,13 +706,24 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #endif
 		//=====================================================
 
-		Object_Manager::Reserve_Update();
-		Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+		unordered_map<std::string, Fixed_Object_Info>* temp_list_map = obj_manager->Get_Object_List_Map(Object_Type::fixed);
 
-#ifdef USING_OBB
-		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
-		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
-#endif
+		// 씬에 있는 모든 fixed 객체들을 지형에 따라 재배치하기
+
+		for (auto& [mesh_name, instance_info] : *temp_list_map)
+		{
+			//m_pTerrain->Reset_Obj_List_Height(instance_info.fixed_obj_list);
+			//m_pTerrain->Reset_Obj_List_Up_Vector(instance_info.fixed_obj_list);
+		}
+
+		// 씬에 있는 모든 fixed 객체들을 타일에 맞게 분류하기
+		obj_manager->Classify_Objects_By_Tile();
+
+		Object_Manager::Reserve_Update();
+
+		obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
+		obj_manager->Update_OBB_Drawer(Object_Type::fixed, pd3dDevice, pd3dCommandList);
+
 	}
 
 
@@ -1158,8 +732,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
-
-	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -1252,79 +824,11 @@ void CScene::Update_UI()
 
 #endif
 
-void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
-{
-	texture_ui_manager = new Texture_UI_Manager();
-	if (!texture_ui_manager) return;
-
-	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
-	texture_ui_manager->GetRenderer()->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
-	pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
-	texture_ui_manager->SetShader(std::move(pShader));
-	texture_ui_manager->SetRootSignature(pRootSignature);
-	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
-
-	CTexture* HpBack = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Empty.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpBack, 0, 0);
-	D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
-	std::unique_ptr<TextureBlock> HBblock = std::make_unique<TextureBlock>(HpBack, HBscreenRect, mesh);
-	texture_ui_manager->Add_TextureBlock(std::move(HBblock));
-
-	CTexture* HpFront = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	HpFront->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Filled-Red.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpFront, 0, 0);
-	D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
-	std::unique_ptr<TextureBlock> HFblock = std::make_unique<TextureBlock>(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
-	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
-
-	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	if (select_index == 0)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 1)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 2)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 3)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 4)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 5)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
-	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
-	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(captain_mug, CMscreenRect, mesh);
-	texture_ui_manager->Add_TextureBlock(std::move(CMblock));
-
-	CTexture* replay = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	replay->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/undo-arrow.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
-	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, replay);
-	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable);
-	//REblock->onClick = [this]() {
-	//	RequestSceneChange("Character_Select");
-	//	};
-	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(REblock));
-}
-
-std::vector<TextureBlock*> CScene::Get_Texture_List()
-{
-	if (texture_ui_manager)
-		return texture_ui_manager->GetTextureBlockPtrs(); 
-	else
-		return {};
-}
-
-void CScene::Update_Texture_UI()
-{
-
-}
-
 void CScene::ReleaseObjects()
 {
+	if (m_MRT_GraphicsRootSignature) m_MRT_GraphicsRootSignature->Release();
+
+
 	obj_manager->Clear_Object_List_All();
 #ifdef WRITE_TEXT_UI
 	delete text_ui_manager;
@@ -1351,15 +855,6 @@ void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComma
 	m_pd3dcbLights = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbLights->Map(0, NULL, (void **)&m_pcbMappedLights);
-
-
-	fog_noise = make_shared<CMaterial>(1);
-	CTexture* noise_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-	noise_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Test_Noise.dds", RESOURCE_TEXTURE2D, 0);
-
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, noise_texture, 0, ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX);
-
-	fog_noise->SetTexture(noise_texture, 0);
 }
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
@@ -1374,23 +869,6 @@ void CScene::UpdateShaderVariables_Light_Info(ID3D12GraphicsCommandList* pd3dCom
 
 	D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX, d3dcbLightsGpuVirtualAddress); //Lights
-}
-
-void CScene::UpdateShaderVariables_Fog_Info(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	if (fog_info->time >= 100.0f)
-		fog_info->time = fmod(fog_info->time, 100.0f);
-
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_FOG_INFO_INDEX, 8, fog_info.get(), 0);
-
-	fog_noise->Update_TextureShaderVariables(pd3dCommandList);
-}
-
-void CScene::UpdateShaderVariables_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	if(shadow_camera)
-		shadow_camera->UpdateShaderVariables(pd3dCommandList);
-
 }
 
 void CScene::ReleaseShaderVariables()
@@ -1425,57 +903,7 @@ void CScene::ReleaseUploadBuffers()
 
 bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
-	if (nMessageID == WM_LBUTTONDOWN)
-	{
-		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-		if (blocks.empty()) return false;
-
-		int mouseX = LOWORD(lParam);
-		int mouseY = HIWORD(lParam);
-		float fMouseX = static_cast<float>(mouseX);
-		float fMouseY = static_cast<float>(mouseY);
-
-		
-		uint32_t mask = static_cast<uint32_t>(UILayer::Interactable);
-
-		for (auto& block : blocks)
-		{
-			if (block && block->bActive) {
-				if ((static_cast<uint32_t>(block->layer) & mask) != 0) {
-					if (IsPointInRect(block->hitboxRect, fMouseX, fMouseY))
-					{
-						if (block->onClick) block->onClick();
-						return true;
-					}
-				}
-			}
-		}
-	}
-	return false;
-}
-
-
-void CScene::UpdateUIHoverState(HWND hWnd)
-{
-	POINT ptMouse;
-	GetCursorPos(&ptMouse);
-	ScreenToClient(hWnd, &ptMouse);
-
-	float fMouseX = static_cast<float>(ptMouse.x);
-	float fMouseY = static_cast<float>(ptMouse.y);
-
-	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-	if (blocks.empty()) return;
-
-	uint32_t mask = static_cast<uint32_t>(UILayer::Interactable);
-
-	for (auto& block : blocks)
-	{
-		if (block && block->bActive) {
-			if ((static_cast<uint32_t>(block->layer) & mask) != 0)
-				block->bHovered = IsPointInRect(block->hitboxRect, fMouseX, fMouseY);
-		}
-	}
+	return(false);
 }
 
 bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -1486,23 +914,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		switch (wParam)
 		{
 		case 'Q':
+			test_button = !test_button;
 			{
 				m_pPlayer->SetBlurMask(test_button);
+
 			}		break;
-
-
-		case 'R':
-		{
-			test_button = !test_button;
-		}
-			break;
-
-		case 'F':		case 'f':
-		{
-			// Toggle Fog On/Off
-			fog_info->Fog_Trigger ^= 1;
-		}
-		break;
 
 		case 'E':
 		{
@@ -1523,12 +939,14 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						if (particle_test_button) {
 							dragon->Test_Mode = true;
 							float centerZ = 1590.0f;
+							//XMFLOAT3 centerPos = XMFLOAT3(595.0f, 35.0f, centerZ);
 							XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 35.0f, 831.0f);
 							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 							dragon->SetPosition(centerPos);
 							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
 						}
 						else {
+							//dragon->SetPosition(XMFLOAT3(595.0f, 0.0f, 1590.0f));
 							dragon->SetPosition(XMFLOAT3(1723.0f, 35.0f, 831.0f));
 							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
 						}
@@ -1619,25 +1037,65 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		}		break;
 
-
-		case VK_CONTROL: 
+		case 'V':
 		{
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty()) {
-				uint32_t targetMask = static_cast<uint32_t>(UILayer::HP_bar);
-				for (auto& block : blocks)
-				{
-					if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
-					{
-						block->hp -= 0.01f; 
-						if (block->hp <= 0.0f)
-							block->hp = 1.0f;
-
-					}
+			/*auto it = obj_manager->Get_Object_List(Object_Type::skinned);
+			if (it && it->size() > 5) {
+				auto multiPlayerObj = std::dynamic_pointer_cast<CMultiPlayerObject>((*it)[5]);
+				if (multiPlayerObj) {
+					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+					multiPlayerObj->SetStateElapsedTime(0.0f);
 				}
 			}
-		}
-			break;
+
+			if (it && it->size() > 6) {
+				auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
+				if (multiPlayerObj) {
+					multiPlayerObj->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
+					multiPlayerObj->SetStateElapsedTime(0.0f);
+				}
+			}*/
+
+		}		break;
+		case 'B': 
+		{
+			//auto it = obj_manager->Get_Object_List(Object_Type::skinned);
+			//if (it && it->size() > 6) {
+			//	auto multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>((*it)[6]);
+			//	if (multiPlayerObj) {
+			//		//multiPlayerObj->SetCamera(m_pPlayer->GetCamera());
+			//		//m_pPlayer->DelCamera();
+			//	/*	std::shared_ptr<CPlayer> tempShared = multiPlayerObj;  
+			//		multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>(std::shared_ptr<CPlayer>(m_pPlayer));
+			//		m_pPlayer = tempShared.get();*/
+
+			//		std::weak_ptr<CTerrainPlayer> weakMultiPlayer = multiPlayerObj;  // weak_ptr로 참조 유지
+			//		std::shared_ptr<CPlayer> tempShared = multiPlayerObj;  // 기존 shared_ptr을 유지
+			//		multiPlayerObj = std::dynamic_pointer_cast<CTerrainPlayer>(tempShared); // 안전한 캐스팅
+			//		m_pPlayer = tempShared.get(); // raw pointer 할당
+
+			//		if (auto locked = weakMultiPlayer.lock()) {
+			//			multiPlayerObj = locked;  // 원본 shared_ptr을 다시 참조
+			//		}
+			//	}
+			//}
+		}		break;
+		case '+':
+		{
+			/*CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/First_Mate_v12.bin", NULL);
+			string obj_name_7 = "test_palyer7";
+
+
+			std::string_view name_view = obj_name_7;
+
+			std::shared_ptr<CMultiPlayerObject> humanObject_7 = std::make_shared<CMultiPlayerObject>(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pGargoyleModel6, 12);
+			humanObject_7->SetPosition(20.0f, m_pTerrain->Get_Mesh_Height(20.0f, 10.0f), 10.0f);
+			humanObject_7->Set_Name(obj_name_7);
+			humanObject_7->test_num = 7;
+			obj_manager->Add_Object(humanObject_7, Object_Type::skinned);*/
+
+		}		break;
+
 		default:
 			break;
 		}
@@ -1684,8 +1142,6 @@ bool CScene::ProcessInput(UCHAR *pKeysBuffer)
 
 void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	fog_info->time += fTimeElapsed;
-
 	obj_manager->Animate_Objects_All(fTimeElapsed);
 
 	if (Shader_list.size())
@@ -1730,6 +1186,7 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
+						//test_dragonfire->Set_Center(position);
 						test_dragonfire->SetPosition(position);
 
 						XMFLOAT3 look;
@@ -1741,10 +1198,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 		}
 	}
 
-	if (test_bleeding)
-	{
-
-	}
 #ifdef RENDER_WAVE
 
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;
@@ -1764,25 +1217,19 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-#ifdef RENDER_WAVE
-	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
-	if (wave_obj)
-		wave_obj->Copy_Buffer_Data(pd3dCommandList);
-#endif
+#ifdef RENDER_OBB
 
-#ifdef USING_OBB
-	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
-	obj_manager->Check_OBB_Collision();
-	obj_manager->Check_OBB_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
-#endif
+	// Update every frame
+	obj_manager->Update_OBB_Drawer(Object_Type::skinned, pd3dDevice, pd3dCommandList);
 
+#endif
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
 
 	if (m_pPlayer->GetTrailOn())
 	{
-		if (!m_pPlayer->GetTrailStart()) 
-		{
+		if (!m_pPlayer->GetTrailStart()) {
 			shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 			trail_obj->Set_Trail_Target(trail_target, false);
@@ -1793,13 +1240,11 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 			m_pPlayer->Trail_Start();
 		}
 
-		if (!m_pPlayer->GetTrailObj()->Get_Active()) 
-		{
+		if (!m_pPlayer->GetTrailObj()->Get_Active()) {
 			m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
 			m_pPlayer->GetTrailObj()->Set_Active(true);
 		}
 	}
-
 
 
 	if (test_sand && test_sand->Update_Func_Index == 1)
@@ -1819,31 +1264,12 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 		}
 	}
 
-	if (test_button)
-	{
-		test_button = false;
+#ifdef RENDER_WAVE
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+		wave_obj->Copy_Buffer_Data(pd3dCommandList);
+#endif
 
-		int  cbv = CDescriptor_Heap::GetCreatedCbvCount();
-		int  srv = CDescriptor_Heap::GetCreatedSrvCount();
-		int  uav = CDescriptor_Heap::GetCreatedUavCount();
-
-		DebugOutput("CBV: " + to_string(cbv) + "\n");
-		DebugOutput("SRV: " + to_string(srv) + "\n");
-		DebugOutput("UAV: " + to_string(uav) + "\n");
-
-		test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, "bleeding");
-		test_bleeding->Set_World_Coordinate();
-
-		XMFLOAT3 p_pos = m_pPlayer->GetPosition();
-		p_pos.y += 15.0f;
-		test_bleeding->SetPosition(p_pos);
-		test_bleeding->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, 1.0f));
-
-
-		m_pPlayer->Set_Color_Blending(XMFLOAT3(1.0f, 0.0f, 0.0f), 1.0f);
-	}
-
-	m_pPlayer->Update_Color_Blending(-0.01f);
 }
 
 void CScene::After_Update_Objects()
@@ -1858,76 +1284,13 @@ void CScene::After_Update_Objects()
 
 }
 
-void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
+void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (!shadow_camera || shadow_camera->shadow_active == false)
-		return;
-
-	for (int i = 0; i < m_nLights; ++i)
-	{
-		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
-		{
-			float nearZ = main_Camera->GetNearPlane();
-			float farZ = main_Camera->GetFarPlane();
-			int numCascades = NUM_CASCADES;
-			float lambda = 0.7f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
-
-			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
-			shadow_camera->shadow_active = true;
-			break;
-		}
-	}
-
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
-	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
-
-	pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-	pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-	shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
-
-	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, shadow_camera.get());
-	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get()); 
-
-
-	/* {
-		for (int i = 0; i < NUM_CASCADES; ++i)
-		{
-			ID3D12Resource* depthResource = fixed_shadow_camera->Get_Shadow_Map_Resource(i);
-			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV(i);
-			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
-
-			// 2. 렌더 타겟 설정 및 클리어
-			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-			// 3. 쉐이더 상수 업데이트 및 렌더링
-			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
-			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
-
-			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
-	} */
-
-
-}
-
-void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-
-	if (m_MRT_GraphicsRootSignature)
-		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
-
-	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
-	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
+	pCamera->Update_Render_ShaderVariables(pd3dCommandList);
+	pCamera->Update_Last_Frame_Info(pd3dCommandList);
 
 	//씬의 객체들 프러스텀 컬링
 	//obj_manager->Check_Culling_All(pCamera);
@@ -1937,41 +1300,45 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 }
 
-void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
+void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
+//	if (m_pSkyBox) m_pSkyBox->Render(pd3dCommandList, pCamera);
+	Fog_Trigger = true;
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
+
 }
 
-void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	if (m_Transparent_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_Transparent_GraphicsRootSignature.get());
 
-	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+	pCamera->Update_Render_ShaderVariables(pd3dCommandList);
 
 
 }
 
-void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, main_Camera.get());
+	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, pCamera);
+
+#ifdef RENDER_WAVE
+	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
+	obj_manager->Render_Wave(pd3dCommandList, pCamera);
+#endif
 
 #ifdef RENDER_PARTICLE
 	if (particle_manager)
 	{
-		particle_manager->Render_All(pd3dCommandList, main_Camera.get());
+		particle_manager->Render_All(pd3dCommandList, pCamera);
 	}
 #endif
 
-#ifdef USING_OBB
+#ifdef RENDER_OBB
 	if (bOBBRender)
-		obj_manager->Render_OBB(pd3dCommandList, main_Camera.get());
+		obj_manager->Render_OBB_Drawers(pd3dCommandList, pCamera);
 #endif
 
-#ifdef RENDER_WAVE
-	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
-	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
-#endif
 	// For UI
 	//if (Shader_list.size())
 	//	for (std::shared_ptr<CShader> shader_ptr : Shader_list)
@@ -1979,36 +1346,12 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 }
 
-void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+
+void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	obj_manager->Post_Update_All();
 }
 
-void CScene::Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable)
-{
-	uint32_t targetMask = static_cast<uint32_t>(targetLayer);
-
-	for (auto& block : blocks)
-	{
-		if (block && (static_cast<uint32_t>(block->layer) & targetMask) != 0)
-		{
-			block->bActive = bEnable;
-		}
-	}
-}
-
-Change_Signal CScene::Get_Change_Signal()
-{
-	if (c_signal.change)
-	{
-		Change_Signal temp = c_signal;
-		c_signal.change = false;
-		return temp;
-	}
-	return c_signal;
-}
-
-//==========================================================================================
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -2032,7 +1375,7 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	fog_info->time += fTimeElapsed;
+	m_fElapsedTime = fTimeElapsed;
 
 	if (m_pLights)
 	{
@@ -2043,11 +1386,10 @@ void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, flo
 
 }
 
-void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
-
 
 //==========================================================================================
 
@@ -2114,8 +1456,8 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 #endif
 
 
-#ifdef USING_OBB
-	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 	//=====================================================
@@ -2161,9 +1503,6 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	//=====================================================
 	Object_Manager::Reserve_Update();
-	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
-
-	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -2193,6 +1532,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 		obj->SetLookDirection(lookDir);
 	}
+	m_fElapsedTime = fTimeElapsed;
 
 	static float m_fAccumulatedTime = 0.0f;
 	m_fAccumulatedTime += fTimeElapsed;
@@ -2218,15 +1558,10 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 	m_pLights[0].m_fRange = 50.0f + 20.0f * (fillFactor - 0.8f);
 }
 
-void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
-}
-
-
-void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	CScene::Render(pd3dDevice, pd3dCommandList);
+	CScene::Render(pd3dDevice, pd3dCommandList, pCamera);
+	Fog_Trigger = false;
 	//obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 }
 
@@ -2270,75 +1605,15 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		case 'C':
 			UpdatePlayerSelection(select_index + 1);
 			break;
-		case VK_CONTROL: {
-			static bool currentActive = false;
 
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty())
-			{
-				Set_UI_Layer_Active(blocks, UILayer::Menu, currentActive);
-        currentActive = !currentActive;
-			}
-		}
-					   break;
-		case 'F':		case 'f':
-		{
-			// Toggle Fog On/Off
-			fog_info->Fog_Trigger ^= 1;
-		}
-		break;
 
-				
 		default:
 			break;
 		}
+	default:
+		break;
 	}
 	return(false);
-}
-
-void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
-{
-	texture_ui_manager = new Texture_UI_Manager();
-	if (!texture_ui_manager) return;
-
-	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
-	texture_ui_manager->GetRenderer()->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
-	pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
-	texture_ui_manager->SetShader(std::move(pShader));
-	texture_ui_manager->SetRootSignature(pRootSignature);
-	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
-
-	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
-	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.3f, BackGround);
-	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Menu);
-	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
-
-	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downPart.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartbutttonTexture, 0, 0);
-	D2D1_RECT_F SbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, StartbutttonTexture);
-	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(StartbutttonTexture, SbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	SbTblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Game_Stage_Board";
-		c_signal.type = Scene_Type::Board;
-		};
-	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
-
-	CTexture* StartTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	StartTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/StartTxt.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, StartTxtTexture, 0, 0);
-	D2D1_RECT_F STTscreenRect = MakeNormalizedRect(0.5f, 0.49f, 0.18f, StartTxtTexture);
-	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(StartTxtTexture, STTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	STTblock->hitboxRect = SbTscreenRect;
-	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
 }
 
 //==========================================================================================
@@ -2388,16 +1663,15 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
 	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
-
-
 }
 
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
-	if (shadow_camera)
-		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	m_pLights[8].m_bEnable = true;
+
+
 
 #ifdef RENDER_PARTICLE
 	particle_manager = new Particle_Manager();
@@ -2405,8 +1679,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 #endif
 
 
-#ifdef USING_OBB
-	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#ifdef RENDER_OBB
+	obj_manager->Create_OBB_Drawers(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
 
@@ -2535,7 +1809,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
-		water_splashes_info.shader_type = Particle_Type::loop;
+		water_splashes_info.shader_type = Particle_Type::spread;
 		water_splashes_info.particle_type = 2;
 		water_splashes_info.max_particles = 300;
 
@@ -2551,26 +1825,20 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
 
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
-
-	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
-	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
+	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, cube_shape_mesh, water_splashes_info);
 #endif
 	//=====================================================
 
 
 	Object_Manager::Reserve_Update();
-	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
-	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 }
 
 void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	fog_info->time += fTimeElapsed;
 
 #ifdef RENDER_WAVE
 
@@ -2618,7 +1886,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 	if (m_pPlayer && m_pPlayer->GetCamera())
 	{
-		auto camera = m_pPlayer->GetCamera();
+		auto* camera = m_pPlayer->GetCamera();
 
 		camera->UpdateMouseHold(fTimeElapsed);
 	}
@@ -2632,7 +1900,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
 
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	CScene::Update_Objects(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -2651,7 +1919,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	if (focus_button)
 	{
-		shared_ptr<CCamera> player_camera = m_pPlayer->GetCamera();
+		CCamera* player_camera = m_pPlayer->GetCamera();
 
 		XMFLOAT3 new_camera_pos;
 		pirate_ship->UpdateTransform(NULL);
@@ -2664,13 +1932,13 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
 		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
-		//m_pPlayer->SetPosition(Fixed_Position);
-		
+		m_pPlayer->SetPosition(Fixed_Position);
+
 		auto pCamera = m_pPlayer->GetCamera();
 		pCamera->SetPosition(Fixed_Position);
-		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
-
-		}
+		pCamera->SetLookAtPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+		pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 0.0f, 0.0f), UpVector); 
+	}
 
 }
 
@@ -2682,7 +1950,7 @@ void Board_Scene::After_Update_Objects()
 
 void Board_Scene::SetCameraTarget(std::string_view target)
 {
-	shared_ptr<CCamera> camera_ptr = m_pPlayer->GetCamera();
+	CCamera* camera_ptr = m_pPlayer->GetCamera();
 	if (!camera_ptr)
 		return;
 
@@ -2710,15 +1978,23 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 	}
 }
 
-void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
+	obj_manager->Render_Objects_All(pd3dCommandList, pCamera);
 
 #ifdef RENDER_WAVE
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get()); // Wave_RootSignature
-	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
+	obj_manager->Render_Wave(pd3dCommandList, pCamera);
 #endif
 
+
+
+	Fog_Trigger = false;
+}
+
+bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	return(false);
 }
 
 bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -2748,13 +2024,6 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'F':		case 'f':
-		{
-			// Toggle Fog On/Off
-			fog_info->Fog_Trigger ^= 1;
-		}
-		break;
-
 		case 'D':		case 'd':
 		{
 			pirate_ship->Add_Rotate(10.0f);
@@ -2763,15 +2032,15 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '1':
 			SetCameraTarget("Captain");
-			break;
+		break;
 
 		case '2':
 			SetCameraTarget("Sailor_0");
-			break;
+		break;
 
 		case '3':
 			SetCameraTarget("Sailor_1");
-			break;
+		break;
 
 		case '4':
 			SetCameraTarget("Sailor_2");
@@ -2783,77 +2052,15 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case '6':
 			SetCameraTarget("Sailor_4");
-			break;
+		break;
 
-		case VK_CONTROL: {
-			static bool currentActive = false; 
-
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty())
-			{
-				Set_UI_Layer_Active(blocks, UILayer::Dialogue, currentActive);
-
-				currentActive = !currentActive;
-			}
-		}
-			break;
 		default:
 			break;
 		}
+	default:
+		break;
 	}
 	return(false);
-}
-
-void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
-{
-	texture_ui_manager = new Texture_UI_Manager();
-	if (!texture_ui_manager) return;
-
-	texture_ui_manager->SetRenderer(make_unique<Texture_UI_Renderer>(pd3dDevice));
-	texture_ui_manager->GetRenderer()->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	std::unique_ptr<CTextureToScreenShader> pShader = std::make_unique<CTextureToScreenShader>();
-	pShader->CreateShader(pd3dDevice, pd3dCommandList, pRootSignature);
-	texture_ui_manager->SetShader(std::move(pShader));
-	texture_ui_manager->SetRootSignature(pRootSignature);
-	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
-
-	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downboardName.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
-	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.68f, BackGround);
-	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Dialogue);
-	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
-
-	CTexture* YesButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	YesButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
-	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
-	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
-
-	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
-
-	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
-	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
-	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue);
-	Noblock->onClick = [this]() {
-		/*std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-		if (!blocks.empty())
-		{
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue, false);
-		}*/
-
-		c_signal.change = true;
-		c_signal.scene_name = "Stage_1";
-		c_signal.type = Scene_Type::Stage_1;
-
-		};
-	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
 }
 
 
