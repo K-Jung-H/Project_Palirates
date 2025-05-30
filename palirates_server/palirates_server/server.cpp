@@ -173,6 +173,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 Scene* scene = sceneManager.getScene(clientId);
                 if (scene) scene->removePlayer(clientId);
 
+                std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId) + "\n";
+                BroadcastPacket(leavePacket, clientId);
+
                 break;
             }
             else
