@@ -178,7 +178,6 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId) + "\n";
                 BroadcastPacket(leavePacket, clientId);
 
-                // clients 맵에서 완전히 제거
                 clients.erase(clientId);
             }
             else

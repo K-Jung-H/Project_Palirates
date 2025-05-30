@@ -1043,19 +1043,8 @@ void CGameFramework::FrameAdvance()
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-			static std::string recvBuffer;
-			recvBuffer += receivedData;
-
-			size_t pos = 0;
-			while ((pos = recvBuffer.find('\n')) != std::string::npos)
-			{
-				std::string line = recvBuffer.substr(0, pos);
-				recvBuffer.erase(0, pos + 1);
-				if (!line.empty()) {
-					std::lock_guard<std::mutex> lock(recvQueueMutex);
-					recvQueue.push(line);
-				}
-			}
+			std::cout << "[FrameAdvance] 수신 패킷 처리: " << receivedData << std::endl;
+			ProcessReceivedData(receivedData);
 		}
 	}
 
