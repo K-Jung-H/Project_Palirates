@@ -136,7 +136,7 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	Change_Signal c_signal;
-
+	float current_time = 0.0f;
 protected:
 	std::shared_ptr<Shadow_Camera> shadow_camera;
 
@@ -244,10 +244,11 @@ public:
 	Texture_UI_Manager* texture_ui_manager = NULL;
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 	std::vector<TextureBlock*> Get_Texture_List();
-	virtual void Update_Texture_UI();
+	virtual void Update_Texture_UI(float currentTime, float elapsedTime);
 
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
+	virtual void Bind_Player_UI_Callback();
 
 	static UINT select_index;
 };

@@ -1133,7 +1133,7 @@ void CGameFramework::FrameAdvance()
 	}
 	
 
-	//scene_manager->Update_Texture_UI();
+	
 
 	// ====================== [4] Render Phase ======================
 	BeginGPUStage(GPU_Stage::Render);
@@ -1218,7 +1218,7 @@ void CGameFramework::FrameAdvance()
 		{
 			m_pPlayer->Record_Last_Pos();
 		}
-
+		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 
 #ifndef WRITE_TEXT_UI

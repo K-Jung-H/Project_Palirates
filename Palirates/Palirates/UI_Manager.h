@@ -60,9 +60,6 @@ struct TextBlock
 
 };
 
-// 프레임워크에서 동작하는 객체
-// 씬에서 TextBlock배열을 전달받아, 일괄 렌더링
-
 class Text_UI_Manager
 {
 private:
@@ -131,6 +128,8 @@ enum class UILayer : uint32_t
     HP_bar = 1 << 3,  
     Menu = 1 << 4,   
     Dialogue = 1 << 5,
+    screen = 1 << 6,
+    Dialogue_Button = 1 << 7,
     All = 0xFFFFFFFF
 };
 
@@ -164,6 +163,10 @@ struct TextureBlock
     bool bActive = true;
 
     float hp = 1.0f;
+    float ui_type = 1.0f;
+    float start_time = 0.0f;
+
+    bool bPendingActivation = false;
 
     UILayer layer = UILayer::Default;
 
