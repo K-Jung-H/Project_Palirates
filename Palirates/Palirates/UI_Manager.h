@@ -131,7 +131,6 @@ enum class UILayer : uint32_t
     HP_bar = 1 << 3,  
     Menu = 1 << 4,   
     Dialogue = 1 << 5,
-    screen = 1 << 6,
     All = 0xFFFFFFFF
 };
 
@@ -165,8 +164,6 @@ struct TextureBlock
     bool bActive = true;
 
     float hp = 1.0f;
-    float ui_type = 0.0f;
-    float start_time = 0.0f;
 
     UILayer layer = UILayer::Default;
 
