@@ -84,8 +84,8 @@ void MonsterManager::AddAnubisMonster(int id, float x, float y, float z, float l
     m.lookX = 0.0f;
     m.lookY = 1.0f; 
     m.lookZ = 0.0f; 
-    m.trackPositions.resize(9, 1.0f);
-    m.trackWeights.resize(9, 1.0f);
+    m.trackPositions.resize(10, 0.0f);
+    m.trackWeights.resize(10, 0.0f);
     monsters[id] = m; // Fix: Assign the Monster object directly instead of its ID
 }
 
