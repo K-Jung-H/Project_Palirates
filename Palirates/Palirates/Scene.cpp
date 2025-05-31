@@ -2807,6 +2807,18 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//	}
 
+	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+	if (!blocks.empty())
+	{
+		bool is_nearby = Check_Island_Range(300.0f);
+
+		if (is_nearby != bMenuActive)
+		{
+			bMenuActive = is_nearby; 
+			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, bMenuActive);
+		}
+	}
+
 }
 
 void Board_Scene::After_Update_Objects()
@@ -2814,6 +2826,39 @@ void Board_Scene::After_Update_Objects()
 	CScene::After_Update_Objects();
 
 }
+
+bool Board_Scene::Check_Island_Range(float range)
+{
+	XMFLOAT3 boat_pos = pirate_ship->GetPosition();
+
+	XMFLOAT3 island_points[] = 
+	{
+		   XMFLOAT3(-1200.0f, 40.0f, -1200.0f),
+		   XMFLOAT3(-1200.0f, 40.0f, 0.0f),
+		   XMFLOAT3(-1200.0f, 40.0f, 1200.0f),
+		   XMFLOAT3(0.0f,    40.0f, 1200.0f),
+		   XMFLOAT3(1200.0f, 40.0f, 1200.0f),
+		   XMFLOAT3(1200.0f, 40.0f, 0.0f),
+		   XMFLOAT3(1200.0f, 40.0f, -1200.0f)
+	};
+
+	for (const auto& point : island_points)
+	{
+		XMVECTOR v1 = XMLoadFloat3(&boat_pos);
+		XMVECTOR v2 = XMLoadFloat3(&point);
+		XMVECTOR diff = XMVectorSubtract(v1, v2);
+
+
+		float distance = XMVectorGetX(XMVector3Length(diff));
+
+		if (distance <= range)
+			return true;
+	}
+
+	return false;
+
+}
+
 
 void Board_Scene::SetCameraTarget(std::string_view target)
 {
