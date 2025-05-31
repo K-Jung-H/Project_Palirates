@@ -139,7 +139,7 @@ extern HINSTANCE						ghAppInstance;
 #define LOAD_SCENE
 #define USING_OBB
 #define RENDER_PARTICLE
-//#define RENDER_WAVE
+#define RENDER_WAVE
 
 //#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
@@ -542,6 +542,6 @@ namespace Plane
 	}
 }
 
-//#define SERVER_IP "127.0.0.1"
+
 #define SERVER_IP "1.242.69.251"
 #define SERVER_PORT 9000
