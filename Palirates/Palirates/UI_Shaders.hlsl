@@ -15,7 +15,7 @@ cbuffer UIConstants : register(b1)
     float4 g_hoverGlowColor;
     float g_isHovered;
     float g_hp;
-    float ui_type;
+    int ui_type;
     float start_time;
 };
 
@@ -40,6 +40,11 @@ VS_UI_OUTPUT VS_UI(VS_UI_INPUT input)
     return output;
 }
 
+#define UI_EFFECT_CUT_HP     (1 << 0) // 1
+#define UI_EFFECT_FADE_OUT   (1 << 1) // 2
+#define UI_EFFECT_SLIDE_DOWN   (1 << 2) // 4
+#define UI_EFFECT_FADE_IN    (1 << 3) // 8
+
 float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 {
     // scan
@@ -57,12 +62,14 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 
     //return g_isHovered ? baseColor + scanColor : baseColor;
     
-    float2 uv = input.uv;
+    int type = (int) (ui_type + 0.5f);
 
-    float4 texColor = gtxtAlbedoTexture.Sample(gssClamp, uv);
+    float elapsed = gfCurrentTime - start_time;
     
-    float4 result = texColor;
+    float2 uv = input.uv;
+    float4 result = gtxtAlbedoTexture.Sample(gssClamp, uv);
 
+// Hover 
     if (g_isHovered)
     {
         float pulse = 0.5f + 0.5f * sin(gfCurrentTime * 6.0f);
@@ -73,39 +80,44 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
         result *= g_tintColor;
     }
 
-    int type = (int) (ui_type + 0.5f);
-    if (type == 1)
+// HP CUT
+    if ((type & UI_EFFECT_CUT_HP) != 0)
     {
         if (uv.x > g_hp)
             discard;
     }
-    else if (type == 2)
+
+// Fade-out
+    if ((type & UI_EFFECT_FADE_OUT) != 0)
     {
-        float elapsed = gfCurrentTime - start_time;
-        
         float fadeSpeed = 3.0f / g_hp;
         float alpha = exp(-fadeSpeed * elapsed);
-
         if (elapsed < 0.0f || elapsed > g_hp || alpha <= 0.01f)
             discard;
-
         result.a *= alpha;
     }
-    else if (type == 3)
-    {
-        float elapsed = gfCurrentTime - start_time;
 
+// Slide up
+    if ((type & UI_EFFECT_SLIDE_DOWN) != 0)
+    {
         float slideSpeed = 1.0f / g_hp;
         float offsetY = saturate(elapsed * slideSpeed);
-        
         float2 movingUV = float2(uv.x, uv.y + (1.0 - offsetY));
-        
+
         if (movingUV.y > 1.0f)
             discard;
 
         result = gtxtAlbedoTexture.Sample(gssClamp, movingUV);
         result *= g_tintColor;
     }
-    
+
+// Fade-in
+    if ((type & UI_EFFECT_FADE_IN) != 0)
+    {
+        float fadeInDuration = g_hp;
+        float alpha = saturate(elapsed / fadeInDuration);
+        result.a *= alpha;
+    }
+
     return result;
 }

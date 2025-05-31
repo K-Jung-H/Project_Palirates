@@ -27,17 +27,14 @@ D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState
 	UINT nInputElementDescs = 7;  
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	// ì •ì  ì •ë³´ë¥¼ ìœ„í•œ ì…ë ¥ ì›ì†Œë“¤
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[1] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-	// ì¸ìŠ¤í„´ì‹± ì •ë³´ë¥¼ ìœ„í•œ ì…ë ¥ ì›ì†Œë“¤
 	pd3dInputElementDescs[2] = { "WORLDMATRIX", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[3] = { "WORLDMATRIX", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[4] = { "WORLDMATRIX", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[5] = { "WORLDMATRIX", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
-	// ì¸ìŠ¤í„´ìŠ¤ ìƒ‰ìƒ
 	pd3dInputElementDescs[6] = { "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
 
@@ -745,7 +742,7 @@ XMVECTOR OBB_Manager::Resolve_Overlap(const BoundingOrientedBox& playerOBB) cons
 //				const char* nameB = col_obb_list[j].obj->Get_Name();
 //
 //				char buffer[256];
-//				sprintf_s(buffer, "OBB ì¶©ëŒ ê°ì§€: [%s] <--> [%s]\n", nameA, nameB);
+//				sprintf_s(buffer, "OBB Ãæµ¹ °¨Áö: [%s] <--> [%s]\n", nameA, nameB);
 //				OutputDebugStringA(buffer);*/
 //
 //				if (typeA == OBJECT_TPYE_MAIN_PLAYER && typeB == OBJECT_TPYE_MONSTER_WEAPON) {
@@ -898,7 +895,7 @@ void Fixed_Object_Info::Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dD
 
 	m_d3dInstancingBufferView.BufferLocation = Instance_info->GetGPUVirtualAddress();
 	m_d3dInstancingBufferView.StrideInBytes = sizeof(Instance_Info);
-	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 ì •ë ¬ëœ í¬ê¸° ì‚¬ìš©
+	m_d3dInstancingBufferView.SizeInBytes = bufferSize;  // 256 Á¤·ÄµÈ Å©±â »ç¿ë
 
 }
 
@@ -920,7 +917,7 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 		Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	// ê°€ì‹œì„± ê²€ì‚¬ í›„, ë³´ì´ëŠ” ì¸ìŠ¤í„´ìŠ¤ë§Œ ì—…ë°ì´íŠ¸
+	// °¡½Ã¼º °Ë»ç ÈÄ, º¸ÀÌ´Â ÀÎ½ºÅÏ½º¸¸ ¾÷µ¥ÀÌÆ®
 	for (auto& obj_ptr : fixed_obj_list)
 	{
 		if (!obj_ptr->Get_Active())
@@ -1062,7 +1059,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 			if (obj_ptr->Get_Active()) {
 				if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
-				obj_ptr->Animate(fTimeElapsed);
+					obj_ptr->Animate(fTimeElapsed);
 			}
 	}
 	break;
@@ -1073,10 +1070,6 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
-				/*if (obj_ptr->Object_type == 10) {
-					obj_ptr->m_xmf4x4Parent = obj_ptr->m_xmf4x4World;
-					obj_ptr->MoveForward(fTimeElapsed);
-				}*/
 				obj_ptr->UpdateTransform(NULL);
 			}
 	}
@@ -1086,9 +1079,6 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
-				/*std::wostringstream oss;
-				oss << obj_ptr->GetSkinnedAnimationController()->m_pAnimationTracks[0].m_fSpeed << '\n';
-				OutputDebugStringW(oss.str().c_str());*/
 			}
 	}
 	break;
@@ -1130,7 +1120,7 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (do_instance_update == false)
 		return;
 	else
-		do_instance_update = false; // ë‹¤ìŒ Update í˜¸ì¶œ ì „ê¹Œì§€ëŠ” ì¸ìŠ¤í„´ìŠ¤ ì •ë³´ ìœ ì§€í•˜ê¸°
+		do_instance_update = false; // ´ÙÀ½ Update È£Ãâ Àü±îÁö´Â ÀÎ½ºÅÏ½º Á¤º¸ À¯ÁöÇÏ±â
 
 	for (auto& pair : fixed_obj_info_map)
 	{
@@ -1469,9 +1459,9 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 			info.fixed_obj_list.shrink_to_fit(); 
 
 			if (info.obj_mesh)
-				info.obj_mesh.reset(); // ê°•ì œë¡œ nullptrë¡œ ì„¤ì •
+				info.obj_mesh.reset(); // °­Á¦·Î nullptr·Î ¼³Á¤
 
-			// ìˆ˜ë™ í• ë‹¹ëœ ë©”ëª¨ë¦¬ 
+			// ¼öµ¿ ÇÒ´çµÈ ¸Ş¸ğ¸® 
 			if (info.Instance_info)
 			{
 				info.Instance_info -> Unmap(0, NULL);
@@ -1480,7 +1470,7 @@ void Object_Manager::Clear_Object_List(Object_Type type)
 			}
 		}
 
-		// ì»¨í…Œì´ë„ˆ ìì²´ë¥¼ ì™„ì „íˆ ë¹„ìš°ê³  ë©”ëª¨ë¦¬ í•´ì œ
+		// ÄÁÅ×ÀÌ³Ê ÀÚÃ¼¸¦ ¿ÏÀüÈ÷ ºñ¿ì°í ¸Ş¸ğ¸® ÇØÁ¦
 		fixed_obj_info_map.clear();
 		unique_mesh_names.clear();
 
@@ -1519,20 +1509,20 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 
 			XMMATRIX objMat = XMLoadFloat4x4(&obj->m_xmf4x4World);
 
-			// ë¶„í•´í•˜ì—¬ ê°ì²´ íšŒì „ê³¼ ìŠ¤ì¼€ì¼ ì¶”ì¶œ
+			// ºĞÇØÇÏ¿© °´Ã¼ È¸Àü°ú ½ºÄÉÀÏ ÃßÃâ
 			XMVECTOR scale, rotation, translation;
 			XMMatrixDecompose(&scale, &rotation, &translation, objMat);
 
-			// 1. Center ë³€í™˜ (localOBB.Center â†’ ì›”ë“œ)
+			// 1. Center º¯È¯ (localOBB.Center ¡æ ¿ùµå)
 			XMVECTOR localCenter = XMLoadFloat3(&localOBB.Center);
 			XMVECTOR worldCenter = XMVector3Transform(localCenter, objMat);
 
-			// 2. Orientation ë³€í™˜ (ë¡œì»¬ OBB íšŒì „ * ê°ì²´ íšŒì „)
+			// 2. Orientation º¯È¯ (·ÎÄÃ OBB È¸Àü * °´Ã¼ È¸Àü)
 			XMVECTOR obbRot = XMLoadFloat4(&localOBB.Orientation);
 			XMVECTOR finalRot = XMQuaternionMultiply(obbRot, rotation);
 			finalRot = XMQuaternionNormalize(finalRot);
 
-			// 3. Extents ë³€í™˜ (ë¡œì»¬ Extents * ê°ì²´ ìŠ¤ì¼€ì¼)
+			// 3. Extents º¯È¯ (·ÎÄÃ Extents * °´Ã¼ ½ºÄÉÀÏ)
 			XMFLOAT3 scaleVec;
 			XMStoreFloat3(&scaleVec, scale);
 			XMFLOAT3 worldExtents = {
@@ -1541,7 +1531,7 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 				localOBB.Extents.z * scaleVec.z
 			};
 
-			// GPU OBB êµ¬ì„±
+			// GPU OBB ±¸¼º
 			GPU_OBB obb{};
 			XMStoreFloat3(&obb.Center, worldCenter);
 			XMStoreFloat4(&obb.Rotation, finalRot);
