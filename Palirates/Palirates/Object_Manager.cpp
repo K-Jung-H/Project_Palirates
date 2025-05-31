@@ -27,17 +27,14 @@ D3D12_INPUT_LAYOUT_DESC BoundingBox_Shader::CreateInputLayout(int nPipelineState
 	UINT nInputElementDescs = 7;  
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	// 정점 정보를 위한 입력 원소들
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 	pd3dInputElementDescs[1] = { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
-	// 인스턴싱 정보를 위한 입력 원소들
 	pd3dInputElementDescs[2] = { "WORLDMATRIX", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[3] = { "WORLDMATRIX", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[4] = { "WORLDMATRIX", 2, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 32, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 	pd3dInputElementDescs[5] = { "WORLDMATRIX", 3, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 48, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
-	// 인스턴스 색상
 	pd3dInputElementDescs[6] = { "INSTANCECOLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 64, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
 
 
@@ -1062,7 +1059,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 			if (obj_ptr->Get_Active()) {
 				if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
-				obj_ptr->Animate(fTimeElapsed);
+					obj_ptr->Animate(fTimeElapsed);
 			}
 	}
 	break;
@@ -1073,10 +1070,6 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			if (obj_ptr->Get_Active())
 			{
 				obj_ptr->Animate(fTimeElapsed);
-				/*if (obj_ptr->Object_type == 10) {
-					obj_ptr->m_xmf4x4Parent = obj_ptr->m_xmf4x4World;
-					obj_ptr->MoveForward(fTimeElapsed);
-				}*/
 				obj_ptr->UpdateTransform(NULL);
 			}
 	}
@@ -1086,9 +1079,6 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
 			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
-				/*std::wostringstream oss;
-				oss << obj_ptr->GetSkinnedAnimationController()->m_pAnimationTracks[0].m_fSpeed << '\n';
-				OutputDebugStringW(oss.str().c_str());*/
 			}
 	}
 	break;

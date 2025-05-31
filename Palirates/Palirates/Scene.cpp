@@ -1262,7 +1262,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BDSCR, 0, 0);
 	D2D1_RECT_F BDSCRscreenRect = MakeNormalizedRect(0.5f, 0.5f, 1.0f, BDSCR);
 	std::unique_ptr<TextureBlock> BDSCRblock = std::make_unique<TextureBlock>(BDSCR, BDSCRscreenRect, mesh, UILayer::screen);
-	BDSCRblock->ui_type = 2;
+	BDSCRblock->ui_type = UI_EFFECT_FADE_OUT;
 	BDSCRblock->hp = 1.5f;
 	texture_ui_manager->Add_TextureBlock(std::move(BDSCRblock));
 
@@ -1278,7 +1278,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpFront, 0, 0);
 	D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
 	std::unique_ptr<TextureBlock> HFblock = std::make_unique<TextureBlock>(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
-	HFblock->ui_type = 1;
+	HFblock->ui_type = UI_EFFECT_CUT_HP;
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -1324,30 +1324,48 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 
 void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
-	std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
+	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive) {
+		std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
-	for (auto& block : blocks)
-	{
-		if (block->bPendingActivation) {
-			float elapsed = currentTime - block->start_time;
-			if (elapsed >= block->hp)
-			{
-				block->bActive = true;
-				block->bPendingActivation = false;
-			}
-		}
-		if (!block) continue;
-		if (UpdateUI)
+		for (auto& block : blocks)
 		{
-			uint32_t layerMask = static_cast<uint32_t>(UILayer::HP_bar);
-			if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
-			{
-				float targetHP = m_pPlayer->currentHP / m_pPlayer->maxHP;
-				float speed = 15.0f; 
-				block->hp = block->hp + (targetHP - block->hp) * (elapsedTime * speed);
+			if (block->bPendingActivation) {
+				float elapsed = currentTime - block->start_time;
+				if (elapsed >= block->hp)
+				{
+					block->bActive = true;
+					block->bPendingActivation = false;
+				}
+			}
+			if (!block) continue;
 
-				if (abs(block->hp - targetHP) < 0.001f)
-					block->hp = targetHP;
+			if (bUpdateUI_HP)
+			{
+				uint32_t layerMask = static_cast<uint32_t>(UILayer::HP_bar);
+				if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
+				{
+					float targetHP = m_pPlayer->currentHP / m_pPlayer->maxHP;
+					float speed = 15.0f;
+					block->hp = block->hp + (targetHP - block->hp) * (elapsedTime * speed);
+
+					if (abs(block->hp - targetHP) < 0.001f) {
+						block->hp = targetHP;
+						bUpdateUI_HP = false;
+					}
+				}
+			}
+			if (bUpdateUI_Screen)
+			{
+				uint32_t layerMask = static_cast<uint32_t>(UILayer::screen);
+				if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
+				{
+					float elapsed = currentTime - block->start_time;
+					if (elapsed >= block->hp)
+					{
+						block->bActive = false;
+						bUpdateUI_Screen = false;
+					}
+				}
 			}
 		}
 	}
@@ -2030,7 +2048,8 @@ void CScene::Bind_Player_UI_Callback()
 		m_pPlayer->GetStateMachine()->onGetHitEffect = [this](bool bEnable) {
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			this->Set_UI_Layer_Active(blocks, UILayer::screen, bEnable);
-			UpdateUI = bEnable;
+			bUpdateUI_Screen = bEnable;
+			bUpdateUI_HP = bEnable;
 			bHitSignal = bEnable;
 			};
 	}
@@ -2319,14 +2338,12 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		case 'C':
 			UpdatePlayerSelection(select_index + 1);
 			break;
-		case VK_CONTROL: {
-			static bool currentActive = false;
-
+		case VK_RETURN: {
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
-				Set_UI_Layer_Active(blocks, UILayer::Menu, currentActive);
-        currentActive = !currentActive;
+				Set_UI_Layer_Active(blocks, UILayer::Menu, !bMenuActive);
+				bMenuActive = !bMenuActive;
 			}
 		}
 					   break;
@@ -2363,6 +2380,8 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.3f, BackGround);
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Menu);
+	BGblock->bActive = false;
+	BGblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
 	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -2377,6 +2396,8 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 		};
 	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	SbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	SbTblock->bActive = false;
+	SbTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
 
 	CTexture* StartTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -2387,6 +2408,8 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	STTblock->hitboxRect = SbTscreenRect;
 	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	STTblock->bActive = false;
+	STTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
 }
 
@@ -2836,15 +2859,13 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			SetCameraTarget("Sailor_4");
 			break;
 
-		case VK_CONTROL: {
-			static bool currentActive = false; 
-
+		case VK_RETURN: {
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
-				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, currentActive);
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, !bMenuActive);
 
-				currentActive = !currentActive;
+				bMenuActive = !bMenuActive;
 			}
 		}
 			break;
@@ -2873,8 +2894,9 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.68f, BackGround);
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Dialogue);
-	BGblock->ui_type = 3;
+	BGblock->ui_type = UI_EFFECT_SLIDE_DOWN;
 	BGblock->hp = 1;
+	BGblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
 
 	CTexture* YesButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -2891,6 +2913,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	Yesblock->hp = 1;
+	Yesblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
 
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -2903,11 +2926,13 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		if (!blocks.empty())
 		{
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+			bMenuActive = false;
 		}
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	Noblock->hp = 1;
+	Noblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
 }
 

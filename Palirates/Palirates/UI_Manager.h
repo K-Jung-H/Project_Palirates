@@ -119,6 +119,11 @@ public:
 
 };
 
+#define UI_EFFECT_CUT_HP     (1 << 0) // 1
+#define UI_EFFECT_FADE_OUT   (1 << 1) // 2
+#define UI_EFFECT_SLIDE_DOWN   (1 << 2) // 4
+#define UI_EFFECT_FADE_IN    (1 << 3) // 8
+
 enum class UILayer : uint32_t
 {
     None = 0,
@@ -163,7 +168,7 @@ struct TextureBlock
     bool bActive = true;
 
     float hp = 1.0f;
-    float ui_type = 1.0f;
+    int ui_type = 0;
     float start_time = 0.0f;
 
     bool bPendingActivation = false;
