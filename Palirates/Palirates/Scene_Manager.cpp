@@ -120,7 +120,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
 
         Register_Scene(scene_name, in_stage_scene);
-        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
         pPlayer->SetupWeaponCollider();
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
