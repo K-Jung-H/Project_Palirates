@@ -852,8 +852,8 @@ void CGameFramework::Animate_Scene()
 	//===============================================================
 
 
-	//if (m_pPlayer)
-	//	m_pPlayer->Animate(fTimeElapsed);
+	if (m_pPlayer)
+		m_pPlayer->Animate(fTimeElapsed);
 
 
 	if (multiMode)
@@ -888,7 +888,7 @@ void CGameFramework::Update_Scene()
 {
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
-	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
+	scene_manager->Update_Active_Objects(m_pd3dDevice, Active_CommandList);
 
 	if (m_pPlayer)
 		m_pPlayer->Update(fTimeElapsed);
@@ -1133,7 +1133,7 @@ void CGameFramework::FrameAdvance()
 	}
 	
 
-	//scene_manager->Update_Texture_UI();
+	
 
 	// ====================== [4] Render Phase ======================
 	BeginGPUStage(GPU_Stage::Render);
@@ -1218,7 +1218,7 @@ void CGameFramework::FrameAdvance()
 		{
 			m_pPlayer->Record_Last_Pos();
 		}
-
+		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 
 #ifndef WRITE_TEXT_UI
