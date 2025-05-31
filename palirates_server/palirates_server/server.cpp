@@ -226,21 +226,21 @@ void Server::BroadcastAllStates()
             BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
         }
 
-        //for (const auto& [monsterId, monster] : scene.getMonsters())
-        //{
-        //    std::ostringstream oss;
-        //    oss << "MONSTER_UPDATE," << monster.id << ","
-        //        << monster.x << "," << monster.y << "," << monster.z << ","
-        //        << monster.lookX << "," << monster.lookY << "," << monster.lookZ << ","
-        //        << monster.hp << "," << monster.state << "," << static_cast<int>(monster.type);
-        //
-        //    int trackCount = static_cast<int>(monster.trackPositions.size());
-        //    oss << "," << trackCount;
-        //    for (int i = 0; i < trackCount; ++i)
-        //        oss << "," << monster.trackPositions[i] << "," << monster.trackWeights[i];
-        //
-        //    BroadcastPacket(oss.str(), -1);
-        //}
+        for (const auto& [monsterId, monster] : scene.getMonsters())
+        {
+            std::ostringstream oss;
+            oss << "MONSTER_UPDATE," << monster.id << ","
+                << monster.x << "," << monster.y << "," << monster.z << ","
+                << monster.lookX << "," << monster.lookY << "," << monster.lookZ << ","
+                << monster.hp << "," << monster.state << "," << static_cast<int>(monster.type);
+        
+            int trackCount = static_cast<int>(monster.trackPositions.size());
+            oss << "," << trackCount;
+            for (int i = 0; i < trackCount; ++i)
+                oss << "," << monster.trackPositions[i] << "," << monster.trackWeights[i];
+        
+            BroadcastPacket(oss.str(), -1);
+        }
     }
 }
 
@@ -274,20 +274,20 @@ void Server::SendInitialStates(int clientId)
         logger.Log("[서버] (SendInitialStates) PLAYER_CREATE 전송: " + createPacket);
 
 
-        //for (const auto& [monsterId, monster] : scene.getMonsters())
-        //{
-        //    std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
-        //    send(clients[clientId].socket, create.c_str(), create.length(), 0);
-        //
-        //    std::string update = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
-        //        std::to_string(monster.x) + "," + std::to_string(monster.y) + "," + std::to_string(monster.z) + "," +
-        //        std::to_string(monster.lookX) + "," + std::to_string(monster.lookY) + "," + std::to_string(monster.lookZ) + "," +
-        //        std::to_string(monster.hp) + "," + std::to_string(monster.state) + "," + std::to_string((int)monster.type) + "\n";
-        //
-        //
-        //    send(clients[clientId].socket, update.c_str(), update.length(), 0);
-        //
-        //}
+        for (const auto& [monsterId, monster] : scene.getMonsters())
+        {
+            std::string create = "MONSTER_CREATE," + std::to_string(monsterId) + "\n";
+            send(clients[clientId].socket, create.c_str(), create.length(), 0);
+        
+            std::string update = "MONSTER_UPDATE," + std::to_string(monsterId) + "," +
+                std::to_string(monster.x) + "," + std::to_string(monster.y) + "," + std::to_string(monster.z) + "," +
+                std::to_string(monster.lookX) + "," + std::to_string(monster.lookY) + "," + std::to_string(monster.lookZ) + "," +
+                std::to_string(monster.hp) + "," + std::to_string(monster.state) + "," + std::to_string((int)monster.type) + "\n";
+        
+        
+            send(clients[clientId].socket, update.c_str(), update.length(), 0);
+        
+        }
     }
 }
 
