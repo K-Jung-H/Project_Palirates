@@ -333,6 +333,33 @@ void Server::MonsterUpdate(int monsterId, float x, float y, float z, float lookX
     BroadcastPacket(packet, -1); // -1이면 모든 클라이언트에게 전송
 }
 
+void Server::HandleKeyInput()
+{
+    if (GetAsyncKeyState(VK_F1) & 0x8000) // F1 키 감지
+    {
+        Scene* scene = sceneManager.getScene(0); // 기본 씬 가져오기
+        if (!scene) return;
+
+        int id = 100; // 몬스터 ID 시작값
+        // Fishman 5마리 생성
+        for (int i = 0; i < 5; ++i)
+        {
+            scene->addMonster(1000+id++, 1500.0f + (i*20), 5.0f, 750.0f + (i*10), 0.0f, 1.0f, 0.0f, 100, 0, Monster_Type::Fishman);
+        }
+        // Anubis 1마리 생성
+        scene->addMonster(1100+id++, 1550.0f, 5.0f, 800.0f, 0.0f, 1.0f, 0.0f, 200, 0, Monster_Type::Anubis);
+        // Dragon 1마리 생성
+        scene->addMonster(1200+id++, 1600.0f, 5.0f, 900.0f, 0.0f, 1.0f, 0.0f, 300, 0, Monster_Type::Dragon);
+
+        // 클라이언트로 패킷 전송
+        for (const auto& [monsterId, monster] : scene->getMonsters())
+        {
+            BroadcastPacket(monster.Serialize(), -1); // 모든 클라이언트에게 전송
+        }
+
+        logger.Log("[서버] F1 키 입력으로 몬스터 생성 완료");
+    }
+}
 
 Server::~Server()
 {
@@ -380,10 +407,9 @@ int main()
     Server server(9000);
     server.Start();
 
-
-
     while (true)
     {
+        server.HandleKeyInput();
         server.BroadcastAllStates();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
