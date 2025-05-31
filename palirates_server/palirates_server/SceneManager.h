@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include "Scene.h"
+#include <vector>
 
 class Scene_Manager
 {

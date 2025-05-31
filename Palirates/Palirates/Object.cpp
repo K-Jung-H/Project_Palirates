@@ -3424,7 +3424,10 @@ ServerAnimationSyncData CGameObject::MakeSyncData()
 
 void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
-
+	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
+	{
+		return;
+	}
 	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
 }

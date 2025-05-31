@@ -47,4 +47,7 @@ public:
     {
         std::cout << "캐릭터 " << id << " 위치: (" << x << ", " << y << ", " << z << "), 상태: " << static_cast<int>(state) << std::endl;
     }
+
+    std::vector<float> animPositions;
+    std::vector<float> animWeights;
 };

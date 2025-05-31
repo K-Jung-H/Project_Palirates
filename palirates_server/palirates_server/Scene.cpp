@@ -61,3 +61,18 @@ Player* Scene::getPlayerById(int id)
     }
     return nullptr;
 }
+
+void Scene::updatePlayerAnimation(int playerId, const std::vector<float>& trackPositions, const std::vector<float>& trackWeights)
+{
+    GameCharacter* player = getPlayer(playerId);
+    if (!player) return;
+
+    player->animPositions = trackPositions;
+    player->animWeights = trackWeights;
+}
+
+GameCharacter* Scene::getPlayer(int id)
+{
+    if (players.find(id) == players.end()) return nullptr;
+    return &players[id];
+}

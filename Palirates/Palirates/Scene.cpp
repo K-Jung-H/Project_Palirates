@@ -2291,7 +2291,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 	if (bStartAnimation)
 	{
 		enterTime += fTimeElapsed;
-		float duration = 5.0f; 
+		float duration = 1.0f; 
 		float t = min(enterTime / duration, 1.0f);
 
 		XMFLOAT3 startPos = m_pPlayer->GetPosition();
@@ -2305,13 +2305,13 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 		XMStoreFloat3(&newPos, vInterp);
 		m_pPlayer->SetPosition(newPos);
 
-		XMFLOAT3 targetLook = { 0.0f, 0.0f, 0.0f };
+	/*	XMFLOAT3 targetLook = { 1000.0f, 0.0f, 0.0f };
 		XMVECTOR lookDir = XMVectorSubtract(XMLoadFloat3(&targetLook), vInterp);
 		lookDir = XMVector3Normalize(lookDir);
 
 		XMFLOAT3 finalLook;
 		XMStoreFloat3(&finalLook, lookDir);
-		m_pPlayer->SetLookDirection(finalLook);
+		m_pPlayer->SetLookDirection(finalLook);*/
 
 		if (t >= 1.0f)
 		{
@@ -2794,18 +2794,21 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 		player_camera->UpdateFocusTracking(new_camera_pos);
 	}
-	//else
-	//{
-	//	XMFLOAT3 Fixed_Position = { 0.0f, 1400.0f, 2500.0f };
-	//	XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
+	else
+	{
+		XMFLOAT3 Fixed_Position = { 0.0f, 1800.0f, 1550.0f };
+		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
 
-	//	//m_pPlayer->SetPosition(Fixed_Position);
-	//	
-	//	auto pCamera = m_pPlayer->GetCamera();
-	//	pCamera->SetPosition(Fixed_Position);
-	//	pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
+		//m_pPlayer->SetPosition(Fixed_Position);
 
-	//	}
+		auto pCamera = m_pPlayer->GetCamera();
+		pCamera->SetPosition(Fixed_Position);
+		//pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
+
+		//m_pPlayer->SetLookDirection(XMFLOAT3(0.0f, -1.0f, 0.0f));
+		pCamera->SetLookDirection(XMFLOAT3(0.0f, -0.866f, -0.5f));
+		//m_pPlayer->Rotate(0.0f, 90.0f, 0.0f);
+	}
 
 	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 	if (!blocks.empty())
