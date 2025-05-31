@@ -736,6 +736,20 @@ void Observer::Animate(float fTimeElapsed)
 void Observer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
+	if (m_pCamera && m_pCamera->GetMode() == FIRST_PERSON_CAMERA)
+	{
+		m_xmf3Look = Vector3::Normalize(m_pCamera->GetLookVector());
+		m_xmf3Right = Vector3::Normalize(m_pCamera->GetRightVector());
+		m_xmf3Up = Vector3::Normalize(m_pCamera->GetUpVector());
+	}
+	float fixedYValue = -5.0f;
+	m_xmf3Position.y = fixedYValue;
+	if (m_pCamera)
+	{
+		XMFLOAT3 camPos = m_pCamera->GetPosition();
+		camPos.y = fixedYValue + 20.0f; 
+		m_pCamera->SetPosition(camPos);
+	}
 }
 
 
