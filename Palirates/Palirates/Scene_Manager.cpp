@@ -97,8 +97,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         Register_Scene(scene_name, character_select_scene);
         std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
-        select_scene_observer->SetPosition(XMFLOAT3{ 52.0f, 0.0f, 35.0f });
-        select_scene_observer->Rotate(0.0f, -120.0f, 0.0f);
+        select_scene_observer->SetPosition(XMFLOAT3{ -70.0f, 30.0f, 25.0f });
+        select_scene_observer->Rotate(0.0f, -110.0f, 0.0f);
         Set_Scene_Player(scene_name, select_scene_observer);
     }
     break;

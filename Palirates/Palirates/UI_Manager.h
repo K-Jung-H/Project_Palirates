@@ -135,6 +135,7 @@ enum class UILayer : uint32_t
     Dialogue = 1 << 5,
     screen = 1 << 6,
     Dialogue_Button = 1 << 7,
+    Start = 1 << 8,
     All = 0xFFFFFFFF
 };
 

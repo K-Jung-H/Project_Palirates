@@ -141,6 +141,7 @@ public:
 	bool bUpdateUI_Screen{ false };
 	bool bHitSignal{ false };
 	bool bMenuActive{ false };
+	bool bStartAnimation{ false };
 protected:
 	std::shared_ptr<Shadow_Camera> shadow_camera;
 
