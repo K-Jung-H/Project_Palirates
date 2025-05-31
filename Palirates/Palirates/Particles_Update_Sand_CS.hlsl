@@ -94,6 +94,15 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
+    // Check Reset Flag
+    if (Reset_Flag != 0)
+    {
+        p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
+    // Check Delay    
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
@@ -112,6 +121,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     if (p.Active == 0)
         return;
 
+    
     p.Lifetime += ElapsedTime;
 
     if (p.Lifetime >= p.MaxLifetime)
@@ -135,8 +145,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         ParticleBuffer_Update[index] = p;
         return;
     }
-    
-    if (worldPos.y <= 10.0f)
+        else if (worldPos.y <= 10.0f)
     {
         p.Velocity = float3(0.0f, 0.0f, 0.0f);
         p.Lifetime = 0.5f;
@@ -158,16 +167,22 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
+    // Check Reset Flag
+    if (Reset_Flag != 0)
+    {
+        p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
+    // Check Delay    
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
     }
-
-    if (p.Active == 0)
-        return;
-
+    
     p.Lifetime += ElapsedTime;
 
     float distToFocus = length(focus_point - p.Position);
@@ -216,6 +231,15 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
+    // Check Reset Flag
+    if (Reset_Flag != 0)
+    {
+        p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
+    // Check Delay    
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
@@ -225,7 +249,8 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
 
     if (p.Active == 0)
         return;
-
+    
+    
     p.Lifetime += ElapsedTime;
 
     if (p.Type == PARTICLE_TYPE_SAND)

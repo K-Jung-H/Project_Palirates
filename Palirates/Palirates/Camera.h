@@ -17,7 +17,8 @@ struct VS_CB_CAMERA_INFO
 {
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
-	XMFLOAT3						m_xmf3Position;
+	XMFLOAT4X4						m_xmf4x4InverseView;
+	XMFLOAT3							m_xmf3Position;
 };
 
 
@@ -26,6 +27,9 @@ class CPlayer;
 class CCamera
 {
 protected:
+	float m_fNearPlane = 1.0f; 
+	float m_fFarPlane = 5000.0f;
+
 	XMFLOAT3						m_xmf3Position;
 	XMFLOAT3						m_xmf3Right;
 	XMFLOAT3						m_xmf3Up;
@@ -94,8 +98,10 @@ public:
 
 public:
 	CCamera();
-	CCamera(CCamera *pCamera);
+	CCamera(shared_ptr<CCamera> pCamera);
 	virtual ~CCamera();
+
+	virtual std::shared_ptr<CCamera> Clone() const { return std::make_shared<CCamera>(*this); }
 
 	virtual void CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
@@ -135,6 +141,9 @@ public:
 	float& GetRoll() { return(m_fRoll); }
 	float& GetYaw() { return(m_fYaw); }
 
+	float GetNearPlane() const { return m_fNearPlane; }
+	float GetFarPlane() const { return m_fFarPlane; }
+
 	void SetOffset(XMFLOAT3 xmf3Offset) { m_xmf3Offset = xmf3Offset; }
 	XMFLOAT3& GetOffset() { return(m_xmf3Offset); }
 
@@ -154,14 +163,19 @@ public:
 	void GenerateFrustum();
 	bool IsInFrustum(BoundingOrientedBox& xmBoundingBox);
 	bool IsInFrustum(const XMFLOAT3& position);
+	
+	const BoundingFrustum& Get_Frustum() const { return m_xmFrustum; }
 
 };
 
 class CSpaceShipCamera : public CCamera
 {
 public:
-	CSpaceShipCamera(CCamera *pCamera);
+	CSpaceShipCamera(shared_ptr<CCamera> pCamera);
 	virtual ~CSpaceShipCamera() { }
+
+	virtual std::shared_ptr<CCamera> Clone() const { return std::make_shared<CSpaceShipCamera>(*this); }
+
 
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
 };
@@ -169,8 +183,10 @@ public:
 class CFirstPersonCamera : public CCamera
 {
 public:
-	CFirstPersonCamera(CCamera *pCamera);
+	CFirstPersonCamera(shared_ptr<CCamera> pCamera);
 	virtual ~CFirstPersonCamera() { }
+
+	virtual std::shared_ptr<CCamera> Clone() const { return std::make_shared<CFirstPersonCamera>(*this); }
 
 	virtual void Rotate(float fPitch = 0.0f, float fYaw = 0.0f, float fRoll = 0.0f);
 };
@@ -178,8 +194,10 @@ public:
 class CThirdPersonCamera : public CCamera
 {
 public:
-	CThirdPersonCamera(CCamera *pCamera);
+	CThirdPersonCamera(shared_ptr<CCamera>pCamera);
 	virtual ~CThirdPersonCamera() { }
+
+	virtual std::shared_ptr<CCamera> Clone() const { return std::make_shared<CThirdPersonCamera>(*this); }
 
 	virtual void Update(XMFLOAT3& xmf3LookAt, float fTimeElapsed);
 	virtual void SetLookAt(XMFLOAT3& vLookAt);

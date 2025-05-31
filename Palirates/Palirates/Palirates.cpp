@@ -32,6 +32,9 @@ void CreateConsole()
 	std::cout << "[INFO] 콘솔 창 활성화 - 네트워크 상태 확인 가능" << std::endl;
 }
 
+#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "1.242.69.251"
+#define SERVER_PORT 9000
 
 
 int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow) {
@@ -186,7 +189,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 std::string CPlayer::Serialize()
 {
 	std::ostringstream packetStream;
-	packetStream << "PLAYER_DATA," << m_PlayerID << ","
+	packetStream << "PLAYER_DATA," << id << ","
 		<< m_xmf3Position.x << "," << m_xmf3Position.y << "," << m_xmf3Position.z << ","
 		<< state;
 	return packetStream.str();

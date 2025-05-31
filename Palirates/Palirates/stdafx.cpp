@@ -11,14 +11,13 @@ UINT gnCbvSrvUavDescriptorIncrementSize = 0;
 UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
 
-UINT Fog_Trigger = true;
-
  DXGI_FORMAT RenderTarget_Config::RTV_FORMATS[RTV_Format_Num] =
 {
 	DXGI_FORMAT_R8G8B8A8_UNORM, // AlbedoColor
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_pos
 	DXGI_FORMAT_R16G16B16A16_FLOAT, // world_normal & camera_distance
 	DXGI_FORMAT_R16G16B16A16_FLOAT,   // x,y : Velocity , z: Blur Mask, w: Object ID == Outline color
+	DXGI_FORMAT_R16_FLOAT
 };
 
  DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;

@@ -10,12 +10,11 @@
 
 enum class Particle_Type
 {
-	spread,
+	loop,
+	interval,
 	sand,
-	dragon_fire,
 	sample_1,
 	sample_2,
-	boss_skill,
 	etc
 };
 
@@ -69,7 +68,28 @@ struct Particle_Info
 	float Size;            
 	UINT Type;
 	UINT Active;
-	float Padding;
+	UINT Sleep;
+};
+
+struct CB_Particle_Update_Info
+{
+	XMFLOAT4X4 world_matrix;
+
+	XMFLOAT3 EmitRegionMin;
+	float ElapsedTime;
+
+	XMFLOAT3 EmitRegionMax;
+	UINT Max_Particle_N;
+
+	XMFLOAT3 Main_Direction;
+	float Init_Velocity_Value;
+
+	XMFLOAT3 focus_point;
+	float focus_strength;
+
+	UINT obb_num;
+	UINT Reset_Flag;
+	XMFLOAT2 padding0;
 };
 
 //==============================================================================
@@ -116,7 +136,6 @@ public:
 	// 버퍼 생성 및 해제
 	void Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format);
 
-	//ID3D12Resource* CreateBuffer(ID3D12Device* pd3dDevice, Control_BufferType type, UINT byteSize = sizeof(UINT), UINT initialValue = 0);
 	void UpdateBuffers(ID3D12GraphicsCommandList* pd3dCommandList);
 	void ReleaseBuffers();
 
@@ -193,22 +212,49 @@ public:
 
 	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 };
+
+class Tetrahedron_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Tetrahedron_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize = 2.0f);
+	virtual ~Tetrahedron_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
+class Billboard_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Billboard_Shape_Mesh(ID3D12Device* pd3dDevice = NULL, ID3D12GraphicsCommandList* pd3dCommandList = NULL, float fSize = 2.0f);
+	virtual ~Billboard_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
 //==============================================================================
 
 class Particle_Manager;
 
 class ParticleObject : public CGameObject
 {
+private:
+	bool wasResetFlagSent = false;
+
 protected:
 	XMFLOAT3 m_xmf3Direction = { 0.0f, 0.0f, 1.0f }; // 기본 전방
 	float m_fSpeed = 0.0f;
 	XMFLOAT3 m_xmf3Velocity = { 0.0f, 0.0f, 0.0f };
 
 private:
-	Particle_Shape_Mesh* shape_mesh = NULL;
+	Particle_Manager* owner_manager = nullptr;
 	Particle* particle_data = NULL;
-	CMaterial* particle_Material = NULL;
-	
+
+	shared_ptr<Particle_Shape_Mesh>  shape_mesh = NULL;
+	shared_ptr<CMaterial> particle_Material = NULL;
+	bool is_textured = false;
+	//=============================
+
+	bool is_local = true;
 	XMFLOAT3 local_area_xyz {};
 
 	XMFLOAT3 focus_point {};
@@ -217,8 +263,9 @@ private:
 	XMFLOAT3 direction {};
 	int Init_Velocity_Value {};
 	
-
-	Particle_Manager* owner_manager = nullptr; 
+	float ElapsedTime = 0.0f;
+	float Max_Lifetime = 0.0f;
+	//=============================
 
 public:
 	UINT Update_Func_Index = 0;
@@ -227,21 +274,34 @@ public:
 
 	void ReleaseUploadBuffers();
 
-	void Set_Shape(Particle_Shape_Mesh* mesh_ptr) { shape_mesh = mesh_ptr; }
+	void Set_Shape(shared_ptr<Particle_Shape_Mesh>  mesh_ptr) { shape_mesh = mesh_ptr; }
+	shared_ptr<Particle_Shape_Mesh>  Get_Shape() { return shape_mesh; }
 	void Set_Particle_Data(Particle* new_particle_obj = NULL) { particle_data = new_particle_obj; }
+	void Set_Max_Interval(float new_max_lifetime) { Max_Lifetime = new_max_lifetime; }
 	void Init_Info(Particle_Format particle_info);
 
 	virtual void SetMesh(CMesh* pMesh = NULL) { m_pMesh = NULL; }
+	virtual void SetMaterial(CMaterial* pMaterial);
+	virtual void SetMaterial(int nMaterial, CMaterial* pMaterial);
+	virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+	
 
 	virtual void Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	void Update_Interval(float fTimeElapsed);
+	void Reset_Interval() { wasResetFlagSent = false, ElapsedTime = 0.0f, Max_Lifetime = 0.0f; }
 
+	virtual void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 	Particle* Get_Particle_Data() { return particle_data; }
+	CB_Particle_Update_Info Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage);
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
-	
+
+	void Set_Local_Coordinate() { is_local = true; }
+	void Set_World_Coordinate() { is_local = false; }
+	bool Is_Local_Coordinate() const { return is_local; }
+
 	void Set_Area(XMFLOAT3 new_local_area) { local_area_xyz = new_local_area; }
 	XMFLOAT3 Get_Area() { return local_area_xyz; }
 

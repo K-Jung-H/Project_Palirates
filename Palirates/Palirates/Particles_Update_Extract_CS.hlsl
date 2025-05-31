@@ -15,7 +15,7 @@ struct Particle_Info
     float Size;
     uint Type;
     uint Active;
-    float padding0;
+    uint Sleep;
 };
 
 struct Render_Instance
@@ -48,6 +48,7 @@ struct CellInfo
 #define PARTICLE_TYPE_SAND       3
 #define PARTICLE_TYPE_SAND_STORM       4
 #define PARTICLE_TYPE_DRAGON_FIRE       5
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 6
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
@@ -66,7 +67,8 @@ cbuffer CB_Particle_Update_Info : register(b0)
     float focus_strength;
 
     uint obb_num;
-    float3 padding0;
+    uint Reset_Flag;
+    float2 padding0;
 };
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
@@ -282,6 +284,7 @@ void Update_DragonFire(inout Particle_Info p, uint index)
     p.Color = FireColorGradient(lifeRatio, outerT);
 }
 
+
 //===============================================================
 // 인스턴싱 정보 추출
 
@@ -291,7 +294,6 @@ void Extract_Instance(in Particle_Info p)
 
     float safeScale = max(p.Size, 0.1f); // clamp to minimum positive scale
     inst.Position_and_Scale = float4(p.Position.xyz, safeScale);
-
     inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
 
     float normalizedLife = saturate(p.Lifetime / p.MaxLifetime);
@@ -317,16 +319,26 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     Particle_Info p = ParticleBuffer_Update[index];
 
+    // Check Reset Flag
+    if (Reset_Flag != 0)
+    {
+        p.Active = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+
+    // Check Delay    
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
         ParticleBuffer_Update[index] = p;
         return;
     }
-
+    
     if (p.Active == 0)
         return;
-
+    
+    
     p.Lifetime += ElapsedTime;
 
     bool out_of_bounds = IsOutOfBounds(p.Position, EmitRegionMin, EmitRegionMax);
@@ -347,7 +359,7 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Water_Splash(p, index);
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
             Update_DragonFire(p, index);
-        
+    
         
         float3 localPos = p.Position;
         float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
@@ -366,3 +378,96 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
 
     ParticleBuffer_Update[index] = p;
 }
+
+
+//===============================================================
+
+void Update_Bleeding(inout Particle_Info p, uint index)
+{
+   // p.Velocity += RandomSpreadDirection(index, Main_Direction, 1.0f);
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Acceleration.y += -9.8f;
+    p.Position += p.Velocity * ElapsedTime;
+
+    // 위치 갱신
+    p.Rotate_Value += 8.0f * ElapsedTime;
+}
+
+
+#define THREAD_COUNT 64
+[numthreads(THREAD_COUNT, 1, 1)]
+void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
+{
+    uint index = DTid.x;
+    
+    if (index >= Max_Particle_N)
+        return;
+
+    Particle_Info p = ParticleBuffer_Update[index];
+
+    // Check Reset Flag
+    if (Reset_Flag != 0)
+    {
+        p.Active = 0;
+        p.Sleep = 0;
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+    
+    if (p.Sleep == 1)
+    {
+        return;
+    }
+
+    // Check Delay    
+    bool isDelayed = DelayActive(p);
+    if (isDelayed)
+    {
+        ParticleBuffer_Update[index] = p;
+        return;
+    }
+    
+    if (p.Active == 0)
+        return;
+    
+    
+    p.Lifetime += ElapsedTime;
+
+    bool out_of_bounds = IsOutOfBounds(p.Position, EmitRegionMin, EmitRegionMax);
+
+
+    if (p.Lifetime >= p.MaxLifetime || out_of_bounds)
+    {
+        p.Active = 0;
+        p.Sleep = 1;
+        InterlockedAdd(debug_buffer[2], 1);
+    }
+    else
+    {
+        if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
+            Update_Bleeding(p, index);
+    
+        
+        float3 localPos = p.Position;
+        float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
+
+        if (CheckCollisionWithGridOBBs(worldPos))
+        {
+            p.Velocity = float3(0.0f, 0.0f, 0.0f);
+            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+            p.Color = float3(0.0f, 0.0f, 1.0f);
+            ParticleBuffer_Update[index] = p;
+            return;
+        }
+        else if (worldPos.y <= 3.0f)
+        {
+            p.Velocity = float3(0.0f, 0.0f, 0.0f);
+            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+            ParticleBuffer_Update[index] = p;
+        }
+        Extract_Instance(p);
+    }
+
+    ParticleBuffer_Update[index] = p;
+}
+

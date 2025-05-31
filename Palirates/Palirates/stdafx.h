@@ -32,6 +32,7 @@
 #include <array>
 #include <random>
 #include <optional>
+#include <functional>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -70,6 +71,8 @@ using namespace DirectX::PackedVector;
 using Microsoft::WRL::ComPtr;
 
 extern HINSTANCE						ghAppInstance;
+
+
 
 
 #pragma comment(lib, "winmm.lib")
@@ -112,15 +115,17 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 11
 #define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 12
 #define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
-#define ROOT_PARAMETER_RANDOM_VALUE_SRV_INDEX 14
 //=====================================
 #define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 15
 
-#define ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX 0
-#define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 1
-#define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 2
-#define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 3
-
+#define ROOT_PARAMETER_FOG_INFO_INDEX 0
+#define ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX 1
+#define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 2
+#define ROOT_PARAMETER_POST_SHADOW_INFO_CBV_INDEX 3
+#define ROOT_PARAMETER_G_BUFFER_SRV_INDEX 4
+#define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 5
+#define ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX 6
+#define ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX 7
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
@@ -132,9 +137,9 @@ extern HINSTANCE						ghAppInstance;
 
 //#define WRITE_TEXT_UI
 #define LOAD_SCENE
-#define RENDER_OBB
+#define USING_OBB
 #define RENDER_PARTICLE
-#define RENDER_WAVE
+//#define RENDER_WAVE
 
 //#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
@@ -147,7 +152,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 4
+#define RTV_Format_Num 5
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;
@@ -162,6 +167,26 @@ enum Control_BufferType
 	BUFFER_COUNTER_RESET = 2
 };
 
+enum Scene_Type
+{
+	Lobby,
+	Board,
+	Stage_1,
+	Stage_2,
+	etc
+};
+
+struct Change_Signal
+{
+	bool change;
+	Scene_Type type;
+	std::string scene_name;
+
+	Change_Signal(
+		bool change = false,		Scene_Type type = Scene_Type::etc,		const std::string& scene_name = "")		
+		:	change(change), type(type), scene_name(scene_name) {}
+};
+
 struct GPU_OBB
 {
 	XMFLOAT3 Center;
@@ -172,8 +197,6 @@ struct GPU_OBB
 
 	XMFLOAT4 Rotation;
 };
-
-extern UINT Fog_Trigger;
 
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);
@@ -206,6 +229,7 @@ extern void Get_File_Name_From_Address(wchar_t* pszFileName, char* textureName, 
 
 extern XMFLOAT4 Get_Random_Color(float w);
 extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area);
+
 #define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 
 
@@ -518,9 +542,6 @@ namespace Plane
 	}
 }
 
-
 //#define SERVER_IP "127.0.0.1"
 #define SERVER_IP "1.242.69.251"
 #define SERVER_PORT 9000
-
-

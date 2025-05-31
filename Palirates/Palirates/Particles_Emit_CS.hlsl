@@ -16,7 +16,7 @@ struct Particle_Info
     float Size;
     uint Type;
     uint Active;
-    float padding0;
+    uint Sleep;
 };
 
 struct Render_Instance
@@ -54,7 +54,8 @@ cbuffer CB_Particle_Update_Info : register(b0)
     float focus_strength; 
 
     uint obb_num;
-    float3 padding0;
+    uint Reset_Flag;
+    float2 padding0;
 };
 
 RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
@@ -158,7 +159,7 @@ float3 ConeEmitDirection(uint id, float3 baseDir, float coneAngle)
 }
 
 //===============================================================
-
+// Loop
 void Emit_Snow(inout Particle_Info p, uint index)
 {
     p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
@@ -235,6 +236,20 @@ void Emit_DragonFire(inout Particle_Info p, uint index)
     p.Size = 0.1f; // start small
 }
 
+//===============================================================
+// Interval
+void Emit_Bleeding(inout Particle_Info p, uint index)
+{
+    float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
+    p.Position = center;
+    float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
+    p.Velocity = normalize(dir) * Init_Velocity_Value;
+    p.Acceleration = p.Velocity;
+
+}
+
+//===============================================================
+
 
 
 #define PARTICLE_TYPE_SNOW     0
@@ -243,6 +258,8 @@ void Emit_DragonFire(inout Particle_Info p, uint index)
 #define PARTICLE_TYPE_SAND      3
 #define PARTICLE_TYPE_SAND_STORM 4
 #define PARTICLE_TYPE_DRAGON_FIRE 5
+
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 6
 
 //===============================================================
 
@@ -273,6 +290,8 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     }
 
     p.Active = 1;
+    
+    
 }
 
 //===============================================================
@@ -293,12 +312,6 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     Particle_Info p = ParticleBuffer_Emit[index];
     if (p.Active == 1)
         return;
-    if (p.Active == 2)
-        return;
-    InterlockedAdd(debug_buffer[1], 1); // emit 카운트
-
-    p.Active = 1;
-    p.Lifetime = 0.0f;
 
     if (p.Type == PARTICLE_TYPE_SNOW)
         Emit_Snow(p, index);
@@ -312,8 +325,17 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Sand_Storm(p, index);
     else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
         Emit_DragonFire(p, index);
+    else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
+    {
+        Emit_Bleeding(p, index);
+    }
+    
+    
+    p.Active = 1;
+    p.Lifetime = 0.0f;
     
     ApplyDelayByType(p, index);
-        
+    InterlockedAdd(debug_buffer[1], 1); // emit 카운트
+    
     ParticleBuffer_Emit[index] = p;
 }

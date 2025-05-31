@@ -21,14 +21,6 @@ enum Player_Model
 	Skeleton = 5,
 };
 
-struct AnimationWeightPacket
-{
-	uint8_t packetType;
-	uint32_t playerId;
-	uint8_t trackCount;
-	std::vector<std::pair<uint8_t, float>> trackWeights;
-};
-
 class CPlayer : public CGameObject
 {
 protected:
@@ -44,15 +36,17 @@ protected:
 	float           			m_fRoll = 0.0f;
 
 	XMFLOAT3					m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
-	XMFLOAT3     				m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
 	float           			m_fMaxVelocityXZ = 0.0f;
 	float           			m_fMaxVelocityY = 0.0f;
+
 	float           			m_fFriction = 0.0f;
+	XMFLOAT3     				m_xmf3Gravity = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 	LPVOID						m_pPlayerUpdatedContext = NULL;
 	LPVOID						m_pCameraUpdatedContext = NULL;
 
-	CCamera						*m_pCamera = NULL;
+	shared_ptr<CCamera> m_pCamera = NULL;
 	CHeightMapTerrain* last_tile_ptr = NULL;
 
 	float stateElapsedTime{ 0.0f };
@@ -71,12 +65,8 @@ protected:
 	bool TrailStart{ false };
 
 	//=================¼­¹ö=================
-	int m_PlayerID;
+	int id;  
 	int state;
-	void SendAnimationUpdate();
-	float GetAnimationWeight(int track);
-	void SetPlayerID(int id);
-	void SetOnline(bool online);
 
 private:
 	std::unique_ptr<StateMachine> m_StateMachine;
@@ -94,7 +84,25 @@ public:
 	void SetGravity(const XMFLOAT3& xmf3Gravity) { m_xmf3Gravity = xmf3Gravity; }
 	void SetMaxVelocityXZ(float fMaxVelocity) { m_fMaxVelocityXZ = fMaxVelocity; }
 	void SetMaxVelocityY(float fMaxVelocity) { m_fMaxVelocityY = fMaxVelocity; }
+
 	void SetVelocity(const XMFLOAT3& xmf3Velocity) { m_xmf3Velocity = xmf3Velocity; }
+
+	bool m_bSliding = false;
+	XMFLOAT3 m_xmf3SlideVector = XMFLOAT3(0, 0, 0);
+
+	void EnableSliding(const XMFLOAT3& slideVec)
+	{
+		m_xmf3SlideVector = slideVec;
+		m_bSliding = true;
+	}
+
+	void DisableSliding()
+	{
+		m_bSliding = false;
+		m_xmf3SlideVector = XMFLOAT3(0, 0, 0);
+	}
+
+
 	void SetPosition(const XMFLOAT3& xmf3Position) 
 	{ 
 		Move(XMFLOAT3(
@@ -111,13 +119,14 @@ public:
 	float GetPitch() const { return(m_fPitch); }
 	float GetRoll() const { return(m_fRoll); }
 
-	CCamera *GetCamera() { return(m_pCamera); }
-	void SetCamera(CCamera *pCamera) { m_pCamera = pCamera; }
+	shared_ptr<CCamera>GetCamera() { return(m_pCamera); }
+	void SetCamera(shared_ptr<CCamera> pCamera) { m_pCamera = pCamera; }
 	void DelCamera() { m_pCamera = nullptr; }
 
-	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
+	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
+
 	void Rotate(float x, float y, float z);
 
 	virtual void SetLookDirection(const XMFLOAT3& look);
@@ -138,10 +147,12 @@ public:
 	virtual void ReleaseShaderVariables();
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 
-	CCamera *OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
+	shared_ptr<CCamera>OnChangeCamera(DWORD nNewCameraMode, DWORD nCurrentCameraMode);
 
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
+	virtual shared_ptr<CCamera>ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed) { return(NULL); }
 	virtual void OnPrepareAnimate();
+
+
 	virtual void Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera = NULL);
 
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
@@ -152,9 +163,7 @@ public:
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
 	std::unique_ptr<StateMachine>& GetStateMachine() { return m_StateMachine; }
-	void SetStateMachine(std::unique_ptr<StateMachine> it) {
-		m_StateMachine = std::move(it);
-	}
+	void SetStateMachine(std::unique_ptr<StateMachine> it) { m_StateMachine = std::move(it); }
 	void DelStateMachine() { m_StateMachine.reset(); }
 
 	void SetStateElapsedTime(float time) { stateElapsedTime = time; }
@@ -178,13 +187,14 @@ public:
 
 	//=================¼­¹ö=================
 	CPlayer::CPlayer(int playerId, float startX, float startY, float startZ, int startState)
-		: m_PlayerID(playerId), state(startState)
+		: id(playerId), state(startState)
 	{
 		m_xmf3Position = XMFLOAT3(startX, startY, startZ);
 	}
 
-	int GetPlayerID();
-	void SendMovePacket(const XMFLOAT3& shift);
+	int GetID() const { return id; }
+	void SetID(int playerId) { id = playerId; }
+
 	int GetState() const { return state; }
 	void SetState(int newState) { state = newState; }
 
@@ -214,7 +224,7 @@ public:
 	virtual ~CTerrainPlayer();
 
 public:
-	virtual CCamera *ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual shared_ptr<CCamera> ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
@@ -238,7 +248,7 @@ public:
 	virtual ~Observer();
 
 public:
-	virtual CCamera* ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
+	virtual shared_ptr<CCamera>ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);
 
 	virtual void OnPlayerUpdateCallback(float fTimeElapsed);
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);

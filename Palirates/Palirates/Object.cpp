@@ -11,7 +11,7 @@
 
 CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	int nGraphicsSrvRootParameters, int nComputeUavRootParameters, int nComputeSrvRootParameters,
-	int nGraphicsSrvGpuHandles, int nComputeUavGpuHandles, int nComputeSrvGpuHandles) : m_nTextureType(nTextureType)
+	int nGraphicsSrvGpuHandles, int nComputeUavGpuHandles, int nComputeSrvGpuHandles, int nDsvHandles) : m_nTextureType(nTextureType)
 {
 	m_pnResourceTypes.resize(nTextures, 0);
 	m_ppd3dTextures.resize(nTextures, nullptr);
@@ -19,6 +19,8 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	m_pdxgiBufferFormats.resize(nTextures, DXGI_FORMAT_UNKNOWN);
 	m_pnBufferElements.resize(nTextures, 0);
 	m_pnBufferStrides.resize(nTextures, 0);
+	m_nTextureWidths.resize(nTextures, 0);
+	m_nTextureHeights.resize(nTextures, 0);
 
 	m_pd3dGraphicsSrvGpuDescriptorHandles.resize(nGraphicsSrvGpuHandles, { 0 });
 	m_pd3dComputeUavGpuDescriptorHandles.resize(nComputeUavGpuHandles, { 0 });
@@ -37,6 +39,8 @@ CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	m_pd3dComputeSrvRootParameterGpuDescriptorHandles.resize(nComputeSrvRootParameters, { 0 });
 
 	m_pd3dSamplerGpuDescriptorHandles.resize(nSamplers, { 0 });
+	m_d3dDsvCPUDescriptorHandles.resize(nDsvHandles, { 0 });
+
 }
 
 
@@ -248,6 +252,9 @@ void CTexture::LoadTextureFromDDSFile(ID3D12Device* device, ID3D12GraphicsComman
 	Get_File_Name_From_Address(filename, m_pstrTextureName);
 	m_pnResourceTypes[index] = resourceType;
 	m_ppd3dTextures[index] = CreateTextureResourceFromDDSFile(device, commandList, filename, &m_ppd3dTextureUploadBuffers[index], D3D12_RESOURCE_STATE_GENERIC_READ);
+	D3D12_RESOURCE_DESC texDesc = m_ppd3dTextures[index]->GetDesc();
+	m_nTextureWidths[index] = static_cast<UINT>(texDesc.Width);
+	m_nTextureHeights[index] = static_cast<UINT>(texDesc.Height);
 }
 
 void CTexture::LoadBuffer(ID3D12Device* device, ID3D12GraphicsCommandList* commandList, void* data, UINT elements, UINT stride, DXGI_FORMAT format, UINT index)
@@ -314,12 +321,20 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv{};
 	srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
+	DXGI_FORMAT originalFormat = desc.Format;
+	if (originalFormat == DXGI_FORMAT_R32_TYPELESS)
+		srv.Format = DXGI_FORMAT_R32_FLOAT;
+	else if (originalFormat == DXGI_FORMAT_R24G8_TYPELESS)
+		srv.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	else
+		srv.Format = originalFormat;
+
 	int type = GetTextureType(index);
 	switch (type)
 	{
 	case RESOURCE_TEXTURE2D:
 	case RESOURCE_TEXTURE2D_ARRAY:
-		srv.Format = desc.Format;
+		//srv.Format = desc.Format;
 		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srv.Texture2D.MipLevels = -1;
 		srv.Texture2D.MostDetailedMip = 0;
@@ -327,7 +342,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 		srv.Texture2D.ResourceMinLODClamp = 0.0f;
 		break;
 	case RESOURCE_TEXTURE2DARRAY:
-		srv.Format = desc.Format;
+		//srv.Format = desc.Format;
 		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
 		srv.Texture2DArray.MipLevels = -1;
 		srv.Texture2DArray.MostDetailedMip = 0;
@@ -337,7 +352,7 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int index)
 		srv.Texture2DArray.ArraySize = desc.DepthOrArraySize;
 		break;
 	case RESOURCE_TEXTURE_CUBE:
-		srv.Format = desc.Format;
+		//srv.Format = desc.Format;
 		srv.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 		srv.TextureCube.MipLevels = 1;
 		srv.TextureCube.MostDetailedMip = 0;
@@ -418,6 +433,8 @@ CMaterial::CMaterial(int nTextures)
 	m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
 	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = NULL;
 	for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
+
+
 }
 
 CMaterial::~CMaterial()
@@ -599,8 +616,9 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.Outline_Color_ID = Outline_Color_ID;
 	material_packet.Blur_Mask = Blur_Mask_ID;
 
+
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 27);       // 27
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
 
 	for (int i = 0; i < m_nTextures; i++)
 	{
@@ -608,6 +626,16 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 			m_ppTextures[i]->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 	}
 }
+
+void CMaterial::Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (int i = 0; i < m_nTextures; i++)
+	{
+		if (m_ppTextures[i])
+			m_ppTextures[i]->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+	}
+}
+
 
 void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
@@ -721,7 +749,7 @@ void Light_Material_Manager::CreateStructuredBuffer(ID3D12Device* pd3dDevice, ID
 {
 	if (material_info_buffer)
 	{
-		delete material_info_buffer;
+		material_info_buffer->Release();
 		material_info_buffer = nullptr;
 	}
 
@@ -744,7 +772,10 @@ void Light_Material_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		return;
 
 	if (material_info_buffer)
-		delete material_info_buffer;
+	{
+		material_info_buffer->Release();
+		material_info_buffer = nullptr;
+	}
 
 	CreateStructuredBuffer(pd3dDevice, pd3dCommandList);
 
@@ -1114,7 +1145,8 @@ CAnimationController::CAnimationController(ID3D12Device* pd3dDevice, ID3D12Graph
 	m_pModelRootObject = pModel->m_pModelRootObject;
 
 	m_nSkinnedMeshes = pModel->m_nSkinnedMeshes;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+	m_ppSkinnedMeshes.resize(m_nSkinnedMeshes);
+	//m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 		m_ppSkinnedMeshes[i] = pModel->m_ppSkinnedMeshes[i];
@@ -1154,8 +1186,9 @@ CAnimationController::~CAnimationController()
 	if (m_pAnimationSets)
 		m_pAnimationSets->Release();
 
-	if (m_ppSkinnedMeshes)
-		delete[] m_ppSkinnedMeshes;
+	m_ppSkinnedMeshes.clear();
+	//if (m_ppSkinnedMeshes)
+	//	delete[] m_ppSkinnedMeshes;
 }
 
 void CAnimationController::SetCallbackKeys(int nAnimationTrack, int nCallbackKeys)
@@ -1527,15 +1560,18 @@ void CAnimationController::Bone_Info()
 //
 CLoadedModelInfo::~CLoadedModelInfo()
 {
-	if (m_ppSkinnedMeshes)
-		delete[] m_ppSkinnedMeshes;
+	m_ppSkinnedMeshes.clear();
+	//if (m_ppSkinnedMeshes)
+	//	delete[] m_ppSkinnedMeshes;
 }
 
 void CLoadedModelInfo::PrepareSkinning()
 {
 	int nSkinnedMesh = 0;
-	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
-	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
+	m_ppSkinnedMeshes.clear();
+	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes);
+//	m_ppSkinnedMeshes = new CSkinnedMesh * [m_nSkinnedMeshes];
+//	m_pModelRootObject->FindAndSetSkinnedMesh(m_ppSkinnedMeshes, &nSkinnedMesh);
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
@@ -1615,7 +1651,7 @@ CGameObject::CGameObject(const CGameObject& other)
 
 
 	if (other.m_pMesh != nullptr)
-		m_pMesh = new CMesh(*other.m_pMesh);
+		m_pMesh = other.m_pMesh;
 
 
 	if (other.m_pSkinnedAnimationController != nullptr)
@@ -1675,9 +1711,7 @@ CGameObject& CGameObject::operator=(const CGameObject& other)
 
 	if (other.m_pMesh != nullptr)
 	{
-		if (m_pMesh != nullptr)
-			delete m_pMesh;
-		m_pMesh = new CMesh(*other.m_pMesh);
+		m_pMesh = other.m_pMesh;
 	}
 
 	if (other.m_pSkinnedAnimationController != nullptr)
@@ -1702,7 +1736,7 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 	std::memcpy(clone->m_pstrFrameName, this->m_pstrFrameName, sizeof(this->m_pstrFrameName));
 
 	if (this->m_pMesh)
-		clone->m_pMesh = new CMesh(*this->m_pMesh);
+		clone->m_pMesh = m_pMesh;
 
 	for (const auto& material : this->Material_list)
 	{
@@ -1884,7 +1918,7 @@ void CGameObject::Set_Active(bool active, bool IsRoot)
 		m_pSibling->Set_Active(active, false);
 }
 
-void CGameObject::SetMesh(CMesh* pMesh)
+void CGameObject::SetMesh(std::shared_ptr<CMesh> pMesh)
 {
 	if (m_pMesh) m_pMesh->Release();
 	m_pMesh = pMesh;
@@ -1943,17 +1977,49 @@ void CGameObject::SetBlurMask(bool value)
 		m_pChild->SetBlurMask(value);
 }
 
-void CGameObject::FindAndSetSkinnedMesh(CSkinnedMesh **ppSkinnedMeshes, int *pnSkinnedMesh)
+void CGameObject::Set_Color_Blending(XMFLOAT3& blending_color, float blending_value)
 {
-	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT))
-		ppSkinnedMeshes[(*pnSkinnedMesh)++] = (CSkinnedMesh*)m_pMesh;
+	blending_value = std::clamp(blending_value, 0.0f, 1.0f);
+	
+	Blending_value = blending_value;
+	Blending_color = blending_color;
 
 	if (m_pSibling)
-		m_pSibling->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
+		m_pSibling->Set_Color_Blending(blending_color, blending_value);
 
 	if (m_pChild)
-		m_pChild->FindAndSetSkinnedMesh(ppSkinnedMeshes, pnSkinnedMesh);
+		m_pChild->Set_Color_Blending(blending_color, blending_value);
 }
+
+void CGameObject::Update_Color_Blending(float update_bleeding_value)
+{
+	Blending_value += update_bleeding_value;
+	Blending_value = std::clamp(Blending_value, 0.0f, 1.0f);
+
+	if (m_pSibling)
+		m_pSibling->Update_Color_Blending(update_bleeding_value);
+
+	if (m_pChild)
+		m_pChild->Update_Color_Blending(update_bleeding_value);
+}
+
+
+void CGameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes)
+{
+	if (m_pMesh && (m_pMesh->GetType() & VERTEXT_BONE_INDEX_WEIGHT)) {
+		auto pSkinned = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
+		if (pSkinned) {
+			outSkinnedMeshes.push_back(pSkinned);
+		}
+	}
+
+	if (m_pSibling)
+		m_pSibling->FindAndSetSkinnedMesh(outSkinnedMeshes);
+
+	if (m_pChild)
+		m_pChild->FindAndSetSkinnedMesh(outSkinnedMeshes);
+}
+
 
 
 std::shared_ptr<CGameObject> CGameObject::FindFrame(const char* pstrFrameName)
@@ -1996,12 +2062,6 @@ void CGameObject::SetTrackAnimationPosition(int nAnimationTrack, float fPosition
 {
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->SetTrackPosition(nAnimationTrack, fPosition);
-}
-
-void CGameObject::SetRootMotion(bool bRootMotion)
-{
-	if (m_pSkinnedAnimationController)
-		m_pSkinnedAnimationController->SetRootMotion(bRootMotion);
 }
 
 void CGameObject::Animate(float fTimeElapsed)
@@ -2290,14 +2350,10 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 					CShader* pShader = material_ptr->m_pShader;
 					if (pShader)
 					{
-						int pipelineStateNum = pShader->Get_Num_PipelineState();
-						for (int j = 0; j < pipelineStateNum; ++j)
-						{
-							pShader->Setting_Render(pd3dCommandList, j);
-							material_ptr->UpdateShaderVariable(pd3dCommandList);
+						pShader->Setting_Render(pd3dCommandList, 0);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
 
-							m_pMesh->Render(pd3dCommandList, i);
-						}
+						m_pMesh->Render(pd3dCommandList, i);
 					}
 					else
 					{
@@ -2319,12 +2375,52 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 }
 
+void CGameObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (Active && m_pMesh)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Material_list.size())
+		{
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+					{
+						pShader->Setting_Render(pd3dCommandList, 1);
+
+						m_pMesh->Render(pd3dCommandList, i);
+
+					}
+				}
+			}
+		}
+	}
+
+		if (m_pSibling)
+			m_pSibling->Render_Shadow(pd3dCommandList, pCamera);
+
+
+		if (m_pChild)
+			m_pChild->Render_Shadow(pd3dCommandList, pCamera);
+
+}
+
 void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 }
 
 void CGameObject::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &Blending_value, 28);
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &Blending_color, 29);
 }
 
 void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4X4* pxmf4x4World)
@@ -2340,7 +2436,10 @@ void CGameObject::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandLis
 		now_position.y - previous_position.y,
 		now_position.z - previous_position.z
 	};
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &velocity, 24);      // 24~26
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &velocity, 25);      // 25~27
+
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &Blending_value, 28); 
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 3, &Blending_color, 29); 
 
 }
 
@@ -2953,7 +3052,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
 
-			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
+//			CStandardMesh* pMesh = new CStandardMesh(pd3dDevice, pd3dCommandList);
+			shared_ptr<CStandardMesh> pMesh = make_shared<CStandardMesh>(pd3dDevice, pd3dCommandList);
 			pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			pGameObject->SetMesh(pMesh);
 		}
@@ -2961,7 +3061,8 @@ std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Devic
 		{
 			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
 
-			CSkinnedMesh* pSkinnedMesh = new CSkinnedMesh(pd3dDevice, pd3dCommandList);
+			//CSkinnedMesh* pSkinnedMesh = new CSkinnedMesh(pd3dDevice, pd3dCommandList);
+			shared_ptr<CSkinnedMesh> pSkinnedMesh = make_shared<CSkinnedMesh>(pd3dDevice, pd3dCommandList);
 			pSkinnedMesh->LoadSkinInfoFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			pSkinnedMesh->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -3040,7 +3141,7 @@ std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Dev
 
 				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
 				if (sharedMesh)
-					pGameObject->SetMesh(sharedMesh.get());
+					pGameObject->SetMesh(sharedMesh);
 			}
 		}
 		else if (!strcmp(pstrToken, "<Materials>:"))
@@ -3305,7 +3406,9 @@ void CGameObject::Add_Collider(float cube_length)
 void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 {
 	if (m_pMesh == NULL)
-		m_pMesh = new OBBContainer();
+		m_pMesh = make_shared<OBBContainer>();
+//		m_pMesh = new OBBContainer();
+
 	m_pMesh->Set_BoundingBox(ptr);
 }
 
@@ -3358,7 +3461,6 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 
 	pWeapon = new WeaponObject();
 	pWeapon->pWeapon.push_back(swordClone);
-	pWeapon->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
 	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
 	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
 	swordClone->Object_type = 10;
@@ -3373,10 +3475,12 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 		sword->Set_Active(true);
 	if (!pWeapon->pWeapon.empty()) {
 		for (auto& obj : pWeapon->pWeapon) {
-			obj->Set_Active(false);
+			//obj->Set_Active(false);
+			//obj.reset();
 		}
 	}
 }
+
 
 CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
 CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
@@ -3394,10 +3498,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-		pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Base_Texture.dds", RESOURCE_TEXTURE2D, 0);
+		pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds", RESOURCE_TEXTURE2D, 0);
 
 		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_7.dds", RESOURCE_TEXTURE2D, 0);
+		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_8.dds", RESOURCE_TEXTURE2D, 0);
 
 		pTerrainShader = new Deferred_CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
@@ -3410,6 +3514,10 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
 		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
 		pTerrainMaterial->SetShader(pTerrainShader);
+
+		Light_Material_Info light_info;
+		light_info.gSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f);
+		pTerrainMaterial->m_Material_ID = Light_Material_Manager::Add_Material(light_info);
 
 		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
 
@@ -3435,15 +3543,30 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
-	if (nMaxDepth == 0)
+	bool bIsRoot = (tile_map_number == 0);
+
+	if (bIsRoot) // Root node
 	{
-		CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
-		SetMesh(part_mesh);
+		CHeightMapGridMesh* full = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, 
+			m_pHeightMapImage->GetHeightMapWidth(), m_pHeightMapImage->GetHeightMapLength(), xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
+		Set_FullMesh(full);  // Only used for rendering
+		SetMesh(nullptr);    
+	}
+	else if (m_nDepth == 0) // Leaf node: used for height/normal
+	{
+		//CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, 
+		//	nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
+		shared_ptr<CHeightMapGridMesh> part_mesh = make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos,
+			nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
+		SetMesh(part_mesh);  // local terrain 
+	}
+	else
+	{
+		SetMesh(nullptr);    
 	}
 }
 
-void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature,
-	LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
+void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
 {
 	if (m_nDepth <= 0) return;
 
@@ -3456,24 +3579,17 @@ void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12Graph
 		for (int x = 0; x < Cell_num; ++x)
 		{
 			XMFLOAT4 tile_color = Get_Random_Color(1.0f);
-
 			int xStart = (int)Tile_Start_Pos.x + x * blocks_x_size[0];
 			int zStart = (int)Tile_Start_Pos.y + z * blocks_z_size[0];
 
-			std::shared_ptr<CHeightMapTerrain> child = std::make_shared<CHeightMapTerrain>(
-				pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName,
-				xStart, zStart, blocks_x_size[x], blocks_z_size[z],
-				xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1
-			);
+			std::shared_ptr<CHeightMapTerrain> child = std::make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, 
+				xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1);
 
 			Set_Child(child);
-
-			// 재귀 분할
 			child->DivideIntoChildren(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xmf3Scale, Vertex_gap);
 		}
 	}
 }
-
 
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
@@ -3721,7 +3837,7 @@ void CHeightMapTerrain::Check_Culling(CCamera* pCamera)
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (Get_Active() && m_pMesh != NULL)
+	if (Get_Active() && full_mesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
@@ -3730,24 +3846,32 @@ void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 
 			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
+			
+			full_mesh->Render(pd3dCommandList, 0);
 
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); // 두 번째 PSO
-			m_pMesh->Render(pd3dCommandList, 0);
 		}
 	}
 
-	if (Get_Active())
-	{
-		std::shared_ptr<CGameObject> pChild = Get_Child();
-		if (pChild) pChild->Render(pd3dCommandList, pCamera);
-	}
-
-	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
-	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
-
 }
 
+void CHeightMapTerrain::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && full_mesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
+		{
+			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+
+			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); 
+
+			full_mesh->Render(pd3dCommandList, 0);
+
+		}
+	}
+
+}
 
 
 
@@ -3766,7 +3890,8 @@ Plane_Object::Plane_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* 
 	}
 
 	int side_vertex_n = 10;
-	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+//	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
 	Plane_Material = new CMaterial(2);
@@ -3803,6 +3928,31 @@ void Plane_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	if (pSibling) pSibling->Render(pd3dCommandList, pCamera);
 
 }
+
+void Plane_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 1);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render_Shadow(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render_Shadow(pd3dCommandList, pCamera);
+
+}
+
 
 void Plane_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
 {
@@ -3875,7 +4025,9 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
 	desiredTexelSize = 20.0f;
-	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+
+//	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
+	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
 	int tex_Length = static_cast<int>(ceil(nLength / desiredTexelSize));
@@ -4112,6 +4264,37 @@ void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 }
 
+void Wave_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
+
+	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+
+	if (Get_Active() && m_pMesh != NULL)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+
+
+		if (Plane_Material && Plane_Material->m_pShader)
+		{
+			Plane_Material->m_pShader->Setting_Render(pd3dCommandList, 1);
+			Plane_Material->m_pShader->UpdateShaderVariables(pd3dCommandList);
+			m_pMesh->Render(pd3dCommandList, 0);
+		}
+	}
+
+	if (Get_Active())
+	{
+		std::shared_ptr<CGameObject> pChild = Get_Child();
+		if (pChild) pChild->Render_Shadow(pd3dCommandList, pCamera);
+	}
+
+	std::shared_ptr<CGameObject> pSibling = Get_Sibling();
+	if (pSibling) pSibling->Render_Shadow(pd3dCommandList, pCamera);
+
+}
+
 Boat_Object::Boat_Object() : CGameObject(1)
 {
 	m_fMaxVelocityXZ = 200.0f;
@@ -4319,7 +4502,9 @@ void Boat_Object::Change_Model(bool is_stay_mode)
 // 
 CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) : CGameObject(1)
 {
-	CSkyBoxMesh* pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+//	CSkyBoxMesh* pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+	shared_ptr<CSkyBoxMesh> pSkyBoxMesh = make_shared<CSkyBoxMesh>(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+
 	SetMesh(pSkyBoxMesh);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -4455,32 +4640,16 @@ void CMonsterObject::Animate(float fTimeElapsed)
 	GetStateMachine()->update(fTimeElapsed);
 }
 
-void CMonsterObject::ApplySyncData(const ServerAnimationSyncData& syncData)
+void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) 
 {
-	CGameObject::ApplySyncData(syncData);
-	SetPosition(syncData.position);
-	GetStateMachine()->SetState(syncData.currentState);
-	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
-
-	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
-	{
-		return;
-	}
-
-	if (GetSkinnedAnimationController())
-	{
-		for (int i = 0; i < n_Animation; i++) {
-			GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
-			GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
-		}
-	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
-	}
-}
-
-void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) {
 	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
+void CMonsterObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	CGameObject::Render_Shadow(pd3dCommandList, pCamera);
+
+}
 void CMonsterObject::SetupWeaponCollider()
 {
 	std::shared_ptr<CGameObject> model = FindFrame(WeaponName);
