@@ -2823,7 +2823,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		auto pCamera = m_pPlayer->GetCamera();
 		XMFLOAT3 currentCamPos = pCamera->GetPosition();
 		XMFLOAT3 targetPos = pirate_ship->GetPosition();
-		targetPos.y += 5000.0f;
+		targetPos.y += 1000.0f;
 		targetPos.z += 500.0f;
 
 		float lerpAlpha = 0.1f;
