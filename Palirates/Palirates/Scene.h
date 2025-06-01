@@ -308,7 +308,8 @@ private:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void After_Update_Objects();
-	bool Check_Island_Range();
+
+	bool Check_Island_Range(float range);
 
 	void SetCameraTarget(std::string_view target);
 
