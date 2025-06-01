@@ -520,6 +520,7 @@ public:
 #define OBJECT_TPYE_PLAYER_WEAPON      0x08
 #define OBJECT_TPYE_SELECT_PLAYER      0x10
 #define OBJECT_TPYE_MONSTER_WEAPON      0x20
+#define OBJECT_TPYE_MONSTER_SERVER      0x40
 //#define OBJECT_TPYE_MONSTER_BODY      0x40
 
 class CHeightMapTerrain;
@@ -1078,4 +1079,11 @@ public:
     virtual ~CDragonObject() {};
 
     DragonStateMachine* GetStateMachine() override { return static_cast<DragonStateMachine*>(m_StateMachine.get()); }
+};
+enum class Monster_Type
+{
+    ETC = 0,
+    Fishman,
+    Anubis,
+    Dragon
 };

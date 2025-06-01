@@ -39,6 +39,8 @@ public:
         return it != players.end() ? &it->second : nullptr;
     }
 
+    GameCharacter* getPlayer(int id);
+
     void addPlayer(int id) 
     {
         //players[id] = GameCharacter();
@@ -57,4 +59,5 @@ public:
     Player* getPlayerById(int id);
     std::unordered_map<int, Player*> playerMap;
     std::unordered_map<int, Monster> monsterMap;
+    void updatePlayerAnimation(int playerId, const std::vector<float>& trackPositions, const std::vector<float>& trackWeights);
 };
