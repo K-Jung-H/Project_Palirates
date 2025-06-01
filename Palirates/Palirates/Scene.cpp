@@ -178,7 +178,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 {
 	CCamera::CreateShaderVariables(pd3dDevice, pd3dCommandList); 
 
-	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256ÀÇ ¹è¼ö
+	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256ì˜ ë°°ìˆ˜
 	m_pd3dcb_LightCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcb_LightCamera->Map(0, NULL, (void**)&m_pcb_MappedLightCamera);
@@ -1067,7 +1067,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> ÆòÁö
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> í‰ì§€
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -1146,8 +1146,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // ¹Ì¸® ÇÑ¹ø ¾÷µ¥ÀÌÆ® ÇØ¾ß ÆÄÆ¼Å¬ ¸Ş´ÏÀú¿¡¼­ fixed Å¸ÀÔ Á¤º¸ ¾òÀ» ¼ö ÀÖÀ½
-	obj_manager->Update_Fixed_OBBs(); // ³»ºÎ¿¡¼­ m_OBBDataArray »ı¼º
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // ë¯¸ë¦¬ í•œë²ˆ ì—…ë°ì´íŠ¸ í•´ì•¼ íŒŒí‹°í´ ë©”ë‹ˆì €ì—ì„œ fixed íƒ€ì… ì •ë³´ ì–»ì„ ìˆ˜ ìˆìŒ
+	obj_manager->Update_Fixed_OBBs(); // ë‚´ë¶€ì—ì„œ m_OBBDataArray ìƒì„±
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
@@ -1616,12 +1616,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						{
 							XMFLOAT3 anubisPos = anu->GetPosition();
 
-							// focus_point¸¸ ¼³Á¤ (1¹ø °øÅë Ã³¸®)
+							// focus_pointë§Œ ì„¤ì • (1ë²ˆ ê³µí†µ ì²˜ë¦¬)
 							test_sand->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
 							test_sand->Set_Focus_Point(anubisPos);
 							test_sand->Set_Speed(0.0f);
 
-							// 2¹ø Àü¿ë Ã³¸®
+							// 2ë²ˆ ì „ìš© ì²˜ë¦¬
 							if (test_sand->Update_Func_Index == 2)
 							{
 								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
@@ -1934,11 +1934,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-			// 2. ·»´õ Å¸°Ù ¼³Á¤ ¹× Å¬¸®¾î
+			// 2. ë Œë” íƒ€ê²Ÿ ì„¤ì • ë° í´ë¦¬ì–´
 			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-			// 3. ½¦ÀÌ´õ »ó¼ö ¾÷µ¥ÀÌÆ® ¹× ·»´õ¸µ
+			// 3. ì‰ì´ë” ìƒìˆ˜ ì—…ë°ì´íŠ¸ ë° ë Œë”ë§
 			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
 			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
 
@@ -1958,7 +1958,7 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
 
-	//¾ÀÀÇ °´Ã¼µé ÇÁ·¯½ºÅÒ ÄÃ¸µ
+	//ì”¬ì˜ ê°ì²´ë“¤ í”„ëŸ¬ìŠ¤í…€ ì»¬ë§
 	//obj_manager->Check_Culling_All(pCamera);
 
 	// Light Update
