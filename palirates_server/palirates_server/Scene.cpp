@@ -25,9 +25,9 @@ void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float 
         player->setLookVec(lookX, lookY, lookZ);
     }
 
-   // std::cout << "[DEBUG] updatePlayerPosition ¡æ ID=" << clientId
-   //     << " Pos=(" << x << "," << y << "," << z << ")"
-   //     << " State=" << state << std::endl;
+    // std::cout << "[DEBUG] updatePlayerPosition ¡æ ID=" << clientId
+    //     << " Pos=(" << x << "," << y << "," << z << ")"
+    //     << " State=" << state << std::endl;
 
 
 }
