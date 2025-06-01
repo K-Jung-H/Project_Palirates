@@ -245,7 +245,7 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
     float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
     p.Velocity = normalize(dir) * Init_Velocity_Value;
     p.Acceleration = p.Velocity;
-
+    p.Color = float3(1.0f, 0.3f, 0.0f);
 }
 
 //===============================================================

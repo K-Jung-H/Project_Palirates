@@ -1539,7 +1539,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case 'Q':
 			{
-				m_pPlayer->SetBlurMask(test_button);
+			blur_effect = !blur_effect;
+			m_pPlayer->SetBlurMask(blur_effect);
 			}		break;
 
 
