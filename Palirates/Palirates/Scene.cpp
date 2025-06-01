@@ -1003,6 +1003,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		test_dragon_fire_info.EmitFaceIndex = 0;
 
 
+
 		test_dragon_fire_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
 		test_dragon_fire_info.init_velocity_value = 100.0f;
 		test_dragon_fire_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
@@ -1287,17 +1288,17 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	if (select_index == 0)
+	if (select_index == Captain)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 1)
+	else if (select_index == Deckhand)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 2)
+	else if (select_index == Female_Pirate)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 3)
+	else if (select_index == First_Mate)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 4)
+	else if (select_index == Seaman)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 5)
+	else if (select_index == Skeleton)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
 	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);

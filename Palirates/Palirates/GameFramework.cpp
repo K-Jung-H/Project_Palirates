@@ -588,8 +588,8 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
-
 	Disconnect();
+
 	Release_Scenes();
 
 	delete MRT_shader;
@@ -735,6 +735,7 @@ bool CGameFramework::Change_Scene()
 	{
 		if (scene_manager->Find_Scene(c_signal.scene_name)) // 이미 생성된 씬이라면?
 		{
+			
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
