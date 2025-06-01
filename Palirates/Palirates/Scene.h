@@ -187,6 +187,8 @@ public:
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	
+	void Render_SkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -221,8 +223,9 @@ public:
 
 	std::vector<std::shared_ptr<CShader>> Shader_list;
 
-	CSkyBox								*m_pSkyBox = NULL;
+
 	std::shared_ptr<CHeightMapTerrain> m_pTerrain;
+	std::shared_ptr<CSkyBox>	m_pSkyBox = NULL;
 
 
 	LIGHT								*m_pLights = NULL;

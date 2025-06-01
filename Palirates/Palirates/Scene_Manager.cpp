@@ -402,9 +402,15 @@ void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3
     if (MRT_shader)
         MRT_shader->OnPostRenderTarget(pd3dCommandList);
 }
+
 void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-    if(MRT_shader)
+    if (activeScene)
+    {
+        activeScene->Render_SkyBox(pd3dDevice, pd3dCommandList);
+    }
+
+    if (MRT_shader)
         MRT_shader->Setting_Render(pd3dCommandList, 0);
 
 
@@ -419,7 +425,7 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
     Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
 
 
-    if(MRT_shader)
+    if (MRT_shader)
         MRT_shader->Render(pd3dCommandList, NULL);
 
 }
