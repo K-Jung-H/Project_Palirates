@@ -23,6 +23,7 @@ class Plane_Shader;
 class Deferred_CTerrainShader;
 class Deferred_Plane_Shader;
 class CS_Wave_Shader;
+class CSkyBoxShader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -520,7 +521,6 @@ public:
 #define OBJECT_TPYE_PLAYER_WEAPON      0x08
 #define OBJECT_TPYE_SELECT_PLAYER      0x10
 #define OBJECT_TPYE_MONSTER_WEAPON      0x20
-#define OBJECT_TPYE_MONSTER_SERVER      0x40
 //#define OBJECT_TPYE_MONSTER_BODY      0x40
 
 class CHeightMapTerrain;
@@ -992,12 +992,23 @@ public:
 
 class CSkyBox : public CGameObject
 {
+private:
+    static CSkyBoxShader* pSkybox_shader;
+    static shared_ptr<CSkyBoxMesh> pSkyBoxMesh;
+
+    CTexture* skybox_texture = NULL;
+    shared_ptr<CMaterial>skybox_material = NULL;
 public:
-    CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    static void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+
+    CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual ~CSkyBox();
+
+    virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 };
+
 
 class Trail_Object : public CGameObject
 {
@@ -1079,11 +1090,4 @@ public:
     virtual ~CDragonObject() {};
 
     DragonStateMachine* GetStateMachine() override { return static_cast<DragonStateMachine*>(m_StateMachine.get()); }
-};
-enum class Monster_Type
-{
-    ETC = 0,
-    Fishman,
-    Anubis,
-    Dragon
 };

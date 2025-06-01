@@ -7,9 +7,6 @@
 #include "DatabaseManager.h"
 #include "Logger.h"
 #include "Player.h"
-#include <sstream>
-#include <vector>
-#include "MonsterManager.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -28,7 +25,7 @@ private:
     Scene_Manager sceneManager;
     //DatabaseManager dbManager;
     Logger logger;
-	MonsterManager monsterManager;
+
 public:
     Server(int port);
     ~Server();
@@ -42,7 +39,6 @@ public:
     void SendInitialStates(int clientId);
     void BroadcastAllStates();
     void NotifyExistingPlayersAboutNew(int clientId);
-	void MonsterUpdate(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, float aniPos, float aniWei);
-    void HandleKeyInput();
+    void MonsterUpdate(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, float aniPos, float aniWei);
     //bool ValidatePosition(float x, float y, float z);
 };

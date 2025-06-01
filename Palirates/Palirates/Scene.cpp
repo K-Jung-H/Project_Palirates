@@ -178,7 +178,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 {
 	CCamera::CreateShaderVariables(pd3dDevice, pd3dCommandList); 
 
-	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256¿« πËºˆ
+	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256Ïùò Î∞∞Ïàò
 	m_pd3dcb_LightCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcb_LightCamera->Map(0, NULL, (void**)&m_pcb_MappedLightCamera);
@@ -937,6 +937,7 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		m_UI_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_UI_GraphicsRootSignature(pd3dDevice), com_deleter);
 
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	CSkyBox::CreateShader(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
 	fog_info = make_shared<Fog_Info>();
 	{
@@ -958,6 +959,10 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
 
 	shadow_camera = std::make_shared<Shadow_Camera>();
 
@@ -996,6 +1001,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		test_dragon_fire_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
 		test_dragon_fire_info.EmitFaceIndex = 0;
+
 
 
 		test_dragon_fire_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
@@ -1067,7 +1073,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> ∆Ú¡ˆ
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> ÌèâÏßÄ
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -1146,8 +1152,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // πÃ∏Æ «—π¯ æ˜µ•¿Ã∆Æ «ÿæﬂ ∆ƒ∆º≈¨ ∏ﬁ¥œ¿˙ø°º≠ fixed ≈∏¿‘ ¡§∫∏ æÚ¿ª ºˆ ¿÷¿Ω
-	obj_manager->Update_Fixed_OBBs(); // ≥ª∫Œø°º≠ m_OBBDataArray ª˝º∫
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // ÎØ∏Î¶¨ ÌïúÎ≤à ÏóÖÎç∞Ïù¥Ìä∏ Ìï¥Ïïº ÌååÌã∞ÌÅ¥ Î©îÎãàÏ†ÄÏóêÏÑú fixed ÌÉÄÏûÖ Ï†ïÎ≥¥ ÏñªÏùÑ Ïàò ÏûàÏùå
+	obj_manager->Update_Fixed_OBBs(); // ÎÇ¥Î∂ÄÏóêÏÑú m_OBBDataArray ÏÉùÏÑ±
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
@@ -1282,17 +1288,17 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	if (select_index == 0)
+	if (select_index == Captain)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 1)
+	else if (select_index == Deckhand)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 2)
+	else if (select_index == Female_Pirate)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 3)
+	else if (select_index == First_Mate)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 4)
+	else if (select_index == Seaman)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 5)
+	else if (select_index == Skeleton)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
 	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
@@ -1382,8 +1388,6 @@ void CScene::ReleaseObjects()
 		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
 			shader_ptr.reset();
 		
-		if (m_pSkyBox) 
-			delete m_pSkyBox;
 
 
 	ReleaseShaderVariables();
@@ -1616,12 +1620,12 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						{
 							XMFLOAT3 anubisPos = anu->GetPosition();
 
-							// focus_point∏∏ º≥¡§ (1π¯ ∞¯≈Î √≥∏Æ)
+							// focus_pointÎßå ÏÑ§Ï†ï (1Î≤à Í≥µÌÜµ Ï≤òÎ¶¨)
 							test_sand->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
 							test_sand->Set_Focus_Point(anubisPos);
 							test_sand->Set_Speed(0.0f);
 
-							// 2π¯ ¿¸øÎ √≥∏Æ
+							// 2Î≤à Ï†ÑÏö© Ï≤òÎ¶¨
 							if (test_sand->Update_Func_Index == 2)
 							{
 								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
@@ -1934,11 +1938,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-			// 2. ∑ª¥ı ≈∏∞Ÿ º≥¡§ π◊ ≈¨∏ÆæÓ
+			// 2. Î†åÎçî ÌÉÄÍ≤ü ÏÑ§Ï†ï Î∞è ÌÅ¥Î¶¨Ïñ¥
 			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-			// 3. Ω¶¿Ã¥ı ªÛºˆ æ˜µ•¿Ã∆Æ π◊ ∑ª¥ı∏µ
+			// 3. ÏâêÏù¥Îçî ÏÉÅÏàò ÏóÖÎç∞Ïù¥Ìä∏ Î∞è Î†åÎçîÎßÅ
 			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
 			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
 
@@ -1958,8 +1962,6 @@ void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
 
-	//æ¿¿« ∞¥√ºµÈ «¡∑ØΩ∫≈“ ƒ√∏µ
-	//obj_manager->Check_Culling_All(pCamera);
 
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
@@ -1970,6 +1972,20 @@ void CScene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCom
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 }
+
+void CScene::Render_SkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_MRT_GraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
+
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+
+
+	if (m_pSkyBox) 
+		m_pSkyBox->Render(pd3dCommandList, main_Camera.get());
+
+}
+
 
 void CScene::Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -2166,6 +2182,10 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
 
 	m_pLights[0].m_bEnable = true;
 	m_pLights[1].m_bEnable = true;
@@ -2528,6 +2548,10 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
 
 	shadow_camera = std::make_shared<Shadow_Camera>();
 
