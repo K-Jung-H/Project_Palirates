@@ -192,8 +192,8 @@ public:
 		m_xmf3Position = XMFLOAT3(startX, startY, startZ);
 	}
 
-	int GetID() const { return id; }
-	void SetID(int playerId) { id = playerId; }
+	//int GetID() const { return id; }
+	//void SetID(int playerId) { id = playerId; }
 
 	int GetState() const { return state; }
 	void SetState(int newState) { state = newState; }
