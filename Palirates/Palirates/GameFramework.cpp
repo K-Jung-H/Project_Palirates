@@ -1359,7 +1359,7 @@ void CGameFramework::SendPacket()
 	}
 	else
 	{
-		std::cout << "[SEND] " << packet << std::endl;
+		//std::cout << "[SEND] " << packet << std::endl;
 	}
 }
 
@@ -1422,11 +1422,14 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		int leaveId = std::stoi(tokens[1]);
 		std::cout << "[디버그] PLAYER_LEAVE 감지됨: " << leaveId << std::endl;
 
+		//leaveId = leaveId - 1;
+
 		std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
 		auto it = m_pRemotePlayers.find(leaveId);
 		if (it != m_pRemotePlayers.end())
 		{
+			std::cout << "[디버그] 플레이어 " << leaveId << " 제거 시작" << std::endl;
 			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
 			if (scene && scene->obj_manager)
 			{
@@ -1438,25 +1441,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				}),
 					playerList->end()
 				);
-
-				auto* skinnedList = scene->obj_manager->Get_Object_List(Object_Type::skinned);
-				skinnedList->erase(
-					std::remove_if(skinnedList->begin(), skinnedList->end(),
-						[leaveId](const std::shared_ptr<CGameObject>& obj) {
-					return obj && obj->GetID() == leaveId;
-				}),
-					skinnedList->end()
-				);
-
-
-				auto* nonSkinnedList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
-				nonSkinnedList->erase(
-					std::remove_if(nonSkinnedList->begin(), nonSkinnedList->end(),
-						[leaveId](const std::shared_ptr<CGameObject>& obj) {
-					return obj && obj->GetID() == leaveId;
-				}),
-					nonSkinnedList->end()
-				);
+				std::cout << "[디버그] 플레이어 " << leaveId << " 오브젝트 리스트에서 찾음" << std::endl;
 
 			}
 
@@ -1464,6 +1449,11 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 			std::cout << "[디버그] 플레이어 " << leaveId << " 제거됨" << std::endl;
 		}
+		else
+		{
+			std::cout << "PLAYER_LEAVE 처리 중 플레이어 " << leaveId << "를 찾을 수 없음" << std::endl;
+		}
+
 		return; // 여기서 끝내야 PLAYER_UPDATE 안 감
 	}
 
@@ -1760,9 +1750,9 @@ void CGameFramework::NetworkLoop()
 			std::shared_ptr<CPlayer> player = playerPair.second;
 			XMFLOAT3 pos = player->GetPosition();
 			XMFLOAT3 lookVec = player->GetLookVector();
-			std::cout << "[DEBUG] Player ID: " << playerPair.first
-				<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << ", LookVec : (" << lookVec.x << ", " << lookVec.y << ", " << lookVec.z << ")"
-				<< std::endl;
+			//std::cout << "[DEBUG] Player ID: " << playerPair.first
+			//	<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << ", LookVec : (" << lookVec.x << ", " << lookVec.y << ", " << lookVec.z << ")"
+			//	<< std::endl;
 		}
 	}
 }
