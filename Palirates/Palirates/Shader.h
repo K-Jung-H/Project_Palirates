@@ -245,8 +245,7 @@ public:
 
 	static void Set_ScreenSize(UINT new_width, UINT new_height);
 
-	ID3D12RootSignature* Get_Deffered_RootSignature() { return m_pd3dGraphicsRootSignature; }
-}; 
+};
 
 class G_BufferMerger_Shader : public PostProcessBaseShader
 {

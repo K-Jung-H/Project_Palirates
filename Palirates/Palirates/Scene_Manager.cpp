@@ -97,14 +97,9 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         Register_Scene(scene_name, character_select_scene);
         std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
-        select_scene_observer->SetPosition(XMFLOAT3{ 52.0f, 0.0f, 35.0f });
-        select_scene_observer->Rotate(0.0f, -120.0f, 0.0f);
+        select_scene_observer->SetPosition(XMFLOAT3{ -70.0f, 30.0f, 25.0f });
+        select_scene_observer->Rotate(0.0f, -110.0f, 0.0f);
         Set_Scene_Player(scene_name, select_scene_observer);
-
-#ifdef WRITE_TEXT_UI
-        character_select_scene->Build_Text_UI(text_ui_renderer.get());
-#endif
-
     }
     break;
 
@@ -116,10 +111,6 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         Register_Scene(scene_name, game_board_scene);
         std::shared_ptr<Observer> game_board_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
         Set_Scene_Player(scene_name, game_board_observer);
-
-#ifdef WRITE_TEXT_UI
-        game_board_scene->Build_Text_UI(text_ui_renderer.get());
-#endif
     }
     break;
 
@@ -129,17 +120,13 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
 
         Register_Scene(scene_name, in_stage_scene);
-        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), Captain);
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
         pPlayer->SetupWeaponCollider();
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
-
-#ifdef WRITE_TEXT_UI
-        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
-#endif
-
+        in_stage_scene->Bind_Player_UI_Callback();
     }
     break;
 
@@ -155,7 +142,9 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
 
 
-
+#ifdef WRITE_TEXT_UI
+        it->second->Build_Text_UI(text_ui_renderer.get());
+#endif
 
 
 }
@@ -246,11 +235,11 @@ void Scene_Manager::Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graph
 #endif
 }
 
-void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
     {
-        activeScene->Update_Objects(pd3dDevice, pd3dCommandList, fTimeElapsed);
+        activeScene->Update_Objects(pd3dDevice, pd3dCommandList);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -326,11 +315,11 @@ void Scene_Manager::Update_UI()
 #endif
 }
 
-void Scene_Manager::Update_Texture_UI()
+void Scene_Manager::Update_Texture_UI(float currentTime, float elapsedTime)
 {
     if (activeScene)
     {
-        activeScene->Update_Texture_UI();
+        activeScene->Update_Texture_UI(currentTime, elapsedTime);
     }
 }
 
@@ -415,11 +404,6 @@ void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3
 }
 void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-    if (activeScene)
-    {
-        activeScene->Render_SkyBox(pd3dDevice, pd3dCommandList);
-    }
-
     if(MRT_shader)
         MRT_shader->Setting_Render(pd3dCommandList, 0);
 
@@ -466,6 +450,7 @@ void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, 
     if (activeScene) {
         if (activeScene->texture_ui_manager) {
             activeScene->texture_ui_manager->RenderAll(cmdList, currentTime, elapsedTime);
+            activeScene->current_time = currentTime;
         }
     }
     else

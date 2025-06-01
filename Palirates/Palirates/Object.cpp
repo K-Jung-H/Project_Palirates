@@ -3424,7 +3424,10 @@ ServerAnimationSyncData CGameObject::MakeSyncData()
 
 void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 {
-
+	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
+	{
+		return;
+	}
 	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
 }
@@ -4495,60 +4498,38 @@ void Boat_Object::Change_Model(bool is_stay_mode)
 }
 
 
-//=====================================================================================
-CSkyBoxShader* CSkyBox::pSkybox_shader = NULL;
-shared_ptr<CSkyBoxMesh> CSkyBox::pSkyBoxMesh = NULL;
-
-void CSkyBox::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature) : CGameObject(1)
 {
-	if (pSkybox_shader == NULL)
-	{
-		pSkybox_shader = new CSkyBoxShader();
-		pSkybox_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature.get());
-		pSkybox_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	}
-}
-
-
-CSkyBox::CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) 
-	: CGameObject(1)
-{
-	if (pSkybox_shader == NULL)
-	{
-		DebugOutput("No shader for Builing Skybox\n");
-		return;
-	}
-	else if (pSkyBoxMesh == NULL)
-	{
-		pSkyBoxMesh = make_shared<CSkyBoxMesh>(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 20.0f);
-	}
+//	CSkyBoxMesh* pSkyBoxMesh = new CSkyBoxMesh(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
+	shared_ptr<CSkyBoxMesh> pSkyBoxMesh = make_shared<CSkyBoxMesh>(pd3dDevice, pd3dCommandList, 20.0f, 20.0f, 2.0f);
 
 	SetMesh(pSkyBoxMesh);
 
-	skybox_material = make_shared<CMaterial>(1);
-	skybox_material->SetShader(pSkybox_shader);
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	//	CTexture* pSkyBoxTexture = new CTexture(1, RESOURCE_TEXTURE_CUBE, 0, 1);
+	CTexture* pSkyBoxTexture = new CTexture(1, RESOURCE_TEXTURE_CUBE, 0, 1, 0, 0, 1, 0, 0);
+
+	pSkyBoxTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"SkyBox/SkyBox_0.dds", RESOURCE_TEXTURE_CUBE, 0);
+
+	CSkyBoxShader* pSkyBoxShader = new CSkyBoxShader();
+	pSkyBoxShader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	pSkyBoxShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//CScene::CreateShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pSkyBoxTexture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+
+	CMaterial* pSkyBoxMaterial = new CMaterial(1);
+	pSkyBoxMaterial->SetTexture(pSkyBoxTexture);
+	pSkyBoxMaterial->SetShader(pSkyBoxShader);
+
+	SetMaterial(0, pSkyBoxMaterial);
 }
 
 CSkyBox::~CSkyBox()
 {
-}
-
-void CSkyBox::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
-{
-	if (filename == NULL)
-		return;
-	
-	if (skybox_texture)
-		skybox_texture->Release();
-
-	skybox_texture = new CTexture(1, RESOURCE_TEXTURE_CUBE, 0, 1, 0, 0, 1, 0, 0);
-	skybox_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE_CUBE, 0);
-
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, skybox_texture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
-
-
-	skybox_material->SetTexture(skybox_texture, 0);
 }
 
 void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
@@ -4556,19 +4537,7 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 	XMFLOAT3 xmf3CameraPos = pCamera->GetPosition();
 	SetPosition(xmf3CameraPos.x, xmf3CameraPos.y, xmf3CameraPos.z);
 
-	if (Get_Active() && m_pMesh != NULL)
-	{
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-		if (skybox_material && skybox_material->m_pShader)
-		{
-			skybox_material->m_pShader->Setting_Render(pd3dCommandList, 0);
-			skybox_material->m_pShader->UpdateShaderVariables(pd3dCommandList);
-			skybox_material->UpdateShaderVariable(pd3dCommandList);
-			m_pMesh->Render(pd3dCommandList, 0);
-		}
-	}
-
+	CGameObject::Render(pd3dCommandList, pCamera);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

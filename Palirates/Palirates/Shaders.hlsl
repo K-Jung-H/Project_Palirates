@@ -427,38 +427,40 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     output.viewspace_z = input.positionV.z;
     return (output);
 }
+
+
+
 //=============================================================
 
 struct VS_SKYBOX_CUBEMAP_INPUT
 {
-    float3 position : POSITION;
+	float3 position : POSITION;
 };
 
 struct VS_SKYBOX_CUBEMAP_OUTPUT
 {
-    float3 positionL : POSITION;
-    float4 position : SV_POSITION;
+	float3	positionL : POSITION;
+	float4	position : SV_POSITION;
 };
 
 VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 {
-    VS_SKYBOX_CUBEMAP_OUTPUT output;
+	VS_SKYBOX_CUBEMAP_OUTPUT output;
 
-    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
-    output.positionL = input.position;
+	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+	output.positionL = input.position;
 
-    return (output);
+	return(output);
 }
 
 
+// SkyBox don't need DefferedRendering
 float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 {
     float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
+
     return (cColor);
 }
-
-//=============================================================
-
 
 struct VS_OBB_INPUT
 {

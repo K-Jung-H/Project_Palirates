@@ -136,7 +136,12 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	Change_Signal c_signal;
-
+	float current_time = 0.0f;
+	bool bUpdateUI_HP{ false };
+	bool bUpdateUI_Screen{ false };
+	bool bHitSignal{ false };
+	bool bMenuActive{ false };
+	bool bStartAnimation{ false };
 protected:
 	std::shared_ptr<Shadow_Camera> shadow_camera;
 
@@ -174,7 +179,7 @@ public:
 	bool ProcessInput(UCHAR *pKeysBuffer);
 
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);	
-	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
 
 	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
@@ -182,8 +187,6 @@ public:
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	
-	virtual void Render_SkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
 	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -218,8 +221,8 @@ public:
 
 	std::vector<std::shared_ptr<CShader>> Shader_list;
 
+	CSkyBox								*m_pSkyBox = NULL;
 	std::shared_ptr<CHeightMapTerrain> m_pTerrain;
-	std::shared_ptr<CSkyBox>	m_pSkyBox = NULL;
 
 
 	LIGHT								*m_pLights = NULL;
@@ -246,10 +249,11 @@ public:
 	Texture_UI_Manager* texture_ui_manager = NULL;
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 	std::vector<TextureBlock*> Get_Texture_List();
-	virtual void Update_Texture_UI();
+	virtual void Update_Texture_UI(float currentTime, float elapsedTime);
 
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
+	virtual void Bind_Player_UI_Callback();
 
 	static UINT select_index;
 };
@@ -274,13 +278,12 @@ private:
 	UINT prev_index = -1;
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	void UpdatePlayerSelection(int new_index);
-
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
@@ -306,9 +309,8 @@ private:
 
 
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
-	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
-
 	bool Check_Island_Range(float range);
 
 	void SetCameraTarget(std::string_view target);
