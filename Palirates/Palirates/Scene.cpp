@@ -1051,7 +1051,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("billboard");
 	test_sand = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_sand_storm_info);
-	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds");
+	test_sand->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/dust_particle.dds");
 	test_sand->Set_Local_Coordinate();
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
@@ -1268,7 +1268,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(BDSCRblock));
 
 	CTexture* HpBack = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	HpBack->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Healthbar-Empty.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, HpBack, 0, 0);
 	D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
 	std::unique_ptr<TextureBlock> HBblock = std::make_unique<TextureBlock>(HpBack, HBscreenRect, mesh);
@@ -1283,18 +1283,18 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	if (select_index == 0)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 1)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 2)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 3)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 4)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == 5)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	if (select_index == Captain)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == Deckhand)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == Female_Pirate)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == First_Mate)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == Seaman)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
+	else if (select_index == Skeleton)
+		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
 	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
 	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(captain_mug, CMscreenRect, mesh);
@@ -2823,18 +2823,6 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		}
 	}
 
-	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-	if (!blocks.empty())
-	{
-		bool is_nearby = Check_Island_Range(300.0f);
-
-		if (is_nearby != bMenuActive)
-		{
-			bMenuActive = is_nearby; 
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, bMenuActive);
-		}
-	}
-
 }
 
 void Board_Scene::After_Update_Objects()
@@ -3012,7 +3000,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
 	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downboardName.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
 	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.68f, BackGround);
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Dialogue);
