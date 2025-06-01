@@ -588,8 +588,9 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 
 void CGameFramework::OnDestroy()
 {
-
 	Disconnect();
+
+
 	Release_Scenes();
 
 	delete MRT_shader;
