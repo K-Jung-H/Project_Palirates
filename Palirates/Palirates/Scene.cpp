@@ -2821,14 +2821,22 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 	else
 	{
-		XMFLOAT3 Fixed_Position = { 0.0f, 1800.0f, 1550.0f };
-		XMFLOAT3 UpVector = { 0.0f, 1.0f, 0.0f };
-
-		//m_pPlayer->SetPosition(Fixed_Position);
-
 		auto pCamera = m_pPlayer->GetCamera();
-		pCamera->SetPosition(Fixed_Position);
-		//pCamera->GenerateViewMatrix(Fixed_Position, XMFLOAT3(0.0f, 1.0f, 0.0f), UpVector); 
+		XMFLOAT3 currentCamPos = pCamera->GetPosition();
+		XMFLOAT3 targetPos = pirate_ship->GetPosition();
+		targetPos.y += 1000.0f;
+		targetPos.z += 500.0f;
+
+		float lerpAlpha = 0.1f;
+
+		XMVECTOR vCurrent = XMLoadFloat3(&currentCamPos);
+		XMVECTOR vTarget = XMLoadFloat3(&targetPos);
+		XMVECTOR vInterpolated = XMVectorLerp(vCurrent, vTarget, lerpAlpha);
+
+		XMFLOAT3 interpolatedPos;
+		XMStoreFloat3(&interpolatedPos, vInterpolated);
+
+		pCamera->SetPosition(interpolatedPos);
 
 		pCamera->SetLookDirection(XMFLOAT3(0.0f, -0.866f, -0.5f));
 	}
