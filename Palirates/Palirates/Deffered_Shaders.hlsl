@@ -12,8 +12,7 @@ Texture2D<float4> T_ViewSpace_Z : register(t4);
 
 // t4 = Light_Material_Info
 Texture2D<float4> T_Fog_Noise : register(t6);
-//Texture2D<float> T_Fixed_ShadowMap : register(t7);
-Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7);
+Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t11
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -67,7 +66,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
 {
     float shadowSum = 0.0f;
-    int kernelSize = 1;
+    int kernelSize = 0;
     int count = 0;
     [unroll]
     for (int dx = -kernelSize; dx <= kernelSize; ++dx)
@@ -127,6 +126,14 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint li
     
     return shadowFactor;
 }
+
+
+//================================================================
+
+
+
+
+//================================================================
 
 
 struct VS_TEXTURED_SCREEN_RECT_OUTPUT
@@ -189,7 +196,15 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
 
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z, shadow_pass, light_type, shadow_bias, inv_shadow_map_size, LightViewProjTex, gShadowMaps, gssShadowSampler, CascadeSplits);
-    //float shadowFactor = 1.0f;
+    
+    
+
+    bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
+    if (isEmptyPixel && Fog_Trigger == 0)
+    {
+        discard;
+    }
+    
     // ======= Lighting calculation =======
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
@@ -217,8 +232,6 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     float3 foggedColor = lerp(Light_Color, finalFogColor, fogFactor);
 
-    // Handle empty pixels
-    bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
     if (isEmptyPixel)
     {
         return Fog_Trigger == 1 ? float4(finalFogColor, 1.0f) : float4(1.0f, 1.0f, 1.0f, 1.0f);
