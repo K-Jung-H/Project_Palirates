@@ -1425,24 +1425,21 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
 		auto it = m_pRemotePlayers.find(leaveId);
-		if (it != m_pRemotePlayers.end())
-		{
-			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-			if (scene && scene->obj_manager)
-			{
-				auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
-				playerList->erase(
-					std::remove_if(playerList->begin(), playerList->end(),
-						[leaveId](const std::shared_ptr<CGameObject>& obj) {
-							return obj && obj->GetID() == leaveId;
-						}),
-					playerList->end()
-				);
-			}
+		if (it == m_pRemotePlayers.end()) return;
 
-			m_pRemotePlayers.erase(it);
-		}
-		return; // 여기서 끝내야 PLAYER_UPDATE 안 감
+		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+		if (!scene || !scene->obj_manager) return;
+
+		auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+		playerList->erase(
+			std::remove_if(playerList->begin(), playerList->end(),
+				[leaveId](const std::shared_ptr<CGameObject>& obj) -> bool {
+			return obj && obj->GetID() == leaveId;
+		}),
+			playerList->end()
+		);
+
+		m_pRemotePlayers.erase(it);
 	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
