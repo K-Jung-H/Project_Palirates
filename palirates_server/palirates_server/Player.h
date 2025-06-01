@@ -42,13 +42,13 @@ public:
         lookZ = newLookZ;
     }
 
-	void setState(::EState newState)
-	{
-		state = newState;
-	}
+    void setState(::EState newState)
+    {
+        state = newState;
+    }
 
-	void printInfo()
-	{
+    void printInfo()
+    {
         std::cout << "캐릭터 " << id << " 위치: (" << x << ", " << y << ", " << z << "), 상태: " << static_cast<int>(state) << std::endl;
-	}
+    }
 };

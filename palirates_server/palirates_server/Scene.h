@@ -21,19 +21,19 @@ private:
     SceneState state;
 
 public:
-    
+
     Scene() : state(In_Stage) {}
     SceneState getState() const { return state; }
     void setState(SceneState newState) { state = newState; }
 
     void updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
 
-    const std::unordered_map<int, GameCharacter>& getPlayers() const 
+    const std::unordered_map<int, GameCharacter>& getPlayers() const
     {
-        return players; 
+        return players;
     }
 
-    const GameCharacter* getPlayer(int id) const 
+    const GameCharacter* getPlayer(int id) const
     {
         auto it = players.find(id);
         return it != players.end() ? &it->second : nullptr;
@@ -41,12 +41,12 @@ public:
 
     GameCharacter* getPlayer(int id);
 
-    void addPlayer(int id) 
+    void addPlayer(int id)
     {
         //players[id] = GameCharacter();
     }
 
-    void removePlayer(int id) 
+    void removePlayer(int id)
     {
         players.erase(id);
     }

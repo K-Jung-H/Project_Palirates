@@ -116,6 +116,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
     case Stage_1:
     {
+
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
 
