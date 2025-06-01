@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
 #pragma once
@@ -381,7 +381,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 						scene_manager->Set_Active_Scene("Character_Select");
 						break;
 					case 1:
-						scene_manager->Set_Active_Scene("Game_Board");
+						scene_manager->Set_Active_Scene("Game_Stage_Board");
 						break;
 					case 2:
 						scene_manager->Set_Active_Scene("In_Stage");
@@ -412,7 +412,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					// Set scene_index to 1 when key 9 is pressed
 					scene_index = 1;
-					scene_manager->Set_Active_Scene("Game_Board");
+					scene_manager->Set_Active_Scene("Game_Stage_Board");
 					m_pPlayer = scene_manager->Get_Active_Scene_Player();
 					//m_pCamera = m_pPlayer->GetCamera();
 					Object_Manager::Reserve_Update();
@@ -1157,9 +1157,6 @@ void CGameFramework::FrameAdvance()
 		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList);
 
 		shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
-
-		//if (m_pPlayer)
-		//	m_pPlayer->Render(Active_CommandList, scene_camera.get());
 		
 
 		{
