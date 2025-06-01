@@ -177,6 +177,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 BroadcastPacket(leavePacket, clientId);
 
                 clients.erase(clientId);
+
             }
             else
             {
