@@ -4,8 +4,8 @@
 
 cbuffer Frame_Info : register(b0)
 {
-    float gfCurrentTime; 
-    float gfElapsedTime; 
+    float gfCurrentTime;
+    float gfElapsedTime;
 };
 
 struct Material_Info
@@ -83,11 +83,11 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 
 struct VS_STANDARD_INPUT
 {
-	float3 position : POSITION;
-	float2 uv : TEXCOORD;
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-	float3 bitangent : BITANGENT;
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float3 bitangent : BITANGENT;
 };
 
 
@@ -255,7 +255,7 @@ VS_STANDARD_OUTPUT VSStandard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input)
     float2 camVelocityPx = camVelocityUV * float2(FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
     
     // 고정된 객체는 카메라의 이동 반대 방향으로 블러링되야 자연스러움
-    output.velocity = -camVelocityPx; 
+    output.velocity = -camVelocityPx;
     
     output.normalW = mul(input.normal, (float3x3) input.instance_worldMatrix);
     output.tangentW = mul(input.tangent, (float3x3) input.instance_worldMatrix);
@@ -280,23 +280,23 @@ float4 VS_Shadow_Standard_INSTANCE(VS_STANDARD_INPUT_INSTANCE input) : SV_POSITI
 
 cbuffer cbBoneOffsets : register(b4)
 {
-	float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
+    float4x4 gpmtxBoneOffsets[SKINNED_ANIMATION_BONES];
 };
 
 cbuffer cbBoneTransforms : register(b5)
 {
-	float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
+    float4x4 gpmtxBoneTransforms[SKINNED_ANIMATION_BONES];
 };
 
 struct VS_SKINNED_STANDARD_INPUT
 {
-	float3 position : POSITION;
-	float2 uv : TEXCOORD;
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-	float3 bitangent : BITANGENT;
-	int4 indices : BONEINDEX;
-	float4 weights : BONEWEIGHT;
+    float3 position : POSITION;
+    float2 uv : TEXCOORD;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float3 bitangent : BITANGENT;
+    int4 indices : BONEINDEX;
+    float4 weights : BONEWEIGHT;
 };
 
 
@@ -358,22 +358,22 @@ float4 VS_Shadow_SkinnedAnimationStandard(VS_SKINNED_STANDARD_INPUT input) : SV_
 
 struct VS_TERRAIN_INPUT
 {
-	float3 position : POSITION;
-	float4 color : COLOR;
-	float2 uv0 : TEXCOORD0;
-	float2 uv1 : TEXCOORD1;
+    float3 position : POSITION;
+    float4 color : COLOR;
+    float2 uv0 : TEXCOORD0;
+    float2 uv1 : TEXCOORD1;
 };
 
 struct VS_TERRAIN_OUTPUT
 {
-	float4 position : SV_POSITION;
+    float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
     float3 positionV : TEXCOORD2;
     
-	float4 color : COLOR;
-	float2 uv0 : TEXCOORD0;
-	float2 uv1 : TEXCOORD1;
+    float4 color : COLOR;
+    float2 uv0 : TEXCOORD0;
+    float2 uv1 : TEXCOORD1;
     
 };
 
@@ -383,16 +383,16 @@ VS_TERRAIN_OUTPUT VSTerrain(VS_TERRAIN_INPUT input)
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
-    output.positionV = positionV.xyz; 
+    output.positionV = positionV.xyz;
 
     output.position = mul(positionV, gmtxProjection);
-	output.color = input.color;
-	output.uv0 = input.uv0;
-	output.uv1 = input.uv1;
+    output.color = input.color;
+    output.uv0 = input.uv0;
+    output.uv1 = input.uv1;
     
     output.normalW = mul(float4(float3(0.0f, 1.0f, 0.0), 1.0f), gmtxGameObject).xyz;
     
-	return(output);
+    return (output);
 }
 
 
@@ -422,50 +422,48 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 
     
     output.world_Position = float4(input.positionW, 1.0f);
-    output.world_Normal_and_Camera_Distance.xyz = input.normalW;  //float3(0.0f, 1.0f, 0.0f);
+    output.world_Normal_and_Camera_Distance.xyz = input.normalW; //float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
     output.viewspace_z = input.positionV.z;
     return (output);
 }
-
-
-
 //=============================================================
 
 struct VS_SKYBOX_CUBEMAP_INPUT
 {
-	float3 position : POSITION;
+    float3 position : POSITION;
 };
 
 struct VS_SKYBOX_CUBEMAP_OUTPUT
 {
-	float3	positionL : POSITION;
-	float4	position : SV_POSITION;
+    float3 positionL : POSITION;
+    float4 position : SV_POSITION;
 };
 
 VS_SKYBOX_CUBEMAP_OUTPUT VSSkyBox(VS_SKYBOX_CUBEMAP_INPUT input)
 {
-	VS_SKYBOX_CUBEMAP_OUTPUT output;
+    VS_SKYBOX_CUBEMAP_OUTPUT output;
 
-	output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
-	output.positionL = input.position;
+    output.position = mul(mul(mul(float4(input.position, 1.0f), gmtxGameObject), gmtxView), gmtxProjection);
+    output.positionL = input.position;
 
-	return(output);
+    return (output);
 }
 
 
-// SkyBox don't need DefferedRendering
 float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 {
     float4 cColor = gtxtSkyCubeTexture.Sample(gssClamp, input.positionL);
-
     return (cColor);
 }
 
+//=============================================================
+
+
 struct VS_OBB_INPUT
 {
-    float3 position : POSITION; 
-    float4 color : COLOR; 
+    float3 position : POSITION;
+    float4 color : COLOR;
     
     float4x4 obb_worldMatrix : WORLDMATRIX; // 월드 변환 행렬
     float4 instanceColor : INSTANCECOLOR; // 색상
@@ -473,14 +471,14 @@ struct VS_OBB_INPUT
 
 struct VS_OBB_OUTPUT
 {
-    float4 position : SV_POSITION; 
-    float4 color : COLOR; 
+    float4 position : SV_POSITION;
+    float4 color : COLOR;
 };
 
 VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 {
     VS_OBB_OUTPUT output;
-	output.position = mul(mul(mul(float4(input.position, 1.0f), input.obb_worldMatrix), gmtxView), gmtxProjection);
+    output.position = mul(mul(mul(float4(input.position, 1.0f), input.obb_worldMatrix), gmtxView), gmtxProjection);
     output.color = input.instanceColor;
 	
     return (output);
@@ -489,6 +487,5 @@ VS_OBB_OUTPUT VS_BoundingBox(VS_OBB_INPUT input)
 float4 PS_BoundingBox(VS_OBB_OUTPUT input) : SV_TARGET
 {
     float4 cColor = input.color;
-        
     return (cColor);
 }

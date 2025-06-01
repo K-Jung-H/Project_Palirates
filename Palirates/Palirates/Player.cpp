@@ -742,14 +742,14 @@ void Observer::Update(float fTimeElapsed)
 		m_xmf3Right = Vector3::Normalize(m_pCamera->GetRightVector());
 		m_xmf3Up = Vector3::Normalize(m_pCamera->GetUpVector());
 	}
-	float fixedYValue = -5.0f;
-	m_xmf3Position.y = fixedYValue;
-	if (m_pCamera)
-	{
-		XMFLOAT3 camPos = m_pCamera->GetPosition();
-		camPos.y = fixedYValue + 20.0f; 
-		m_pCamera->SetPosition(camPos);
-	}
+	//float fixedYValue = -5.0f;
+	//m_xmf3Position.y = fixedYValue;
+	//if (m_pCamera)
+	//{
+	//	XMFLOAT3 camPos = m_pCamera->GetPosition();
+	//	camPos.y = fixedYValue + 20.0f; 
+	//	m_pCamera->SetPosition(camPos);
+	//}
 }
 
 

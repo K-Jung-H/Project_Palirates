@@ -23,6 +23,7 @@ class Plane_Shader;
 class Deferred_CTerrainShader;
 class Deferred_Plane_Shader;
 class CS_Wave_Shader;
+class CSkyBoxShader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -991,12 +992,23 @@ public:
 
 class CSkyBox : public CGameObject
 {
+private:
+    static CSkyBoxShader* pSkybox_shader;
+    static shared_ptr<CSkyBoxMesh> pSkyBoxMesh;
+
+    CTexture* skybox_texture = NULL;
+    shared_ptr<CMaterial>skybox_material = NULL;
 public:
-    CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature);
+    static void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+
+    CSkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual ~CSkyBox();
+
+    virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
 
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 };
+
 
 class Trail_Object : public CGameObject
 {
