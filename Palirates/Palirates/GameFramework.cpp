@@ -1425,21 +1425,46 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
 		auto it = m_pRemotePlayers.find(leaveId);
-		if (it == m_pRemotePlayers.end()) return;
+		if (it != m_pRemotePlayers.end())
+		{
+			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+			if (scene && scene->obj_manager)
+			{
+				auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+				playerList->erase(
+					std::remove_if(playerList->begin(), playerList->end(),
+						[leaveId](const std::shared_ptr<CGameObject>& obj) {
+					return obj && obj->GetID() == leaveId;
+				}),
+					playerList->end()
+				);
 
-		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-		if (!scene || !scene->obj_manager) return;
+				auto* skinnedList = scene->obj_manager->Get_Object_List(Object_Type::skinned);
+				skinnedList->erase(
+					std::remove_if(skinnedList->begin(), skinnedList->end(),
+						[leaveId](const std::shared_ptr<CGameObject>& obj) {
+					return obj && obj->GetID() == leaveId;
+				}),
+					skinnedList->end()
+				);
 
-		auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
-		playerList->erase(
-			std::remove_if(playerList->begin(), playerList->end(),
-				[leaveId](const std::shared_ptr<CGameObject>& obj) -> bool {
-			return obj && obj->GetID() == leaveId;
-		}),
-			playerList->end()
-		);
 
-		m_pRemotePlayers.erase(it);
+				auto* nonSkinnedList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
+				nonSkinnedList->erase(
+					std::remove_if(nonSkinnedList->begin(), nonSkinnedList->end(),
+						[leaveId](const std::shared_ptr<CGameObject>& obj) {
+					return obj && obj->GetID() == leaveId;
+				}),
+					nonSkinnedList->end()
+				);
+
+			}
+
+			m_pRemotePlayers.erase(it);
+
+			std::cout << "[디버그] 플레이어 " << leaveId << " 제거됨" << std::endl;
+		}
+		return; // 여기서 끝내야 PLAYER_UPDATE 안 감
 	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
