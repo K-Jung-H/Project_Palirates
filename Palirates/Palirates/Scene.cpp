@@ -2735,8 +2735,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 #ifdef RENDER_WAVE
 
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;
-	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;
-	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;
+	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;
+	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.05f;
 
 	Deferred_Plane_Shader::Update(fTimeElapsed);
 

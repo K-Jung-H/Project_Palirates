@@ -1601,9 +1601,6 @@ CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameOb
 
 CGameObject::~CGameObject()
 {
-	if (m_pMesh)
-		m_pMesh->Release();
-
 	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
 		material_ptr.reset();
