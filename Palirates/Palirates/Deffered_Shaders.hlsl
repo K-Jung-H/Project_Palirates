@@ -66,7 +66,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
 {
     float shadowSum = 0.0f;
-    int kernelSize = 0;
+    int kernelSize = 2;
     int count = 0;
     [unroll]
     for (int dx = -kernelSize; dx <= kernelSize; ++dx)
