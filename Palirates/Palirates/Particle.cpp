@@ -9,8 +9,6 @@ Particle_Shape_Mesh::Particle_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12Graphic
 }
 Particle_Shape_Mesh::~Particle_Shape_Mesh()
 {
-	if (m_pd3dColorBuffer) m_pd3dColorBuffer->Release();
-	if (m_pxmf4Colors) delete[] m_pxmf4Colors;
 }
 
 //==============================================================================
@@ -18,17 +16,12 @@ Particle_Shape_Mesh::~Particle_Shape_Mesh()
 Cube_Shape_Mesh::Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize)
 	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
 {
-	XMFLOAT4 color1 = { 0.8f, 0.2f, 0.2f, 1.0f }; // 예시 색상
-	XMFLOAT4 color2 = { 0.2f, 0.8f, 0.2f, 1.0f };
-
 	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-	// Cube는 8개의 정점 (8개의 꼭짓점)과 6개의 면을 가짐
+
 	m_nVertices = 8;
 	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
-	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
 
-	// 큐브 정점 위치 정의
 	float halfSize = fSize / 2.0f;
 
 	m_pxmf3Positions[0] = XMFLOAT3(-halfSize, -halfSize, -halfSize);
@@ -40,64 +33,54 @@ Cube_Shape_Mesh::Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pxmf3Positions[6] = XMFLOAT3(halfSize, halfSize, halfSize);
 	m_pxmf3Positions[7] = XMFLOAT3(-halfSize, halfSize, halfSize);
 
-	// 각 정점에 색상 할당 (예시로 두 색상을 번갈아 할당)
-	for (int i = 0; i < m_nVertices; ++i)
-	{
-		m_pxmf4Colors[i] = XMFLOAT4(rand() % 2 == 0 ? color1 : color2);
-	}
 
-	// 서브메쉬의 개수는 1개만 사용하도록 설정
 	m_nSubMeshes = 1;
 
-	// 서브메쉬 인덱스 개수 및 할당
-	int nSubMeshIndices = 36; // 큐브는 6개의 면, 각 면은 2개의 삼각형, 한 면당 6개의 인덱스 => 6 * 6 = 36
+	int nSubMeshIndices = 36; 
 	m_pnSubSetIndices = new int[m_nSubMeshes];
 	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
 
-	m_pnSubSetIndices[0] = nSubMeshIndices; // 첫 번째 서브메쉬의 인덱스 개수 설정
-	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; // 첫 번째 서브메쉬의 인덱스 배열 할당
+	m_pnSubSetIndices[0] = nSubMeshIndices; 
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices]; 
 
 	int k = 0;
 
-	// 큐브의 면에 대한 인덱스를 설정 (각 면을 2개의 삼각형으로 나눔)
-	// 아래 6개의 면을 정의 (각 면은 2개의 삼각형으로 나누어 6개의 인덱스를 가짐)
-	// 앞면
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 2;
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3;
-	// 뒷면
+
 	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
 	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 7;
-	// 왼쪽 면
+
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 7;
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 3;
-	// 오른쪽 면
+
 	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
 	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 2;
-	// 위쪽 면
+
 	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3; m_ppnSubSetIndices[0][k++] = 7;
 	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 6;
-	// 아래쪽 면
+
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5;
 	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 4;
 
-	// 서브메쉬 인덱스 버퍼 및 업로드 버퍼 생성
+
 	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
 	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
 
-	// 첫 번째 서브메쉬의 인덱스 버퍼 생성
+
 	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
 		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices, 
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_INDEX_BUFFER,
 		&m_ppd3dSubSetIndexUploadBuffers[0]);
 
-	// 서브메쉬 인덱스 버퍼 뷰 설정
+
 	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
 	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
 	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
 	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
 
 	//===========================================================
-	// Position Buffer 생성
+
 	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices,
 		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
 
@@ -106,13 +89,6 @@ Cube_Shape_Mesh::Cube_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
 	//===========================================================
-	// Color Buffer 생성
-	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices,
-		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
-
-	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
-	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
-	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
 }
 
 Cube_Shape_Mesh::~Cube_Shape_Mesh()
@@ -145,15 +121,11 @@ void Cube_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandLi
 
 Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fRadius, int nSlices, int nStacks)	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
 {
-	XMFLOAT4 color1 = { 0.5f, 0.5f, 0.8f, 1.0f };
-	XMFLOAT4 color2 = { 0.0f, 0.0f, 0.5f, 1.0f };
-
 	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	m_nVertices = 2 + (nSlices * (nStacks - 1));
 
 	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
-	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
 
 
 	float fDeltaPhi = float(XM_PI / nStacks);
@@ -179,11 +151,6 @@ Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	}
 	//구의 아래(남극)를 나타내는 정점이다. 
 	m_pxmf3Positions[k] = XMFLOAT3(0.0f, -fRadius, 0.0f);
-
-	for (int i = 0; i < m_nVertices; ++i)
-	{
-		m_pxmf4Colors[i] = XMFLOAT4(rand() % 2 == 0 ? color1 : color2);
-	}
 
 	// 서브메쉬의 개수는 1개만 사용하도록 설정
 	m_nSubMeshes = 1;
@@ -252,12 +219,6 @@ Sphere_Shape_Mesh::Sphere_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
 
 	//===========================================================
-	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
-
-	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
-	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
-	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
-
 }
 
 Sphere_Shape_Mesh::~Sphere_Shape_Mesh()
@@ -290,15 +251,12 @@ Tetrahedron_Shape_Mesh::Tetrahedron_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12G
 	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	m_nVertices = 4;
 	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
-	m_pxmf4Colors = new XMFLOAT4[m_nVertices];
 
 	float s = fSize / sqrtf(2.0f);
 	m_pxmf3Positions[0] = XMFLOAT3(s, s, s);
 	m_pxmf3Positions[1] = XMFLOAT3(-s, -s, s);
 	m_pxmf3Positions[2] = XMFLOAT3(-s, s, -s);
 	m_pxmf3Positions[3] = XMFLOAT3(s, -s, -s);
-
-	for (int i = 0; i < m_nVertices; ++i) m_pxmf4Colors[i] = XMFLOAT4(0.7f, 0.3f, 1.0f, 1.0f);
 
 	m_nSubMeshes = 1;
 	int nIndices = 12;
@@ -327,11 +285,6 @@ Tetrahedron_Shape_Mesh::Tetrahedron_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12G
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
-
-	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dColorUploadBuffer);
-	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
-	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
-	m_d3dColorBufferView.SizeInBytes = sizeof(XMFLOAT4) * m_nVertices;
 }
 
 Tetrahedron_Shape_Mesh::~Tetrahedron_Shape_Mesh() 

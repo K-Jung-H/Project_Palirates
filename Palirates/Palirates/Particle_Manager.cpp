@@ -1081,7 +1081,6 @@ void Grid_Builder::Release_Grid_ShaderVariables()
 	if (Obb_Grid_Texture)
 	{
 		Obb_Grid_Texture->Release();
-		delete Obb_Grid_Texture;
 		Obb_Grid_Texture = nullptr;
 	}
 }
