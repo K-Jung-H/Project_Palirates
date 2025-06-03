@@ -155,8 +155,8 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPla
     auto it = sceneCache.find(std::string(sceneName));
     if (it != sceneCache.end())
     {
-        it->second->m_pPlayer = player_ptr;
-        it->second->main_Camera = player_ptr->GetCamera();
+        it->second->Set_Client_Player(player_ptr);
+        it->second->Set_MainCamera(player_ptr->GetCamera());
         return true;
     }
 
@@ -167,7 +167,7 @@ bool Scene_Manager::Set_Scene_Player(std::string_view sceneName, shared_ptr<CPla
 shared_ptr<CPlayer> Scene_Manager::Get_Active_Scene_Player()
 {
     if (activeScene)
-        return activeScene->m_pPlayer;
+        return activeScene->Get_Client_Player();
     else
         DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
     return NULL;
@@ -177,12 +177,25 @@ shared_ptr<CPlayer> Scene_Manager::Get_Active_Scene_Player()
 shared_ptr<CCamera> Scene_Manager::Get_Active_Scene_Main_Camera()
 {
     if (activeScene)
-        return activeScene->main_Camera;
+        return activeScene->Get_MainCamera();
     else
         DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
     return NULL;
 
 }
+
+std::shared_ptr<Particle_Manager> Scene_Manager::Get_Active_Scene_Particle_Manager()
+{
+    shared_ptr<Particle_Manager> active_particle_manager = NULL;
+
+    if (activeScene)
+        active_particle_manager = activeScene->Get_Particle_Manager();
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active_Scene is NULL");
+
+    return active_particle_manager;
+}
+
 
 bool Scene_Manager::Check_Scene_Change_Signal()
 {
@@ -205,7 +218,7 @@ void Scene_Manager::Set_Active_Scene_Main_Camera(const std::shared_ptr<CCamera>&
 {
     if (activeScene)
     {
-        activeScene->main_Camera = newCamera;
+        activeScene->Set_MainCamera(newCamera);
     }
     else
     {
@@ -221,7 +234,7 @@ void Scene_Manager::Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graph
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 #ifdef RENDER_PARTICLE
-    Particle_Manager* particle_manager = NULL;
+    shared_ptr<Particle_Manager> particle_manager;
 
     if (activeScene)
         particle_manager = activeScene->Get_Particle_Manager();
@@ -246,7 +259,7 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 #ifdef RENDER_PARTICLE
-    Particle_Manager* particle_manager = NULL;
+    shared_ptr<Particle_Manager> particle_manager;
 
     if (activeScene)
         particle_manager = activeScene->Get_Particle_Manager();
@@ -271,7 +284,7 @@ void Scene_Manager::After_Update_Active_Objects()
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
 #ifdef RENDER_PARTICLE
-    Particle_Manager* particle_manager = NULL;
+    shared_ptr<Particle_Manager> particle_manager;
 
     if (activeScene)
         particle_manager = activeScene->Get_Particle_Manager();
@@ -291,7 +304,7 @@ void Scene_Manager::After_Update_Active_Objects()
 void Scene_Manager::Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_PARTICLE
-    Particle_Manager* particle_manager = NULL;
+    shared_ptr<Particle_Manager> particle_manager;
 
     if (activeScene)
         particle_manager = activeScene->Get_Particle_Manager();
@@ -420,7 +433,7 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
         activeScene->UpdateShaderVariables_Light_Info(pd3dCommandList);
         activeScene->UpdateShaderVariables_Fog_Info(pd3dCommandList);
         activeScene->UpdateShaderVariables_ShadowMap(pd3dCommandList);
-        activeScene->main_Camera->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
+        activeScene->Get_MainCamera()->Update_Deffered_Render_ShaderVariables(pd3dCommandList);
     }
 
     Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
