@@ -392,8 +392,3 @@ int main()
     return 0;
 }
 
-//bool Server::ValidatePosition(float x, float y, float z)
-//{
-//    return 0;//(x >= -1000 && x <= 1000) && (y >= -1000 && y <= 1000) && (z >= -1000 && z <= 1000);
-//}
-

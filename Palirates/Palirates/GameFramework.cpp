@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+﻿//-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
 #pragma once
@@ -368,7 +368,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					break;
 
 				case VK_SPACE:
-					multiMode = true;
 					break;
 
 				case VK_RETURN:
@@ -752,15 +751,6 @@ void CGameFramework::Animate_Scene()
 	if (m_pPlayer)
 		m_pPlayer->Animate(fTimeElapsed);
 
-
-	if (multiMode)
-	{
-		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
-			if (remotePlayer)
-				remotePlayer->Animate(fTimeElapsed);
-	}
-	else
-	{
 		static bool dead = false;
 		// Weapon Drop EX
 		if (!dead) 
@@ -778,7 +768,6 @@ void CGameFramework::Animate_Scene()
 				dead = false;
 			}
 		}
-	}
 }
 
 void CGameFramework::Update_Scene()
@@ -790,13 +779,6 @@ void CGameFramework::Update_Scene()
 	if (m_pPlayer)
 		m_pPlayer->Update(fTimeElapsed);
 
-	if (multiMode)
-	{
-		for (auto& [playerId, remotePlayer] : m_pRemotePlayers)
-			if (remotePlayer)
-				remotePlayer->Update(fTimeElapsed);
-
-	}
 }
 
 
@@ -1166,14 +1148,14 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
-		std::cerr << "[ERROR] Winsock 초기화 실패" << std::endl;
+		std::cerr << "[ERROR] Failed to initialize Winsock" << std::endl;
 		return;
 	}
 
 	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverSocket == INVALID_SOCKET)
 	{
-		std::cerr << "[ERROR] 소켓 생성 실패: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] Failed to create socket: " << WSAGetLastError() << std::endl;
 		WSACleanup();
 		return;
 	}
@@ -1184,20 +1166,20 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 	if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1)
 	{
-		//std::cerr << "[ERROR] IP 주소 변환 실패: " << ip << std::endl;
+		//std::cerr << "[ERROR] Failed to convert IP address: " << ip << std::endl;
 		closesocket(serverSocket);
 		WSACleanup();
 		return;
 	}
 	if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
 	{
-		//std::cerr << "[ERROR] 서버 연결 실패: " << WSAGetLastError() << std::endl;
+		//std::cerr << "[ERROR] Failed to connect to server: " << WSAGetLastError() << std::endl;
 		closesocket(serverSocket);
 		WSACleanup();
 		return;
 	}
 
-	std::cout << "[INFO] 서버 연결 성공 (IP: " << ip << ", 포트: " << port << ")" << std::endl;
+	std::cout << "[INFO] Successfully connected to server (IP: " << ip << ", Port: " << port << ")" << std::endl;
 
 	isRunning = true;
 	networkThread = std::thread(&CGameFramework::NetworkLoop, this);
@@ -1241,7 +1223,7 @@ void CGameFramework::SendPacket()
 
 	if (result == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] PLAYER_UPDATE 전송 실패: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] Failed to send PLAYER_UPDATE: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
@@ -1251,14 +1233,13 @@ void CGameFramework::SendPacket()
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-	std::cout << "[디버그] ProcessReceivedData() 호출됨" << std::endl;
+	std::cout << "[DEBUG] ProcessReceivedData() called" << std::endl;
 
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
-		std::cout << "[Debug] 내 클라이언트 ID 수신 완료: " << ClientNum << std::endl;
+		std::cout << "[DEBUG] Received my client ID: " << ClientNum << std::endl;
 		bClientIdAssigned = true;
 
-		//m_pPlayer = std::shared_ptr<CPlayer>(GetSceneManager().GetPlayerById(ClientNum));
 		scene_manager->Get_Active_Scene_Main_Camera();
 		shared_ptr<CCamera>m_pCamera = scene_manager->Get_Active_Scene_Main_Camera();
 
@@ -1282,7 +1263,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	if (!bClientIdAssigned)
 	{
-		std::cout << "[경고] 아직 CLIENT_ID를 받지 않아 패킷 처리 지연 중: " << receivedData << std::endl;
+		std::cout << "[WARNING] CLIENT_ID not received yet; delaying packet processing: " << receivedData << std::endl;
 		int playerId;
 		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
 		{
@@ -1292,7 +1273,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	// 파싱 시작
 	std::vector<std::string> tokens;
 	std::stringstream ss(receivedData);
 	std::string item;
@@ -1306,16 +1286,14 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	if (tokens[0] == "PLAYER_LEAVE" && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
-		std::cout << "[디버그] PLAYER_LEAVE 감지됨: " << leaveId << std::endl;
+		std::cout << "\[DEBUG] PLAYER\_LEAVE detected: " << leaveId << std::endl;
 
-		//leaveId = leaveId - 1;
 
 		std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
 		auto it = m_pRemotePlayers.find(leaveId);
 		if (it != m_pRemotePlayers.end())
 		{
-			std::cout << "[디버그] 플레이어 " << leaveId << " 제거 시작" << std::endl;
 			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
 			if (scene && scene->obj_manager)
 			{
@@ -1327,20 +1305,13 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				}),
 					playerList->end()
 				);
-				std::cout << "[디버그] 플레이어 " << leaveId << " 오브젝트 리스트에서 찾음" << std::endl;
-
 			}
 
 			m_pRemotePlayers.erase(it);
-
-			std::cout << "[디버그] 플레이어 " << leaveId << " 제거됨" << std::endl;
-		}
-		else
-		{
-			std::cout << "PLAYER_LEAVE 처리 중 플레이어 " << leaveId << "를 찾을 수 없음" << std::endl;
 		}
 
-		return; // 여기서 끝내야 PLAYER_UPDATE 안 감
+
+		return;
 	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
@@ -1408,7 +1379,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				if (!alreadyQueued) {
 					std::lock_guard<std::mutex> lock(pendingCreateMutex);
 					pendingPlayerCreates.push(playerId);
-					std::cout << "[디버그] playerId " << playerId << " remote 큐에 추가됨" << std::endl;
+					std::cout << "[DEBUG] playerId " << playerId << " added to remote queue" << std::endl;
 				}
 				return;
 			}
@@ -1464,7 +1435,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	//
 	//	int type = std::stoi(tokens[10]);
 	//
-	//	// 몬스터 찾기
+	//
 	//	auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 	//	auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
 	//		return obj && obj->GetID() == monsterId;
@@ -1515,47 +1486,42 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 void CGameFramework::CreateRemotePlayer(int playerId)
 {
-	std::cout << "[디버그] CreateRemotePlayer() 호출됨 - ID: " << playerId << std::endl;
+	std::cout << "[DEBUG] CreateRemotePlayer() called - ID: " << playerId << std::endl;
 
-	// 중복 방지
 	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
 	{
-		std::cout << "[중복 방지] m_pRemotePlayers 에 이미 존재: " << playerId << std::endl;
+		std::cout << "[Duplicate Check] Already exists in m_pRemotePlayers: " << playerId << std::endl;
 		return;
 	}
 
 	auto scene = scene_manager->Get_Active_Scene();
 	if (!scene || !scene->obj_manager)
 	{
-		std::cout << "[오류] scene 또는 obj_manager 가 NULL" << std::endl;
+		std::cout << "[ERROR] scene or obj_manager is NULL" << std::endl;
 		return;
 	}
 
-	// scene 내부 중복 플레이어 검사
+	
 	auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
 	for (const auto& obj : *playerList)
 	{
 		if (obj && obj->GetID() == playerId)
 		{
-			std::cout << "[중복 방지] scene 내부에도 이미 playerId 있음: " << playerId << std::endl;
+			std::cout << "[Duplicate Check] playerId already exists in scene: " << playerId << std::endl;
 			return;
 		}
 	}
 
 	if (!m_pPlayer)
 	{
-		std::cout << "[CreateRemotePlayer] 내 플레이어가 아직 생성되지 않음" << std::endl;
+		std::cout << "[CreateRemotePlayer] My player has not been created yet" << std::endl;
 		return;
 	}
 
 	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get());
 
-	//remotePlayer->m_pMesh = m_pPlayer->m_pMesh;
-	//remotePlayer->Material_list = m_pPlayer->Material_list;
-
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//remotePlayer->SetLookDirection(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	remotePlayer->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	remotePlayer->SetState(0);
 	remotePlayer->SetID(playerId);
@@ -1572,7 +1538,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);
 	m_pRemotePlayers[playerId] = remotePlayer;
 
-	std::cout << "[성공] RemotePlayer 생성 완료: " << playerId << std::endl;
+	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 }
 
 
@@ -1587,27 +1553,19 @@ void CGameFramework::Disconnect()
 	closesocket(serverSocket);
 	WSACleanup();
 
-	std::cout << "[INFO] 서버 연결 종료" << std::endl;
+	std::cout << "[INFO] Disconnected from server" << std::endl;
 
 }
 
 void CGameFramework::NetworkLoop()
 {
-	//std::cout << "[쓰레드 확인] NetworkLoop() 시작됨" << std::endl;
+
 
 	while (isRunning)
 	{
-		//auto activeScene = scene_manager->Get_Active_Scene();
-		//if (!activeScene || activeScene != scene_manager->Load_Scene("In_Stage"))
-		//{
-		//	std::cout << "인스테이지 아님" << std::endl;
-		//	std::this_thread::sleep_for(std::chrono::milliseconds(100));
-		//	continue;
-		//}
-
-		char buffer[1024 + 1]; // null terminator 공간 확보
+		char buffer[1024 + 1];
 		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-		std::cout << "[recv] 수신 성공: " << bytesReceived << std::endl;
+		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
 
 		if (bytesReceived > 0)
 		{
@@ -1617,7 +1575,7 @@ void CGameFramework::NetworkLoop()
 			{
 				std::lock_guard<std::mutex> lock(recvQueueMutex);
 				recvQueue.push(receivedData);
-				std::cout << "[recvQueue] 데이터 push 완료, 현재 큐 크기: " << recvQueue.size() << std::endl;
+				std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
 			}
 		}
 
@@ -1627,7 +1585,7 @@ void CGameFramework::NetworkLoop()
 		}
 		else if (bytesReceived == 0)
 		{
-			std::cerr << "[INFO] 서버와의 연결 종료" << std::endl;
+			std::cerr << "[INFO] Connection with server closed" << std::endl;
 			isRunning = false;
 			break;
 		}
@@ -1636,9 +1594,6 @@ void CGameFramework::NetworkLoop()
 			std::shared_ptr<CPlayer> player = playerPair.second;
 			XMFLOAT3 pos = player->GetPosition();
 			XMFLOAT3 lookVec = player->GetLookVector();
-			//std::cout << "[DEBUG] Player ID: " << playerPair.first
-			//	<< ", Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << ", LookVec : (" << lookVec.x << ", " << lookVec.y << ", " << lookVec.z << ")"
-			//	<< std::endl;
 		}
 	}
 }
@@ -1659,7 +1614,7 @@ void CGameFramework::PlayerLeave(int playerId)
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] PLAYER_LEAVE 전송 실패: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
