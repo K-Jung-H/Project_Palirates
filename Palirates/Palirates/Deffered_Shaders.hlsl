@@ -66,7 +66,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
 {
     float shadowSum = 0.0f;
-    int kernelSize = 2;
+    int kernelSize = 0;
     int count = 0;
     [unroll]
     for (int dx = -kernelSize; dx <= kernelSize; ++dx)
@@ -74,7 +74,7 @@ float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_
         [unroll]
         for (int dy = -kernelSize; dy <= kernelSize; ++dy)
         {
-            float2 offset = float2(dx, dy) * invShadowMapSize;
+            float2 offset = float2(dx, dy) * invShadowMapSize * 2;
             shadowSum += shadowMap.SampleCmpLevelZero(shadow_sampler, uv + offset, depth);
             count++;
         }
@@ -128,6 +128,54 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint li
 }
 
 
+float4 Debug_ShadowMap(float2 uv)
+{
+    float4 color = float4(1, 1, 1, 1);
+
+    float2 quad_uv = uv * 2.0f;
+    int cascade_idx = 0;
+    float2 shadow_uv = 0;
+
+    if (quad_uv.x < 1.0f && quad_uv.y < 1.0f)
+    {
+        cascade_idx = 0;
+        shadow_uv = quad_uv;
+    }
+    else if (quad_uv.x >= 1.0f && quad_uv.y < 1.0f)
+    {
+        cascade_idx = 1;
+        shadow_uv = float2(quad_uv.x - 1.0f, quad_uv.y);
+    }
+    else if (quad_uv.x < 1.0f && quad_uv.y >= 1.0f)
+    {
+        cascade_idx = 2;
+        shadow_uv = float2(quad_uv.x, quad_uv.y - 1.0f);
+    }
+    else
+    {
+        cascade_idx = 3;
+        shadow_uv = float2(quad_uv.x - 1.0f, quad_uv.y - 1.0f);
+    }
+    float depth = gShadowMaps[cascade_idx].SampleLevel(gssWrap, shadow_uv, 0);
+    color = float4(depth.xxx, 1);
+
+    return color;
+}
+
+int FindCascadeIdx(float viewZ, float CascadeSplits[NUM_CASCADES])
+{
+    int cascadeIdx = 0;
+    [unroll]
+    for (int i = 0; i < NUM_CASCADES; ++i)
+    {
+        if (viewZ < CascadeSplits[i])
+        {
+            cascadeIdx = i;
+            break;
+        }
+    }
+    return cascadeIdx;
+}
 //================================================================
 
 
@@ -181,9 +229,6 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_Vertex
 }
 
 
-
-
-
 float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
@@ -195,6 +240,10 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float Camera_Distance = wNormal_CD.w;
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
 
+
+
+    //    return Debug_ShadowMap(input.uv);
+    
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z, shadow_pass, light_type, shadow_bias, inv_shadow_map_size, LightViewProjTex, gShadowMaps, gssShadowSampler, CascadeSplits);
     
     

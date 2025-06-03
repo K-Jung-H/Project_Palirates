@@ -930,7 +930,6 @@ void CGameFramework::PrepareStage(GPU_Stage stage)
 	}
 }
 
-//#define _WITH_PLAYER_TOP
 
 void CGameFramework::FrameAdvance()
 {
