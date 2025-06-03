@@ -424,6 +424,8 @@ D3D12_UNORDERED_ACCESS_VIEW_DESC CTexture::GetUnorderedAccessViewDesc(int index)
 
 
 //==================================================================================
+CShader* CMaterial::m_pSkinnedAnimationShader = NULL;
+CShader* CMaterial::m_pStandardShader = NULL;
 
 CMaterial::CMaterial(int nTextures)
 {
@@ -574,8 +576,6 @@ void CMaterial::ReleaseUploadBuffers()
 	}
 }
 
-CShader* CMaterial::m_pSkinnedAnimationShader = NULL;
-CShader* CMaterial::m_pStandardShader = NULL;
 
 void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
@@ -1601,9 +1601,6 @@ CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameOb
 
 CGameObject::~CGameObject()
 {
-	if (m_pMesh)
-		m_pMesh->Release();
-
 	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
 	{
 		material_ptr.reset();

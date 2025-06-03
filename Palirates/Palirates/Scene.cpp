@@ -178,7 +178,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 {
 	CCamera::CreateShaderVariables(pd3dDevice, pd3dCommandList); 
 
-	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(LightCamera_Info) + 255) & ~255); //256 * N
 	m_pd3dcb_LightCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcb_LightCamera->Map(0, NULL, (void**)&m_pcb_MappedLightCamera);
@@ -293,6 +293,9 @@ std::shared_ptr<ID3D12RootSignature> CScene::m_MRT_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Transparent_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NULL;
 std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
+
+bool CScene::bOBBRender = false;
+
 UINT CScene::select_index = 0;
 
 
@@ -553,11 +556,6 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
 		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		//pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		//pd3dRootParameters[4].Constants.Num32BitValues = 10; // float4 + float4 + float + bool + padding = 10
-		//pd3dRootParameters[4].Constants.ShaderRegister = 3; // b3
-		//pd3dRootParameters[4].Constants.RegisterSpace = 0;
-		//pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2];
@@ -919,7 +917,7 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	BuildDefaultLightsAndMaterials();
 	CS_Wave_Shader::Prepare_WaveParams();
 
-	obj_manager = new Object_Manager();
+	obj_manager = make_shared<Object_Manager>();
 
 	auto com_deleter = [](ID3D12RootSignature* p) { if (p) p->Release(); };
 
@@ -954,6 +952,22 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		fog_info->padding0 = XMFLOAT2(0.0f, 0.0f);
 	}
 
+
+	shadow_camera = std::make_shared<Shadow_Camera>();
+
+	if (shadow_camera)
+		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+#ifdef RENDER_PARTICLE
+	particle_manager = make_shared<Particle_Manager>();
+	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
 }
 
 void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -962,13 +976,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
 	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
-
-
-	shadow_camera = std::make_shared<Shadow_Camera>();
-
-	if(shadow_camera)
-		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
 
 	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
 	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
@@ -984,14 +991,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	obj_manager->Set_Wave_Object(wave_obj);
 #endif
 
-
 #ifdef RENDER_PARTICLE
-	particle_manager = new Particle_Manager();
-	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-
-//	Particle_Shape_Mesh* tri_dust_shape_mesh = new Tetrahedron_Shape_Mesh(pd3dDevice, pd3dCommandList, 10.0f);
-//	Particle_Shape_Mesh* sphere_shape_mesh = new Sphere_Shape_Mesh(pd3dDevice, pd3dCommandList, 20.0f);
-
 	Particle_Format test_dragon_fire_info;
 	{
 		test_dragon_fire_info.shader_type = Particle_Type::loop;
@@ -1064,16 +1064,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
-
-
 #endif
+
 
 
 #ifdef USING_OBB
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> 평지
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -1152,8 +1151,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // 미리 한번 업데이트 해야 파티클 메니저에서 fixed 타입 정보 얻을 수 있음
-	obj_manager->Update_Fixed_OBBs(); // 내부에서 m_OBBDataArray 생성
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
@@ -1384,12 +1383,6 @@ void CScene::ReleaseObjects()
 	delete text_ui_manager;
 #endif
 
-	if (Shader_list.size())
-		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
-			shader_ptr.reset();
-		
-
-
 	ReleaseShaderVariables();
 
 	if (m_pLights) 
@@ -1458,10 +1451,6 @@ void CScene::ReleaseUploadBuffers()
 {
 	if (m_pSkyBox) m_pSkyBox->ReleaseUploadBuffers();
 	if (m_pTerrain) m_pTerrain->ReleaseUploadBuffers();
-
-	if (Shader_list.size())
-		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
-			shader_ptr->ReleaseUploadBuffers();
 
 	
 	std::vector<std::shared_ptr<CGameObject>>* skinned_obj_container = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -1539,7 +1528,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case 'Q':
 			{
-				m_pPlayer->SetBlurMask(test_button);
+			blur_effect = !blur_effect;
+			m_pPlayer->SetBlurMask(blur_effect);
 			}		break;
 
 
@@ -1620,12 +1610,11 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 						{
 							XMFLOAT3 anubisPos = anu->GetPosition();
 
-							// focus_point만 설정 (1번 공통 처리)
+							// focus_point
 							test_sand->SetPosition(XMFLOAT3(1200.0f, 1000.0f, 1200.0f));
 							test_sand->Set_Focus_Point(anubisPos);
 							test_sand->Set_Speed(0.0f);
 
-							// 2번 전용 처리
 							if (test_sand->Update_Func_Index == 2)
 							{
 								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
@@ -1719,10 +1708,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 	fog_info->time += fTimeElapsed;
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
-
-	if (Shader_list.size())
-		for (std::shared_ptr<CShader> shader_ptr : Shader_list)
-			shader_ptr->AnimateObjects(fTimeElapsed);
 
 	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
 	if (list) {
@@ -1893,7 +1878,7 @@ void CScene::After_Update_Objects()
 
 void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
 {
-	if (!shadow_camera || shadow_camera->shadow_active == false)
+	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
 
 	for (int i = 0; i < m_nLights; ++i)
@@ -1907,7 +1892,7 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
-			shadow_camera->shadow_active = true;
+			shadow_camera->update_shadow = true;
 			break;
 		}
 	}
@@ -1938,11 +1923,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-			// 2. 렌더 타겟 설정 및 클리어
+			// 2. 
 			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-			// 3. 쉐이더 상수 업데이트 및 렌더링
+			// 3. 
 			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
 			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
 
@@ -2017,11 +2002,6 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
-	// For UI
-	//if (Shader_list.size())
-	//	for (std::shared_ptr<CShader> shader_ptr : Shader_list)
-	//		shader_ptr->Render_Objects(pd3dCommandList, pCamera);
-
 }
 
 void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -2085,47 +2065,6 @@ Change_Signal CScene::Get_Change_Signal()
 
 //==========================================================================================
 
-void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
-
-
-#ifdef RENDER_PARTICLE
-	particle_manager = new Particle_Manager();
-	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-#endif
-
-
-	obj_manager = new Object_Manager();
-
-	//=====================================================
-
-	Object_Manager::Reserve_Update();
-
-	CreateShaderVariables(pd3dDevice, pd3dCommandList);
-}
-
-void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
-{
-	fog_info->time += fTimeElapsed;
-
-	if (m_pLights)
-	{
-		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
-		m_pLights[1].m_xmf3Position.y += 10.0f;
-		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
-	}
-
-}
-
-void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
-}
-
-
-//==========================================================================================
-
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 {
 	m_nLights = 5;
@@ -2179,33 +2118,24 @@ void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 
 }
 
-void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Character_Select_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+	CScene::Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
 	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
-
 
 	m_pLights[0].m_bEnable = true;
 	m_pLights[1].m_bEnable = true;
 	m_pLights[2].m_bEnable = true;
 	m_pLights[3].m_bEnable = false;
 
-	shadow_camera = std::make_shared<Shadow_Camera>();
-
-	if (shadow_camera)
-		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-#ifdef RENDER_PARTICLE
-	particle_manager = new Particle_Manager();
-	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-#endif
+}
 
 
-#ifdef USING_OBB
-	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-#endif
+void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 	//=====================================================
 
@@ -2545,29 +2475,24 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 
 }
 
-void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Board_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+	CScene::Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
 	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
 
+	m_pLights[0].m_bEnable = true;
+	m_pLights[1].m_bEnable = true;
+	m_pLights[2].m_bEnable = true;
+	m_pLights[3].m_bEnable = false;
 
-	shadow_camera = std::make_shared<Shadow_Camera>();
-
-	if (shadow_camera)
-		shadow_camera->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-#ifdef RENDER_PARTICLE
-	particle_manager = new Particle_Manager();
-	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-#endif
+}
 
 
-#ifdef USING_OBB
-	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-#endif
-
+void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
 #ifdef RENDER_WAVE
 	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 100, true);
@@ -2734,8 +2659,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 #ifdef RENDER_WAVE
 
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.35f;
-	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.65f;
-	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.01f;
+	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;
+	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.05f;
 
 	Deferred_Plane_Shader::Update(fTimeElapsed);
 
@@ -3078,8 +3003,44 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 //==========================================================================================
 
-void Weapon_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+
+void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
+
+#ifdef RENDER_PARTICLE
+	particle_manager = make_shared<Particle_Manager>();
+	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
+	obj_manager = make_shared<Object_Manager>();
+
+	//=====================================================
+
+	Object_Manager::Reserve_Update();
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
+
+void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	fog_info->time += fTimeElapsed;
+
+	if (m_pLights)
+	{
+		m_pLights[1].m_xmf3Position = m_pPlayer->GetPosition();
+		m_pLights[1].m_xmf3Position.y += 10.0f;
+		m_pLights[1].m_xmf3Direction = m_pPlayer->GetLookVector();
+	}
+
+}
+
+void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
+}
+
+
+//==========================================================================================

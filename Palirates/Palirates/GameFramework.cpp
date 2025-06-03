@@ -371,73 +371,12 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					multiMode = true;
 					break;
 
-				case VK_TAB:
-				{
-					scene_index = (scene_index + 1) % 3;
-
-					switch (scene_index)
-					{
-					case 0:
-						scene_manager->Set_Active_Scene("Character_Select");
-						break;
-					case 1:
-						scene_manager->Set_Active_Scene("Game_Stage_Board");
-						break;
-					case 2:
-						scene_manager->Set_Active_Scene("In_Stage");
-						ConnectToServer(SERVER_IP, SERVER_PORT);
-						break;
-					default:
-						break;
-					}
-
-					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					//m_pCamera = m_pPlayer->GetCamera();
-					Object_Manager::Reserve_Update();
-					break;
-				}
-				break;
-
-				case 0x38:
-				{
-					// Set scene_index to 0 when key 8 is pressed
-					scene_index = 0;
-					scene_manager->Set_Active_Scene("Character_Select");
-					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					//m_pCamera = m_pPlayer->GetCamera();
-					Object_Manager::Reserve_Update();
-				}
-					break;
-				case 0x39:
-				{
-					// Set scene_index to 1 when key 9 is pressed
-					scene_index = 1;
-					scene_manager->Set_Active_Scene("Game_Stage_Board");
-					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					//m_pCamera = m_pPlayer->GetCamera();
-					Object_Manager::Reserve_Update();
-				}
-					break;
-				case 0x30:
-				{
-					// Set scene_index to 2 when key 0 is pressed
-					scene_index = 2;
-					scene_manager->Set_Active_Scene("In_Stage");
-					m_pPlayer = scene_manager->Get_Active_Scene_Player();
-					//m_pCamera = m_pPlayer->GetCamera();
-					Object_Manager::Reserve_Update();
-					ConnectToServer(SERVER_IP, SERVER_PORT);
-				}
-					break;
-
 				case VK_RETURN:
 					break;
 				case VK_F1:
 				case VK_F2:
 				case VK_F3:
 				{
-					//m_pCamera = m_pPlayer->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
-
 					shared_ptr<CCamera> temp = scene_manager->Get_Active_Scene_Player()->ChangeCamera((DWORD)(wParam - VK_F1 + 1), m_GameTimer.GetTimeElapsed());
 					scene_manager->Get_Active_Scene_Player()->SetCamera(temp);
 					scene_manager->Set_Active_Scene_Main_Camera(temp);
@@ -531,56 +470,6 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 				//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			}
-			if (nMessageID == WM_KEYDOWN && wParam == 'T') {
-				//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-				//if (obj_list && obj_list->size() < 7) {
-				static int modelnum = 1;
-				if (modelnum > 5) modelnum = 0;
-					if (!Active_CommandList) {
-						OutputDebugString(L"Active_CommandList is nullptr!\n");
-						return 0;
-					}
-
-					HRESULT hr = Active_CommandList->Reset(Active_CommandAllocator, nullptr);
-					if (FAILED(hr)) {
-						OutputDebugString(L"CommandList Reset Failed!\n");
-						return 0;
-					}
-
-					//CLoadedModelInfo* pGargoyleModel6 = CGameObject::LoadGeometryAndAnimationFromFile(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->GetGraphicsRootSignature(), "Model/First_Mate_v12.bin", NULL);
-					string player_name = "test_palyer" + std::to_string(nPlayer);
-
-
-					std::string_view name_view = player_name;
-
-					std::shared_ptr<CTerrainPlayer> humanObject_7 = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature(), scene_manager->Get_Active_Scene()->m_pTerrain.get(), modelnum);
-					humanObject_7->SetPosition(XMFLOAT3(30.0f, scene_manager->Get_Active_Scene()->m_pTerrain->Get_Mesh_Height(30.0f, 10.0f+ nPlayer*30.0f), 10.0f + nPlayer * 30.0f));
-					humanObject_7->Set_Name(player_name);
-					humanObject_7->Set_Child(humanObject_7->m_pRootModel);
-					humanObject_7->SetupWeaponCollider();
-					humanObject_7->Object_type = OBJECT_TPYE_PLAYER;
-					CPlayer* player = humanObject_7.get(); 
-					auto st = std::make_unique<MultiPlayerStateMachine>(player);
-					humanObject_7->SetStateMachine(std::move(st));
-					humanObject_7->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
-					scene_manager->Get_Active_Scene()->obj_manager->Add_Object(humanObject_7, Object_Type::player);
-					nPlayer++;
-					modelnum++;
-
-					string message2 = "Player list :";
-					auto* player_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::player);
-					for (auto& obj : *player_list) {
-						string name = obj->m_pstrFrameName;
-						message2 += name + ", ";
-					}
-					message2 += "\n";
-					DebugOutput(message2);
-
-					Active_CommandList->Close();
-					ID3D12CommandList* ppCommandLists[] = { Active_CommandList };
-					p_CommandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-				//}
-			}
 			break;
 	}
 	return(0);
@@ -639,7 +528,7 @@ void CGameFramework::OnDestroy()
 
 void CGameFramework::CreateShaderVariables()
 {
-	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256ÀÇ ¹è¼ö
+	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256ì˜ ë°°ìˆ˜
 	FrameworkInfo = ::CreateBufferResource(m_pd3dDevice, Active_CommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	FrameworkInfo->Map(0, NULL, (void**)&MappedFrameworkInfo);
 
@@ -734,13 +623,13 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
-		if (scene_manager->Find_Scene(c_signal.scene_name)) // ÀÌ¹Ì »ý¼ºµÈ ¾ÀÀÌ¶ó¸é?
+		if (scene_manager->Find_Scene(c_signal.scene_name)) // ì´ë¯¸ ìƒì„±ëœ ì”¬ì´ë¼ë©´?
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
-		else // »õ·Î ¸¸µé¾î¾ß ÇÏ´Â °æ¿ì
+		else // ìƒˆë¡œ ë§Œë“¤ì–´ì•¼ í•˜ëŠ” ê²½ìš°
 		{
 			BeginGPUStage(GPU_Stage::Compute);
 			{
@@ -1037,7 +926,7 @@ void CGameFramework::MoveToNextFrame()
 {
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	// Present ÈÄ, ´ÙÀ½ ÇÁ·¹ÀÓÀ» À§ÇÑ Render Fence Áõ°¡ ¹× signal
+	// Present í›„, ë‹¤ìŒ í”„ë ˆìž„ì„ ìœ„í•œ Render Fence ì¦ê°€ ë° signal
 	UINT64& renderFence = m_RenderFenceValues[SwapChainBuffer_Index];
 	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, ++renderFence);
 
@@ -1081,7 +970,7 @@ void CGameFramework::FrameAdvance()
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-			std::cout << "[FrameAdvance] ¼ö½Å ÆÐÅ¶ Ã³¸®: " << receivedData << std::endl;
+			std::cout << "[FrameAdvance] ìˆ˜ì‹  íŒ¨í‚· ì²˜ë¦¬: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
@@ -1257,8 +1146,8 @@ void CGameFramework::FrameAdvance()
 
 	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
-
-	Particle_Manager* active_scene_particle_manager = scene_manager->Get_Active_Scene()->particle_manager;
+	
+	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
 	if (active_scene_particle_manager)
 		active_scene_particle_manager->Process_Destroy_Queue();
 
@@ -1269,7 +1158,7 @@ void CGameFramework::FrameAdvance()
 
 
 
-//==============¼­¹ö================
+//==============ì„œë²„================
 void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
 	if (isRunning) return;
@@ -1277,14 +1166,14 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
 	{
-		std::cerr << "[ERROR] Winsock ÃÊ±âÈ­ ½ÇÆÐ" << std::endl;
+		std::cerr << "[ERROR] Winsock ì´ˆê¸°í™” ì‹¤íŒ¨" << std::endl;
 		return;
 	}
 
 	serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (serverSocket == INVALID_SOCKET)
 	{
-		std::cerr << "[ERROR] ¼ÒÄÏ »ý¼º ½ÇÆÐ: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] ì†Œì¼“ ìƒì„± ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
 		WSACleanup();
 		return;
 	}
@@ -1295,20 +1184,20 @@ void CGameFramework::ConnectToServer(const std::string& ip, int port)
 
 	if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) != 1)
 	{
-		//std::cerr << "[ERROR] IP ÁÖ¼Ò º¯È¯ ½ÇÆÐ: " << ip << std::endl;
+		//std::cerr << "[ERROR] IP ì£¼ì†Œ ë³€í™˜ ì‹¤íŒ¨: " << ip << std::endl;
 		closesocket(serverSocket);
 		WSACleanup();
 		return;
 	}
 	if (connect(serverSocket, (sockaddr*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
 	{
-		//std::cerr << "[ERROR] ¼­¹ö ¿¬°á ½ÇÆÐ: " << WSAGetLastError() << std::endl;
+		//std::cerr << "[ERROR] ì„œë²„ ì—°ê²° ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
 		closesocket(serverSocket);
 		WSACleanup();
 		return;
 	}
 
-	std::cout << "[INFO] ¼­¹ö ¿¬°á ¼º°ø (IP: " << ip << ", Æ÷Æ®: " << port << ")" << std::endl;
+	std::cout << "[INFO] ì„œë²„ ì—°ê²° ì„±ê³µ (IP: " << ip << ", í¬íŠ¸: " << port << ")" << std::endl;
 
 	isRunning = true;
 	networkThread = std::thread(&CGameFramework::NetworkLoop, this);
@@ -1352,7 +1241,7 @@ void CGameFramework::SendPacket()
 
 	if (result == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] PLAYER_UPDATE Àü¼Û ½ÇÆÐ: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] PLAYER_UPDATE ì „ì†¡ ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
@@ -1362,11 +1251,11 @@ void CGameFramework::SendPacket()
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-	std::cout << "[µð¹ö±×] ProcessReceivedData() È£ÃâµÊ" << std::endl;
+	std::cout << "[ë””ë²„ê·¸] ProcessReceivedData() í˜¸ì¶œë¨" << std::endl;
 
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
-		std::cout << "[Debug] ³» Å¬¶óÀÌ¾ðÆ® ID ¼ö½Å ¿Ï·á: " << ClientNum << std::endl;
+		std::cout << "[Debug] ë‚´ í´ë¼ì´ì–¸íŠ¸ ID ìˆ˜ì‹  ì™„ë£Œ: " << ClientNum << std::endl;
 		bClientIdAssigned = true;
 
 		//m_pPlayer = std::shared_ptr<CPlayer>(GetSceneManager().GetPlayerById(ClientNum));
@@ -1393,7 +1282,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	if (!bClientIdAssigned)
 	{
-		std::cout << "[°æ°í] ¾ÆÁ÷ CLIENT_ID¸¦ ¹ÞÁö ¾Ê¾Æ ÆÐÅ¶ Ã³¸® Áö¿¬ Áß: " << receivedData << std::endl;
+		std::cout << "[ê²½ê³ ] ì•„ì§ CLIENT_IDë¥¼ ë°›ì§€ ì•Šì•„ íŒ¨í‚· ì²˜ë¦¬ ì§€ì—° ì¤‘: " << receivedData << std::endl;
 		int playerId;
 		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
 		{
@@ -1403,7 +1292,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	// ÆÄ½Ì ½ÃÀÛ
+	// íŒŒì‹± ì‹œìž‘
 	std::vector<std::string> tokens;
 	std::stringstream ss(receivedData);
 	std::string item;
@@ -1417,7 +1306,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	if (tokens[0] == "PLAYER_LEAVE" && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
-		std::cout << "[µð¹ö±×] PLAYER_LEAVE °¨ÁöµÊ: " << leaveId << std::endl;
+		std::cout << "[ë””ë²„ê·¸] PLAYER_LEAVE ê°ì§€ë¨: " << leaveId << std::endl;
 
 		//leaveId = leaveId - 1;
 
@@ -1426,7 +1315,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		auto it = m_pRemotePlayers.find(leaveId);
 		if (it != m_pRemotePlayers.end())
 		{
-			std::cout << "[µð¹ö±×] ÇÃ·¹ÀÌ¾î " << leaveId << " Á¦°Å ½ÃÀÛ" << std::endl;
+			std::cout << "[ë””ë²„ê·¸] í”Œë ˆì´ì–´ " << leaveId << " ì œê±° ì‹œìž‘" << std::endl;
 			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
 			if (scene && scene->obj_manager)
 			{
@@ -1438,20 +1327,20 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				}),
 					playerList->end()
 				);
-				std::cout << "[µð¹ö±×] ÇÃ·¹ÀÌ¾î " << leaveId << " ¿ÀºêÁ§Æ® ¸®½ºÆ®¿¡¼­ Ã£À½" << std::endl;
+				std::cout << "[ë””ë²„ê·¸] í”Œë ˆì´ì–´ " << leaveId << " ì˜¤ë¸Œì íŠ¸ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì°¾ìŒ" << std::endl;
 
 			}
 
 			m_pRemotePlayers.erase(it);
 
-			std::cout << "[µð¹ö±×] ÇÃ·¹ÀÌ¾î " << leaveId << " Á¦°ÅµÊ" << std::endl;
+			std::cout << "[ë””ë²„ê·¸] í”Œë ˆì´ì–´ " << leaveId << " ì œê±°ë¨" << std::endl;
 		}
 		else
 		{
-			std::cout << "PLAYER_LEAVE Ã³¸® Áß ÇÃ·¹ÀÌ¾î " << leaveId << "¸¦ Ã£À» ¼ö ¾øÀ½" << std::endl;
+			std::cout << "PLAYER_LEAVE ì²˜ë¦¬ ì¤‘ í”Œë ˆì´ì–´ " << leaveId << "ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŒ" << std::endl;
 		}
 
-		return; // ¿©±â¼­ ³¡³»¾ß PLAYER_UPDATE ¾È °¨
+		return; // ì—¬ê¸°ì„œ ëë‚´ì•¼ PLAYER_UPDATE ì•ˆ ê°
 	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
@@ -1519,7 +1408,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				if (!alreadyQueued) {
 					std::lock_guard<std::mutex> lock(pendingCreateMutex);
 					pendingPlayerCreates.push(playerId);
-					std::cout << "[µð¹ö±×] playerId " << playerId << " remote Å¥¿¡ Ãß°¡µÊ" << std::endl;
+					std::cout << "[ë””ë²„ê·¸] playerId " << playerId << " remote íì— ì¶”ê°€ë¨" << std::endl;
 				}
 				return;
 			}
@@ -1575,7 +1464,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	//
 	//	int type = std::stoi(tokens[10]);
 	//
-	//	// ¸ó½ºÅÍ Ã£±â
+	//	// ëª¬ìŠ¤í„° ì°¾ê¸°
 	//	auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
 	//	auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
 	//		return obj && obj->GetID() == monsterId;
@@ -1626,36 +1515,36 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 void CGameFramework::CreateRemotePlayer(int playerId)
 {
-	std::cout << "[µð¹ö±×] CreateRemotePlayer() È£ÃâµÊ - ID: " << playerId << std::endl;
+	std::cout << "[ë””ë²„ê·¸] CreateRemotePlayer() í˜¸ì¶œë¨ - ID: " << playerId << std::endl;
 
-	// Áßº¹ ¹æÁö
+	// ì¤‘ë³µ ë°©ì§€
 	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
 	{
-		std::cout << "[Áßº¹ ¹æÁö] m_pRemotePlayers ¿¡ ÀÌ¹Ì Á¸Àç: " << playerId << std::endl;
+		std::cout << "[ì¤‘ë³µ ë°©ì§€] m_pRemotePlayers ì— ì´ë¯¸ ì¡´ìž¬: " << playerId << std::endl;
 		return;
 	}
 
 	auto scene = scene_manager->Get_Active_Scene();
 	if (!scene || !scene->obj_manager)
 	{
-		std::cout << "[¿À·ù] scene ¶Ç´Â obj_manager °¡ NULL" << std::endl;
+		std::cout << "[ì˜¤ë¥˜] scene ë˜ëŠ” obj_manager ê°€ NULL" << std::endl;
 		return;
 	}
 
-	// scene ³»ºÎ Áßº¹ ÇÃ·¹ÀÌ¾î °Ë»ç
+	// scene ë‚´ë¶€ ì¤‘ë³µ í”Œë ˆì´ì–´ ê²€ì‚¬
 	auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
 	for (const auto& obj : *playerList)
 	{
 		if (obj && obj->GetID() == playerId)
 		{
-			std::cout << "[Áßº¹ ¹æÁö] scene ³»ºÎ¿¡µµ ÀÌ¹Ì playerId ÀÖÀ½: " << playerId << std::endl;
+			std::cout << "[ì¤‘ë³µ ë°©ì§€] scene ë‚´ë¶€ì—ë„ ì´ë¯¸ playerId ìžˆìŒ: " << playerId << std::endl;
 			return;
 		}
 	}
 
 	if (!m_pPlayer)
 	{
-		std::cout << "[CreateRemotePlayer] ³» ÇÃ·¹ÀÌ¾î°¡ ¾ÆÁ÷ »ý¼ºµÇÁö ¾ÊÀ½" << std::endl;
+		std::cout << "[CreateRemotePlayer] ë‚´ í”Œë ˆì´ì–´ê°€ ì•„ì§ ìƒì„±ë˜ì§€ ì•ŠìŒ" << std::endl;
 		return;
 	}
 
@@ -1683,7 +1572,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);
 	m_pRemotePlayers[playerId] = remotePlayer;
 
-	std::cout << "[¼º°ø] RemotePlayer »ý¼º ¿Ï·á: " << playerId << std::endl;
+	std::cout << "[ì„±ê³µ] RemotePlayer ìƒì„± ì™„ë£Œ: " << playerId << std::endl;
 }
 
 
@@ -1698,27 +1587,27 @@ void CGameFramework::Disconnect()
 	closesocket(serverSocket);
 	WSACleanup();
 
-	std::cout << "[INFO] ¼­¹ö ¿¬°á Á¾·á" << std::endl;
+	std::cout << "[INFO] ì„œë²„ ì—°ê²° ì¢…ë£Œ" << std::endl;
 
 }
 
 void CGameFramework::NetworkLoop()
 {
-	//std::cout << "[¾²·¹µå È®ÀÎ] NetworkLoop() ½ÃÀÛµÊ" << std::endl;
+	//std::cout << "[ì“°ë ˆë“œ í™•ì¸] NetworkLoop() ì‹œìž‘ë¨" << std::endl;
 
 	while (isRunning)
 	{
 		//auto activeScene = scene_manager->Get_Active_Scene();
 		//if (!activeScene || activeScene != scene_manager->Load_Scene("In_Stage"))
 		//{
-		//	std::cout << "ÀÎ½ºÅ×ÀÌÁö ¾Æ´Ô" << std::endl;
+		//	std::cout << "ì¸ìŠ¤í…Œì´ì§€ ì•„ë‹˜" << std::endl;
 		//	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		//	continue;
 		//}
 
-		char buffer[1024 + 1]; // null terminator °ø°£ È®º¸
+		char buffer[1024 + 1]; // null terminator ê³µê°„ í™•ë³´
 		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-		std::cout << "[recv] ¼ö½Å ¼º°ø: " << bytesReceived << std::endl;
+		std::cout << "[recv] ìˆ˜ì‹  ì„±ê³µ: " << bytesReceived << std::endl;
 
 		if (bytesReceived > 0)
 		{
@@ -1728,17 +1617,17 @@ void CGameFramework::NetworkLoop()
 			{
 				std::lock_guard<std::mutex> lock(recvQueueMutex);
 				recvQueue.push(receivedData);
-				std::cout << "[recvQueue] µ¥ÀÌÅÍ push ¿Ï·á, ÇöÀç Å¥ Å©±â: " << recvQueue.size() << std::endl;
+				std::cout << "[recvQueue] ë°ì´í„° push ì™„ë£Œ, í˜„ìž¬ í í¬ê¸°: " << recvQueue.size() << std::endl;
 			}
 		}
 
 		else if (bytesReceived == SOCKET_ERROR)
 		{
-			std::cerr << "[ERROR] recv() ½ÇÆÐ: " << WSAGetLastError() << std::endl;
+			std::cerr << "[ERROR] recv() ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
 		}
 		else if (bytesReceived == 0)
 		{
-			std::cerr << "[INFO] ¼­¹ö¿ÍÀÇ ¿¬°á Á¾·á" << std::endl;
+			std::cerr << "[INFO] ì„œë²„ì™€ì˜ ì—°ê²° ì¢…ë£Œ" << std::endl;
 			isRunning = false;
 			break;
 		}
@@ -1770,7 +1659,7 @@ void CGameFramework::PlayerLeave(int playerId)
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] PLAYER_LEAVE Àü¼Û ½ÇÆÐ: " << WSAGetLastError() << std::endl;
+		std::cerr << "[ERROR] PLAYER_LEAVE ì „ì†¡ ì‹¤íŒ¨: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
