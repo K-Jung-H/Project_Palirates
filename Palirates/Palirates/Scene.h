@@ -23,7 +23,7 @@ class Particle_Manager;
 class ParticleObject;
 class Particle_Shape_Mesh;
 class Texture_UI_Manager;
-class TextureBlock;
+struct TextureBlock;
 
 struct LIGHT
 {

@@ -2980,6 +2980,19 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
 
+	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
+	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable);
+	TestSkipblock->onClick = [this]() {
+		c_signal.change = true;
+		c_signal.scene_name = "Stage_1";
+		c_signal.type = Scene_Type::Stage_1;
+
+		};
+	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	TestSkipblock->hp = 1;
+	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
+
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
