@@ -1587,6 +1587,7 @@ CGameObject::CGameObject(const std::string_view& name)
 
 	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	m_fRotationSpeed = 0.0f;
+	XMStoreFloat4x4(&WeaponMatrix, XMMatrixIdentity());
 }
 
 CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
@@ -2091,62 +2092,6 @@ void CGameObject::Animate(float fTimeElapsed)
 			XMMATRIX finalM = scaleM * world;
 			XMStoreFloat4x4(&m_xmf4x4Parent, finalM);
 			UpdateTransform(nullptr);
-			//const float deltaY = 3.5f;
-			//XMMATRIX lift = XMMatrixTranslation(0.0f, deltaY, 0.0f);
-
-			//// 2) 기존 행렬에 곱해서 Y만 올리기
-			//XMMATRIX mat = XMLoadFloat4x4(&m_xmf4x4Parent);
-			//mat = lift * mat;  // mat = lift 행렬을 먼저 곱하면 Y축 이동만 추가됨
-
-			//// 3) 저장 & 갱신
-			//XMStoreFloat4x4(&m_xmf4x4Parent, mat);
-			//SetLookDirection(XMFLOAT3(0, 1, 0));
-
-			//// 1) 부모 행렬 로드
-			//XMMATRIX parentMat = XMLoadFloat4x4(&m_xmf4x4Parent);
-
-			//// 2) 현재 Look 벡터 (forward)와 목표 Up 벡터
-			//XMVECTOR currentLook = XMVector3Normalize(parentMat.r[2]);
-			//XMVECTOR targetUp = XMVectorSet(0, 1, 0, 0);
-
-			//// 3) 두 벡터 사이 남은 각도 (라디안)
-			//float cosA = XMVectorGetX(XMVector3Dot(currentLook, targetUp));
-			//cosA = std::clamp(cosA, -1.0f, 1.0f);
-			//float angleTo = acosf(cosA);
-			//if (angleTo < XMConvertToRadians(0.5f))
-			//	return; // 이미 충분히 가깝다면 회전 종료
-
-			//// 4) 회전축과 deltaQ(Identity→Up 회전) 계산
-			//XMVECTOR axis = XMVector3Normalize(XMVector3Cross(currentLook, targetUp));
-			//XMVECTOR deltaQ = XMQuaternionRotationAxis(axis, angleTo);
-
-			//// 5) SLERP 인자 t
-			//float rotSpeedRad = XMConvertToRadians(m_fRotationSpeed);
-			//float t = std::clamp((rotSpeedRad * fTimeElapsed) / angleTo, 0.0f, 1.0f);
-			//deltaQ = XMQuaternionSlerp(XMQuaternionIdentity(), deltaQ, t);
-
-			//// 6) 기존 회전 쿼터니언 분리
-			//XMMATRIX rotOnly = parentMat;
-			//rotOnly.r[3] = XMVectorSet(0, 0, 0, 1);
-			//XMVECTOR currentQ = XMQuaternionRotationMatrix(rotOnly);
-
-			//// 7) newQ = deltaQ ⊗ currentQ  (순서 주의!)
-			//XMVECTOR newQ = XMQuaternionMultiply(deltaQ, currentQ);
-
-			//// 8) 새 회전 매트릭스
-			//XMMATRIX rotM = XMMatrixRotationQuaternion(newQ);
-
-			//// 9) 월드 위치 보존
-			//XMVECTOR worldPos = parentMat.r[3];
-
-			//// 10) 최종 월드 매트릭스 조립
-			////     → rotation만 rotM으로, translation은 그대로 덮어쓰기
-			//XMMATRIX worldM = rotM;
-			//worldM.r[3] = worldPos;
-
-			//// 11) 저장 및 씬 반영
-			//XMStoreFloat4x4(&m_xmf4x4Parent, worldM);
-			UpdateTransform(nullptr);
 			return;
 		}
 
@@ -2196,15 +2141,6 @@ void CGameObject::Animate(float fTimeElapsed)
 			m_bInAir = false;           // 착지!
 			m_vVelocity = XMVectorZero(); // 속도 초기화
 			Set_LookDirection_LookAt(XMFLOAT3(1, 0, 0));
-			//const float deltaY = 0.1f;
-			//XMMATRIX lift = XMMatrixTranslation(0.0f, deltaY, 0.0f);
-
-			// 2) 기존 행렬에 곱해서 Y만 올리기
-			//XMMATRIX mat = XMLoadFloat4x4(&m_xmf4x4Parent);
-			//mat = lift * mat;  // mat = lift 행렬을 먼저 곱하면 Y축 이동만 추가됨
-
-			// 3) 저장 & 갱신
-			//XMStoreFloat4x4(&m_xmf4x4Parent, mat);
 			UpdateTransform(nullptr);
 		}
 
@@ -2215,55 +2151,6 @@ void CGameObject::Animate(float fTimeElapsed)
 		// 5) 씬 그래프 갱신
 		UpdateTransform(nullptr);
 	}
-
-	//if (pWeapon) {
-	//	if (this->pWeapon->m_bInAir)
-	//	{
-	//		// 중력 가속도 적용 (Y축만)
-	//		XMVECTOR vGravityDelta = XMVectorSet(0.0f, -this->pWeapon->m_fGravity * fTimeElapsed, 0.0f, 0.0f);
-	//		this->pWeapon->m_vVelocity = XMVectorAdd(this->pWeapon->m_vVelocity, vGravityDelta);
-
-	//		// 이번 프레임 이동량 = 속도 × 시간
-	//		XMVECTOR vOffset = XMVectorScale(this->pWeapon->m_vVelocity, fTimeElapsed);
-
-	//		// 변환 매트릭스 만들고 누적
-	//		XMMATRIX M = XMMatrixTranslationFromVector(vOffset);
-	//		pWeapon->pWeapon[0]->m_xmf4x4Parent = Matrix4x4::Multiply(M, m_xmf4x4Parent);
-
-	//		// 씬 그래프에 반영
-	//		UpdateTransform(nullptr);
-
-	//		// (선택) 지면에 닿았는지 검사 — Y 위치가 groundHeight 이하가 되면 착지 처리
-	//		float currentY = XMVectorGetY(XMLoadFloat4x4(&m_xmf4x4Parent).r[3]);
-	//		const float groundHeight = 0.0f; // 지면 Y좌표
-	//		if (currentY <= groundHeight)
-	//		{
-	//			// 바닥에 달라붙게 하고
-	//			XMMATRIX clampY = XMMatrixTranslation(
-	//				XMVectorGetX(XMLoadFloat4x4(&m_xmf4x4Parent).r[3]),
-	//				groundHeight,
-	//				XMVectorGetZ(XMLoadFloat4x4(&m_xmf4x4Parent).r[3])
-	//			);
-	//			// 1) clampY * Identity
-	//			XMMATRIX result = XMMatrixMultiply(clampY, XMMatrixIdentity());
-
-	//			// 2) XMMATRIX → XMFLOAT4X4
-	//			XMStoreFloat4x4(&m_xmf4x4Parent, result);
-
-	//			UpdateTransform(nullptr);
-
-	//			// 공중 모드 종료
-	//			this->pWeapon->m_bInAir = false;
-	//			this->pWeapon->m_vVelocity = XMVectorZero();
-	//		}
-	//	}
-	//	else
-	//	{
-	//		// 지상에 있을 땐 기존 Animate 로직만
-	//		// OnPrepareAnimate()… 회전 처리 등
-	//	}
-
-	//}
 
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -3427,6 +3314,20 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	}
 	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
+}
+
+void CGameObject::Launch(const XMVECTOR& target_dir)
+{
+	m_fRotationSpeed = 720.0f;
+	if (m_bInAir) return;
+	m_bInAir = true;
+	XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+	m_vVelocity = XMVectorSet(
+		XMVectorGetX(dirNorm) * m_fMoveSpeed,
+		m_fInitialUpSpeed,
+		XMVectorGetZ(dirNorm) * m_fMoveSpeed,
+		0.0f
+	);
 }
 
 std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {

@@ -179,28 +179,8 @@ struct TextureBlock
     XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
     XMFLOAT4 hoverGlowColor = { 1.0f, 0.0f, 0.0f, 1.0f };      
 
-    TextureBlock(
-        CTexture* texture,
-        const D2D1_RECT_F& rect,
-        std::shared_ptr<CTextureMesh> meshPtr,
-        UILayer layerMask = UILayer::Default,
-        const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f },
-        const XMFLOAT2& scale = { 1.0f, 1.0f })
-        : pTexture(texture), screenRect(rect), mesh(meshPtr), layer(layerMask)
-    {
-        float cx = (rect.left + rect.right) * 0.5f;
-        float cy = (rect.top + rect.bottom) * 0.5f;
-        float width = (rect.right - rect.left) * scale.x;
-        float height = (rect.bottom - rect.top) * scale.y;
-
-        float offsetX = offsetNormalized.x * FRAME_BUFFER_WIDTH;
-        float offsetY = offsetNormalized.y * FRAME_BUFFER_HEIGHT;
-
-        hitboxRect.left = cx - width * 0.5f + offsetX;
-        hitboxRect.right = cx + width * 0.5f + offsetX;
-        hitboxRect.top = cy - height * 0.5f + offsetY;
-        hitboxRect.bottom = cy + height * 0.5f + offsetY;
-    }
+    TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default, const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f }, const XMFLOAT2& scale = { 1.0f, 1.0f });
+    TextureBlock() = default;
 };
 
 class Texture_UI_Renderer
@@ -259,33 +239,9 @@ public:
         textureBlockList.emplace_back(std::move(block));
     }
 
-    void RenderAll(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime) {
-        if (textureRenderer && textureShader)
-        {
-            std::vector<TextureBlock*> rawPtrs;
-            for (auto& block : textureBlockList)
-                rawPtrs.push_back(block.get());
+    void RenderAll(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime);
 
-            cmdList->SetGraphicsRootSignature(m_TextureUI_GraphicsRootSignature.get());
-
-            textureRenderer->UpdateShaderVariables(
-                currentTime,
-                elapsedTime,
-                cmdList
-            );
-
-            textureShader->OnPrepareRender(cmdList, 0);
-            textureRenderer->Render_UI_Textures(cmdList, &rawPtrs);
-        }
-    }
-
-    std::vector<TextureBlock*> GetTextureBlockPtrs() 
-    {
-        std::vector<TextureBlock*> result;
-        for (auto& block : textureBlockList)
-            result.push_back(block.get());
-        return result;
-    }
+    std::vector<TextureBlock*> GetTextureBlockPtrs();
 
     CTextureToScreenShader* GetShader() const { return textureShader.get(); }
 };
