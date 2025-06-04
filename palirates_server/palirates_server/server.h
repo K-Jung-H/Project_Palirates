@@ -34,6 +34,7 @@ public:
 
     void Start();
     void AcceptClients();
+    void Server_Update();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
     void BroadcastPacket(const std::string& packet, int senderId);
     void SendInitialStates(int clientId);
