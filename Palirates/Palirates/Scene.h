@@ -89,8 +89,8 @@ struct alignas(16) LightCamera_Info
 
 #define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
-#define _SHADOWMAP_WIDTH 2048
-#define _SHADOWMAP_HEIGHT 2048
+#define _SHADOWMAP_WIDTH 2048 * 3
+#define _SHADOWMAP_HEIGHT 2048 * 3
 
 class Shadow_Camera : public CCamera
 {
