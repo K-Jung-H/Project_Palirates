@@ -415,7 +415,9 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_MOUSEMOVE:
 			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
             break;
-
+		case WM_MOUSEWHEEL:
+			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+			break;
         case WM_KEYDOWN:
         case WM_KEYUP:
 		case WM_CHAR:
