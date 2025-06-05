@@ -169,6 +169,39 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     BroadcastPacket(oss.str(), clientId);
                 }
             }
+            else if (packet.rfind("CHARACTER_SELECT,", 0) == 0)
+            {
+                std::istringstream iss(packet);
+                std::string token;
+                std::vector<std::string> tokens;
+
+                while (std::getline(iss, token, ','))
+                    tokens.push_back(token);
+
+                if (tokens.size() >= 2)
+                {
+                    int selectedCharId = std::stoi(tokens[1]);
+
+                    // 이미 선택된 캐릭터인지 확인
+                    if (lockedCharacterIds.contains(selectedCharId))
+                    {
+                        logger.Log("[REJECTED] Character " + std::to_string(selectedCharId) + " already selected.");
+                        return;
+                    }
+
+                    // 선택 처리
+                    characterSelections[clientId] = selectedCharId;
+                    lockedCharacterIds.insert(selectedCharId);
+
+                    logger.Log("[SELECTED] Client " + std::to_string(clientId) +
+                        " selected character " + std::to_string(selectedCharId));
+
+                    // 전체 클라이언트에게 해당 캐릭터 잠금 알림
+                    std::string lockPacket = "CHARACTER_LOCKED," + std::to_string(selectedCharId);
+                    BroadcastPacket(lockPacket, -1); // -1: 전체 클라이언트 대상
+                }
+            }
+
             else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
             {
                 logger.Log("클라이언트 " + std::to_string(clientId) + " 퇴장 처리");

@@ -597,7 +597,7 @@ bool CGameFramework::Change_Scene()
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 
-			if (c_signal.type == Stage_1)
+			if (c_signal.type == Lobby)
 			{
 				ConnectToServer(SERVER_IP, SERVER_PORT);
 			}
@@ -633,17 +633,17 @@ void CGameFramework::ProcessInput()
 		DWORD dwDirection = 0;
 
 		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;   
+			dwDirection |= DIR_FORWARD;
 		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;  
+			dwDirection |= DIR_BACKWARD;
 		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;    
+			dwDirection |= DIR_LEFT;
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;   
+			dwDirection |= DIR_RIGHT;
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;       
+			dwDirection |= DIR_UP;
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;      
+			dwDirection |= DIR_DOWN;
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
@@ -665,22 +665,29 @@ void CGameFramework::ProcessInput()
 			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
 		}
 
-		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+		if (m_pPlayer->GetID() == currentShipControllerId)
+		{
+			if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+			{
+				if (cxDelta || cyDelta)
+				{
+					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+					else
+						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				}
+				if (dwDirection)
+					m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
+			}
+		}
+		else
 		{
 			if (cxDelta || cyDelta)
 			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
-		
 	}
-	
 }
 
 void CGameFramework::Animate_Scene()
@@ -1174,6 +1181,21 @@ void CGameFramework::SendPacket()
 
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 
+	if (scene_manager->Get_Active_Scene()->Get_Change_Signal().type == Scene_Type::Board &&
+		m_pPlayer->GetID() == currentShipControllerId)
+	{
+		DWORD shipDir = SHIP_NONE;
+		if (GetAsyncKeyState('W') & 0x8000) shipDir = SHIP_FORWARD;
+		if (GetAsyncKeyState('A') & 0x8000) shipDir = SHIP_LEFT;
+		if (GetAsyncKeyState('D') & 0x8000) shipDir = SHIP_RIGHT;
+
+		if (shipDir != SHIP_NONE)
+		{
+			std::string inputPacket = "SHIP_INPUT," + std::to_string(ClientNum) + "," + std::to_string(shipDir);
+			send(serverSocket, inputPacket.c_str(), static_cast<int>(inputPacket.size()), 0);
+		}
+	}
+
 
 	if (result == SOCKET_ERROR)
 	{
@@ -1266,6 +1288,39 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 
 		return;
+	}
+
+	if (tokens[0] == "SHIP_CONTROLLER_ID" && tokens.size() >= 2)
+	{
+		currentShipControllerId = std::stoi(tokens[1]);
+		std::cout << "[DEBUG] Received SHIP_CONTROLLER_ID: " << currentShipControllerId << std::endl;
+		return;
+	}
+
+	if (tokens[0] == "SHIP_SYNC" && tokens.size() >= 7)
+	{
+		float x = std::stof(tokens[1]);
+		float y = std::stof(tokens[2]);
+		float z = std::stof(tokens[3]);
+		float lookX = std::stof(tokens[4]);
+		float lookY = std::stof(tokens[5]);
+		float lookZ = std::stof(tokens[6]);
+
+		std::cout << "[SYNC] Ship position: (" << x << ", " << y << ", " << z << "), "
+			<< "look: (" << lookX << ", " << lookY << ", " << lookZ << ")" << std::endl;
+
+		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+		if (!scene || !scene->obj_manager) return;
+
+		auto* shipList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
+		for (auto& ship : *shipList)
+		{
+			if (ship && ship->Get_Name() == "player's pirate_ship")
+			{
+				ship->SetPosition(XMFLOAT3(x, y, z));
+				ship->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+			}
+		}
 	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
@@ -1570,4 +1625,18 @@ void CGameFramework::PlayerLeave(int playerId)
 	{
 		std::cout << "[SEND] " << packet << std::endl;
 	}
+}
+
+void CGameFramework::SelectCharacter(int characterId)
+{
+	if (lockedCharacterIds.contains(characterId))
+	{
+		std::cout << "[REJECTED] Character " << characterId << " is already selected.\n";
+		return;
+	}
+
+	std::string packet = "CHARACTER_SELECT," + std::to_string(characterId);
+	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
+
+	std::cout << "[REQUEST] Sent character selection: " << characterId << "\n";
 }

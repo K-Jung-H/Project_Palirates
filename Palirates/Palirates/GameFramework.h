@@ -247,10 +247,22 @@ public:
     std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
+    int currentShipControllerId = -1;
+    std::unordered_set<int> lockedCharacterIds;
+    void SelectCharacter(int characterId);
+
 
     //=================SERVER=================
 
 #ifdef WRITE_TEXT_UI
     Text_UI_Renderer* text_ui_renderer = NULL;
 #endif 
+};
+
+enum SHIP_INPUT_TYPE
+{
+    SHIP_NONE = 0,
+    SHIP_FORWARD = 1,
+    SHIP_LEFT = 2,
+    SHIP_RIGHT = 3
 };
