@@ -2164,7 +2164,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		player->SetupWeaponCollider();
 
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
-		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
+		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 		obj_manager->Add_Object(player, Object_Type::player);
 	}

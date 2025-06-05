@@ -1333,7 +1333,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+					//if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+					if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player)) {
 						if (j == RootIndex)
 						{
 							if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
@@ -1347,7 +1348,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 						}
 					}
-					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+					else if (pRootGameObject->HasType(EObjectType::Monster)) {
 						if (j == RootIndex) {
 							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
@@ -1409,7 +1410,8 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+				//if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+				if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player)) {
 					if (j == RootIndex)
 					{
 						if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
@@ -1421,7 +1423,7 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 
 					}
 				}
-				else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+				else if (pRootGameObject->HasType(EObjectType::Monster)) {
 					if (j == RootIndex) {
 						if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
@@ -1758,22 +1760,17 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 
 std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 {
-	//Set_Active(false);
-	// 1) 복사 생성자 호출로 이 객체의 멤버(메시·머티리얼·애니메이션 컨트롤러 등)를 복사
 	auto clone = std::make_shared<CGameObject>(*this);
 
-	// 2) 부모·자식·형제 포인터는 일단 깨끗이 초기화
 	clone->m_pParent = nullptr;
 	clone->m_pChild = nullptr;
 	clone->m_pSibling = nullptr;
 
 	if (withHierarchy && this->m_pChild)
 	{
-		// 3) 첫 번째 자식부터 재귀 복제
 		clone->m_pChild = this->m_pChild->Clone(true);
 		clone->m_pChild->m_pParent = clone;
 
-		// 4) 나머지 형제들도 순차적으로 복제하여 링크
 		auto srcSibling = this->m_pChild->m_pSibling;
 		auto dstSibling = clone->m_pChild;
 		while (srcSibling)
@@ -1781,12 +1778,10 @@ std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 			dstSibling->m_pSibling = srcSibling->Clone(true);
 			dstSibling->m_pSibling->m_pParent = clone;
 
-			// 다음 형제
 			dstSibling = dstSibling->m_pSibling;
 			srcSibling = srcSibling->m_pSibling;
 		}
 	}
-	//auto weaponClone = std::dynamic_pointer_cast<CWeaponObject>(clone);
 
 	return clone;
 }
@@ -2066,7 +2061,7 @@ void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
 
-	if (Object_type == 10) {
+	if (HasType(EObjectType::DropWeapon)) {
 		if (!m_bInAir)
 		{
 			// 1) 현재 위치
@@ -3361,7 +3356,7 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	pWeapon->pWeapon.push_back(swordClone);
 	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
 	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
-	swordClone->Object_type = 10;
+	swordClone->type = EObjectType::DropWeapon;
 	swordClone->Set_Active(true);
 
 	return swordClone;
@@ -3372,10 +3367,11 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 	if (sword != nullptr)
 		sword->Set_Active(true);
 	if (!pWeapon->pWeapon.empty()) {
-		for (auto& obj : pWeapon->pWeapon) {
-			//obj->Set_Active(false);
-			//obj.reset();
-		}
+		//pWeapon->pWeapon.clear();
+		//for (auto& obj : pWeapon->pWeapon) {
+		//	//obj->Set_Active(false);
+		//	obj.reset();
+		//}
 	}
 }
 
@@ -4601,7 +4597,7 @@ void CMonsterObject::SetupWeaponCollider()
 			XMConvertToRadians(0.0f));
 	}
 
-	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
+	model->type = EObjectType::MonsterWeapon;
 
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
 	XMVECTOR scale, rotationQuat, translation;
@@ -4647,7 +4643,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_StateMachine = std::make_unique<FishManStateMachine>(this);
 
-	Object_type = OBJECT_TPYE_MONSTER;
+	type = EObjectType::Monster;
 
 	CLoadedModelInfo* pFishManModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FishmanLP.bin", NULL);
 
@@ -4707,7 +4703,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
 
-	Object_type = OBJECT_TPYE_MONSTER;
+	type = EObjectType::Monster;
 
 	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_LP.bin", NULL);
 
@@ -4761,7 +4757,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	m_StateMachine = std::make_unique<DragonStateMachine>(this);
 
-	Object_type = OBJECT_TPYE_MONSTER;
+	type = EObjectType::Monster;
 
 	CLoadedModelInfo* pDragonModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Dragon_LP.bin", NULL);
 

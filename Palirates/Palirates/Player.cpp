@@ -278,7 +278,7 @@ void CPlayer::OnPrepareAnimate()
 void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
 	DWORD nCameraMode = (pCamera) ? pCamera->GetMode() : 0x00;
-	if (nCameraMode == THIRD_PERSON_CAMERA || Object_type == OBJECT_TPYE_SELECT_PLAYER)
+	if (nCameraMode == THIRD_PERSON_CAMERA || HasType(EObjectType::SelectPlayer))
 		CGameObject::Render(pd3dCommandList, pCamera);
 }
 
@@ -298,7 +298,7 @@ void CPlayer::SetupWeaponCollider()
 
 	if (!model || !model->m_pMesh) return;
 
-	model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
+	model->type = EObjectType::PlayerWeapon;
 
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
 	XMVECTOR scale, rotationQuat, translation;
@@ -341,7 +341,7 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void *pContext, int ModelNum) : CPlayer()
 {
-	Object_type = OBJECT_TPYE_MAIN_PLAYER;
+	type = EObjectType::MainPlayer;
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	char* modelPaths[] = {
@@ -580,18 +580,11 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		/*if (Anime_test_FallingLoop)
-			m_pSkinnedAnimationController->AdvanceTime2(fTimeElapsed, this);
-		else*/
-		if (Object_type == OBJECT_TPYE_MAIN_PLAYER && !CheckMultiMode()) {
+		if (HasType(EObjectType::MainPlayer) && !CheckMultiMode()) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
-		else if (Object_type == OBJECT_TPYE_PLAYER) {
-			//m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
-			//GetStateMachine()->update(fTimeElapsed);
-		}
-		else if (Object_type == OBJECT_TPYE_SELECT_PLAYER) {
+		else if (HasType(EObjectType::SelectPlayer)) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
@@ -666,7 +659,7 @@ void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
 Observer::Observer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void* pContext)
 	: CPlayer()
 {
-	Object_type = OBJECT_TPYE_MAIN_PLAYER;
+	type = EObjectType::MainPlayer;
 	n_Animation = 0;
 
 	m_pCamera = ChangeCamera(FIRST_PERSON_CAMERA, 0.0f);
