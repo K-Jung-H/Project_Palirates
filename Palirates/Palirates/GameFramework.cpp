@@ -481,7 +481,7 @@ void CGameFramework::OnDestroy()
 
 void CGameFramework::CreateShaderVariables()
 {
-	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); 
 	FrameworkInfo = ::CreateBufferResource(m_pd3dDevice, Active_CommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	FrameworkInfo->Map(0, NULL, (void**)&MappedFrameworkInfo);
 
@@ -862,7 +862,6 @@ void CGameFramework::MoveToNextFrame()
 {
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	// Present 후, 다음 프레임을 위한 Render Fence 증가 및 signal
 	UINT64& renderFence = m_RenderFenceValues[SwapChainBuffer_Index];
 	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, ++renderFence);
 
@@ -905,7 +904,7 @@ void CGameFramework::FrameAdvance()
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-			std::cout << "[FrameAdvance] 수신 패킷 처리: " << receivedData << std::endl;
+			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
@@ -1307,7 +1306,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			{
 				m_pPlayer->SetPosition(pos);
 				m_pPlayer->SetLookDirection(look);
-				m_pPlayer->SetState(state);
 
 				if (m_pPlayer->GetStateMachine())
 					m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
@@ -1342,7 +1340,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 				remotePlayer->SetPosition(pos);
 				remotePlayer->SetLookDirection(look);
-				remotePlayer->SetState(state);
 				remotePlayer->ApplySyncData(syncData);
 			}
 		}
@@ -1532,7 +1529,7 @@ void CGameFramework::NetworkLoop()
 
 		else if (bytesReceived == SOCKET_ERROR)
 		{
-			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
+			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
 		}
 		else if (bytesReceived == 0)
 		{

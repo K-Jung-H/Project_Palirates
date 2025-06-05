@@ -138,7 +138,7 @@ public:
     Scene_Manager sceneManager;
     std::shared_ptr<Object_Manager> object_manager;
     bool bClientIdAssigned = false;
-    //=================서버=================
+    //=================SERVER=================
 
 private:
     HINSTANCE               m_hInstance;
@@ -184,7 +184,6 @@ private:
     ID3D12CommandAllocator* Post_CommandAllocator = nullptr;
     ID3D12GraphicsCommandList* Post_CommandList = nullptr;
 
-    // 사용할 커멘드 할당자, 큐로 연결하여 사용
     ID3D12CommandAllocator* Active_CommandAllocator = NULL;
     ID3D12GraphicsCommandList* Active_CommandList = NULL;
     //=======================================================
