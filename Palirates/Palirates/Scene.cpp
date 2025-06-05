@@ -2749,8 +2749,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		auto pCamera = m_pPlayer->GetCamera();
 		XMFLOAT3 currentCamPos = pCamera->GetPosition();
 		XMFLOAT3 targetPos = pirate_ship->GetPosition();
-		targetPos.y += 1000.0f;
-		targetPos.z += 500.0f;
+		targetPos.y += 1000.0f + cameraYOffset;
+		targetPos.z += 500.0f + cameraYOffset / 2.0f;
 
 		float lerpAlpha = 0.1f;
 
@@ -2939,6 +2939,36 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 	}
 	return(false);
+}
+
+bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_MOUSEWHEEL:
+	{
+		short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam); 
+
+		const float scrollSpeed = 50.0f; 
+		if (wheelDelta > 0)
+		{
+			cameraYOffset -= scrollSpeed;
+		}
+		else if (wheelDelta < 0)
+		{
+			cameraYOffset += scrollSpeed;
+		}
+
+		cameraYOffset = std::clamp(cameraYOffset, -500.0f, 500.0f);
+
+		return true; 
+	}
+
+	default:
+		break;
+	}
+
+	return false;
 }
 
 void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
