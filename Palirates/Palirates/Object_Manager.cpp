@@ -308,7 +308,7 @@ void OBBCollision_Manager::Update_OBB_Data(const std::unordered_map<std::string,
 			obb_info.object = obj;
 			obb_info.mesh = info.obj_mesh;
 			obb_info.obb = worldOBB;
-			obb_info.type = static_cast<UINT>(obj->Object_type);
+			obb_info.type = obj->type;
 
 			Add_OBB(obb_info);
 		}
@@ -339,7 +339,7 @@ void OBBCollision_Manager::Update_OBB_Data(const std::vector<shared_ptr<CGameObj
 		obb_info.object = obj_ptr;
 		obb_info.mesh = obj_ptr->m_pMesh;
 		obb_info.obb = worldOBB;
-		obb_info.type = static_cast<UINT>(obj_ptr->Object_type);
+		obb_info.type = obj_ptr->type;
 
 		Add_OBB(obb_info);
 	}
@@ -967,8 +967,8 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 		for ( std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 			if (obj_ptr->Get_Active()) {
-				if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
-				obj_ptr->Animate(fTimeElapsed);
+				if (!obj_ptr->HasType(EObjectType::MainPlayer))
+					obj_ptr->Animate(fTimeElapsed);
 			}
 	}
 	break;
@@ -1440,7 +1440,7 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 			XMStoreFloat3(&obb.Center, worldCenter);
 			XMStoreFloat4(&obb.Rotation, finalRot);
 			obb.Extents = worldExtents;
-			obb.Type = static_cast<UINT>(obj->Object_type);
+			obb.Type = static_cast<UINT>(obj->type);
 			obb.Active = obj->Get_Active() ? 1 : 0;
 
 			obbList.push_back(obb);
@@ -1485,7 +1485,7 @@ void Object_Manager::Check_Player_Collision(shared_ptr<CPlayer> player_ptr)
 	auto* player = dynamic_cast<CTerrainPlayer*>(player_ptr.get());
 	if (!player) return;
 
-	if (player_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER) return;
+	if (!player_ptr->HasType(EObjectType::MainPlayer)) return;
 
 	Check_Dynamic_OBB_Collision(player_ptr);
 	Check_Fixed_OBB_Collision(player_ptr);
@@ -1500,7 +1500,7 @@ void Object_Manager::Check_Player_Collision(shared_ptr<CPlayer> player_ptr)
 	std::shared_ptr<CGameObject> player_weapon = NULL;
 
 	for (std::shared_ptr<CGameObject> obj_ptr : obb_targets)
-		if (obj_ptr->Object_type == OBJECT_TPYE_PLAYER_WEAPON)
+		if (obj_ptr->HasType(EObjectType::PlayerWeapon))
 		{
 			player_weapon = obj_ptr;
 			break;
@@ -1527,7 +1527,7 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CGameObject>& 
 	
 	for (OBB_Info obb_info : collision_list)
 	{
-		if (obb_info.type == OBJECT_TPYE_MONSTER)
+		if (obb_info.type == EObjectType::Monster)
 		{
 			std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(obb_info.object);
 			
@@ -1557,10 +1557,10 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CPlayer>& play
 
 	for (OBB_Info obb_info : collision_list)
 	{
-		if (obb_info.type == OBJECT_TPYE_MAIN_PLAYER)
+		if (obb_info.type == EObjectType::MainPlayer)
 			return;
 
-		if (obb_info.type == OBJECT_TPYE_MONSTER_WEAPON)
+		if (obb_info.type == EObjectType::MonsterWeapon)
 			if (player_ptr->GetStateMachine()->Get_State() != State::Get_Hit_F2 && obb_info.object->bUpdateOBB)
 				player_ptr->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 	}
@@ -1573,7 +1573,7 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CPlayer>& play
 //cal fixed obb & player sliding 
 void Object_Manager::Check_Fixed_OBB_Collision(const shared_ptr<CGameObject> obj_ptr)
 {
-	if (obj_ptr->Object_type != OBJECT_TPYE_MAIN_PLAYER)
+	if (!obj_ptr->HasType(EObjectType::MainPlayer))
 		return;
 
 	auto* player = dynamic_cast<CTerrainPlayer*>(obj_ptr.get());

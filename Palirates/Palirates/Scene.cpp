@@ -1641,8 +1641,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			//m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -2165,7 +2165,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		player->SetupWeaponCollider();
 
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
-		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
+		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 		obj_manager->Add_Object(player, Object_Type::player);
 	}
@@ -2980,6 +2980,19 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->hp = 1;
 	Yesblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
+
+	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
+	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable);
+	TestSkipblock->onClick = [this]() {
+		c_signal.change = true;
+		c_signal.scene_name = "Stage_1";
+		c_signal.type = Scene_Type::Stage_1;
+
+		};
+	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	TestSkipblock->hp = 1;
+	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
 
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);

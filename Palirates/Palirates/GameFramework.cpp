@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
 #pragma once
@@ -420,53 +420,7 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			if (nMessageID == WM_KEYDOWN && wParam == VK_OEM_2) {
-				// Monster State Change EX
-				//auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-
-				//if (mon && !mon->empty())
-				//{
-				//	std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
-
-				//	CGameObject* base = baseObj.get();
-
-				//	auto* anubis = dynamic_cast<CAnubisObject*>(base);
-				//	if (anubis)
-				//	{
-				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-				//		anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				//	}
-
-				//	std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
-
-				//	CGameObject* base2 = baseObj2.get();
-
-				//	auto* dra = dynamic_cast<CDragonObject*>(base2);
-				//	if (dra)
-				//	{
-				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-				//		dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				//		dra->MoveUp(30.0f);
-				//	}
-				//}
-			}
 			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
-				//ServerAnimationSyncData data;
-				////data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-				//data.position = m_pPlayer->GetPosition();
-				//data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				//data.currentState = State::Get_Hit_F2;
-				//for (int i = 0; i < m_pPlayer->n_Animation; i++) {
-				//	data.trackPositions.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
-				//	data.Weights.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
-				//}
-
-				//GetSyncManager().AddPlayerSyncData(ClientNum, data);
-				//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			}
 			break;
@@ -622,13 +576,13 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
-		if (scene_manager->Find_Scene(c_signal.scene_name)) // 이미 생성된 씬이라면?
+		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
-		else // 새로 만들어야 하는 경우
+		else 
 		{
 			BeginGPUStage(GPU_Stage::Compute);
 			{
@@ -1139,7 +1093,7 @@ void CGameFramework::FrameAdvance()
 
 
 
-//==============서버================
+//==============================
 void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
 	if (isRunning) return;
@@ -1389,8 +1343,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				remotePlayer->SetPosition(pos);
 				remotePlayer->SetLookDirection(look);
 				remotePlayer->SetState(state);
-				if (remotePlayer->GetStateMachine())
-					remotePlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
 				remotePlayer->ApplySyncData(syncData);
 			}
 		}
@@ -1525,7 +1477,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->SetState(0);
 	remotePlayer->SetID(playerId);
 	remotePlayer->Set_Name("Remote_" + std::to_string(playerId));
-	remotePlayer->Object_type = OBJECT_TPYE_PLAYER;
+	remotePlayer->type = EObjectType::Player;
 	remotePlayer->SetRotationSpeed(1.0f);
 	remotePlayer->Set_Active(true);
 	remotePlayer->Set_Child(remotePlayer->m_pRootModel);

@@ -1333,7 +1333,8 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-					if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+					//if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+					if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player)) {
 						if (j == RootIndex)
 						{
 							if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
@@ -1347,7 +1348,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 						}
 					}
-					else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+					else if (pRootGameObject->HasType(EObjectType::Monster)) {
 						if (j == RootIndex) {
 							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
@@ -1409,7 +1410,8 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
 
-				if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+				//if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
+				if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player)) {
 					if (j == RootIndex)
 					{
 						if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
@@ -1421,7 +1423,7 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 
 					}
 				}
-				else if (pRootGameObject->Object_type == OBJECT_TPYE_MONSTER) {
+				else if (pRootGameObject->HasType(EObjectType::Monster)) {
 					if (j == RootIndex) {
 						if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
 							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
@@ -1587,6 +1589,7 @@ CGameObject::CGameObject(const std::string_view& name)
 
 	m_xmf3RotationAxis = XMFLOAT3(0.0f, 1.0f, 0.0f);
 	m_fRotationSpeed = 0.0f;
+	XMStoreFloat4x4(&WeaponMatrix, XMMatrixIdentity());
 }
 
 CGameObject::CGameObject(int nMaterials, const std::string_view& name) : CGameObject(name)
@@ -1757,22 +1760,17 @@ std::shared_ptr<CGameObject> CGameObject::Clone(bool withHierarchy)
 
 std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 {
-	//Set_Active(false);
-	// 1) 복사 생성자 호출로 이 객체의 멤버(메시·머티리얼·애니메이션 컨트롤러 등)를 복사
 	auto clone = std::make_shared<CGameObject>(*this);
 
-	// 2) 부모·자식·형제 포인터는 일단 깨끗이 초기화
 	clone->m_pParent = nullptr;
 	clone->m_pChild = nullptr;
 	clone->m_pSibling = nullptr;
 
 	if (withHierarchy && this->m_pChild)
 	{
-		// 3) 첫 번째 자식부터 재귀 복제
 		clone->m_pChild = this->m_pChild->Clone(true);
 		clone->m_pChild->m_pParent = clone;
 
-		// 4) 나머지 형제들도 순차적으로 복제하여 링크
 		auto srcSibling = this->m_pChild->m_pSibling;
 		auto dstSibling = clone->m_pChild;
 		while (srcSibling)
@@ -1780,12 +1778,10 @@ std::shared_ptr<CGameObject> CGameObject::GetWeapon(bool withHierarchy)
 			dstSibling->m_pSibling = srcSibling->Clone(true);
 			dstSibling->m_pSibling->m_pParent = clone;
 
-			// 다음 형제
 			dstSibling = dstSibling->m_pSibling;
 			srcSibling = srcSibling->m_pSibling;
 		}
 	}
-	//auto weaponClone = std::dynamic_pointer_cast<CWeaponObject>(clone);
 
 	return clone;
 }
@@ -2065,7 +2061,7 @@ void CGameObject::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
 
-	if (Object_type == 10) {
+	if (HasType(EObjectType::DropWeapon)) {
 		if (!m_bInAir)
 		{
 			// 1) 현재 위치
@@ -2090,62 +2086,6 @@ void CGameObject::Animate(float fTimeElapsed)
 			// 7) 최종 합성
 			XMMATRIX finalM = scaleM * world;
 			XMStoreFloat4x4(&m_xmf4x4Parent, finalM);
-			UpdateTransform(nullptr);
-			//const float deltaY = 3.5f;
-			//XMMATRIX lift = XMMatrixTranslation(0.0f, deltaY, 0.0f);
-
-			//// 2) 기존 행렬에 곱해서 Y만 올리기
-			//XMMATRIX mat = XMLoadFloat4x4(&m_xmf4x4Parent);
-			//mat = lift * mat;  // mat = lift 행렬을 먼저 곱하면 Y축 이동만 추가됨
-
-			//// 3) 저장 & 갱신
-			//XMStoreFloat4x4(&m_xmf4x4Parent, mat);
-			//SetLookDirection(XMFLOAT3(0, 1, 0));
-
-			//// 1) 부모 행렬 로드
-			//XMMATRIX parentMat = XMLoadFloat4x4(&m_xmf4x4Parent);
-
-			//// 2) 현재 Look 벡터 (forward)와 목표 Up 벡터
-			//XMVECTOR currentLook = XMVector3Normalize(parentMat.r[2]);
-			//XMVECTOR targetUp = XMVectorSet(0, 1, 0, 0);
-
-			//// 3) 두 벡터 사이 남은 각도 (라디안)
-			//float cosA = XMVectorGetX(XMVector3Dot(currentLook, targetUp));
-			//cosA = std::clamp(cosA, -1.0f, 1.0f);
-			//float angleTo = acosf(cosA);
-			//if (angleTo < XMConvertToRadians(0.5f))
-			//	return; // 이미 충분히 가깝다면 회전 종료
-
-			//// 4) 회전축과 deltaQ(Identity→Up 회전) 계산
-			//XMVECTOR axis = XMVector3Normalize(XMVector3Cross(currentLook, targetUp));
-			//XMVECTOR deltaQ = XMQuaternionRotationAxis(axis, angleTo);
-
-			//// 5) SLERP 인자 t
-			//float rotSpeedRad = XMConvertToRadians(m_fRotationSpeed);
-			//float t = std::clamp((rotSpeedRad * fTimeElapsed) / angleTo, 0.0f, 1.0f);
-			//deltaQ = XMQuaternionSlerp(XMQuaternionIdentity(), deltaQ, t);
-
-			//// 6) 기존 회전 쿼터니언 분리
-			//XMMATRIX rotOnly = parentMat;
-			//rotOnly.r[3] = XMVectorSet(0, 0, 0, 1);
-			//XMVECTOR currentQ = XMQuaternionRotationMatrix(rotOnly);
-
-			//// 7) newQ = deltaQ ⊗ currentQ  (순서 주의!)
-			//XMVECTOR newQ = XMQuaternionMultiply(deltaQ, currentQ);
-
-			//// 8) 새 회전 매트릭스
-			//XMMATRIX rotM = XMMatrixRotationQuaternion(newQ);
-
-			//// 9) 월드 위치 보존
-			//XMVECTOR worldPos = parentMat.r[3];
-
-			//// 10) 최종 월드 매트릭스 조립
-			////     → rotation만 rotM으로, translation은 그대로 덮어쓰기
-			//XMMATRIX worldM = rotM;
-			//worldM.r[3] = worldPos;
-
-			//// 11) 저장 및 씬 반영
-			//XMStoreFloat4x4(&m_xmf4x4Parent, worldM);
 			UpdateTransform(nullptr);
 			return;
 		}
@@ -2196,15 +2136,6 @@ void CGameObject::Animate(float fTimeElapsed)
 			m_bInAir = false;           // 착지!
 			m_vVelocity = XMVectorZero(); // 속도 초기화
 			Set_LookDirection_LookAt(XMFLOAT3(1, 0, 0));
-			//const float deltaY = 0.1f;
-			//XMMATRIX lift = XMMatrixTranslation(0.0f, deltaY, 0.0f);
-
-			// 2) 기존 행렬에 곱해서 Y만 올리기
-			//XMMATRIX mat = XMLoadFloat4x4(&m_xmf4x4Parent);
-			//mat = lift * mat;  // mat = lift 행렬을 먼저 곱하면 Y축 이동만 추가됨
-
-			// 3) 저장 & 갱신
-			//XMStoreFloat4x4(&m_xmf4x4Parent, mat);
 			UpdateTransform(nullptr);
 		}
 
@@ -2215,55 +2146,6 @@ void CGameObject::Animate(float fTimeElapsed)
 		// 5) 씬 그래프 갱신
 		UpdateTransform(nullptr);
 	}
-
-	//if (pWeapon) {
-	//	if (this->pWeapon->m_bInAir)
-	//	{
-	//		// 중력 가속도 적용 (Y축만)
-	//		XMVECTOR vGravityDelta = XMVectorSet(0.0f, -this->pWeapon->m_fGravity * fTimeElapsed, 0.0f, 0.0f);
-	//		this->pWeapon->m_vVelocity = XMVectorAdd(this->pWeapon->m_vVelocity, vGravityDelta);
-
-	//		// 이번 프레임 이동량 = 속도 × 시간
-	//		XMVECTOR vOffset = XMVectorScale(this->pWeapon->m_vVelocity, fTimeElapsed);
-
-	//		// 변환 매트릭스 만들고 누적
-	//		XMMATRIX M = XMMatrixTranslationFromVector(vOffset);
-	//		pWeapon->pWeapon[0]->m_xmf4x4Parent = Matrix4x4::Multiply(M, m_xmf4x4Parent);
-
-	//		// 씬 그래프에 반영
-	//		UpdateTransform(nullptr);
-
-	//		// (선택) 지면에 닿았는지 검사 — Y 위치가 groundHeight 이하가 되면 착지 처리
-	//		float currentY = XMVectorGetY(XMLoadFloat4x4(&m_xmf4x4Parent).r[3]);
-	//		const float groundHeight = 0.0f; // 지면 Y좌표
-	//		if (currentY <= groundHeight)
-	//		{
-	//			// 바닥에 달라붙게 하고
-	//			XMMATRIX clampY = XMMatrixTranslation(
-	//				XMVectorGetX(XMLoadFloat4x4(&m_xmf4x4Parent).r[3]),
-	//				groundHeight,
-	//				XMVectorGetZ(XMLoadFloat4x4(&m_xmf4x4Parent).r[3])
-	//			);
-	//			// 1) clampY * Identity
-	//			XMMATRIX result = XMMatrixMultiply(clampY, XMMatrixIdentity());
-
-	//			// 2) XMMATRIX → XMFLOAT4X4
-	//			XMStoreFloat4x4(&m_xmf4x4Parent, result);
-
-	//			UpdateTransform(nullptr);
-
-	//			// 공중 모드 종료
-	//			this->pWeapon->m_bInAir = false;
-	//			this->pWeapon->m_vVelocity = XMVectorZero();
-	//		}
-	//	}
-	//	else
-	//	{
-	//		// 지상에 있을 땐 기존 Animate 로직만
-	//		// OnPrepareAnimate()… 회전 처리 등
-	//	}
-
-	//}
 
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
@@ -3429,6 +3311,20 @@ void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
 	SetPosition(syncData.position);
 }
 
+void CGameObject::Launch(const XMVECTOR& target_dir)
+{
+	m_fRotationSpeed = 720.0f;
+	if (m_bInAir) return;
+	m_bInAir = true;
+	XMVECTOR dirNorm = XMVector3Normalize(target_dir);
+	m_vVelocity = XMVectorSet(
+		XMVectorGetX(dirNorm) * m_fMoveSpeed,
+		m_fInitialUpSpeed,
+		XMVectorGetZ(dirNorm) * m_fMoveSpeed,
+		0.0f
+	);
+}
+
 std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	std::shared_ptr<CGameObject> root = Get_Root_Object();
 	root->UpdateTransform(nullptr);
@@ -3460,7 +3356,7 @@ std::shared_ptr<CGameObject> CGameObject::DropWeapon(const char* targetName) {
 	pWeapon->pWeapon.push_back(swordClone);
 	swordClone->Launch(XMVectorNegate(XMLoadFloat3(&GetLook())));
 	swordClone->target_dir = XMVectorNegate(XMLoadFloat3(&GetLook()));;
-	swordClone->Object_type = 10;
+	swordClone->type = EObjectType::DropWeapon;
 	swordClone->Set_Active(true);
 
 	return swordClone;
@@ -3471,10 +3367,11 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 	if (sword != nullptr)
 		sword->Set_Active(true);
 	if (!pWeapon->pWeapon.empty()) {
-		for (auto& obj : pWeapon->pWeapon) {
-			//obj->Set_Active(false);
-			//obj.reset();
-		}
+		//pWeapon->pWeapon.clear();
+		//for (auto& obj : pWeapon->pWeapon) {
+		//	//obj->Set_Active(false);
+		//	obj.reset();
+		//}
 	}
 }
 
@@ -4700,7 +4597,7 @@ void CMonsterObject::SetupWeaponCollider()
 			XMConvertToRadians(0.0f));
 	}
 
-	model->Object_type = OBJECT_TPYE_MONSTER_WEAPON;
+	model->type = EObjectType::MonsterWeapon;
 
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
 	XMVECTOR scale, rotationQuat, translation;
@@ -4746,7 +4643,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_StateMachine = std::make_unique<FishManStateMachine>(this);
 
-	Object_type = OBJECT_TPYE_MONSTER;
+	type = EObjectType::Monster;
 
 	CLoadedModelInfo* pFishManModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FishmanLP.bin", NULL);
 
@@ -4806,7 +4703,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
 
-	Object_type = OBJECT_TPYE_MONSTER;
+	type = EObjectType::Monster;
 
 	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_LP.bin", NULL);
 
@@ -4860,7 +4757,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 
 	m_StateMachine = std::make_unique<DragonStateMachine>(this);
 
-	Object_type = OBJECT_TPYE_MONSTER;
+	type = EObjectType::Monster;
 
 	CLoadedModelInfo* pDragonModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Dragon_LP.bin", NULL);
 
