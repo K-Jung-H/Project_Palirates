@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "SceneManager.h"
 
 void Scene_Manager::addScene(int clientId)

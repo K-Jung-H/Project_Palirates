@@ -1,7 +1,7 @@
 #pragma once
-#include <iostream>
 #include "Player.h"
 
+// 사용 안할 예정
 class GameCharacter
 {
 public:

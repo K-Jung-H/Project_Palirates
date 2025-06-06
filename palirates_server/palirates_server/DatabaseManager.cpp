@@ -1,3 +1,4 @@
+#include "stdafx.h"
 /*#include "DatabaseManager.h"
 
 DatabaseManager::DatabaseManager()

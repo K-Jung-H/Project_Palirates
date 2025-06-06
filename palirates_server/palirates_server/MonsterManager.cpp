@@ -1,7 +1,6 @@
 #pragma once
+#include "stdafx.h"
 #include "Monster.h"
-#include <unordered_map>
-#include <vector>
 #include "MonsterManager.h"
 
 

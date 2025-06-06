@@ -1,4 +1,5 @@
-﻿#include "server.h"
+﻿#include "stdafx.h"
+#include "server.h"
 
 Server::Server(int port)
 {
@@ -155,9 +156,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         scene = sceneManager.getScene(clientId);
                     }
 
-                    if (!scene->getPlayer(clientId)) {
-                        scene->addPlayer(clientId);
-                    }
+                    //if (!scene->getPlayer(clientId)) {
+                    //    scene->addPlayer(clientId);
+                    //}
 
                     scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
                     scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
@@ -189,7 +190,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     int selectedCharId = std::stoi(tokens[1]);
 
                     // 이미 선택된 캐릭터인지 확인
-                    if (lockedCharacterIds.contains(selectedCharId))
+                    if (lockedCharacterIds.find(selectedCharId) != lockedCharacterIds.end())
                     {
                         logger.Log("[REJECTED] Character " + std::to_string(selectedCharId) + " already selected.");
                         return;

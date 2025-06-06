@@ -1,6 +1,5 @@
 #pragma once
-#include <unordered_map>
-#include <iostream>
+#include "stdafx.h"
 #include "GameCharacter.h"
 #include "Player.h"
 #include "Monster.h"
@@ -18,13 +17,16 @@ class Scene
 {
 private:
     std::unordered_map<int, GameCharacter> players;
-    SceneState state;
+    SceneState sceen_state;
 
 public:
 
-    Scene() : state(In_Stage) {}
-    SceneState getState() const { return state; }
-    void setState(SceneState newState) { state = newState; }
+    Scene() : sceen_state(In_Stage) {}
+    SceneState getState() const { return sceen_state; }
+    void setState(SceneState newState) { sceen_state = newState; }
+
+    void Update_Player(int clientId, uint32_t keyState, XMFLOAT3 lookVector);
+    Player* Add_Player(int clientId);
 
     void updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
 

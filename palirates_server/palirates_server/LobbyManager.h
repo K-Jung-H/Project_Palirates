@@ -3,7 +3,6 @@
 #include <vector>
 #include <mutex>
 #include <memory>
-#include <iostream>
 
 enum GameState
 {

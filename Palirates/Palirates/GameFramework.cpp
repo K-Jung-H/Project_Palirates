@@ -576,7 +576,6 @@ void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 
 bool CGameFramework::Change_Scene()
 {
-	//scene_manager->Check_Scene_Change_Signal()
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
@@ -612,9 +611,6 @@ bool CGameFramework::Change_Scene()
 
 void CGameFramework::Release_Scenes()
 {
-	//if (m_pPlayer) 
-	//	delete m_pPlayer;
-
 	delete scene_manager;
 	
 	ReleaseShaderVariables();
@@ -646,6 +642,48 @@ void CGameFramework::ProcessInput()
 			dwDirection |= DIR_UP;
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
 			dwDirection |= DIR_DOWN;
+
+		{
+			current_keyboard_inputFlags = INPUT_NONE;
+
+			if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0)) // W
+			{
+				current_keyboard_inputFlags |= INPUT_W;
+				dwDirection |= DIR_FORWARD;
+			}
+			if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0)) // S
+			{
+				current_keyboard_inputFlags |= INPUT_S;
+				dwDirection |= DIR_BACKWARD;
+			}
+			if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0)) // A
+			{
+				current_keyboard_inputFlags |= INPUT_A;
+				dwDirection |= DIR_LEFT;
+			}
+			if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0)) // D
+			{
+				current_keyboard_inputFlags |= INPUT_D;
+				dwDirection |= DIR_RIGHT;
+			}
+			if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0)) // Q
+			{
+				current_keyboard_inputFlags |= INPUT_Q;
+			}
+			if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0)) // E
+			{
+				current_keyboard_inputFlags |= INPUT_E;
+			}
+			if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
+			{
+				current_keyboard_inputFlags |= INPUT_SHIFT;
+			}
+			if (pKeysBuffer[VK_RETURN] & 0xF0) // Enter
+			{
+				current_keyboard_inputFlags |= INPUT_ENTER;
+			}
+		}
+
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
@@ -697,18 +735,6 @@ void CGameFramework::Animate_Scene()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
-
-	// Server logic EX
-	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
-	//data.position.x += 10.0f;
-
-	//GetSyncManager().AddPlayerSyncData(ClientNum, data);
-	////m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
-
-	//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
-
-	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 
 	//===============================================================
 
@@ -1161,8 +1187,13 @@ void CGameFramework::SendPacket()
 
 	std::ostringstream oss;
 
+	//oss << "PLAYER_UPDATE," << ClientNum
+	//	<< "," << pos.x << "," << pos.y << "," << pos.z
+	//	<< "," << look.x << "," << look.y << "," << look.z
+	//	<< "," << state;
+
 	oss << "PLAYER_UPDATE," << ClientNum
-		<< "," << pos.x << "," << pos.y << "," << pos.z
+		<< "," << current_keyboard_inputFlags
 		<< "," << look.x << "," << look.y << "," << look.z
 		<< "," << state;
 
