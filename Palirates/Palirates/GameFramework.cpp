@@ -71,6 +71,8 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
+	ConnectToServer(SERVER_IP, SERVER_PORT);
+
 	Build_Default_Elements();
 	Build_Default_Scenes();
 	return(true);
@@ -1181,18 +1183,33 @@ void CGameFramework::SendPacket()
 
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 
+	Change_Signal signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
+
 	if (scene_manager->Get_Active_Scene()->Get_Change_Signal().type == Scene_Type::Board &&
 		m_pPlayer->GetID() == currentShipControllerId)
 	{
-		DWORD shipDir = SHIP_NONE;
-		if (GetAsyncKeyState('W') & 0x8000) shipDir = SHIP_FORWARD;
-		if (GetAsyncKeyState('A') & 0x8000) shipDir = SHIP_LEFT;
-		if (GetAsyncKeyState('D') & 0x8000) shipDir = SHIP_RIGHT;
-
-		if (shipDir != SHIP_NONE)
+		auto* scene = scene_manager->Get_Active_Scene_Ptr();
+		if (scene && scene->obj_manager)
 		{
-			std::string inputPacket = "SHIP_INPUT," + std::to_string(ClientNum) + "," + std::to_string(shipDir);
-			send(serverSocket, inputPacket.c_str(), static_cast<int>(inputPacket.size()), 0);
+			auto* shipList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
+			for (auto& ship : *shipList)
+			{
+				if (ship && ship->Get_Name() == "player's pirate_ship")
+				{
+					XMFLOAT3 pos = ship->GetPosition();
+					XMFLOAT3 look = ship->GetLook();
+
+					std::ostringstream oss;
+					oss << "SHIP_SYNC,"
+						<< pos.x << "," << pos.y << "," << pos.z << ","
+						<< look.x << "," << look.y << "," << look.z;
+
+					std::string packet = oss.str() + "\n";
+					send(serverSocket, packet.c_str(), static_cast<int>(packet.size()), 0);
+
+					std::cout << "[SEND] " << packet;
+				}
+			}
 		}
 	}
 
@@ -1321,6 +1338,42 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				ship->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
 			}
 		}
+		//======================================================================================
+		//
+		//      // Parse additional key-value fields, speed=3.5, boost=true, etc....
+		//      std::unordered_map<std::string, std::string> extraFields; -> Declare the fields you want to write additionally.
+		//      for (size_t i = 7; i < tokens.size(); ++i) -> Declare the size next to the existing token size
+		//      {
+		//          size_t eqPos = tokens[i].find('=');
+		//          if (eqPos != std::string::npos && eqPos > 0 && eqPos + 1 < tokens[i].length())
+		//          {
+		//              std::string key = tokens[i].substr(0, eqPos);
+		//              std::string value = tokens[i].substr(eqPos + 1);
+		//              extraFields[key] = value; 
+		//          } -> Add additional information with key and value
+		//      }
+		//
+		//      // Example: if a 'speed' parameter is included, parse and apply it
+		//      float parsedSpeed = 0.0f;
+		//      if (extraFields.find("speed") != extraFields.end())
+		//		{
+		//			parsedSpeed = std::stof(extraFields["speed"]);
+		//			std::cout << "[SHIP_SYNC] Detected speed field: " << parsedSpeed << std::endl;
+		//		}
+		//
+		//      // Update the ship object with position and look direction
+		//      auto ship = scene->obj_manager->Find_Object_By_Name("player's pirate_ship");
+		//      if (ship)
+		//      {
+		//          ship->SetPosition(XMFLOAT3(x, y, z));
+		//          ship->SetLook(XMFLOAT3(lookX, lookY, lookZ));
+		//
+		//          // Apply extended fields if needed
+		//          if (parsedSpeed > 0.0f)
+		//              ship->SetSpeed(parsedSpeed); // Example: apply custom ship speed
+		//      }
+		//  }
+		//==========================================================================================
 	}
 
 	if (tokens[0] == "PLAYER_UPDATE")
@@ -1639,4 +1692,21 @@ void CGameFramework::SelectCharacter(int characterId)
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 
 	std::cout << "[REQUEST] Sent character selection: " << characterId << "\n";
+}
+
+std::unordered_map<std::string, std::string> CGameFramework::ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex)
+{
+	std::unordered_map<std::string, std::string> result;
+	for (size_t i = startIndex; i < tokens.size(); ++i)
+	{
+		const std::string& field = tokens[i];
+		size_t eqPos = field.find('=');
+		if (eqPos != std::string::npos && eqPos > 0 && eqPos + 1 < field.length())
+		{
+			std::string key = field.substr(0, eqPos);
+			std::string value = field.substr(eqPos + 1);
+			result[key] = value;
+		}
+	}
+	return result;
 }

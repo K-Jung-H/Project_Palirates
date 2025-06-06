@@ -250,7 +250,7 @@ public:
     int currentShipControllerId = -1;
     std::unordered_set<int> lockedCharacterIds;
     void SelectCharacter(int characterId);
-
+    std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
 
     //=================SERVER=================
 

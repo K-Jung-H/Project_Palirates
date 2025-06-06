@@ -38,6 +38,12 @@ void Server::AcceptClients()
         if (scene)
         {
             scene->addPlayer(clientId);
+
+            int controllerId = GetControllerId(scene);
+            controllerIdByScene[clientId] = controllerId;
+
+            std::string packet = "SHIP_CONTROLLER_ID," + std::to_string(controllerId);
+            BroadcastPacket(packet, -1);
         }
 
         char sendBuffer[256];
@@ -201,7 +207,44 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     BroadcastPacket(lockPacket, -1); // -1: 전체 클라이언트 대상
                 }
             }
+            else if (packet.rfind("SHIP_SYNC,", 0) == 0)
+            {
+                std::istringstream iss(packet);
+                std::string token;
+                std::vector<std::string> tokens;
 
+                while (std::getline(iss, token, ','))
+                    tokens.push_back(token);
+
+                if (tokens.size() >= 7)
+                {
+                    shipX = std::stof(tokens[1]);
+                    shipY = std::stof(tokens[2]);
+                    shipZ = std::stof(tokens[3]);
+                    shipLookX = std::stof(tokens[4]);
+                    shipLookY = std::stof(tokens[5]);
+                    shipLookZ = std::stof(tokens[6]);
+
+                    std::unordered_map<std::string, std::string> extraFields = ParseKeyValueFields(tokens, 7);
+
+                    for (const auto& [key, value] : extraFields)
+                    {
+                        logger.Log("Extra Field: " + key + " = " + value);
+                    }
+
+                    std::ostringstream oss;
+                    oss << "SHIP_SYNC," << shipX << "," << shipY << "," << shipZ
+                        << "," << shipLookX << "," << shipLookY << "," << shipLookZ;
+
+                    for (const auto& [key, value] : extraFields)
+                    {
+                        oss << "," << key << "=" << value;
+                    }
+
+                    oss << "\n";
+                    BroadcastPacket(oss.str(), clientId);
+                }
+            }
             else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
             {
                 logger.Log("클라이언트 " + std::to_string(clientId) + " 퇴장 처리");
@@ -413,6 +456,58 @@ void Server::Start()
    // }
     BroadcastAllStates();
 
+}
+
+int Server::GetControllerId(Scene* scene)
+{
+    const auto& players = scene->getPlayers();
+    if (players.empty()) return -1;
+
+    int minId = INT_MAX;
+    for (const auto& [id, player] : players)
+    {
+        if (id < minId)
+            minId = id;
+    }
+
+    return minId;
+}
+
+
+//================================================================================
+// 패킷 문자열 토큰 중 "key=value" 형태의 임의 필드를 파싱하는 유틸 함수
+// tokens     ','로 나눈 전체 패킷 문자열 리스트
+// startIndex key=value 필드를 읽기 시작할 시작 인덱스
+// unordered_map<string, string> 형태로 파싱된 확장 필드(key-value 쌍)
+//
+// @details
+// 패킷 내에서 기본 위치, 방향 등의 필드 외에 확장 가능한 데이터를 유연하게 전달하기 위해
+// 사용되는 함수. 예를 들어 다음과 같은 패킷:
+//
+//   SHIP_SYNC,10,20,30,0,1,0,speed=3.5,boost=true
+//
+// 이 있을 경우, 앞의 7개 필드는 고정 필드로 처리하고
+// 이후의 "speed=3.5", "boost=true" 같은 확장 필드를 모두 파싱해
+// unordered_map 으로 반환한다.
+//================================================================================
+
+std::unordered_map<std::string, std::string> Server::ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex)
+{
+    std::unordered_map<std::string, std::string> result;
+
+    for (size_t i = startIndex; i < tokens.size(); ++i)
+    {
+        const std::string& field = tokens[i];
+        size_t eqPos = field.find('=');
+        if (eqPos != std::string::npos && eqPos > 0 && eqPos + 1 < field.length())
+        {
+            std::string key = field.substr(0, eqPos);
+            std::string value = field.substr(eqPos + 1);
+            result[key] = value;
+        }
+    }
+
+    return result;
 }
 
 int main()
