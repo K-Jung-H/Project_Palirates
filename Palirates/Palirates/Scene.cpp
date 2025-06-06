@@ -2945,6 +2945,35 @@ bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 {
 	switch (nMessageID)
 	{
+	case WM_LBUTTONDOWN:
+	{
+
+		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+		if (blocks.empty()) return false;
+
+		int mouseX = LOWORD(lParam);
+		int mouseY = HIWORD(lParam);
+		float fMouseX = static_cast<float>(mouseX);
+		float fMouseY = static_cast<float>(mouseY);
+
+
+		uint32_t mask = static_cast<uint32_t>(UILayer::Interactable);
+
+		for (auto& block : blocks)
+		{
+			if (block && block->bActive) {
+				if ((static_cast<uint32_t>(block->layer) & mask) != 0) {
+					if (IsPointInRect(block->hitboxRect, fMouseX, fMouseY))
+					{
+						if (block->onClick) block->onClick();
+						return true;
+					}
+				}
+			}
+		}
+
+	}	break;
+
 	case WM_MOUSEWHEEL:
 	{
 		short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam); 
