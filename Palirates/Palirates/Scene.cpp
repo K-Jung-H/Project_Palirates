@@ -1641,8 +1641,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'Z':
 		{
-			//m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -2165,7 +2165,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		player->SetupWeaponCollider();
 
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
-		player->Object_type = OBJECT_TPYE_SELECT_PLAYER;
+		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
 		obj_manager->Add_Object(player, Object_Type::player);
 	}
@@ -2749,8 +2749,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		auto pCamera = m_pPlayer->GetCamera();
 		XMFLOAT3 currentCamPos = pCamera->GetPosition();
 		XMFLOAT3 targetPos = pirate_ship->GetPosition();
-		targetPos.y += 1000.0f;
-		targetPos.z += 500.0f;
+		targetPos.y += 1000.0f + cameraYOffset;
+		targetPos.z += 500.0f + cameraYOffset / 2.0f;
 
 		float lerpAlpha = 0.1f;
 
@@ -2941,6 +2941,36 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 	return(false);
 }
 
+bool Board_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	switch (nMessageID)
+	{
+	case WM_MOUSEWHEEL:
+	{
+		short wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam); 
+
+		const float scrollSpeed = 50.0f; 
+		if (wheelDelta > 0)
+		{
+			cameraYOffset -= scrollSpeed;
+		}
+		else if (wheelDelta < 0)
+		{
+			cameraYOffset += scrollSpeed;
+		}
+
+		cameraYOffset = std::clamp(cameraYOffset, -500.0f, 500.0f);
+
+		return true; 
+	}
+
+	default:
+		break;
+	}
+
+	return false;
+}
+
 void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature)
 {
 	texture_ui_manager = new Texture_UI_Manager();
@@ -2980,6 +3010,19 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->hp = 1;
 	Yesblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
+
+	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
+	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable);
+	TestSkipblock->onClick = [this]() {
+		c_signal.change = true;
+		c_signal.scene_name = "Stage_1";
+		c_signal.type = Scene_Type::Stage_1;
+
+		};
+	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	TestSkipblock->hp = 1;
+	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
 
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);

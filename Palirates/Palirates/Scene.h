@@ -23,7 +23,7 @@ class Particle_Manager;
 class ParticleObject;
 class Particle_Shape_Mesh;
 class Texture_UI_Manager;
-class TextureBlock;
+struct TextureBlock;
 
 struct LIGHT
 {
@@ -305,6 +305,7 @@ private:
 
 	string camera_position = "";
 	bool focus_button = false;
+	float cameraYOffset{ 0.0f };
 
 private:
 	virtual void BuildDefaultLightsAndMaterials();
@@ -321,9 +322,10 @@ private:
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
-
+	void SetcameraYOffset(float offset) { cameraYOffset = offset; }
 };
 
 class Test_Scene : public CScene

@@ -122,7 +122,7 @@ struct OBB_Info
 	std::shared_ptr<CGameObject> object;
 	std::shared_ptr<CMesh> mesh;
 	BoundingOrientedBox obb;
-	UINT type = 0;
+	EObjectType type = EObjectType::None;
 };
 
 class OBBCollision_Manager

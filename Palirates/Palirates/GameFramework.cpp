@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // File: CGameFramework.cpp
 //-----------------------------------------------------------------------------
 #pragma once
@@ -415,58 +415,14 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
         case WM_MOUSEMOVE:
 			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
             break;
-
+		case WM_MOUSEWHEEL:
+			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+			break;
         case WM_KEYDOWN:
         case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
-			if (nMessageID == WM_KEYDOWN && wParam == VK_OEM_2) {
-				// Monster State Change EX
-				//auto* mon = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-
-				//if (mon && !mon->empty())
-				//{
-				//	std::shared_ptr<CGameObject> baseObj = (*mon)[0]; 
-
-				//	CGameObject* base = baseObj.get();
-
-				//	auto* anubis = dynamic_cast<CAnubisObject*>(base);
-				//	if (anubis)
-				//	{
-				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-				//		anubis->GetStateMachine()->changeState(State::Attack1, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				//	}
-
-				//	std::shared_ptr<CGameObject> baseObj2 = (*mon)[1];
-
-				//	CGameObject* base2 = baseObj2.get();
-
-				//	auto* dra = dynamic_cast<CDragonObject*>(base2);
-				//	if (dra)
-				//	{
-				//		//anubis->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
-				//		dra->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack2, Key_Value::None);
-				//		//anubis->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-				//		dra->MoveUp(30.0f);
-				//	}
-				//}
-			}
 			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
-				//ServerAnimationSyncData data;
-				////data.position = XMFLOAT3(0.0f, 0.0f, 0.0f);
-				//data.position = m_pPlayer->GetPosition();
-				//data.lookVector = XMFLOAT3(0.0f, 0.0f, 1.0f);
-				//data.currentState = State::Get_Hit_F2;
-				//for (int i = 0; i < m_pPlayer->n_Animation; i++) {
-				//	data.trackPositions.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
-				//	data.Weights.push_back(m_pPlayer->GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
-				//}
-
-				//GetSyncManager().AddPlayerSyncData(ClientNum, data);
-				//m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			}
 			break;
@@ -527,7 +483,7 @@ void CGameFramework::OnDestroy()
 
 void CGameFramework::CreateShaderVariables()
 {
-	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(CB_FRAMEWORK_INFO) + 255) & ~255); 
 	FrameworkInfo = ::CreateBufferResource(m_pd3dDevice, Active_CommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 	FrameworkInfo->Map(0, NULL, (void**)&MappedFrameworkInfo);
 
@@ -622,13 +578,13 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
-		if (scene_manager->Find_Scene(c_signal.scene_name)) // 이미 생성된 씬이라면?
+		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
-		else // 새로 만들어야 하는 경우
+		else 
 		{
 			BeginGPUStage(GPU_Stage::Compute);
 			{
@@ -908,7 +864,6 @@ void CGameFramework::MoveToNextFrame()
 {
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
-	// Present 후, 다음 프레임을 위한 Render Fence 증가 및 signal
 	UINT64& renderFence = m_RenderFenceValues[SwapChainBuffer_Index];
 	HRESULT hResult = p_CommandQueue->Signal(m_pd3dFence, ++renderFence);
 
@@ -951,7 +906,7 @@ void CGameFramework::FrameAdvance()
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-			std::cout << "[FrameAdvance] 수신 패킷 처리: " << receivedData << std::endl;
+			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
@@ -1139,7 +1094,7 @@ void CGameFramework::FrameAdvance()
 
 
 
-//==============서버================
+//==============================
 void CGameFramework::ConnectToServer(const std::string& ip, int port)
 {
 	if (isRunning) return;
@@ -1353,7 +1308,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			{
 				m_pPlayer->SetPosition(pos);
 				m_pPlayer->SetLookDirection(look);
-				m_pPlayer->SetState(state);
 
 				if (m_pPlayer->GetStateMachine())
 					m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
@@ -1388,9 +1342,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 				remotePlayer->SetPosition(pos);
 				remotePlayer->SetLookDirection(look);
-				remotePlayer->SetState(state);
-				if (remotePlayer->GetStateMachine())
-					remotePlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
 				remotePlayer->ApplySyncData(syncData);
 			}
 		}
@@ -1525,7 +1476,7 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->SetState(0);
 	remotePlayer->SetID(playerId);
 	remotePlayer->Set_Name("Remote_" + std::to_string(playerId));
-	remotePlayer->Object_type = OBJECT_TPYE_PLAYER;
+	remotePlayer->type = EObjectType::Player;
 	remotePlayer->SetRotationSpeed(1.0f);
 	remotePlayer->Set_Active(true);
 	remotePlayer->Set_Child(remotePlayer->m_pRootModel);
@@ -1580,7 +1531,7 @@ void CGameFramework::NetworkLoop()
 
 		else if (bytesReceived == SOCKET_ERROR)
 		{
-			std::cerr << "[ERROR] recv() 실패: " << WSAGetLastError() << std::endl;
+			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
 		}
 		else if (bytesReceived == 0)
 		{
