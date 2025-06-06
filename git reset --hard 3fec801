@@ -1,0 +1,222 @@
+[33mf60d553[m[33m ([m[1;36mHEAD -> [m[1;32mClient_gijun_note2[m[33m)[m HEAD@{0}: reset: moving to HEAD@{4}
+[33m81859a5[m[33m ([m[1;31morigin/Client_gijun_note2[m[33m)[m HEAD@{1}: commit: t
+[33m445c32e[m HEAD@{2}: merge main: Fast-forward
+[33m4fc349c[m HEAD@{3}: merge main: Fast-forward
+[33m3fec801[m HEAD@{4}: reset: moving to 3fec801fb9280a0c0747b2fdfe577ec3b1b9a155
+[33mf60d553[m[33m ([m[1;36mHEAD -> [m[1;32mClient_gijun_note2[m[33m)[m HEAD@{5}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33m3fec801[m HEAD@{6}: commit: 6 캐릭터 mug
+[33m60f97d8[m HEAD@{7}: commit: HP 바 mug, 간단한 체력에 따라 체력바 줄어드는 로직
+[33mab84e15[m HEAD@{8}: commit: Set_UI_Layer_Active()
+[33ma9bc3d5[m HEAD@{9}: commit: 보드 씬 예 아니요 UI
+[33ma9fdf15[m HEAD@{10}: commit: UI 스크린 RECT, HIt RECT 분리. Hit RECT offset, scale 조절 가능
+[33m455f1fd[m HEAD@{11}: merge main: Merge made by the 'ort' strategy.
+[33m600b36d[m HEAD@{12}: commit: 모든 씬 빌드 텍스처 UI 추가
+[33ma41f687[m HEAD@{13}: commit: UI 레이어 기능
+[33md40e2ce[m HEAD@{14}: commit: Start
+[33m26c3eb2[m HEAD@{15}: commit: UI 셰이더, UI 매니저용 타이머
+[33me6e6944[m HEAD@{16}: commit: UI 테두리 -> 그냥 glow로 변경
+[33maf2e048[m HEAD@{17}: commit: UI 클릭으로 씬 전환
+[33m0246769[m HEAD@{18}: merge main: Fast-forward
+[33m0365b22[m HEAD@{19}: commit: border 때깔나게
+[33me91ac61[m HEAD@{20}: commit: UI에 마우스 올라가면 테두리 그려지기
+[33m5808986[m HEAD@{21}: commit: 마우스로 UI 클릭
+[33m69efe55[m HEAD@{22}: commit: UI 구조 완성
+[33m48b8b7e[m HEAD@{23}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mbe17a0d[m HEAD@{24}: reset: moving to HEAD
+[33mbe17a0d[m HEAD@{25}: commit: UI 진행중
+[33m37f9e92[m HEAD@{26}: merge main: Merge made by the 'ort' strategy.
+[33m3892273[m HEAD@{27}: commit: 피격시 블렌딩 캔슬
+[33m183d86c[m HEAD@{28}: commit: 코드 정리
+[33m26d9acd[m HEAD@{29}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33m7f3f9f1[m HEAD@{30}: commit: .
+[33mad7c906[m HEAD@{31}: commit: Set
+[33m76590fb[m HEAD@{32}: commit (merge): Merge branch 'Client_gijun_note2' of https://github.com/K-Jung-H/Project_Palirates into Client_gijun_note2
+[33mec76f29[m HEAD@{33}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33m86ff6fe[m HEAD@{34}: commit: server set
+[33ma254ca9[m HEAD@{35}: commit: DEMO set
+[33m617b208[m HEAD@{36}: merge main: Merge made by the 'ort' strategy.
+[33m352a31b[m HEAD@{37}: pull --ff --recurse-submodules --progress origin: Merge made by the 'ort' strategy.
+[33m0495fbf[m HEAD@{38}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33m35bb015[m HEAD@{39}: commit: Set
+[33mddd24ce[m HEAD@{40}: merge main: Merge made by the 'ort' strategy.
+[33mdab42fc[m HEAD@{41}: reset: moving to HEAD
+[33mdab42fc[m HEAD@{42}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33me93ac99[m HEAD@{43}: merge main: Merge made by the 'ort' strategy.
+[33mfc4b649[m HEAD@{44}: commit: set
+[33mc2ea0de[m HEAD@{45}: commit: DEMO Dragon pos set
+[33m9d22a14[m HEAD@{46}: merge main: Merge made by the 'ort' strategy.
+[33mcaf920a[m HEAD@{47}: commit: for_demo_dragonfire->Set_Active(false);
+[33m7fda0c6[m HEAD@{48}: commit: E button Dragon breath DEMO version
+[33m5da8bdb[m HEAD@{49}: merge main: Merge made by the 'ort' strategy.
+[33m9f932a1[m HEAD@{50}: commit: set
+[33m9adf72a[m HEAD@{51}: pull --ff --recurse-submodules --progress origin: Merge made by the 'ort' strategy.
+[33m9000f8c[m HEAD@{52}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33m437d60d[m HEAD@{53}: commit: sand storm 롤백
+[33m7cdd099[m HEAD@{54}: merge main: Merge made by the 'ort' strategy.
+[33md79eeac[m HEAD@{55}: commit: Set
+[33me5bbcac[m HEAD@{56}: commit (merge): Merge branch 'Client_gijun_note2' of https://github.com/K-Jung-H/Project_Palirates into Client_gijun_note2
+[33m9fefb31[m HEAD@{57}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33m6f7d3bc[m HEAD@{58}: commit: 샌드 스톰 로직 변경 중
+[33m0ce114f[m HEAD@{59}: commit: 부모 포인터 변수 스마트 포인터로 변경하기 위한 구조 조정
+[33mf11d422[m HEAD@{60}: commit: Hit State SetOutlineColor
+[33m977f651[m HEAD@{61}: merge main: Merge made by the 'ort' strategy.
+[33md7ca191[m HEAD@{62}: commit: 아누비스 Body OBB
+[33m118abe7[m HEAD@{63}: commit: P 키로 OBB 렌더링 On/Off
+[33m9024745[m HEAD@{64}: merge main: Merge made by the 'ort' strategy.
+[33m5f45e5e[m HEAD@{65}: commit: Anubis, Dragon bUpdateOBB On/Off
+[33m702b47d[m HEAD@{66}: commit: Q 로 아누비스 모래 테스트
+[33m8eeb4ff[m HEAD@{67}: commit: 몬스터 타겟 셋 로직 수정
+[33m8a41e5a[m HEAD@{68}: merge main: Merge made by the 'ort' strategy.
+[33m0f3d7b5[m HEAD@{69}: commit: 설한이형 코드 추가 GetID 등
+[33mb687905[m HEAD@{70}: commit (merge): Merge branch 'Client_gijun_note2' of https://github.com/K-Jung-H/Project_Palirates into Client_gijun_note2
+[33ma608a93[m HEAD@{71}: commit (merge): Merge branch 'main' into Client_gijun_note2
+[33mab854da[m HEAD@{72}: commit: 충돌처리 버그 일단 수정. 근본적으로 고친건 아님
+[33m0e0dbea[m HEAD@{73}: pull --ff --recurse-submodules --progress origin: Merge made by the 'ort' strategy.
+[33m965f44c[m HEAD@{74}: commit: 모델 파일 정리, 캐릭터 선택 씬, fixed 타입 clear 주석
+[33mf45dc73[m HEAD@{75}: checkout: moving from Client_KJH to Client_gijun_note2
+[33m741d791[m HEAD@{76}: checkout: moving from Client_gijun_note2 to Client_KJH
+[33mf45dc73[m HEAD@{77}: checkout: moving from Client_KJH to Client_gijun_note2
+[33m741d791[m HEAD@{78}: checkout: moving from Client_gijun_note2 to Client_KJH
+[33mf45dc73[m HEAD@{79}: commit: 주석 해제
+[33mf496917[m HEAD@{80}: merge main: Fast-forward
+[33mc4d80cf[m HEAD@{81}: checkout: moving from main to Client_gijun_note2
+[33mf496917[m HEAD@{82}: checkout: moving from Client_gijun_note2 to main
+[33mc4d80cf[m HEAD@{83}: commit: bUpdateOBB, 충돌 처리 구조 구현
+[33meba8aaa[m HEAD@{84}: commit: Trail On Off
+[33mb2b48d9[m HEAD@{85}: commit: CPlayer -> shared_ptr<CPlayer> and Player Add_Object
+[33m5f79537[m HEAD@{86}: checkout: moving from main to Client_gijun_note2
+[33m5f79537[m HEAD@{87}: commit: Set
+[33mfa226db[m HEAD@{88}: checkout: moving from Client_gijun_note to main
+[33m790380c[m[33m ([m[1;31morigin/Client_gijun_note[m[33m, [m[1;32mClient_gijun_note[m[33m)[m HEAD@{89}: revert: Revert "Merge branch 'main' into Client_gijun_note"
+[33mb472d76[m HEAD@{90}: checkout: moving from main to Client_gijun_note
+[33mfa226db[m HEAD@{91}: reset: moving to HEAD
+[33mfa226db[m HEAD@{92}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m2ab9d88[m HEAD@{93}: revert: Revert "Merge pull request #44 from K-Jung-H/Client_gijun_note"
+[33mb284da9[m HEAD@{94}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m22d3036[m HEAD@{95}: checkout: moving from Client_gijun_note to main
+[33m96d55e5[m HEAD@{96}: checkout: moving from main to Client_gijun_note
+[33m22d3036[m HEAD@{97}: reset: moving to HEAD
+[33m22d3036[m HEAD@{98}: checkout: moving from Client_gijun_note to main
+[33m96d55e5[m HEAD@{99}: commit: Set
+[33ma4193b6[m HEAD@{100}: checkout: moving from main to Client_gijun_note
+[33m22d3036[m HEAD@{101}: reset: moving to HEAD
+[33m22d3036[m HEAD@{102}: checkout: moving from Client_gijun_note to main
+[33ma4193b6[m HEAD@{103}: revert: Revert "Merge branch 'main' into Client_gijun_note"
+[33m62165d3[m HEAD@{104}: revert: Revert "Merge branch 'Client_gijun_note' of https://github.com/K-Jung-H/Project_Palirates into Client_gijun_note"
+[33m2e0f77e[m HEAD@{105}: checkout: moving from main to Client_gijun_note
+[33m22d3036[m HEAD@{106}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33mfc0cefa[m HEAD@{107}: revert: Revert "Merge branch 'main' into Client_gijun_note"
+[33mce9465a[m HEAD@{108}: checkout: moving from Client_gijun_note to main
+[33m2e0f77e[m HEAD@{109}: reset: moving to HEAD
+[33m2e0f77e[m HEAD@{110}: commit (merge): Merge branch 'Client_gijun_note' of https://github.com/K-Jung-H/Project_Palirates into Client_gijun_note
+[33m152242d[m HEAD@{111}: reset: moving to HEAD
+[33m152242d[m HEAD@{112}: commit (merge): Merge branch 'main' into Client_gijun_note
+[33me3c6735[m HEAD@{113}: commit: 몬스터 AI 및 상태머신 업데이트
+[33m90b4dcd[m HEAD@{114}: commit: Dragon Breath E Button
+[33m2f7c376[m HEAD@{115}: commit (merge): Merge branch 'Client_gijun_note' of https://github.com/K-Jung-H/Project_Palirates into Client_gijun_note
+[33mb0ab44f[m HEAD@{116}: commit (merge): Merge branch 'main' into Client_gijun_note
+[33mfbb0bb3[m HEAD@{117}: commit: Set
+[33mfed16c3[m HEAD@{118}: commit: 몬스터들 공격 부위 바운딩 박스
+[33mdb149d9[m HEAD@{119}: commit: 스킨 메쉬 바운딩박스 업데이트 되긴 하는데
+[33m1e4638d[m HEAD@{120}: commit: 바운딩 박스 메쉬 데이터에 맞게 그리기
+[33mcaef4ec[m HEAD@{121}: commit: test
+[33m90ce8c6[m HEAD@{122}: commit: Set
+[33m37c3e01[m HEAD@{123}: commit: static 오류 해결
+[33m3259ce0[m HEAD@{124}: commit: Dragon, Anubis 상태머신 정리
+[33m2e4232f[m HEAD@{125}: commit: 몬스터 루트모션 구조
+[33m889a0ae[m HEAD@{126}: commit: CFishManObject, FishManStateMachine
+[33mce6d88a[m HEAD@{127}: commit: Dragon ani v13, Fishman ani v 9
+[33m8ad4cea[m HEAD@{128}: merge main: Fast-forward
+[33mddc0a34[m HEAD@{129}: checkout: moving from main to Client_gijun_note
+[33m8ad4cea[m HEAD@{130}: commit: 캐릭터 hit 추가 및 상태 머신 함수 최적화
+[33md08af49[m HEAD@{131}: pull --ff --recurse-submodules --progress origin: Fast-forward
+[33m038fcc0[m HEAD@{132}: checkout: moving from Client_gijun_note to main
+[33mddc0a34[m HEAD@{133}: commit: bIsControllable로 특정 행동 중 다른 행동 불가 컨트롤
+[33mc5f1309[m HEAD@{134}: commit: enum AnimationTrack, kUpdateHipsTracks 위치 변경
+[33m5cb183e[m HEAD@{135}: commit: RootMotionMove 함수, kUpdateHipsTracks 세트 정의
+[33mf7ff415[m HEAD@{136}: commit: RestoreWeapon
+[33m221ee35[m HEAD@{137}: commit: DetachChildByName 삭제 및 DropWeapon로 통합
+[33m06c622f[m HEAD@{138}: commit: 일단 어택3개, v15
+[33md93824e[m HEAD@{139}: commit: 일단 그냥 땅에 닿으면 딱 붙어 있게
+[33md94685d[m HEAD@{140}: commit: Weapon 클라스로 관리
+[33m4382438[m HEAD@{141}: commit: 칼 자전까진 됨
+[33mb227caa[m HEAD@{142}: commit: player_list 다른 리스트들과 통합
+[33m2d800c5[m HEAD@{143}: merge main: Fast-forward
+[33m74c877a[m HEAD@{144}: checkout: moving from main to Client_gijun_note
+[33m2d800c5[m HEAD@{145}: commit: 상태머신, 애니메이션 set
+[33m36d2b71[m HEAD@{146}: commit: Fishman
+[33m7eceaf9[m HEAD@{147}: commit: move 정규화
+[33m443f976[m HEAD@{148}: commit: DetachChildByName
+[33m3fdba58[m HEAD@{149}: commit: test
+[33me9ee195[m HEAD@{150}: checkout: moving from Client_gijun_note to main
+[33m74c877a[m HEAD@{151}: checkout: moving from main to Client_gijun_note
+[33me9ee195[m HEAD@{152}: reset: moving to HEAD
+[33me9ee195[m HEAD@{153}: revert: Revert "Merge branch 'Client_gijun_note'"
+[33m7147399[m HEAD@{154}: commit (merge): Merge branch 'Client_gijun_note'
+[33m18923d0[m HEAD@{155}: checkout: moving from Client_gijun_note to main
+[33m74c877a[m HEAD@{156}: commit: set
+[33m96f53ee[m HEAD@{157}: checkout: moving from main to Client_gijun_note
+[33m18923d0[m HEAD@{158}: reset: moving to HEAD
+[33m18923d0[m HEAD@{159}: checkout: moving from Client_gijun_note to main
+[33m96f53ee[m HEAD@{160}: commit: set
+[33m4bd9dbc[m HEAD@{161}: commit: reset
+[33m5948c66[m HEAD@{162}: checkout: moving from main to Client_gijun_note
+[33m35593ee[m HEAD@{163}: checkout: moving from Client_gijun_note to main
+[33m5948c66[m HEAD@{164}: reset: moving to HEAD
+[33m5948c66[m HEAD@{165}: checkout: moving from main to Client_gijun_note
+[33m35593ee[m HEAD@{166}: checkout: moving from Client_gijun_note to main
+[33m5948c66[m HEAD@{167}: checkout: moving from main to Client_gijun_note
+[33m35593ee[m HEAD@{168}: checkout: moving from Client_gijun_note to main
+[33m5948c66[m HEAD@{169}: checkout: moving from main to Client_gijun_note
+[33m35593ee[m HEAD@{170}: checkout: moving from Client_gijun_note to main
+[33m5948c66[m HEAD@{171}: reset: moving to HEAD
+[33m5948c66[m HEAD@{172}: commit (merge): Merge branch 'main' into Client_gijun_note
+[33m44df0d9[m HEAD@{173}: commit: set
+[33m51bb45a[m HEAD@{174}: commit: set
+[33m7a2ff27[m HEAD@{175}: commit: 애니메이션 중첩되고 있었음
+[33me75ac29[m HEAD@{176}: commit: set
+[33md9b90cd[m HEAD@{177}: checkout: moving from Client_gijun to Client_gijun_note
+[33mb24477c[m HEAD@{178}: checkout: moving from Client_gijun_note to Client_gijun
+[33md9b90cd[m HEAD@{179}: commit: 정리
+[33m83caef5[m HEAD@{180}: commit: CAnimationTrack::UpdatePosition 에서 m_fPosition = 0; 로 초기화해서 해결
+[33m1bd7869[m HEAD@{181}: commit: void CGameFramework::Update_Scene() 에 테스트 코드 추가
+[33mb928377[m HEAD@{182}: commit: ServerSyncManager
+[33m13a51f4[m HEAD@{183}: commit: m_pPlayer change
+[33m9a70605[m HEAD@{184}: commit: ApplySyncData, MakeSyncData, ServerAnimationSyncData
+[33m4012189[m HEAD@{185}: commit: SetLookDirection
+[33m032886b[m HEAD@{186}: commit: add player message
+[33me9a8f0f[m HEAD@{187}: commit: m_pPlayer change, add player object
+[33m718f04c[m HEAD@{188}: commit: include <random> , m_fPosition 를 난수로 초기화
+[33m740ffc9[m HEAD@{189}: commit: ANIMATION_TYPE_ONCE 타입 마무리 문제 해결
+[33mc33c5b8[m HEAD@{190}: commit: Get_up 끝나면 Idle 전환
+[33m9bf1ddf[m HEAD@{191}: commit: CMultiPlayerObject, MultiPlayerStateMachine
+[33m895f780[m HEAD@{192}: commit: m_ppd3dcbSkinningBoneTransforms null check
+[33m3b3bdef[m HEAD@{193}: commit: ~CAnimationController null check
+[33mfd5c91a[m HEAD@{194}: commit: set
+[33mbae03b5[m HEAD@{195}: reset: moving to HEAD
+[33mbae03b5[m HEAD@{196}: commit: set
+[33mf88886d[m HEAD@{197}: commit: knock down, get up test (Z, X)
+[33m2a6acad[m HEAD@{198}: revert: Revert "Merge branch 'main' into Client_gijun_note"
+[33m05aa24b[m HEAD@{199}: checkout: moving from Client_gijunl to Client_gijun_note
+[33m1cbc60d[m HEAD@{200}: reset: moving to HEAD
+[33m1cbc60d[m HEAD@{201}: checkout: moving from Client_gijun_note to Client_gijunl
+[33ma926a8d[m HEAD@{202}: checkout: moving from Client_gijunl to Client_gijun_note
+[33m1cbc60d[m HEAD@{203}: checkout: moving from Client_gijun_note to Client_gijunl
+[33ma926a8d[m HEAD@{204}: checkout: moving from Client_gijunl to Client_gijun_note
+[33m1cbc60d[m HEAD@{205}: checkout: moving from main to Client_gijunl
+[33m1cbc60d[m HEAD@{206}: checkout: moving from Client_gijun_note to main
+[33ma926a8d[m HEAD@{207}: checkout: moving from revert-14-revert-13-Client_gijun_note to Client_gijun_note
+[33m66a259b[m HEAD@{208}: checkout: moving from revert-13-Client_gijun_note to revert-14-revert-13-Client_gijun_note
+[33mfc5b9c2[m HEAD@{209}: checkout: moving from Client_gijun_note to revert-13-Client_gijun_note
+[33ma926a8d[m HEAD@{210}: checkout: moving from main to Client_gijun_note
+[33m861276c[m HEAD@{211}: checkout: moving from Client_gijun_note to main
+[33ma926a8d[m HEAD@{212}: commit: 코드 조금 정리
+[33mfb6f72b[m HEAD@{213}: commit: blendedTransform._42 만 고정 안하면 되는거였음;;
+[33m31f5eaa[m HEAD@{214}: commit: 가고일 -> 몬스터
+[33m5a799e3[m HEAD@{215}: commit: 메두사 모델
+[33mce7a5b8[m HEAD@{216}: commit: 가고일 애니메이션 파일 데이터대로 Move
+[33mb0b6433[m HEAD@{217}: commit: 가고일 Root가 아닌 Gargoyle_LP 를 고정
+[33mce451b6[m HEAD@{218}: commit: Dash Look 방향으로 하기
+[33mcef8fe5[m HEAD@{219}: commit: 몬스터 1,2,3 디버그 중
+[33m157eb4b[m HEAD@{220}: commit: 몬스터 객체 별로 상태는 독립적인데, 왜 실제 애니메이션은 마지막 객체의 상태를 따라하나?
+[33md851c7f[m HEAD@{221}: commit: 몬스터 
