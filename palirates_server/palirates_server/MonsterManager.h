@@ -6,8 +6,8 @@
 class MonsterManager
 {
 private:
-    std::unordered_map<int, Monster> monsters;
-
+    std::unordered_map<int, Monster> monster_map;
+    
 public:
     //MonsterManager();
     //void SpawnMonster(int id, float x, float y, float z, int hp);

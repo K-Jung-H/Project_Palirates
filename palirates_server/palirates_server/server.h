@@ -25,13 +25,16 @@ struct ClientSession
 class Server
 {
 private:
-    SOCKET listenSocket;
-    std::unordered_map<int, ClientSession> clients;
-    Scene_Manager sceneManager;
+    SceneManager sceneManager;
     //DatabaseManager dbManager;
+    
+    std::unordered_map<int, ClientSession> clients;
+    SOCKET listenSocket;
     Logger logger;
+    
     std::unordered_map<int, int> controllerIdByScene;
-    int GetControllerId(Scene* scene);
+    
+    int GetControllerId(shared_ptr<Scene> scene);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
    
 

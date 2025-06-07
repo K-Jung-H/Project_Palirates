@@ -3,47 +3,77 @@
 
 std::shared_ptr<Player> Scene::getPlayer(int id)
 {
-    auto it = players.find(id);
-    if (it != players.end())
+    auto it = player_data_map.find(id);
+    if (it != player_data_map.end())
         return it->second;
     return nullptr;
 }
 
 std::shared_ptr<Player> Scene::addPlayer(int id, XMFLOAT3 pos, XMFLOAT3 look)
 {
-    auto player = std::make_shared<Player>(id, pos, look);
-    players[id] = player;
+    auto player = std::make_shared<Player>(id);
+
+    player->SetPosition(pos);
+    player->SetLook(look);
+
+    player_data_map[id] = player;
+
     return player;
 }
 
 void Scene::removePlayer(int id)
 {
-    players.erase(id);
+    player_data_map.erase(id);
 }
 
-void Scene::updatePlayerPosition(int id, float x, float y, float z,
-    float lookX, float lookY, float lookZ, EState state)
+void Scene::update_player_keyinput(int id, uint32_t keystate)
 {
     auto player = getPlayer(id);
     if (!player) return;
 
-    player->setPosition(x, y, z);
-    player->setLookVec(lookX, lookY, lookZ);
-    player->setState(state);
+    player->key_input(keystate);
 }
 
-void Scene::updatePlayerAnimation(int id,
-    const std::vector<float>& positions,
-    const std::vector<float>& weights)
+void Scene::update_player_Position(int id, XMFLOAT3 new_pos)
 {
     auto player = getPlayer(id);
     if (!player) return;
 
-    player->animPositions = positions;
-    player->animWeights = weights;
+    player->SetPosition(new_pos);
+}
+
+void Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
+{
+    auto player = getPlayer(id);
+    if (!player) return;
+
+    player->SetLook(new_lookV);
+
+}
+
+void Scene::updatePlayerPosition(int id, float x, float y, float z, float lookX, float lookY, float lookZ, Player_State state)
+{
+    auto player = getPlayer(id);
+    if (!player) return;
+
+    XMFLOAT3 new_lookV = { lookX, lookY, lookZ };
+
+    player->SetPosition(x, y, z);
+    player->SetLook(new_lookV);
+    player->SetState(state);
+}
+
+void Scene::updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights)
+{
+    auto player = getPlayer(id);
+    if (!player) return;
+
+
+    player->SetAnimPositions(positions);
+    player->SetAnimWeights(weights);
 }
 
 const std::unordered_map<int, std::shared_ptr<Player>>& Scene::getPlayers() const
 {
-    return players;
+    return player_data_map;
 }

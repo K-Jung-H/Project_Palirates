@@ -32,7 +32,7 @@ void Server::AcceptClients()
         clients[clientId] = session;
 
         sceneManager.addScene(clientId);
-        Scene* scene = sceneManager.getScene(clientId);
+        shared_ptr<Scene> scene = sceneManager.getScene(clientId);
         if (scene)
         {
             scene->addPlayer(clientId, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
@@ -140,19 +140,21 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         trackCount = 1;
                     }
 
-                    Scene* scene = sceneManager.getScene(clientId);
+                    shared_ptr<Scene> scene = sceneManager.getScene(clientId);
                     if (!scene) {
                         sceneManager.addScene(clientId);
                         scene = sceneManager.getScene(clientId);
                     }
 
-                    scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<EState>(state));
+                    scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<Player_State>(state));
                     scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
 
                     std::ostringstream oss;
-                    oss << "PLAYER_UPDATE," << clientId << "," << x << "," << y << "," << z
-                        << "," << lookX << "," << lookY << "," << lookZ << "," << state
-                        << "," << trackCount;
+                    oss << "PLAYER_UPDATE," << clientId << ","
+                        << x << "," << y << "," << z << ","
+                        << lookX << "," << lookY << "," << lookZ << ","
+                        << state << "," << trackCount;
+
                     for (int i = 0; i < trackCount; ++i)
                     {
                         oss << "," << trackPositions[i] << "," << trackWeights[i];
@@ -232,7 +234,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 clients[clientId].is_connected = false;
                 closesocket(clients[clientId].socket);
 
-                Scene* scene = sceneManager.getScene(clientId);
+                shared_ptr<Scene> scene = sceneManager.getScene(clientId);
                 if (scene) scene->removePlayer(clientId);
 
                 std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId) + "\n";
@@ -274,15 +276,15 @@ void Server::BroadcastAllStates()
     {
         for (const auto& [playerId, player] : scene->getPlayers())
         {
-            float safeLookY = (player->lookVector.y == 0.0f) ? 1.0f : player->lookVector.y;
+            XMFLOAT3 player_look = player->GetLook();
+            XMFLOAT3 player_pos = player->GetPosition();
+
+            float safeLookY = (player_look.y == 0.0f) ? 1.0f : player_look.y;
 
             std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
-                std::to_string(player->Position.x) + "," + std::to_string(player->Position.y) + "," +
-                std::to_string(player->Position.z) + "," +
-                std::to_string(player->lookVector.x) + "," +
-                std::to_string(safeLookY) + "," +
-                std::to_string(player->lookVector.z) + "," +
-                std::to_string(static_cast<int>(player->state)) + "\n";
+                std::to_string(player_pos.x) + "," + std::to_string(player_pos.y) + "," + std::to_string(player_pos.z) + "," +
+                std::to_string(player_look.x) + "," + std::to_string(safeLookY) + "," + std::to_string(player_look.z) + "," +
+                std::to_string(static_cast<int>(player->GetState())) + "\n";
 
             BroadcastPacket(packet, -1); // 전체 클라이언트에게 전송
         }
@@ -291,7 +293,7 @@ void Server::BroadcastAllStates()
 
 void Server::SendInitialStates(int clientId)
 {
-    Scene* myScene = sceneManager.getScene(clientId);
+    shared_ptr<Scene> myScene = sceneManager.getScene(clientId);
     if (!myScene) return;
 
     for (const auto& [otherId, scene] : sceneManager.getAllScenes())
@@ -301,19 +303,18 @@ void Server::SendInitialStates(int clientId)
         auto character = scene->getPlayer(otherId);
         if (!character) continue;
 
+        XMFLOAT3 new_player_look = character->GetLook();
+        XMFLOAT3 new_player_pos = character->GetPosition();
+
         std::string createPacket = "PLAYER_CREATE," + std::to_string(otherId) + "\n";
         send(clients[clientId].socket, createPacket.c_str(), createPacket.length(), 0);
 
-        float safeLookY = (character->lookVector.y == 0.0f) ? 1.0f : character->lookVector.y;
+        float safeLookY = (new_player_look.y == 0.0f) ? 1.0f : new_player_look.y;
 
         std::string updatePacket = "PLAYER_UPDATE," + std::to_string(otherId) + "," +
-            std::to_string(character->Position.x) + "," +
-            std::to_string(character->Position.y) + "," +
-            std::to_string(character->Position.z) + "," +
-            std::to_string(character->lookVector.x) + "," +
-            std::to_string(safeLookY) + "," +
-            std::to_string(character->lookVector.z) + "," +
-            std::to_string(static_cast<int>(character->state)) + "\n";
+            std::to_string(new_player_pos.x) + "," + std::to_string(new_player_pos.y) + "," + std::to_string(new_player_pos.z) + "," +
+            std::to_string(new_player_look.x) + "," + std::to_string(safeLookY) + "," + std::to_string(new_player_look.z) + "," + 
+            std::to_string(static_cast<int>(character->GetState())) + "\n";
 
         send(clients[clientId].socket, updatePacket.c_str(), updatePacket.length(), 0);
 
@@ -323,24 +324,23 @@ void Server::SendInitialStates(int clientId)
 
 void Server::NotifyExistingPlayersAboutNew(int newClientId)
 {
-    Scene* scene = sceneManager.getScene(newClientId);
+    shared_ptr<Scene> scene = sceneManager.getScene(newClientId);
     if (!scene) return;
 
     auto character = scene->getPlayer(newClientId);
     if (!character) return;
 
-    float safeLookY = (character->lookVector.y == 0.0f) ? 1.0f : character->lookVector.y;
+    XMFLOAT3 new_player_look = character->GetLook();
+    XMFLOAT3 new_player_pos = character->GetPosition();
+
+    float safeLookY = (new_player_look.y == 0.0f) ? 1.0f : new_player_look.y;
 
     std::string createPacket = "PLAYER_CREATE," + std::to_string(newClientId) + "\n";
 
     std::string packet = "PLAYER_UPDATE," + std::to_string(newClientId) + "," +
-        std::to_string(character->Position.x) + "," +
-        std::to_string(character->Position.y) + "," +
-        std::to_string(character->Position.z) + "," +
-        std::to_string(character->lookVector.x) + "," +
-        std::to_string(safeLookY) + "," +
-        std::to_string(character->lookVector.z) + "," +
-        std::to_string(static_cast<int>(character->state)) + "\n";
+        std::to_string(new_player_pos.x) + "," + std::to_string(new_player_pos.y) + "," + std::to_string(new_player_pos.z) + "," +
+        std::to_string(new_player_look.x) + "," + std::to_string(safeLookY) + "," + std::to_string(new_player_look.z) + "," + 
+        std::to_string(static_cast<int>(character->GetState())) + "\n";
 
     for (const auto& [clientId, sock] : clients)
     {
@@ -377,7 +377,7 @@ void Server::Start()
         sceneManager.addScene(0);
     }
 
-    Scene* scene = sceneManager.getScene(0);
+    shared_ptr<Scene> scene = sceneManager.getScene(0);
     if (!scene) return;
 
    // for (int i = 0; i < 10; ++i)
@@ -398,7 +398,7 @@ void Server::Start()
 
 }
 
-int Server::GetControllerId(Scene* scene)
+int Server::GetControllerId(shared_ptr<Scene> scene)
 {
     const auto& players = scene->getPlayers();
     if (players.empty()) return -1;

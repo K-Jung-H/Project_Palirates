@@ -1,10 +1,9 @@
 #pragma once
-#include <iostream>
-#include <DirectXMath.h>
+#include "GameObject.h"
 
-using namespace DirectX;
 
-enum class EState : int
+
+enum class Player_State : int
 {
     Idle,
     Walk,
@@ -16,52 +15,23 @@ enum class EState : int
 };
 
 
-class Player
+
+class Player : public Skinned_GameObject
 {
+private:
+    int player_id;
+    Player_State player_state;
+
 public:
-    int id;
-    XMFLOAT3 Position;
-    XMFLOAT3 lookVector;
-    EState state;
-    
-    std::vector<float> animPositions;
-    std::vector<float> animWeights;
 
+    Player(int playerId);
+    virtual ~Player() {}
 
-    Player(int playerId, XMFLOAT3 start_pos, XMFLOAT3 start_lookvector) :
-        id(playerId),
-        Position(start_pos),
-        lookVector(start_lookvector)
-    {
-        state = EState::Idle;
-    }
+    Player_State GetState() { return player_state; }
+    void SetState(Player_State newState) { player_state = newState; }
 
-    void setPosition(XMFLOAT3 new_pos) { setPosition(new_pos.x, new_pos.y, new_pos.z); }
-    void setPosition(float newX, float newY, float newZ)
-    {
-        Position.x = newX;
-        Position.y = newY;
-        Position.z = newZ;
-    }
-
-    void setLookVec(XMFLOAT3 newLook) { setLookVec(newLook.x, newLook.y, newLook.z); }
-    void setLookVec(float newLookX, float newLookY, float newLookZ)
-    {
-        lookVector.x = newLookX;
-        lookVector.y = newLookY;
-        lookVector.z = newLookZ;
-    }
-
-
-    void setState(::EState newState) { state = newState; }
-
-    void Update(uint32_t keyState) {}
-
-
-    void printInfo()
-    {
-        std::cout << "캐릭터 " << id << " 위치: (" << Position.x << ", " << Position.y << ", " << Position.z << "), 상태: " << static_cast<int>(state) << std::endl;
-    }
-
+    void key_input(uint32_t keyState);
+    virtual void animate(float Elapsedtime);
+    virtual void update();
 
 };

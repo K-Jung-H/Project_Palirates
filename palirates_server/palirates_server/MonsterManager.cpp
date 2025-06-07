@@ -6,34 +6,56 @@
 
 void MonsterManager::UpdateAI(float deltaTime)
 {
-    for (auto& [id, m] : monsters)
+    for (auto& [id, m] : monster_map)
     {
         m.stateElapsedTime += deltaTime;
 
         if (m.stateElapsedTime >= m.stateChangeInterval)
         {
-            if (m.state == 0) m.state = 1;
-            else m.state = 0;
+            if (m.GetState() == Monster_State::Idle) 
+                m.SetState(Monster_State::Walk);
+            else 
+                m.SetState(Monster_State::Idle);
 
             m.stateElapsedTime = 0.0f;
             m.stateChangeInterval = 1.0f + (id % 5);
         }
 
-        std::fill(m.trackWeights.begin(), m.trackWeights.end(), 0.0f);
+        auto& weights = m.GetTrackWeights();
+        std::fill(weights.begin(), weights.end(), 0.0f);
 
-        if (m.state == 0)      m.trackWeights[0] = 1.0f; // Idle
-        else if (m.state == 1) m.trackWeights[1] = 1.0f; // Walk
+        Monster_State monster_state = m.GetState();
 
-        for (int i = 0; i < m.trackPositions.size(); ++i)
+        if (monster_state == Monster_State::Idle)
+            weights[0] = 1.0f; // Idle
+        else if (monster_state == Monster_State::Walk)
+            weights[1] = 1.0f; // Walk
+
+        auto& positions = m.GetTrackPositions();
+        for (float& pos : positions)
         {
-            m.trackPositions[i] += deltaTime;
-            if (m.trackPositions[i] > 1.0f) m.trackPositions[i] -= 1.0f;
+            pos += deltaTime;
+            if (pos > 1.0f) pos -= 1.0f;
         }
 
-        if (m.state == 1)
+        if (m.GetState() == Monster_State::Walk)
         {
-            m.x += m.lookX * deltaTime * 5.0f;
-            m.z += m.lookZ * deltaTime * 5.0f;
+            XMFLOAT3 current_pos = m.GetPosition();
+            XMFLOAT3 current_look = m.GetLook();
+
+            // 이동 거리 계산
+            float dx = current_look.x * deltaTime * 5.0f;
+            float dz = current_look.z * deltaTime * 5.0f;
+
+            // 새로운 위치
+            XMFLOAT3 new_pos = 
+            {
+                current_pos.x + dx,
+                current_pos.y, 
+                current_pos.z + dz
+            };
+
+            m.SetPosition(new_pos);
         }
     }
 }
