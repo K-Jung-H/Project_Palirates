@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
+#include <sstream>
 #include "SceneManager.h"
 #include "DatabaseManager.h"
 #include "Logger.h"

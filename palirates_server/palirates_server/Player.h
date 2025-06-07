@@ -1,5 +1,8 @@
 #pragma once
 #include <iostream>
+#include <DirectXMath.h>
+
+using namespace DirectX;
 
 enum class EState : int
 {
@@ -11,6 +14,7 @@ enum class EState : int
     Dash,
     ETC
 };
+
 
 class Player
 {
