@@ -135,6 +135,7 @@ class CScene
 public:
 	static bool bOBBRender;
 	static UINT select_index;
+	static bool Mouse_Lock;
 
 	Change_Signal c_signal;
 	float current_time = 0.0f;
@@ -183,7 +184,8 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
-
+	
+	virtual void Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
 	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

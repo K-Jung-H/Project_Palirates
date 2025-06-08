@@ -471,3 +471,14 @@ std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& ar
 	XMFLOAT3 max_point = Vector3::Add(Center, half);
 	return { min_point, max_point };
 }
+
+void HideCursor()
+{
+	while (ShowCursor(FALSE) >= 0) {}
+}
+
+void ShowCursorFix()
+{
+	while (ShowCursor(TRUE) < 0) {}
+}
+

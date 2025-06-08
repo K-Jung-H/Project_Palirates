@@ -173,6 +173,7 @@ enum Scene_Type
 	Board,
 	Stage_1,
 	Stage_2,
+	Test,
 	etc
 };
 
@@ -233,6 +234,10 @@ extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLO
 #define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 
 
+extern void HideCursor();
+
+extern void ShowCursorFix();
+
 
 #define EPSILON					1.0e-10f
 
@@ -250,6 +255,8 @@ inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs, float tol
 {
 	return (fabs(lhs.x - rhs.x) < tolerance && fabs(lhs.y - rhs.y) < tolerance && fabs(lhs.z - rhs.z) < tolerance && fabs(lhs.w - rhs.w) < tolerance);
 }
+
+
 
 
 namespace Vector3
