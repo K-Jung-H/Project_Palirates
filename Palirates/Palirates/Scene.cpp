@@ -296,7 +296,7 @@ std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NUL
 std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
 
 bool CScene::bOBBRender = false;
-
+bool CScene::Mouse_Lock = true;
 UINT CScene::select_index = 0;
 
 
@@ -1527,6 +1527,15 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		case VK_ESCAPE:
+		{
+			if(Mouse_Lock == false)
+				::PostQuitMessage(0);
+
+			Mouse_Lock = false;
+		}
+		break;
+
 		case 'Q':
 			{
 			blur_effect = !blur_effect;
@@ -1642,7 +1651,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'Z':
 		{
 			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -1877,7 +1885,7 @@ void CScene::After_Update_Objects()
 
 }
 
-void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
+void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
@@ -1899,10 +1907,18 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 
 
+}
+
+void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
+{
+	if (!shadow_camera || shadow_camera->update_shadow == false)
+		return;
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
 	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+
 
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
 
@@ -1913,29 +1929,6 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, shadow_camera.get());
 	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get()); 
-
-
-	/* {
-		for (int i = 0; i < NUM_CASCADES; ++i)
-		{
-			ID3D12Resource* depthResource = fixed_shadow_camera->Get_Shadow_Map_Resource(i);
-			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV(i);
-			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
-
-			// 2. 
-			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-			// 3. 
-			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
-			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
-
-			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
-	} */
-
 
 }
 
@@ -2316,6 +2309,15 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		case VK_ESCAPE:
+		{
+			if (Mouse_Lock == false)
+				::PostQuitMessage(0);
+
+			Mouse_Lock = false;
+		}
+		break;
+
 		case 'Z':
 			UpdatePlayerSelection(select_index - 1);
 			break;
@@ -2778,6 +2780,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		}
 	}
 
+	Mouse_Lock = !bMenuActive;
+
 }
 
 void Board_Scene::After_Update_Objects()
@@ -2867,6 +2871,15 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		case VK_ESCAPE:
+		{
+			if (Mouse_Lock == false)
+				::PostQuitMessage(0);
+
+			Mouse_Lock = false;
+		}
+		break;
+
 		case 'Q':
 		{
 			if (test_button)
@@ -2934,6 +2947,8 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			}
 		}
 			break;
+
+
 		default:
 			break;
 		}
@@ -3077,24 +3092,35 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 //==========================================================================================
 
 
+
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
+
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+
 
 #ifdef RENDER_PARTICLE
-	particle_manager = make_shared<Particle_Manager>();
-	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
-
-	obj_manager = make_shared<Object_Manager>();
-
-	//=====================================================
-
-	Object_Manager::Reserve_Update();
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 }
 
 void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)

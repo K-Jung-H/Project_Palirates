@@ -119,26 +119,7 @@ public:
     void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
     LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-    //=================SERVER=================
-    void ConnectToServer(const std::string& ip, int port);
-    void SendPacket();
-    void NetworkLoop();
-    bool IsServerConnected();
-    int GetServerPlayerID();
-    void PlayerLeave(int playerId);
-    void Disconnect();
-    void CreateRemotePlayer(int playerId);
-    void CreateLocalPlayer(int playerId);
-    void ProcessReceivedData(const std::string& receivedData);
-    std::queue<int> pendingPlayerCreates;
-    std::mutex pendingCreateMutex;
-    std::unordered_map<int, std::string> pendingUpdateMap;
-    std::mutex pendingUpdateMutex;
 
-    Scene_Manager sceneManager;
-    std::shared_ptr<Object_Manager> object_manager;
-    bool bClientIdAssigned = false;
-    //=================SERVER=================
 
 private:
     HINSTANCE               m_hInstance;
@@ -227,14 +208,35 @@ public:
     PostProcessBaseShader* MRT_shader = NULL;
 
     std::shared_ptr<CPlayer> m_pPlayer = NULL;
-    //shared_ptr<CCamera> m_pCamera = NULL;
-
-
 
     POINT                  m_ptOldCursorPos;
     _TCHAR                  m_pszFrameRate[70];
 
+
+#ifdef WRITE_TEXT_UI
+    Text_UI_Renderer* text_ui_renderer = NULL;
+#endif 
+
     //=================SERVER=================
+    void ConnectToServer(const std::string& ip, int port);
+    void SendPacket();
+    void NetworkLoop();
+    bool IsServerConnected();
+    int GetServerPlayerID();
+    void PlayerLeave(int playerId);
+    void Disconnect();
+    void CreateRemotePlayer(int playerId);
+    void CreateLocalPlayer(int playerId);
+    void ProcessReceivedData(const std::string& receivedData);
+    std::queue<int> pendingPlayerCreates;
+    std::mutex pendingCreateMutex;
+    std::unordered_map<int, std::string> pendingUpdateMap;
+    std::mutex pendingUpdateMutex;
+
+    Scene_Manager sceneManager;
+    std::shared_ptr<Object_Manager> object_manager;
+    bool bClientIdAssigned = false;
+
     Scene_Manager& GetSceneManager() { return *scene_manager; }
     CPlayer* GetPlayer() { return m_pPlayer.get(); }
     int nPlayer{ 0 };
@@ -250,7 +252,4 @@ public:
 
     //=================SERVER=================
 
-#ifdef WRITE_TEXT_UI
-    Text_UI_Renderer* text_ui_renderer = NULL;
-#endif 
 };
