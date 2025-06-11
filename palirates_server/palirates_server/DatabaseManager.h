@@ -1,4 +1,6 @@
-/*#pragma once
+#pragma once
+
+/*
 #include <mysql/mysql.h>
 #include <iostream>
 #include <string>

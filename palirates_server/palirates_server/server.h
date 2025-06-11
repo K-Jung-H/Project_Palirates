@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
+#include <sstream>
 #include "SceneManager.h"
 #include "DatabaseManager.h"
 #include "Logger.h"
@@ -19,18 +20,22 @@ struct ClientSession
 {
     SOCKET socket;
     bool is_connected = true;
+    std::chrono::steady_clock::time_point lastPongTime;
 };
 
 class Server
 {
 private:
-    SOCKET listenSocket;
-    std::unordered_map<int, ClientSession> clients;
-    Scene_Manager sceneManager;
+    SceneManager sceneManager;
     //DatabaseManager dbManager;
+    
+    std::unordered_map<int, ClientSession> clients;
+    SOCKET listenSocket;
     Logger logger;
+    
     std::unordered_map<int, int> controllerIdByScene;
-    int GetControllerId(Scene* scene);
+    
+    int GetControllerId(shared_ptr<Scene> scene);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
    
 
@@ -51,6 +56,9 @@ public:
     void MonsterUpdate(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, float aniPos, float aniWei);
     std::unordered_map<int, int> characterSelections;
     std::unordered_set<int> lockedCharacterIds;
+    void CheckClientLiveness();
+
+    SceneManager& getSceneManager() { return sceneManager; }
 
     float shipX = 0.0f, shipY = 0.0f, shipZ = 0.0f;
     float shipLookX = 0.0f, shipLookY = 1.0f, shipLookZ = 0.0f;

@@ -122,13 +122,13 @@ public:
     //=================SERVER=================
     void ConnectToServer(const std::string& ip, int port);
     void SendPacket();
+    void SendPacket(const std::string& packet);
     void NetworkLoop();
     bool IsServerConnected();
     int GetServerPlayerID();
     void PlayerLeave(int playerId);
     void Disconnect();
-    void CreateRemotePlayer(int playerId);
-    void CreateLocalPlayer(int playerId);
+    void CreateRemotePlayer(int playerId, int characterId);
     void ProcessReceivedData(const std::string& receivedData);
     std::queue<int> pendingPlayerCreates;
     std::mutex pendingCreateMutex;
@@ -227,12 +227,16 @@ public:
     PostProcessBaseShader* MRT_shader = NULL;
 
     std::shared_ptr<CPlayer> m_pPlayer = NULL;
-    //shared_ptr<CCamera> m_pCamera = NULL;
 
 
+    
 
     POINT                  m_ptOldCursorPos;
     _TCHAR                  m_pszFrameRate[70];
+
+#ifdef WRITE_TEXT_UI
+    Text_UI_Renderer* text_ui_renderer = NULL;
+#endif 
 
     //=================SERVER=================
     Scene_Manager& GetSceneManager() { return *scene_manager; }
@@ -248,15 +252,13 @@ public:
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
     int currentShipControllerId = -1;
-    std::unordered_set<int> lockedCharacterIds;
     void SelectCharacter(int characterId);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
-
+    int selectedCharacterId = -1;
+    std::unordered_map<int, int> characterSelections;
     //=================SERVER=================
 
-#ifdef WRITE_TEXT_UI
-    Text_UI_Renderer* text_ui_renderer = NULL;
-#endif 
+    uint32_t current_keyboard_inputFlags = 0;
 };
 
 enum SHIP_INPUT_TYPE
@@ -265,4 +267,31 @@ enum SHIP_INPUT_TYPE
     SHIP_FORWARD = 1,
     SHIP_LEFT = 2,
     SHIP_RIGHT = 3
+};
+
+
+enum KeyIndex
+{
+    KEY_INDEX_W = 0,
+    KEY_INDEX_S = 1,
+    KEY_INDEX_A = 2,
+    KEY_INDEX_D = 3,
+    KEY_INDEX_Q = 4,
+    KEY_INDEX_E = 5,
+    KEY_INDEX_SHIFT = 6,
+    KEY_INDEX_ENTER = 7
+};
+
+// 실제 플래그 enum
+enum InputFlags : uint32_t
+{
+    INPUT_NONE = 0,
+    INPUT_W = 1 << KEY_INDEX_W,
+    INPUT_S = 1 << KEY_INDEX_S,
+    INPUT_A = 1 << KEY_INDEX_A,
+    INPUT_D = 1 << KEY_INDEX_D,
+    INPUT_Q = 1 << KEY_INDEX_Q,
+    INPUT_E = 1 << KEY_INDEX_E,
+    INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
+    INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };

@@ -63,7 +63,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 //==================================================================
 
 // PCF 필터링 함수 (3x3 커널)
-float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, float2 invShadowMapSize)
+float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, int cascadeIdx)
 {
     float shadowSum = 0.0f;
     int kernelSize = 0;
@@ -74,7 +74,7 @@ float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_
         [unroll]
         for (int dy = -kernelSize; dy <= kernelSize; ++dy)
         {
-            float2 offset = float2(dx, dy) * invShadowMapSize * 2;
+            float2 offset = float2(dx, dy) * inv_shadow_map_size[cascadeIdx];
             shadowSum += shadowMap.SampleCmpLevelZero(shadow_sampler, uv + offset, depth);
             count++;
         }
@@ -82,7 +82,7 @@ float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_
     return shadowSum / count;
 }
 
-float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint lightType, float shadowBias, float2 invShadowMapSize, float4x4 LightViewProjTex[NUM_CASCADES], Texture2D<float> gShadowMaps[NUM_CASCADES], SamplerComparisonState shadowSampler, float CascadeSplits[NUM_CASCADES])
+float CalcCSMShadowFactor(float3 worldPos, float viewZ)
 {
     int cascadeIdx = 0;
     [unroll]
@@ -97,7 +97,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint li
 
     float shadowFactor = 1.0f;
 
-    if (shadowPass == 1 && lightType == LIGHT_CAMERA_TYPE_DIRECTIONAL)
+    if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
     {
         const float transitionRange = 0.05f;
         float splitCurr = CascadeSplits[cascadeIdx];
@@ -110,7 +110,9 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint li
 
         float shadow0 = 1.0f;
         if (shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f && shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f && shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
-            shadow0 = SampleShadowPCF(gShadowMaps[cascadeIdx], shadowSampler, shadowCoord0.xy, shadowCoord0.z - shadowBias, invShadowMapSize);
+        {
+            shadow0 = SampleShadowPCF(gShadowMaps[cascadeIdx], gssShadowSampler, shadowCoord0.xy, shadowCoord0.z - shadow_bias, cascadeIdx);
+        }
 
         float shadow1 = shadow0;
         if (cascadeIdx > 0)
@@ -118,12 +120,12 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ, uint shadowPass, uint li
             float4 shadowCoord1 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx - 1]);
             shadowCoord1 /= shadowCoord1.w;
             if (shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f && shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f && shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
-                shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], shadowSampler, shadowCoord1.xy, shadowCoord1.z - shadowBias, invShadowMapSize);
+            {
+                shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], gssShadowSampler, shadowCoord1.xy, shadowCoord1.z - shadow_bias, cascadeIdx - 1);
+            }
         }
         shadowFactor = lerp(shadow0, shadow1, blendWeight);
-        
     }
-    
     return shadowFactor;
 }
 
@@ -244,8 +246,8 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     //    return Debug_ShadowMap(input.uv);
     
-    float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z, shadow_pass, light_type, shadow_bias, inv_shadow_map_size, LightViewProjTex, gShadowMaps, gssShadowSampler, CascadeSplits);
-    
+    float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
+
     
 
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
@@ -257,7 +259,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     // ======= Lighting calculation =======
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
-    // FOG calculation
+    // FOG calculationW
     float2 baseUV = world_position.xz - camera_pos.xz;
     float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart));
     fogFactor = pow(fogFactor, fogDensity);
