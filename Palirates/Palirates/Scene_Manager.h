@@ -37,6 +37,7 @@ public:
     bool Set_Active_Scene(std::string_view sceneName);
     bool Find_Scene(std::string_view sceneName);
     bool Get_Active_Scene_Mouse_State();
+    bool Get_Active_Scene_Fade_State();
 
     std::shared_ptr<CScene> Get_Active_Scene() { return activeScene; }
     CScene* Get_Active_Scene_Ptr() { return activeScene.get(); }

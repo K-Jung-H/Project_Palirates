@@ -148,6 +148,15 @@ bool Scene_Manager::Get_Active_Scene_Mouse_State()
     return mouse_locked;
 }
 
+bool Scene_Manager::Get_Active_Scene_Fade_State()
+{
+    if (activeScene == nullptr)
+        return false;
+
+    bool Screen_Faded = CScene::Screen_Fade;
+    return Screen_Faded;
+}
+
 void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 
@@ -158,6 +167,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     {
         std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
         character_select_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        character_select_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, character_select_scene);
         std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
@@ -171,6 +181,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     {
         std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
         game_board_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        game_board_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, game_board_scene);
         std::shared_ptr<Observer> game_board_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
@@ -180,9 +191,9 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
     case Stage_1:
     {
-
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, in_stage_scene);
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
@@ -204,6 +215,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     {
         std::shared_ptr<Test_Scene> in_stage_scene = std::make_shared<Test_Scene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, in_stage_scene);
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
@@ -554,7 +566,8 @@ void Scene_Manager::Render_Scene_UI(UINT nFrame)
 void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime)
 {
     if (activeScene) {
-        if (activeScene->texture_ui_manager) {
+        if (activeScene->texture_ui_manager) 
+        {
             activeScene->texture_ui_manager->RenderAll(cmdList, currentTime, elapsedTime);
             activeScene->current_time = currentTime;
         }
@@ -565,8 +578,7 @@ void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, 
 
 void Scene_Manager::Render_ScreenFade(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-    bool is_mouse_locked = Get_Active_Scene_Mouse_State();
-    if (is_mouse_locked == false)
+    if (Get_Active_Scene_Fade_State())
     {
         pd3dCommandList->SetGraphicsRootSignature(Empty_GraphicsRootSignature.get());
         Fade_shader->Setting_Render(pd3dCommandList);

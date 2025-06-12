@@ -296,12 +296,14 @@ std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NUL
 std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
 
 bool CScene::bOBBRender = false;
-bool CScene::Mouse_Lock = true;
+bool CScene::Mouse_Lock = false;
+bool CScene::Screen_Fade = false;
 UINT CScene::select_index = 0;
 
 
 CScene::CScene()
 {
+	scene_type = Scene_Type::etc;
 }
 
 CScene::~CScene()
@@ -1309,15 +1311,48 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	replay->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/undo-arrow.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
 	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, replay);
-	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable);
-	REblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Character_Select";
-		c_signal.type = Scene_Type::Lobby;
+	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	REblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Character_Select";
+			c_signal.type = Scene_Type::Lobby;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+
+			}
 		};
 	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	REblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
+
+
+	CTexture* return_to_game = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	return_to_game->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_game, 0, 0);
+	D2D1_RECT_F RTG_screenRect = MakeNormalizedRect(0.8f, 0.1f, 0.05f, return_to_game);
+	std::unique_ptr<TextureBlock> RTG_block = std::make_unique<TextureBlock>(return_to_game, RTG_screenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	RTG_block->onClick = [this]()
+		{
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Mouse_Lock = true;
+				Screen_Fade = false;
+			}
+		};
+	RTG_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	RTG_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	RTG_block->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(RTG_block));
+
+	
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1529,10 +1564,17 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		{
 		case VK_ESCAPE:
 		{
-			if(Mouse_Lock == false)
+			if (Screen_Fade == true && Mouse_Lock == false)
 				::PostQuitMessage(0);
 
 			Mouse_Lock = false;
+			Screen_Fade = true;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, true);
+			}
 		}
 		break;
 
@@ -2311,10 +2353,17 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		{
 		case VK_ESCAPE:
 		{
-			if (Mouse_Lock == false)
+			if (Screen_Fade == true && Mouse_Lock == false)
 				::PostQuitMessage(0);
 
+			Screen_Fade = true;
 			Mouse_Lock = false;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, true);
+			}
 		}
 		break;
 
@@ -2325,15 +2374,18 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		case 'C':
 			UpdatePlayerSelection(select_index + 1);
 			break;
-		case VK_RETURN: {
+
+		case VK_RETURN:
+		{
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
-				Set_UI_Layer_Active(blocks, UILayer::Menu, !bMenuActive);
-				bMenuActive = !bMenuActive;
+				Set_UI_Layer_Active(blocks, UILayer::Menu, true);
+				Screen_Fade = true;
 			}
 		}
-					   break;
+		break;
+
 		case 'F':		case 'f':
 		{
 			// Toggle Fog On/Off
@@ -2376,10 +2428,18 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectbutttonTexture, 0, 0);
 	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, SelectbutttonTexture);
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	SlbTblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Game_Stage_Board";
-		c_signal.type = Scene_Type::Board;
+	SlbTblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Game_Stage_Board";
+			c_signal.type = Scene_Type::Board;
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+
+			}
 		};
 	SlbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	SlbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -2398,6 +2458,29 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	SlTTblock->bActive = false;
 	SlTTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SlTTblock));
+
+	CTexture* return_to_select = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	return_to_select->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_select, 0, 0);
+	D2D1_RECT_F RTS_screenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, return_to_select);
+	std::unique_ptr<TextureBlock> RTS_block = std::make_unique<TextureBlock>(return_to_select, RTS_screenRect, mesh, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade);
+	RTS_block->onClick = [this]()
+		{
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				bMenuActive = false;
+
+			}
+		};
+	RTS_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	RTS_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	RTS_block->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(RTS_block));
+
+
 
 	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/upper-login.dds", RESOURCE_TEXTURE2D, 0);
@@ -2768,20 +2851,28 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		pCamera->SetLookDirection(XMFLOAT3(0.0f, -0.866f, -0.5f));
 	}
 
+
 	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 	if (!blocks.empty())
 	{
-		bool is_nearby = Check_Island_Range(300.0f);
+		bool is_nearby = Check_Island_Range(300.0f); 
 
-		if (is_nearby != bMenuActive)
+		if (is_nearby)
 		{
-			bMenuActive = is_nearby; 
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, bMenuActive);
+			if (!bMenuActive && !bClosedByUser)
+			{
+				bMenuActive = true;
+				Screen_Fade = true;
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, true);
+			}
+		}
+		else
+		{
+			bMenuActive = false;
+			bClosedByUser = false;
+			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 		}
 	}
-
-	Mouse_Lock = !bMenuActive;
-
 }
 
 void Board_Scene::After_Update_Objects()
@@ -2873,10 +2964,17 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		{
 		case VK_ESCAPE:
 		{
-			if (Mouse_Lock == false)
+			if (Screen_Fade == true && Mouse_Lock == false)
 				::PostQuitMessage(0);
 
+			Screen_Fade = true;
 			Mouse_Lock = false;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, true);
+			}
 		}
 		break;
 
@@ -3043,10 +3141,11 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
 	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
 	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue | UILayer::Dialogue_Button);
-	Yesblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Stage_1";
-		c_signal.type = Scene_Type::Stage_1;
+	Yesblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Stage_1";
+			c_signal.type = Scene_Type::Stage_1;
 
 		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
@@ -3055,39 +3154,106 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
 
-	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
-	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable);
-	TestSkipblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Stage_1";
-		c_signal.type = Scene_Type::Stage_1;
-
-		};
-	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	TestSkipblock->hp = 1;
-	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
 
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
 	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
 	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue | UILayer::Dialogue_Button);
-	Noblock->onClick = [this]() {
-		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-		if (!blocks.empty())
+	Noblock->onClick = [this]()
 		{
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
-			bMenuActive = false;
-		}
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+				bMenuActive = false;
+				bClosedByUser = true;
+				Screen_Fade = false;
+			}
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	Noblock->hp = 1;
 	Noblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
+
+
+
+	CTexture* return_to_game = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	return_to_game->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_game, 0, 0);
+	D2D1_RECT_F RTG_screenRect = MakeNormalizedRect(0.7f, 0.1f, 0.05f, return_to_game);
+	std::unique_ptr<TextureBlock> RTG_block = std::make_unique<TextureBlock>(return_to_game, RTG_screenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	RTG_block->onClick = [this]()
+		{
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+
+			}
+		};
+	RTG_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	RTG_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	RTG_block->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(RTG_block));
+
+
+	CTexture* replay = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	replay->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/undo-arrow.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
+	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.8f, 0.1f, 0.05f, replay);
+	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	REblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Character_Select";
+			c_signal.type = Scene_Type::Lobby;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+			}
+		};
+	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	REblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(REblock));
+
+
+	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
+	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	TestSkipblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Stage_1";
+			c_signal.type = Scene_Type::Stage_1;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
+		};
+	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	TestSkipblock->hp = 1;
+	TestSkipblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
 }
 
+void Board_Scene::OnMenuCloseButtonClicked(std::vector<TextureBlock*>& blocks)
+{
+	bMenuActive = false;
+	Screen_Fade = false;
+	bClosedByUser = true;
+	Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+}
 
 //==========================================================================================
 
