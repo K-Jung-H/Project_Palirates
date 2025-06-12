@@ -577,11 +577,13 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
-		CScene::Mouse_Lock = true;
-
 		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
+			
+			if (scene_manager->Get_Active_Scene()->scene_type == Stage_1)
+				CScene::Mouse_Lock = true;
+
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
