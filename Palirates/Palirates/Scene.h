@@ -240,6 +240,7 @@ public:
 	shared_ptr<CMaterial>fog_noise = NULL;
 
 	bool test_button = false;
+	bool blur_effect = false;
 	bool particle_test_button = false;
 
 #ifdef WRITE_TEXT_UI
