@@ -3147,6 +3147,13 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			c_signal.scene_name = "Stage_1";
 			c_signal.type = Scene_Type::Stage_1;
 
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
 		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
