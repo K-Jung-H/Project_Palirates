@@ -13,7 +13,11 @@ private:
     std::shared_ptr<Text_UI_Renderer> text_ui_renderer;
     std::shared_ptr<Texture_UI_Renderer> texture_ui_renderer;
 
+    std::shared_ptr<ID3D12RootSignature> Empty_GraphicsRootSignature;
+
     PostProcessBaseShader* MRT_shader = NULL;
+    ScreenFade_Shader* Fade_shader = NULL;
+
 
     std::map<int, CPlayer*> players;
 
@@ -22,6 +26,9 @@ public:
     Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight);
     ~Scene_Manager();
 
+    ID3D12RootSignature* Create_EmptyRootSignature(ID3D12Device* pd3dDevice);
+
+
     bool Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene);
     void Unload_Scene();
 
@@ -29,6 +36,9 @@ public:
 
     bool Set_Active_Scene(std::string_view sceneName);
     bool Find_Scene(std::string_view sceneName);
+    bool Get_Active_Scene_Mouse_State();
+    bool Get_Active_Scene_Fade_State();
+
     std::shared_ptr<CScene> Get_Active_Scene() { return activeScene; }
     CScene* Get_Active_Scene_Ptr() { return activeScene.get(); }
 
@@ -41,7 +51,8 @@ public:
 
     bool Check_Scene_Change_Signal();
 
-    void Set_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
+    void Set_MRT_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
+    void Set_ScreenFade_Shader(ScreenFade_Shader* shader_ptr) { Fade_shader = shader_ptr; }
 
     void Build_Scene(Scene_Type scene_type, string scene_name, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -65,6 +76,7 @@ public:
     void Prepare_Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     void Render_Transparent_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+    void Prepare_Render_Scene_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList);
     void Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
 
@@ -77,8 +89,9 @@ public:
     void Render_Scene_UI(UINT nFrame);
     void Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime);
 
-    void ReleaseUploadBuffers();
+    void Render_ScreenFade(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+    void ReleaseUploadBuffers();
 
 
     //===============¼­¹ö===============

@@ -342,3 +342,25 @@ float4 PS_FullScreen(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     
 
 }
+
+
+static const float2 g_ScreenQuad[6] = { float2(-1, -1), float2(-1, 1), float2(1, -1), float2(1, -1), float2(-1, 1), float2(1, 1) };
+
+struct VS_OUTPUT
+{
+    float4 pos : SV_POSITION;
+    float2 uv : TEXCOORD0;
+};
+
+VS_OUTPUT ScreenFade_VS(uint vertexID : SV_VertexID)
+{
+    VS_OUTPUT output;
+    output.pos = float4(g_ScreenQuad[vertexID], 0.0f, 1.0f);
+    output.uv = g_ScreenQuad[vertexID] * 0.5f + 0.5f;
+    return output;
+}
+
+float4 ScreenFade_PS(VS_OUTPUT input) : SV_TARGET
+{
+    return float4(0.0, 0.0, 0.0, 0.7f);
+}

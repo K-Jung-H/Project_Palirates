@@ -363,10 +363,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case WM_KEYUP:
 			switch (wParam)
 			{
-				case VK_ESCAPE:
-					::PostQuitMessage(0);
-					break;
-
 				case VK_SPACE:
 					break;
 
@@ -526,7 +522,8 @@ void CGameFramework::Build_Default_Elements()
 
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 
-	scene_manager->Set_Shader(MRT_shader);
+	scene_manager->Set_MRT_Shader(MRT_shader);
+	
 
 	Post_ComputeShader::CreateComputeRootSignature(m_pd3dDevice);
 
@@ -547,7 +544,9 @@ void CGameFramework::Build_Default_Scenes()
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
 
+//	Build_Scene(Scene_Type::Test, "Test_Scene");
 
+//	scene_manager->Set_Active_Scene("Test_Scene");
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
@@ -574,13 +573,17 @@ void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 
 bool CGameFramework::Change_Scene()
 {
-	//scene_manager->Check_Scene_Change_Signal()
+
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
 		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
+			
+			if (scene_manager->Get_Active_Scene()->scene_type == Stage_1)
+				CScene::Mouse_Lock = true;
+
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
@@ -620,9 +623,10 @@ void CGameFramework::Release_Scenes()
 
 void CGameFramework::ProcessInput()
 {
+	static bool last_mouse_state = false;
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
-
+	
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
 	if (GetKeyboardState(pKeysBuffer) && main_scene)
@@ -648,22 +652,42 @@ void CGameFramework::ProcessInput()
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
 		if (m_pPlayer && m_pPlayer->GetCamera())
-		{
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
-		}
+		
 
 		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
+
+		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
+
+		if (bMouseLocked != last_mouse_state)
+		{
+			if (bMouseLocked)
+				HideCursor();
+			else		
+				ShowCursorFix();
+		
+			last_mouse_state = bMouseLocked; 
+		}
+
 		float cxDelta = 0.0f, cyDelta = 0.0f;
 		POINT ptCursorPos;
-		if (GetCapture() == m_hWnd)
+		POINT ptCenter = { m_nWndClientWidth / 2, m_nWndClientHeight / 2 };
+		ClientToScreen(m_hWnd, &ptCenter);
+
+		if (bMouseLocked)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+
+			if (GetCursorPos(&ptCursorPos))
+			{
+				cxDelta = (float)(ptCursorPos.x - ptCenter.x);
+				cyDelta = (float)(ptCursorPos.y - ptCenter.y);
+
+				SetCursorPos(ptCenter.x, ptCenter.y);
+			}
 		}
+
+
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
@@ -954,16 +978,26 @@ void CGameFramework::FrameAdvance()
 	scene_manager->Update_UI();
 #endif
 	// ====================== [3.5] ShadowMap Phase ======================
-
-	for (int i = 0; i < NUM_CASCADES; i++)
-	{
 		BeginGPUStage(GPU_Stage::Render);
 		PrepareStage(GPU_Stage::Render);
-		{
-			scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
-		}
+
+
+
 		EndGPUStage(GPU_Stage::Render);
-	}
+
+		for (int i = 0; i < NUM_CASCADES; i++)
+		{
+			{
+				BeginGPUStage(GPU_Stage::Render);
+				PrepareStage(GPU_Stage::Render);
+
+				scene_manager->Prepare_Render_Scene_ShadowMap(Active_CommandList);
+				scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+
+				EndGPUStage(GPU_Stage::Render);
+
+			}
+		}
 	
 
 	
@@ -1048,6 +1082,11 @@ void CGameFramework::FrameAdvance()
 		{
 			m_pPlayer->Record_Last_Pos();
 		}
+
+		// Check MouseLock & FadeEffect
+		scene_manager->Render_ScreenFade(m_pd3dDevice, Active_CommandList);
+
+
 		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 
