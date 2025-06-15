@@ -137,6 +137,23 @@ void Text_UI_Manager::UpdateTextBlock(UINT nIndex, WCHAR* pstrUIText, D2D1_RECT_
 
 //=======================================================================================
 
+TextureBlock::TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask, const XMFLOAT2& offsetNormalized, const XMFLOAT2& scale)
+    : pTexture(texture), screenRect(rect), mesh(meshPtr), layer(layerMask)
+{
+    float cx = (rect.left + rect.right) * 0.5f;
+    float cy = (rect.top + rect.bottom) * 0.5f;
+    float width = (rect.right - rect.left) * scale.x;
+    float height = (rect.bottom - rect.top) * scale.y;
+
+    float offsetX = offsetNormalized.x * FRAME_BUFFER_WIDTH;
+    float offsetY = offsetNormalized.y * FRAME_BUFFER_HEIGHT;
+
+    hitboxRect.left = cx - width * 0.5f + offsetX;
+    hitboxRect.right = cx + width * 0.5f + offsetX;
+    hitboxRect.top = cy - height * 0.5f + offsetY;
+    hitboxRect.bottom = cy + height * 0.5f + offsetY;
+}
+
 Text_UI_Renderer::Text_UI_Renderer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
 {
     m_fWidth = static_cast<float>(nWidth);
@@ -401,4 +418,33 @@ void Texture_UI_Renderer::UpdateShaderVariables(float currentTime, float elapsed
 
     D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = m_pCBFrameInfo->GetGPUVirtualAddress();
     cmdList->SetGraphicsRootConstantBufferView(0, gpuAddress); // b0에 해당
+}
+
+void Texture_UI_Manager::RenderAll(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime) {
+    if (textureRenderer && textureShader)
+    {
+        std::vector<TextureBlock*> rawPtrs;
+        for (auto& block : textureBlockList)
+            rawPtrs.push_back(block.get());
+
+        cmdList->SetGraphicsRootSignature(m_TextureUI_GraphicsRootSignature.get());
+
+        textureRenderer->UpdateShaderVariables(
+            currentTime,
+            elapsedTime,
+            cmdList
+        );
+
+        textureShader->OnPrepareRender(cmdList, 0);
+        textureRenderer->Render_UI_Textures(cmdList, &rawPtrs);
+    }
+}
+
+
+std::vector<TextureBlock*> Texture_UI_Manager::GetTextureBlockPtrs()
+{
+    std::vector<TextureBlock*> result;
+    for (auto& block : textureBlockList)
+        result.push_back(block.get());
+    return result;
 }

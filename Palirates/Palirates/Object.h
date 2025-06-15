@@ -515,13 +515,36 @@ public:
 
 
 //==================================================================================
-#define OBJECT_TPYE_MAIN_PLAYER      0x01
-#define OBJECT_TPYE_PLAYER      0x02
-#define OBJECT_TPYE_MONSTER      0x04
-#define OBJECT_TPYE_PLAYER_WEAPON      0x08
-#define OBJECT_TPYE_SELECT_PLAYER      0x10
-#define OBJECT_TPYE_MONSTER_WEAPON      0x20
-//#define OBJECT_TPYE_MONSTER_BODY      0x40
+
+enum class EObjectType : uint32_t
+{
+    None = 0x00,
+    MainPlayer = 0x01,
+    Player = 0x02,
+    Monster = 0x04,
+    PlayerWeapon = 0x08,
+    SelectPlayer = 0x10,
+    MonsterWeapon = 0x20,
+    DropWeapon = 0x40
+};
+
+inline EObjectType operator|(EObjectType a, EObjectType b)
+{
+    return static_cast<EObjectType>(
+        static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline EObjectType operator&(EObjectType a, EObjectType b)
+{
+    return static_cast<EObjectType>(
+        static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline EObjectType& operator|=(EObjectType& a, EObjectType b)
+{
+    a = a | b;
+    return a;
+}
 
 class CHeightMapTerrain;
 
@@ -560,7 +583,12 @@ public:
 
 public:
     char                     m_pstrFrameName[64];
-    int Object_type = 0;
+    EObjectType type = EObjectType::None;
+
+    bool HasType(EObjectType mask) const
+    {
+        return (type & mask) != EObjectType::None;
+    }
 
     std::shared_ptr<CGameObject> m_pParent = NULL;
 
@@ -582,21 +610,8 @@ public:
     float   Blending_value = 0.0f;
     
     void SetMoveSpeed(float s) { m_fMoveSpeed = s; }
-    void SetRotationSpeed2(float s) { m_fRotationSpeed = s; }
     void SetInitialUpSpeed(float s) { m_fInitialUpSpeed = s; }
-    void Launch(const XMVECTOR& target_dir)
-    {
-        m_fRotationSpeed = 720.0f;
-        if (m_bInAir) return;
-        m_bInAir = true;
-        XMVECTOR dirNorm = XMVector3Normalize(target_dir);
-        m_vVelocity = XMVectorSet(
-            XMVectorGetX(dirNorm) * m_fMoveSpeed,
-            m_fInitialUpSpeed,
-            XMVectorGetZ(dirNorm) * m_fMoveSpeed,
-            0.0f
-        );
-    }
+    void Launch(const XMVECTOR& target_dir);
     WeaponObject* pWeapon;
 
     bool bIsControllable{ true };
@@ -608,11 +623,7 @@ public:
     char* WeaponName = "";
     BoundingOrientedBox m_WorldOBB;
     XMMATRIX customRotation = XMMatrixIdentity();
-    XMFLOAT4X4 WeaponMatrix = []() {
-        XMFLOAT4X4 m;
-        XMStoreFloat4x4(&m, XMMatrixIdentity());
-        return m;
-        }();
+    XMFLOAT4X4 WeaponMatrix{};
 
     XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
 
@@ -634,7 +645,6 @@ public:
 
     // Deep Copy
     std::shared_ptr<CGameObject> Clone(bool withHierarchy = true);
-    std::shared_ptr<CGameObject> GetWeapon(bool withHierarchy);
 
     // Deep Copy Hierarchy & Shallow Copy Resource
     static std::shared_ptr<CGameObject> Make_Instance(std::shared_ptr<CGameObject> modelRoot, bool withHierarchy = true);
@@ -785,6 +795,7 @@ public:
 
     virtual std::shared_ptr<CGameObject> DropWeapon(const char* targetName);
     virtual void RestoreWeapon(const char* targetName);
+    std::shared_ptr<CGameObject> GetWeapon(bool withHierarchy);
 
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;

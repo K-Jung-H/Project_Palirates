@@ -66,7 +66,12 @@ void Server::AcceptClients()
     }
 }
 
-
+void Server::Server_Update()
+{
+    // 서버 업데이트 로직을 여기에 추가할 수 있습니다.
+    // 예를 들어, 주기적으로 모든 플레이어의 상태를 브로드캐스트하거나
+    // 몬스터의 상태를 업데이트하는 등의 작업을 수행할 수 있습니다.
+}
 
 
 void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
@@ -391,9 +396,4 @@ int main()
 
     return 0;
 }
-
-//bool Server::ValidatePosition(float x, float y, float z)
-//{
-//    return 0;//(x >= -1000 && x <= 1000) && (y >= -1000 && y <= 1000) && (z >= -1000 && z <= 1000);
-//}
 

@@ -37,7 +37,8 @@ public:
 
     shared_ptr<CPlayer> Get_Active_Scene_Player();
     shared_ptr<CCamera> Get_Active_Scene_Main_Camera();
-    
+    std::shared_ptr<Particle_Manager> Get_Active_Scene_Particle_Manager();
+
     bool Check_Scene_Change_Signal();
 
     void Set_Shader(PostProcessBaseShader* shader_ptr) { MRT_shader = shader_ptr; }
@@ -78,11 +79,7 @@ public:
 
     void ReleaseUploadBuffers();
 
-    //std::function<void(const std::string&)> sceneChangeCallback;
 
-    //void SetSceneChangeCallback(std::function<void(const std::string&)> fn) {
-    //    sceneChangeCallback = fn;
-    //}
 
     //===============¼­¹ö===============
     //void AddPlayer(int playerId, CPlayer* player);

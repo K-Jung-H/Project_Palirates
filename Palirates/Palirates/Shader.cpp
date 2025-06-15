@@ -1449,7 +1449,7 @@ D3D12_RASTERIZER_DESC Deferred_CStandard_Shader::CreateRasterizerState(int nPipe
 
 	if (nPipelineState == 1)
 	{
-		d3dRasterizerDesc.DepthBias = 80000;
+		d3dRasterizerDesc.DepthBias = 500;
 		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
 	}
