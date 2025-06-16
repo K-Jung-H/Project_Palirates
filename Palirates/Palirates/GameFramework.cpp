@@ -1302,6 +1302,15 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (m_pCamera && m_pPlayer)
 			m_pCamera->SetPlayer(m_pPlayer.get());
 
+		{
+			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+			if (pendingUpdateMap.contains(ClientNum)) {
+				std::string delayedPacket = pendingUpdateMap[ClientNum];
+				ProcessReceivedData(delayedPacket);
+				pendingUpdateMap.erase(ClientNum);
+			}
+		}
+
 		while (!pendingPlayerCreates.empty()) {
 			int pendingId = pendingPlayerCreates.front();
 			pendingPlayerCreates.pop();
@@ -1332,14 +1341,13 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	if (receivedData == "PING")
+	if (receivedData.find("PING") == 0)
 	{
 		std::string pong = "PONG\n";
 		send(serverSocket, pong.c_str(), static_cast<int>(pong.length()), 0);
 		std::cout << "[DEBUG] Received PING ¡æ sent PONG\n";
 		return;
 	}
-
 
 	std::vector<std::string> tokens;
 	std::stringstream ss(receivedData);
@@ -1503,16 +1511,19 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		{
 			if (px == 0.0f && py == 0.0f && pz == 0.0f) return;
 
-			if (m_pPlayer)
+			if (!m_pPlayer)
 			{
-				m_pPlayer->SetPosition(pos);
-				m_pPlayer->SetLookDirection(look);
-
-				if (m_pPlayer->GetStateMachine())
-					m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
-
-				m_pPlayer->ApplySyncData(syncData);
+				std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+				pendingUpdateMap[playerId] = receivedData;
+				//std::cout << "[DELAY] PLAYER_UPDATE for local player delayed, m_pPlayer not yet created" << std::endl;
+				return;
 			}
+
+			m_pPlayer->SetPosition(pos);
+			m_pPlayer->SetLookDirection(look);
+			if (m_pPlayer->GetStateMachine())
+				m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+			m_pPlayer->ApplySyncData(syncData);
 		}
 		else
 		{
@@ -1648,6 +1659,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 void CGameFramework::CreateRemotePlayer(int playerId, int characterId)
 {
+	auto signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
+	if (signal.type != Scene_Type::Stage_1)
+	{
+		return;
+	}
+
 	std::cout << "[DEBUG] CreateRemotePlayer() called - ID: " << playerId << std::endl;
 
 	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
@@ -1698,6 +1715,7 @@ void CGameFramework::CreateRemotePlayer(int playerId, int characterId)
 	remotePlayer->SetupWeaponCollider();
 	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	remotePlayer->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
+
 
 	scene->obj_manager->Add_Object(remotePlayer, Object_Type::player);
 	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);
