@@ -39,6 +39,7 @@
 #include <thread>
 #include <mutex>
 #include <iostream>
+#include <bitset>
 #include <sstream>
 #include <iomanip>
 #pragma comment(lib, "ws2_32.lib")

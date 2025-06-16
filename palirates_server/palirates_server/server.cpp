@@ -253,6 +253,40 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             {
                 clients[clientId].lastPongTime = std::chrono::steady_clock::now();
             }
+            else if (packet.rfind("KEY_INPUT,", 0) == 0)
+            {
+                std::istringstream iss(packet);
+                std::string token;
+                std::vector<std::string> tokens;
+
+                while (std::getline(iss, token, ','))
+                    tokens.push_back(token);
+
+                if (tokens.size() >= 2)
+                {
+                    int keyMask = std::stoi(tokens[1]);
+
+                    shared_ptr<Scene> scene = sceneManager.getScene(clientId);
+                    if (!scene) 
+                    {
+                        sceneManager.addScene(clientId);
+                        scene = sceneManager.getScene(clientId);
+                    }
+
+                    std::shared_ptr<Player> player = scene->getPlayer(clientId);
+                    if (!player) return;
+
+                    player->key_input(keyMask);
+                    player->update(); // 위치 갱신
+
+                    XMFLOAT3 pos = player->GetPosition();
+                    std::ostringstream oss;
+                    oss << "POSITION_UPDATE," << clientId << ","
+                        << pos.x << "," << pos.y << "," << pos.z << "\n";
+
+                    BroadcastPacket(oss.str(), -1);
+                }
+            }
             else
             {
                 logger.Log("잘못된 패킷 형식 수신: " + packet);

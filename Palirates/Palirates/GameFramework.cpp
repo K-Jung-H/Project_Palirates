@@ -932,6 +932,19 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
 
+	int keyMask = 0;
+	if (GetAsyncKeyState('W') & 0x8000) keyMask |= 1 << 0;
+	if (GetAsyncKeyState('S') & 0x8000) keyMask |= 1 << 1;
+	if (GetAsyncKeyState('A') & 0x8000) keyMask |= 1 << 2;
+	if (GetAsyncKeyState('D') & 0x8000) keyMask |= 1 << 3;
+
+	if (keyMask != 0)
+	{
+		std::cout << "[DEBUG] input mask: " << std::bitset<8>(keyMask) << std::endl;
+		std::string packet = "KEY_INPUT," + std::to_string(keyMask);
+		SendPacket(packet);
+	}
+
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
@@ -1530,6 +1543,20 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				remotePlayer->SetLookDirection(look);
 				remotePlayer->ApplySyncData(syncData);
 			}
+		}
+
+	}
+	else if (tokens[0] == "POSITION_UPDATE") {
+		int playerId = std::stoi(tokens[1]);
+		float x = std::stof(tokens[2]);
+		float y = std::stof(tokens[3]);
+		float z = std::stof(tokens[4]);
+
+		if (playerId == ClientNum) return;
+
+		auto it = m_pRemotePlayers.find(playerId);
+		if (it != m_pRemotePlayers.end()) {
+			it->second->SetPosition(XMFLOAT3(x, y, z));
 		}
 	}
 
