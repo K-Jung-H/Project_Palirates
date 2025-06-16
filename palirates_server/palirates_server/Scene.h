@@ -8,15 +8,15 @@
 class Scene
 {
 private:
-    mutable std::mutex sceneMutex;
+    mutable std::recursive_mutex sceneMutex;
     std::unordered_map<int, std::shared_ptr<Player>> player_data_map;
     std::unordered_map<int, Monster> monster_map;
 
-    mutable std::mutex player_mutex;
-    mutable std::mutex monster_mutex;
+    mutable std::recursive_mutex player_mutex;
+    mutable std::recursive_mutex monster_mutex;
 
 public:
-    std::mutex& GetSceneMutex() const;
+    std::recursive_mutex& GetSceneMutex() const;
     std::shared_ptr<Player> getPlayer(int id);
     std::shared_ptr<Player> addPlayer(int id, XMFLOAT3 pos, XMFLOAT3 look);
     void removePlayer(int id);
