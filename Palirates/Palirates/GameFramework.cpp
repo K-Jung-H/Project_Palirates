@@ -1389,6 +1389,32 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 		return;
 	}
+	if (tokens[0] == "PLAYER_CREATE" && tokens.size() >= 2)
+	{
+		int id = std::stoi(tokens[1]);
+
+		if (id != ClientNum)
+		{
+			std::queue<int> tempQueue = pendingPlayerCreates;
+			bool alreadyQueued = false;
+			while (!tempQueue.empty())
+			{
+				if (tempQueue.front() == id) {
+					alreadyQueued = true;
+					break;
+				}
+				tempQueue.pop();
+			}
+
+			if (!alreadyQueued)
+			{
+				std::lock_guard<std::mutex> lock(pendingCreateMutex);
+				pendingPlayerCreates.push(id);
+				std::cout << "[DEBUG] PLAYER_CREATE 수신, remote player " << id << " 대기열 추가" << std::endl;
+			}
+		}
+		return;
+	}
 	if (tokens[0] == "CHARACTER_SELECTED" && tokens.size() >= 3)
 	{
 		int playerId = std::stoi(tokens[1]);
@@ -1404,13 +1430,34 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else
 		{
 			std::cout << "[INFO] Player " << playerId << " selected character " << charId << std::endl;
+			std::queue<int> tempQueue = pendingPlayerCreates;
+			std::queue<int> updatedQueue;
+
+			while (!tempQueue.empty())
+			{
+				int pendingId = tempQueue.front(); tempQueue.pop();
+
+				if (pendingId == playerId)
+				{
+					std::cout << "[CREATE] Creating remote player " << playerId << " with charId " << charId << std::endl;
+					CreateRemotePlayer(playerId, charId);
+
+					std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+					if (pendingUpdateMap.contains(playerId))
+					{
+						ProcessReceivedData(pendingUpdateMap[playerId]);
+						pendingUpdateMap.erase(playerId);
+					}
+				}
+				else
+				{
+					updatedQueue.push(pendingId);
+				}
+			}
+
+			std::swap(pendingPlayerCreates, updatedQueue);
 		}
 		return;
-	}
-	else if (tokens[0] == "CHARACTER_LOCKED" && tokens.size() >= 2)
-	{
-		int rejectedCharId = std::stoi(tokens[1]);
-		std::cout << "[REJECTED] Character already selected: " << rejectedCharId << std::endl;
 	}
 
 	if (tokens[0] == "SHIP_SYNC" && tokens.size() >= 7)

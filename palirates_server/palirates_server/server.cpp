@@ -50,9 +50,6 @@ void Server::AcceptClients()
             logger.Log("[서버] CLIENT_ID 전송 성공! 보낸 데이터: " + std::string(sendBuffer));
         }
 
-        // SendInitialStates(clientId);
-        // NotifyExistingPlayersAboutNew(clientId);
-
         try
         {
             std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
