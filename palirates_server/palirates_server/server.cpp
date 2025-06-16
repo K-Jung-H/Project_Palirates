@@ -576,7 +576,7 @@ int main()
         }
 
         server.BroadcastAllStates();
-        server.CheckClientLiveness();
+        //server.CheckClientLiveness();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
