@@ -1422,6 +1422,16 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 		characterSelections[playerId] = charId;
 
+		if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+		{
+			std::unordered_set<int> lockedIds;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id != ClientNum) lockedIds.insert(cid);
+			}
+			scene->UpdateLockedCharacters(lockedIds);
+		}
+
 		if (playerId == ClientNum)
 		{
 			selectedCharacterId = charId;

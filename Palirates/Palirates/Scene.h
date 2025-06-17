@@ -271,7 +271,6 @@ class Character_Select_Scene : public CScene
 {
 private:
 	UINT prev_index = -1;
-
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -289,7 +288,8 @@ public:
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
-
+	std::unordered_set<int> lockedCharacterIds;
+	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) {lockedCharacterIds = lockedIds;}
 };
 
 class Board_Scene : public CScene

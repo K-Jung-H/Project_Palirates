@@ -2287,13 +2287,31 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 {
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
 	int list_size = static_cast<int>(player_list->size());
-	if (list_size == 0)
-		return;
+	if (list_size == 0) return;
 
+	int attempts = 0;
 	int next_index = (new_index + list_size) % list_size;
 
+	while (attempts < list_size)
+	{
+		int charId = (*player_list)[next_index]->GetID();
+		if (lockedCharacterIds.find(charId) == lockedCharacterIds.end())
+		{
+			break;
+		}
+		next_index = (next_index + 1) % list_size;
+		attempts++;
+	}
+
+	if (attempts >= list_size)
+	{
+		return;
+	}
+
 	if (prev_index >= 0 && prev_index < list_size && prev_index != next_index)
+	{
 		(*player_list)[prev_index]->SetOutlineColor(0);
+	}
 
 	(*player_list)[next_index]->SetOutlineColor(1);
 

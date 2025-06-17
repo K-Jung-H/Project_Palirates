@@ -175,9 +175,10 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     {
                         int selectedCharId = std::stoi(tokens[1]);
 
-                        // 이미 선택된 캐릭터인지 확인
                         if (lockedCharacterIds.find(selectedCharId) != lockedCharacterIds.end())
                         {
+                            std::string rejectMsg = "CHARACTER_LOCKED," + std::to_string(selectedCharId) + "\n";
+                            send(clientSocket, rejectMsg.c_str(), (int)rejectMsg.length(), 0);
                             logger.Log("[REJECTED] Character " + std::to_string(selectedCharId) + " already selected.");
                             return;
                         }
@@ -185,11 +186,11 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         characterSelections[clientId] = selectedCharId;
                         lockedCharacterIds.insert(selectedCharId);
 
-                        std::string lockPacket = "CHARACTER_LOCKED," + std::to_string(selectedCharId);
-                        BroadcastPacket(lockPacket, -1);
-
-                        std::string confirmPacket = "CHARACTER_SELECTED," + std::to_string(clientId) + "," + std::to_string(selectedCharId);
+                        std::string confirmPacket = "CHARACTER_SELECTED," + std::to_string(clientId) + "," + std::to_string(selectedCharId) + "\n";
                         BroadcastPacket(confirmPacket, -1);
+
+                        std::string statusPacket = "CHARACTER_STATUS," + std::to_string(clientId) + "," + std::to_string(selectedCharId) + "\n";
+                        BroadcastPacket(statusPacket, -1);
 
                         logger.Log("[SELECTED] Client " + std::to_string(clientId) + " selected character " + std::to_string(selectedCharId));
 
@@ -372,10 +373,7 @@ void Server::SendInitialStates(int clientId)
         if (!scene) continue;
 
         auto character = scene->getPlayer(otherId);
-        if (!character)
-        {
-            continue;
-        }
+        if (!character) continue;
 
         XMFLOAT3 look = character->GetLook();
         XMFLOAT3 pos = character->GetPosition();
@@ -389,6 +387,13 @@ void Server::SendInitialStates(int clientId)
 
         send(clientIt->second.socket, createPacket.c_str(), createPacket.length(), 0);
         send(clientIt->second.socket, updatePacket.c_str(), updatePacket.length(), 0);
+
+        auto charIt = characterSelections.find(otherId);
+        if (charIt != characterSelections.end())
+        {
+            std::string charStatus = "CHARACTER_STATUS," + std::to_string(otherId) + "," + std::to_string(charIt->second) + "\n";
+            send(clientIt->second.socket, charStatus.c_str(), charStatus.length(), 0);
+        }
     }
 }
 
@@ -414,12 +419,23 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
         std::to_string(look.x) + "," + std::to_string(safeLookY) + "," + std::to_string(look.z) + "," +
         std::to_string(static_cast<int>(character->GetState())) + "\n";
 
+    int charId = -1;
+    auto it = characterSelections.find(newClientId);
+    if (it != characterSelections.end())
+        charId = it->second;
+
     for (const auto& [clientId, session] : clients)
     {
         if (clientId == newClientId || !session.is_connected) continue;
 
         send(session.socket, createPacket.c_str(), createPacket.length(), 0);
         send(session.socket, updatePacket.c_str(), updatePacket.length(), 0);
+
+        if (charId != -1)
+        {
+            std::string charStatus = "CHARACTER_STATUS," + std::to_string(newClientId) + "," + std::to_string(charId) + "\n";
+            send(session.socket, charStatus.c_str(), charStatus.length(), 0);
+        }
     }
 
     logger.Log("[서버] 기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
@@ -573,7 +589,7 @@ int main()
         }
 
         server.BroadcastAllStates();
-        //server.CheckClientLiveness();
+        server.CheckClientLiveness();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
