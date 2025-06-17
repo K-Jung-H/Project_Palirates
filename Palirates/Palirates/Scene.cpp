@@ -1447,16 +1447,19 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 
 		XMVECTOR monsterPosVec = XMLoadFloat3(&obj->GetPosition());
 		float distSq = XMVectorGetX(XMVector3LengthSq(playerPos - monsterPosVec));
+		float normDist = 1.0f - (distSq / (maxDistance * maxDistance));
+		normDist = std::clamp(normDist, 0.0f, 1.0f);
 
 		if (distSq <= maxDistance * maxDistance)
 		{
 			MonsterUIData data;
 			data.position = obj->GetPosition();
 			data.hp = float(obj->currentHP) / obj->maxHP;
-			if (data.hp < 1.0f) {
-
-				float a = data.hp;
+			data.dist = normDist;
+			if (std::string(obj->Get_Name()) == "FishMan") {
+				data.yOffset = 20.0f;
 			}
+			
 			filtered->emplace_back(data);
 		}
 	}
@@ -1478,21 +1481,26 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 	{
 		if (blockIndex + 1 >= hpBlocks.size()) break;
 
+		XMFLOAT3 headWorldPos = monster.position;
+		headWorldPos.y += monster.yOffset;
+
 		XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
-			monster.position,
+			headWorldPos,
 			main_Camera->GetViewMatrix(),
 			main_Camera->GetProjectionMatrix(),
 			main_Camera->GetViewport());
 
-		//if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
-			//continue; 
+		if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
+			continue; 
+
+		float scale = 0.25f + 0.75f * monster.dist;
 
 		TextureBlock* back = hpBlocks[blockIndex++];
-		back->UpdateScreenRect(screenPos.x, screenPos.x, 0.1f, 1.0f, XMFLOAT2(0.0f, 0.05f));
+		back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
 		back->bActive = true;
 
 		TextureBlock* front = hpBlocks[blockIndex++];
-		front->UpdateScreenRect(screenPos.x, screenPos.x, 0.1f, 1.0f, XMFLOAT2(0.0f, 0.05f));
+		front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
 		float targetHP = monster.hp;
 		float speed = 15.0f;
 		front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);

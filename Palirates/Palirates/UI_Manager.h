@@ -8,6 +8,8 @@ struct MonsterUIData
 {
     XMFLOAT3 position;
     float hp;
+    float dist;
+    float yOffset;
 };
 
 inline D2D1_RECT_F MakeNormalizedRect(
@@ -190,7 +192,7 @@ struct TextureBlock
 
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default, const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f }, const XMFLOAT2& scale = { 1.0f, 1.0f });
     TextureBlock() = default;
-    void UpdateScreenRect(float normCX, float normCY, float normW, float scaleH, const XMFLOAT2& offsetNormalized, const XMFLOAT2& scale = XMFLOAT2(1.0f, 1.0f));
+    void UpdateScreenRect(float normCX, float normCY, float normW, float scaleH);
 };
 
 class Texture_UI_Renderer

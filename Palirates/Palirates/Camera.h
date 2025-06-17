@@ -167,7 +167,7 @@ public:
 	const BoundingFrustum& Get_Frustum() const { return m_xmFrustum; }
 
 
-	XMFLOAT2 WorldToNormalizedScreen(const XMFLOAT3& worldPos, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, const D3D12_VIEWPORT& viewport);
+	XMFLOAT2 CCamera::WorldToNormalizedScreen(const XMFLOAT3& worldPos, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, const D3D12_VIEWPORT& viewport);
 };
 
 class CSpaceShipCamera : public CCamera

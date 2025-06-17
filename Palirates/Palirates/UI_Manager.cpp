@@ -154,7 +154,7 @@ TextureBlock::TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shar
     hitboxRect.bottom = cy + height * 0.5f + offsetY;
 }
 
-void TextureBlock::UpdateScreenRect(float normCX, float normCY, float normW, float scaleH, const XMFLOAT2& offsetNormalized, const XMFLOAT2& scale)
+void TextureBlock::UpdateScreenRect(float normCX, float normCY, float normW, float scaleH)
 {
     if (!pTexture) return;
 
@@ -174,19 +174,6 @@ void TextureBlock::UpdateScreenRect(float normCX, float normCY, float normW, flo
     screenRect.right = cx + w * 0.5f;
     screenRect.top = cy - h * 0.5f;
     screenRect.bottom = cy + h * 0.5f;
-
-    float hitboxCX = cx;
-    float hitboxCY = cy;
-    float hitboxW = (screenRect.right - screenRect.left) * scale.x;
-    float hitboxH = (screenRect.bottom - screenRect.top) * scale.y;
-
-    float offsetX = offsetNormalized.x * FRAME_BUFFER_WIDTH;
-    float offsetY = offsetNormalized.y * FRAME_BUFFER_HEIGHT;
-
-    hitboxRect.left = hitboxCX - hitboxW * 0.5f + offsetX;
-    hitboxRect.right = hitboxCX + hitboxW * 0.5f + offsetX;
-    hitboxRect.top = hitboxCY - hitboxH * 0.5f + offsetY;
-    hitboxRect.bottom = hitboxCY + hitboxH * 0.5f + offsetY;
 }
 
 Text_UI_Renderer::Text_UI_Renderer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
