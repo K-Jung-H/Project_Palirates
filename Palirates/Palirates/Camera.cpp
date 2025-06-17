@@ -267,6 +267,31 @@ void CCamera::UpdateFocusTracking(XMFLOAT3& new_camera_pos)
 	RegenerateViewMatrix();
 }
 
+
+XMFLOAT2 CCamera::WorldToNormalizedScreen( const XMFLOAT3& worldPos, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, const D3D12_VIEWPORT& viewport)
+{
+	XMMATRIX mView = XMLoadFloat4x4(&view);
+	XMMATRIX mProj = XMLoadFloat4x4(&proj);
+
+	XMVECTOR pos = XMLoadFloat3(&worldPos);
+	pos = XMVector3Transform(pos, mView);
+	pos = XMVector3Transform(pos, mProj);
+
+	XMFLOAT4 projected;
+	XMStoreFloat4(&projected, pos);
+
+	if (projected.w <= 0.0f)
+		return XMFLOAT2(-1.0f, -1.0f);
+
+	float ndcX = projected.x / projected.w;
+	float ndcY = projected.y / projected.w;
+
+	float screenX = ndcX * 0.5f + 0.5f;
+	float screenY = 1.0f - (ndcY * 0.5f + 0.5f);
+
+	return XMFLOAT2(screenX, screenY);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CSpaceShipCamera
 

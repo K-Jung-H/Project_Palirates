@@ -265,7 +265,8 @@ public:
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 	std::vector<TextureBlock*> Get_Texture_List();
 	virtual void Update_Texture_UI(float currentTime, float elapsedTime);
-
+	virtual std::shared_ptr<std::vector<MonsterUIData>> GetNearbyMonstersUIData(float maxDistance);
+	virtual void Update_Monster_HP_bar(float currentTime, float elapsedTime, float maxDistance);
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 	virtual void Bind_Player_UI_Callback();
