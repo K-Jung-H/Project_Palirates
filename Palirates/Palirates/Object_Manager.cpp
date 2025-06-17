@@ -1560,9 +1560,9 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CPlayer>& play
 		if (obb_info.type == EObjectType::MainPlayer)
 			return;
 
-		if (obb_info.type == EObjectType::MonsterWeapon)
-			if (player_ptr->GetStateMachine()->Get_State() != State::Get_Hit_F2 && obb_info.object->bUpdateOBB)
-				player_ptr->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+		//if (obb_info.type == EObjectType::MonsterWeapon)
+			//if (player_ptr->GetStateMachine()->Get_State() != State::Get_Hit_F2 && obb_info.object->bUpdateOBB)
+				//player_ptr->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 	}
 }
 

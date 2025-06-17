@@ -1289,7 +1289,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	HFblock->ui_type = UI_EFFECT_CUT_HP;
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
-	for (int i = 0; i < UI_MONSTER_NUM * 2; ++i)
+	for (int i = 0; i < UI_MONSTER_NUM; ++i)
 	{
 		D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
 		TextureBlock* HBblock = new TextureBlock(HpBack, HBscreenRect, mesh);
@@ -1299,8 +1299,11 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
 		TextureBlock* HFblock = new TextureBlock(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
 		HFblock->bActive = false;
+		HFblock->ui_type = UI_EFFECT_CUT_HP;
 		texture_ui_manager->AddMonsterHPBlock(HFblock);
 	}
+
+	auto t = texture_ui_manager->GetMonsterHPBlocks();
 
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	if (select_index == Captain)
@@ -1379,7 +1382,6 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
 	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive) {
-		Update_Monster_HP_bar(currentTime, elapsedTime, 100.0f);
 
 		std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
@@ -1425,6 +1427,7 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 			}
 		}
 	}
+	Update_Monster_HP_bar(currentTime, elapsedTime, 100.0f);
 }
 
 std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(float maxDistance)
@@ -1449,8 +1452,11 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 		{
 			MonsterUIData data;
 			data.position = obj->GetPosition();
-			data.hp = obj->currentHP; 
+			data.hp = float(obj->currentHP) / obj->maxHP;
+			if (data.hp < 1.0f) {
 
+				float a = data.hp;
+			}
 			filtered->emplace_back(data);
 		}
 	}
@@ -1463,8 +1469,8 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 	auto mList = GetNearbyMonstersUIData(maxDistance);
 	if (!mList) return;
 
-	auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
 	texture_ui_manager->DeactivateAllMonsterHPBlocks();
+	auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
 
 	size_t blockIndex = 0;
 
@@ -1478,15 +1484,22 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 			main_Camera->GetProjectionMatrix(),
 			main_Camera->GetViewport());
 
-		if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.y < 0.0f || screenPos.y > 1.0f)
-			continue; 
+		//if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
+			//continue; 
 
 		TextureBlock* back = hpBlocks[blockIndex++];
-		back->UpdateScreenRect(0.5f, 0.5f, 0.3f, 1.0f, XMFLOAT2(0.0f, -0.05f));
+		back->UpdateScreenRect(screenPos.x, screenPos.x, 0.1f, 1.0f, XMFLOAT2(0.0f, 0.05f));
 		back->bActive = true;
 
 		TextureBlock* front = hpBlocks[blockIndex++];
-		front->UpdateScreenRect(0.5f, 0.5f, 0.3f, 1.0f, XMFLOAT2(0.0f, -0.05f));
+		front->UpdateScreenRect(screenPos.x, screenPos.x, 0.1f, 1.0f, XMFLOAT2(0.0f, 0.05f));
+		float targetHP = monster.hp;
+		float speed = 15.0f;
+		front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+
+		if (abs(front->hp - targetHP) < 0.001f) {
+			front->hp = targetHP;
+		}
 		front->bActive = true;
 	}
 }
