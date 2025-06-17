@@ -154,6 +154,28 @@ TextureBlock::TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shar
     hitboxRect.bottom = cy + height * 0.5f + offsetY;
 }
 
+void TextureBlock::UpdateScreenRect(float normCX, float normCY, float normW, float scaleH)
+{
+    if (!pTexture) return;
+
+    UINT texW = pTexture->GetTextureWidth();
+    UINT texH = pTexture->GetTextureHeight();
+    if (texH == 0) texH = 1;
+
+    float textureAspect = static_cast<float>(texW) / texH;
+
+    float cx = normCX * FRAME_BUFFER_WIDTH;
+    float cy = normCY * FRAME_BUFFER_HEIGHT;
+
+    float w = normW * FRAME_BUFFER_WIDTH;
+    float h = (w / textureAspect) * scaleH;
+
+    screenRect.left = cx - w * 0.5f;
+    screenRect.right = cx + w * 0.5f;
+    screenRect.top = cy - h * 0.5f;
+    screenRect.bottom = cy + h * 0.5f;
+}
+
 Text_UI_Renderer::Text_UI_Renderer(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
 {
     m_fWidth = static_cast<float>(nWidth);
@@ -427,6 +449,12 @@ void Texture_UI_Manager::RenderAll(ID3D12GraphicsCommandList* cmdList, float cur
         for (auto& block : textureBlockList)
             rawPtrs.push_back(block.get());
 
+        for (auto* block : monsterHPBlocks)
+        {
+            if (block && block->bActive)
+                rawPtrs.push_back(block);
+        }
+
         cmdList->SetGraphicsRootSignature(m_TextureUI_GraphicsRootSignature.get());
 
         textureRenderer->UpdateShaderVariables(
@@ -448,3 +476,4 @@ std::vector<TextureBlock*> Texture_UI_Manager::GetTextureBlockPtrs()
         result.push_back(block.get());
     return result;
 }
+

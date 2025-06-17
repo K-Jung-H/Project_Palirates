@@ -1289,6 +1289,22 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	HFblock->ui_type = UI_EFFECT_CUT_HP;
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
+	for (int i = 0; i < UI_MONSTER_NUM; ++i)
+	{
+		D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
+		TextureBlock* HBblock = new TextureBlock(HpBack, HBscreenRect, mesh);
+		HBblock->bActive = false;
+		texture_ui_manager->AddMonsterHPBlock(HBblock);
+
+		D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
+		TextureBlock* HFblock = new TextureBlock(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
+		HFblock->bActive = false;
+		HFblock->ui_type = UI_EFFECT_CUT_HP;
+		texture_ui_manager->AddMonsterHPBlock(HFblock);
+	}
+
+	auto t = texture_ui_manager->GetMonsterHPBlocks();
+
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	if (select_index == Captain)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
@@ -1366,6 +1382,7 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
 	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive) {
+
 		std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
 		for (auto& block : blocks)
@@ -1409,6 +1426,89 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 				}
 			}
 		}
+	}
+	Update_Monster_HP_bar(currentTime, elapsedTime, 100.0f);
+}
+
+std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(float maxDistance)
+{
+	if (!obj_manager || !m_pPlayer) return nullptr;
+
+	const std::vector<std::shared_ptr<CGameObject>>* allObjects = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!allObjects) return nullptr;
+
+	auto filtered = std::make_shared<std::vector<MonsterUIData>>();
+
+	XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+
+	for (const auto& obj : *allObjects)
+	{
+		if (!obj || !obj->HasType(EObjectType::Monster)) continue;
+
+		XMVECTOR monsterPosVec = XMLoadFloat3(&obj->GetPosition());
+		float distSq = XMVectorGetX(XMVector3LengthSq(playerPos - monsterPosVec));
+		float normDist = 1.0f - (distSq / (maxDistance * maxDistance));
+		normDist = std::clamp(normDist, 0.0f, 1.0f);
+
+		if (distSq <= maxDistance * maxDistance)
+		{
+			MonsterUIData data;
+			data.position = obj->GetPosition();
+			data.hp = float(obj->currentHP) / obj->maxHP;
+			data.dist = normDist;
+			if (std::string(obj->Get_Name()) == "FishMan") {
+				data.yOffset = 20.0f;
+			}
+			
+			filtered->emplace_back(data);
+		}
+	}
+
+	return filtered;
+}
+
+void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float maxDistance)
+{
+	auto mList = GetNearbyMonstersUIData(maxDistance);
+	if (!mList) return;
+
+	texture_ui_manager->DeactivateAllMonsterHPBlocks();
+	auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
+
+	size_t blockIndex = 0;
+
+	for (const auto& monster : *mList)
+	{
+		if (blockIndex + 1 >= hpBlocks.size()) break;
+
+		XMFLOAT3 headWorldPos = monster.position;
+		headWorldPos.y += monster.yOffset;
+
+		XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
+			headWorldPos,
+			main_Camera->GetViewMatrix(),
+			main_Camera->GetProjectionMatrix(),
+			main_Camera->GetViewport());
+
+		if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
+			continue; 
+
+		float scale = 0.25f + 0.75f * monster.dist;
+
+		TextureBlock* back = hpBlocks[blockIndex++];
+		back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+		back->bActive = true;
+
+		TextureBlock* front = hpBlocks[blockIndex++];
+		front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+		float targetHP = monster.hp;
+		float speed = 15.0f;
+		front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+
+		if (abs(front->hp - targetHP) < 0.001f) {
+			front->hp = targetHP;
+		}
+		front->bActive = true;
 	}
 }
 
@@ -2393,6 +2493,20 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		}
 		break;
 
+		case VK_CONTROL:
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Stage_1";
+			c_signal.type = Scene_Type::Stage_1;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
+		}
 				
 		default:
 			break;
@@ -3147,6 +3261,13 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			c_signal.scene_name = "Stage_1";
 			c_signal.type = Scene_Type::Stage_1;
 
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
 		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);

@@ -44,7 +44,6 @@ struct ServerAnimationSyncData
     std::vector<float> trackPositions;
 };
 
-
 class CTexture
 {
 public:

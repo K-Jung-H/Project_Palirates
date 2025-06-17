@@ -267,6 +267,38 @@ void CCamera::UpdateFocusTracking(XMFLOAT3& new_camera_pos)
 	RegenerateViewMatrix();
 }
 
+
+XMFLOAT2 CCamera::WorldToNormalizedScreen(
+	const XMFLOAT3& worldPos,
+	const XMFLOAT4X4& view,
+	const XMFLOAT4X4& proj,
+	const D3D12_VIEWPORT& viewport)
+{
+	XMMATRIX mView = XMLoadFloat4x4(&view);
+	XMMATRIX mProj = XMLoadFloat4x4(&proj);
+
+	XMVECTOR pos = XMLoadFloat3(&worldPos);
+	pos = XMVector3Transform(pos, mView);           // 월드 → 뷰
+	pos = XMVectorSetW(pos, 1.0f);
+	pos = XMVector4Transform(pos, mProj);           // 뷰 → 클립
+
+	XMFLOAT4 projected;
+	XMStoreFloat4(&projected, pos);
+
+	if (projected.w <= 0.0f)
+		return XMFLOAT2(-1.0f, -1.0f); // 클립 공간 바깥
+
+	// NDC (-1~+1) → 정규화 화면 공간 (0~1)
+	float ndcX = projected.x / projected.w;
+	float ndcY = projected.y / projected.w;
+
+	float screenX = ndcX * 0.5f + 0.5f;            // 좌(-1) → 0, 우(+1) → 1
+	float screenY = 1.0f - (ndcY * 0.5f + 0.5f);    // 위(+1) → 0, 아래(-1) → 1 (Y축 반전)
+
+	return XMFLOAT2(screenX, screenY);
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CSpaceShipCamera
 

@@ -4671,6 +4671,8 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
 	);
 	Set_Collider(body);
+
+	Set_Name("FishMan");
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4732,6 +4734,8 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
 	);
 	Set_Collider(body);
+
+	Set_Name("Anubis");
 }
 
 ///////////////////////////////////////////////////////////////////
