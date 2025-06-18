@@ -107,7 +107,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
 
         float4 shadowCoord0 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx]);
         shadowCoord0 /= shadowCoord0.w;
-
+        
         float shadow0 = 1.0f;
         if (shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f && shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f && shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
         {
@@ -119,6 +119,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
         {
             float4 shadowCoord1 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx - 1]);
             shadowCoord1 /= shadowCoord1.w;
+
             if (shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f && shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f && shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
             {
                 shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], gssShadowSampler, shadowCoord1.xy, shadowCoord1.z - shadow_bias, cascadeIdx - 1);
@@ -126,6 +127,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
         }
         shadowFactor = lerp(shadow0, shadow1, blendWeight);
     }
+
     return shadowFactor;
 }
 
@@ -244,7 +246,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
 
 
-    //    return Debug_ShadowMap(input.uv);
+     //return Debug_ShadowMap(input.uv);
     
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
 
