@@ -35,5 +35,5 @@ public:
     virtual void update();
 
     XMFLOAT3 inputDirection = { 0.0f, 0.0f, 0.0f };
-
+    float test_value = 0;
 };

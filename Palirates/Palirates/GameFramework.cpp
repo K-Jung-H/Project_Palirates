@@ -684,6 +684,9 @@ void CGameFramework::ProcessInput()
 			}
 		}
 
+		
+		
+
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
@@ -932,18 +935,7 @@ void CGameFramework::FrameAdvance()
 	m_GameTimer.Tick(100.0f);
 	ProcessInput();
 
-	int keyMask = 0;
-	if (GetAsyncKeyState('W') & 0x8000) keyMask |= 1 << 0;
-	if (GetAsyncKeyState('S') & 0x8000) keyMask |= 1 << 1;
-	if (GetAsyncKeyState('A') & 0x8000) keyMask |= 1 << 2;
-	if (GetAsyncKeyState('D') & 0x8000) keyMask |= 1 << 3;
-
-	if (keyMask != 0)
-	{
-		std::cout << "[DEBUG] input mask: " << std::bitset<8>(keyMask) << std::endl;
-		std::string packet = "KEY_INPUT," + std::to_string(keyMask) + "\n";
-		SendPacket(packet);
-	}
+	
 
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
@@ -1214,6 +1206,7 @@ void CGameFramework::SendPacket()
 	int trackCount = m_pPlayer->n_Animation;
 	oss << "," << trackCount;
 
+
 	for (int i = 0; i < trackCount; ++i)
 	{
 		float pos = controller->m_pAnimationTracks[i].m_fPosition;
@@ -1258,6 +1251,8 @@ void CGameFramework::SendPacket()
 		}
 	}
 
+
+	std::cout << packet << "\n";
 
 	if (result == SOCKET_ERROR)
 	{
@@ -1564,14 +1559,18 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 		if (tokens.size() > 9) {
 			int trackCount = std::stoi(tokens[9]);
-			for (int i = 0; i < trackCount; ++i) {
+			for (int i = 0; i < trackCount; ++i) 
+			{
 				int baseIdx = 10 + i * 2;
-				if (baseIdx + 1 < tokens.size()) {
-					float animPos = std::stof(tokens[baseIdx]);
-					float animWeight = std::stof(tokens[baseIdx + 1]);
-					syncData.trackPositions.push_back(animPos);
-					syncData.Weights.push_back(animWeight);
+				if (baseIdx + 1 < tokens.size())
+				{
+					break;
 				}
+			
+				float animPos = std::stof(tokens[baseIdx]);
+				float animWeight = std::stof(tokens[baseIdx + 1]);
+				syncData.trackPositions.push_back(animPos);
+				syncData.Weights.push_back(animWeight);
 			}
 		}
 

@@ -40,6 +40,8 @@ void Server::AcceptClients()
         sprintf_s(sendBuffer, "CLIENT_ID,%d", clientId);
         logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
 
+        scene->addPlayer(clientId, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 1.0f });
+
         int retval = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
         if (retval == SOCKET_ERROR)
         {
@@ -94,10 +96,11 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 std::string packet = recvBuffer.substr(0, pos);
                 recvBuffer.erase(0, pos + 1);
 
-                logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
+                //logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
 
                 int id, state;
-                float x, y, z;
+                uint32_t keyMask;
+                float x = 0.0f, y = 10.0f, z = 0.0f;
                 float lookX, lookY, lookZ;
 
                 if (packet.rfind("PLAYER_UPDATE,", 0) == 0)
@@ -109,24 +112,26 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     while (std::getline(iss, token, ','))
                         tokens.push_back(token);
 
-                    if (tokens.size() >= 10)
+                    if (tokens.size() >= 8)
                     {
+                        //여기를 kry_input으로 교체
                         id = std::stoi(tokens[1]);
-                        x = std::stof(tokens[2]);
-                        y = std::stof(tokens[3]);
-                        z = std::stof(tokens[4]);
-                        lookX = std::stof(tokens[5]);
-                        lookY = std::stof(tokens[6]);
-                        lookZ = std::stof(tokens[7]);
-                        state = std::stoi(tokens[8]);
-                        int trackCount = std::stoi(tokens[9]);
+                        keyMask = static_cast<uint32_t>(std::stoi(tokens[2]));
+                        lookX = std::stof(tokens[3]);
+                        lookY = std::stof(tokens[4]);
+                        lookZ = std::stof(tokens[5]);
+                        state = std::stoi(tokens[6]);
+                        int trackCount = std::stoi(tokens[7]);
+
+                        std::cout << tokens[2] << "\n";
 
                         std::vector<float> trackPositions;
-                        std::vector<float> trackWeights;
+                        std::vector<float> trackWeights; 
                         for (int i = 0; i < trackCount; ++i)
                         {
-                            int base = 10 + i * 2;
-                            if (base + 1 >= tokens.size()) break;
+                            int base = 8 + i * 2;
+                            if (base + 1 >= tokens.size())
+                                break;
                             trackPositions.push_back(std::stof(tokens[base]));
                             trackWeights.push_back(std::stof(tokens[base + 1]));
                         }
@@ -143,8 +148,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                             sceneManager.addScene(clientId);
                             scene = sceneManager.getScene(clientId);
                         }
-
-                        scene->updatePlayerPosition(clientId, x, y, z, lookX, lookY, lookZ, static_cast<Player_State>(state));
+                        scene->update_player_keyinput(id, keyMask);
                         scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
 
                         std::ostringstream oss;
@@ -278,33 +282,35 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     std::istringstream iss(packet);
                     std::string token;
                     std::vector<std::string> tokens;
-
+                    
                     while (std::getline(iss, token, ','))
                         tokens.push_back(token);
-
+                    
                     if (tokens.size() >= 2)
                     {
                         int keyMask = std::stoi(tokens[1]);
-
+               
                         shared_ptr<Scene> scene = sceneManager.getScene(clientId);
                         if (!scene)
                         {
                             sceneManager.addScene(clientId);
                             scene = sceneManager.getScene(clientId);
                         }
-
+                    
                         std::shared_ptr<Player> player = scene->getPlayer(clientId);
                         if (!player) return;
-
+                    
                         player->key_input(keyMask);
-                        player->update(); // 위치 갱신
-
-                        XMFLOAT3 pos = player->GetPosition();
-                        std::ostringstream oss;
-                        oss << "POSITION_UPDATE," << clientId << ","
-                            << pos.x << "," << pos.y << "," << pos.z << "\n";
-
-                        BroadcastPacket(oss.str(), -1);
+                        //player->update(); // 위치 갱신
+                    
+                        //XMFLOAT3 pos = player->GetPosition();
+                         
+                        std::cout << "test Value, ID : " << clientId << "value : " << player->test_value << "\n";
+                    //    std::ostringstream oss;
+                    //       oss << "POSITION_UPDATE," << clientId << ","
+                    //        << pos.x << "," << pos.y << "," << pos.z << "\n";
+                    //
+                    //    BroadcastPacket(oss.str(), -1);
                     }
                 }
                 else
@@ -349,12 +355,12 @@ void Server::BroadcastAllStates()
 
             float safeLookY = (player_look.y == 0.0f) ? 1.0f : player_look.y;
 
-            std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
-                std::to_string(player_pos.x) + "," + std::to_string(player_pos.y) + "," + std::to_string(player_pos.z) + "," +
-                std::to_string(player_look.x) + "," + std::to_string(safeLookY) + "," + std::to_string(player_look.z) + "," +
-                std::to_string(static_cast<int>(player->GetState())) + "\n";
-
-            BroadcastPacket(packet, -1); // 전체 클라이언트에게 전송
+ //           std::string packet = "PLAYER_UPDATE," + std::to_string(playerId) + "," +
+ //               std::to_string(player_pos.x) + "," + std::to_string(player_pos.y) + "," + std::to_string(player_pos.z) + "," +
+ //               std::to_string(player_look.x) + "," + std::to_string(safeLookY) + "," + std::to_string(player_look.z) + "," +
+ //               std::to_string(static_cast<int>(player->GetState())) + "\n";
+ //
+ //           BroadcastPacket(packet, -1); // 전체 클라이언트에게 전송
         }
     }
 }
@@ -481,7 +487,7 @@ void Server::Start()
    //
    //     scene->addMonster(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
    // }
-    BroadcastAllStates();
+    //BroadcastAllStates();
 
 }
 
@@ -588,7 +594,7 @@ int main()
             scene->update_player_Position();
         }
 
-        server.BroadcastAllStates();
+        //server.BroadcastAllStates();
         //server.CheckClientLiveness();
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }

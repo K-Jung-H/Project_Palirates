@@ -31,7 +31,6 @@ void Scene::removePlayer(int id)
 
 void Scene::update_player_keyinput(int id, uint32_t keystate)
 {
-    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
     auto player = getPlayer(id);
     if (!player) return;
 
