@@ -941,7 +941,7 @@ void CGameFramework::FrameAdvance()
 	if (keyMask != 0)
 	{
 		std::cout << "[DEBUG] input mask: " << std::bitset<8>(keyMask) << std::endl;
-		std::string packet = "KEY_INPUT," + std::to_string(keyMask);
+		std::string packet = "KEY_INPUT," + std::to_string(keyMask) + "\n";
 		SendPacket(packet);
 	}
 
