@@ -579,6 +579,23 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	if (c_signal.change)
 	{
+		if (c_signal.scene_name == "Game_Stage_Board")
+		{
+			if (!bCharacterSelectedSent)
+			{
+				std::ostringstream oss;
+				oss << "CHARACTER_SELECT_REQUEST," << selectedCharacterId;
+				SendPacket(oss.str());
+				bCharacterSelectedSent = true;
+				return false;
+			}
+
+			if (!bCharacterSelectApproved)
+			{
+				return false;
+			}
+		}
+
 		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
@@ -1464,15 +1481,37 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		}
 		return;
 	}
+	else if (tokens[0] == "CHARACTER_SELECT_OK" && tokens.size() >= 3)
+	{
+		int charId = std::stoi(tokens[1]);
+		int playerId = std::stoi(tokens[2]);
+
+		characterSelections[playerId] = charId;
+
+		if (playerId == ClientNum)
+		{
+			selectedCharacterId = charId;
+			bCharacterSelectApproved = true;
+			std::cout << "[APPROVED] My character selection confirmed: " << charId << std::endl;
+		}
+
+		if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+		{
+			std::unordered_set<int> lockedIds;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id != ClientNum) lockedIds.insert(cid);
+			}
+			scene->UpdateLockedCharacters(lockedIds);
+		}
+
+		return;
+	}
 	else if (tokens[0] == "CHARACTER_LOCKED" && tokens.size() >= 2)
 	{
 		int lockedCharId = std::stoi(tokens[1]);
-		std::cout << "[REJECTED] 캐릭터 " << lockedCharId << "은(는) 이미 다른 플레이어가 선택했습니다.\n";
+		//std::cout << "[REJECTED] 캐릭터 " << lockedCharId << "은(는) 이미 다른 플레이어가 선택했습니다.\n";
 
-		//if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
-		//{
-		//	scene->ClearSelectedCharacterIf(lockedCharId);
-		//}
 		return;
 	}
 

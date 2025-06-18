@@ -190,6 +190,10 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         characterSelections[clientId] = selectedCharId;
                         lockedCharacterIds.insert(selectedCharId);
 
+
+                        std::string okPacket = "CHARACTER_SELECT_OK," + std::to_string(selectedCharId) + "," + std::to_string(clientId) + "\n";
+                        BroadcastPacket(okPacket, -1);
+
                         std::string confirmPacket = "CHARACTER_SELECTED," + std::to_string(clientId) + "," + std::to_string(selectedCharId) + "\n";
                         BroadcastPacket(confirmPacket, -1);
 

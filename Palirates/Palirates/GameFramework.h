@@ -256,6 +256,8 @@ public:
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
     int selectedCharacterId = -1;
     std::unordered_map<int, int> characterSelections;
+    bool bCharacterSelectedSent = false;
+    bool bCharacterSelectApproved = false;
     //=================SERVER=================
 
     uint32_t current_keyboard_inputFlags = 0;

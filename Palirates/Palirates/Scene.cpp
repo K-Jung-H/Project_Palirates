@@ -2394,7 +2394,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	SlbTblock->onClick = [this]() {
 
-
 		c_signal.change = true;
 		c_signal.scene_name = "Game_Stage_Board";
 		c_signal.type = Scene_Type::Board;
