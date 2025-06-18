@@ -1469,6 +1469,17 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		}
 		return;
 	}
+	else if (tokens[0] == "CHARACTER_LOCKED" && tokens.size() >= 2)
+	{
+		int lockedCharId = std::stoi(tokens[1]);
+		std::cout << "[REJECTED] 캐릭터 " << lockedCharId << "은(는) 이미 다른 플레이어가 선택했습니다.\n";
+
+		//if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+		//{
+		//	scene->ClearSelectedCharacterIf(lockedCharId);
+		//}
+		return;
+	}
 
 	if (tokens[0] == "SHIP_SYNC" && tokens.size() >= 7)
 	{

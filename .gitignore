@@ -31,7 +31,6 @@
 *.out
 *.app
 
-/palirates_server
 /Palirates/.vs
 /Palirates/Palirates/x64
 /Palirates/x64

@@ -92,7 +92,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
     case Lobby:
     {
-        std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
+        std::shared_ptr<
+            _Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
         character_select_scene->BuildObjects(pd3dDevice, pd3dCommandList);
 
         Register_Scene(scene_name, character_select_scene);
