@@ -943,6 +943,10 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 
 	XMStoreFloat4x4(&xmf4x4Transform, XMMatrixAffineTransformation(S, XMVectorZero(), R, T));
 #else   
+
+	if (fPosition >= m_pfKeyFrameTimes[m_nKeyFrames - 1])
+		return m_ppxmf4x4KeyFrameTransforms[m_nKeyFrames - 1][nBone];
+
 	for (int i = 0; i < (m_nKeyFrames - 1); i++)
 	{
 		if ((m_pfKeyFrameTimes[i] <= fPosition) && (fPosition < m_pfKeyFrameTimes[i + 1]))
@@ -952,7 +956,6 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 			break;
 		}
 	}
-	if (fPosition >= m_pfKeyFrameTimes[m_nKeyFrames - 1]) xmf4x4Transform = m_ppxmf4x4KeyFrameTransforms[m_nKeyFrames - 1][nBone];
 
 #endif
 	return(xmf4x4Transform);
