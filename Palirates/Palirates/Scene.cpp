@@ -27,15 +27,24 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 	XMVECTOR upV = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX view = XMMatrixLookAtLH(eyeV, atV, upV);
 
+
+
 	float fov = XMConvertToRadians(60.0f);
 	float aspect = ASPECT_RATIO;
 	XMMATRIX proj = XMMatrixPerspectiveFovLH(fov, aspect, nearZ, farZ);
+
+	//XMMATRIX view = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
+	//XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	
+
+
 	XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
 
 	float ndc[8][3] = {
 		{-1, -1, 0}, { 1, -1, 0}, { 1,  1, 0}, {-1,  1, 0},
 		{-1, -1, 1}, { 1, -1, 1}, { 1,  1, 1}, {-1,  1, 1}
 	};
+
 
 	for (int i = 0; i < 8; ++i)
 	{
@@ -2015,7 +2024,7 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandLis
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
 			float nearZ = 1.01f;
-			float farZ = 5000.0f;
+			float farZ = 2000.0f;
 			int numCascades = NUM_CASCADES;
 			float lambda = 0.7f;
 			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
