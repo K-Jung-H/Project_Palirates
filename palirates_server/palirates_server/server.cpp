@@ -166,6 +166,22 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         BroadcastPacket(oss.str(), clientId);
                     }
                 }
+                else if (packet.rfind("ENTER_SCENE,", 0) == 0)
+                {
+                    std::string sceneName = packet.substr(strlen("ENTER_SCENE,"));
+                    auto scene = sceneManager.getScene(clientId);
+                    if (scene)
+                    {
+                        if (sceneName == "Game_Stage_Board")
+                            scene->SetSceneType(Scene_Type::Board);
+                        else if (sceneName == "Character_Select")
+                            scene->SetSceneType(Scene_Type::Lobby);
+                        else
+                            scene->SetSceneType(Scene_Type::None);
+                    }
+
+                    logger.Log("[Scene] 클라이언트 " + std::to_string(clientId) + " → " + sceneName + " 진입");
+                }
                 else if (packet.rfind("CHARACTER_SELECT,", 0) == 0)
                 {
                     std::istringstream iss(packet);
@@ -585,6 +601,42 @@ void Server::CheckClientLiveness()
     }
 }
 
+void Server::BroadcastCharacterSelect(Server* pServer)
+{
+    if (!pServer) return;
+
+    while (true)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        bool hasCharacterSelectClients = false;
+
+        for (const auto& [clientId, scenePtr] : pServer->sceneManager.getAllScenes())
+        {
+            if (scenePtr && scenePtr->GetSceneType() == Scene_Type::Lobby)
+            {
+                hasCharacterSelectClients = true;
+                break;
+            }
+        }
+
+        if (!hasCharacterSelectClients) continue;
+
+        for (const auto& [selectedClientId, charId] : pServer->characterSelections)
+        {
+            std::string packet = "CHARACTER_STATUS," + std::to_string(selectedClientId) + "," + std::to_string(charId) + "\n";
+
+            for (const auto& [targetId, session] : pServer->clients)
+            {
+                if (session.is_connected)
+                {
+                    send(session.socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+                }
+            }
+        }
+    }
+}
+
 int main()
 {
     Server server(9000);
@@ -597,7 +649,7 @@ int main()
         {
             scene->update_player_Position();
         }
-
+        std::thread(&Server::BroadcastCharacterSelect, &server).detach();
         //server.BroadcastAllStates();
         //server.CheckClientLiveness();
         std::this_thread::sleep_for(std::chrono::seconds(1));

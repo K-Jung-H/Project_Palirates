@@ -583,10 +583,20 @@ bool CGameFramework::Change_Scene()
 		{
 			if (!bCharacterSelectedSent)
 			{
+				for (const auto& [id, cid] : characterSelections)
+				{
+					if (id != ClientNum && cid == selectedCharacterId)
+					{
+						std::cout << "[BLOCKED] That character has already been selected.\n";
+						return false;
+					}
+				}
+
 				std::ostringstream oss;
-				oss << "CHARACTER_SELECT_REQUEST," << selectedCharacterId;
+				oss << "CHARACTER_SELECT_REQUEST," << selectedCharacterId << "\n";
 				SendPacket(oss.str());
 				bCharacterSelectedSent = true;
+				std::cout << "[DEBUG] Send character selection request.\n";
 				return false;
 			}
 
@@ -596,13 +606,17 @@ bool CGameFramework::Change_Scene()
 			}
 		}
 
+		std::ostringstream scenePacket;
+		scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
+		SendPacket(scenePacket.str());
+
 		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
-		else 
+		else
 		{
 			BeginGPUStage(GPU_Stage::Compute);
 			{
@@ -1425,6 +1439,26 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 				std::cout << "[DEBUG] PLAYER_CREATE 수신, remote player " << id << " 대기열 추가" << std::endl;
 			}
 		}
+		return;
+	}
+	if (tokens[0] == "CHARACTER_STATUS" && tokens.size() >= 3)
+	{
+		int playerId = std::stoi(tokens[1]);
+		int charId = std::stoi(tokens[2]);
+
+		characterSelections[playerId] = charId;
+
+		if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+		{
+			std::unordered_set<int> lockedIds;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id != ClientNum) lockedIds.insert(cid);
+			}
+			scene->UpdateLockedCharacters(lockedIds);
+		}
+
+		std::cout << "[STATUS] Player " << playerId << " selected character " << charId << std::endl;
 		return;
 	}
 	if (tokens[0] == "CHARACTER_SELECTED" && tokens.size() >= 3)

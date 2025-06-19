@@ -58,6 +58,8 @@ public:
     std::unordered_set<int> lockedCharacterIds;
     void CheckClientLiveness();
 
+    static void BroadcastCharacterSelect(Server* pServer);
+
     SceneManager& getSceneManager() { return sceneManager; }
 
     float shipX = 0.0f, shipY = 0.0f, shipZ = 0.0f;

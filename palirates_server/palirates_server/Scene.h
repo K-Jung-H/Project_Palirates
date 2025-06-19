@@ -5,12 +5,21 @@
 #include "Player.h"
 #include "Monster.h"
 
+enum class Scene_Type
+{
+    None,
+    Lobby,
+    Board,
+    Stage,
+};
+
 class Scene
 {
 private:
     mutable std::recursive_mutex sceneMutex;
     std::unordered_map<int, std::shared_ptr<Player>> player_data_map;
     std::unordered_map<int, Monster> monster_map;
+    Scene_Type sceneType = Scene_Type::None;
 
     mutable std::recursive_mutex player_mutex;
     mutable std::recursive_mutex monster_mutex;
@@ -28,6 +37,9 @@ public:
         float lookX, float lookY, float lookZ, Player_State state);
 
     void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
+    
+    Scene_Type GetSceneType() const { return sceneType; }
+    void SetSceneType(Scene_Type type) { sceneType = type; }
 
     const std::unordered_map<int, std::shared_ptr<Player>>& getPlayers() const;
 
