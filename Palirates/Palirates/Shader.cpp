@@ -963,13 +963,13 @@ ID3D12RootSignature* PostProcessBaseShader::CreateGraphicsRootSignature(ID3D12De
 
 		pd3dDescriptorRanges[2].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[2].NumDescriptors = 1;  // Noise_Texture
-		pd3dDescriptorRanges[2].BaseShaderRegister = 6;
+		pd3dDescriptorRanges[2].BaseShaderRegister = RenderTarget_Config::RTV_FORMAT_num + 1;
 		pd3dDescriptorRanges[2].RegisterSpace = 0;
 		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = 0;
 
 		pd3dDescriptorRanges[3].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[3].NumDescriptors = NUM_CASCADES;  // Fixed_ShadowMap_Texture
-		pd3dDescriptorRanges[3].BaseShaderRegister = 7;
+		pd3dDescriptorRanges[3].BaseShaderRegister = RenderTarget_Config::RTV_FORMAT_num + 2;
 		pd3dDescriptorRanges[3].RegisterSpace = 0;
 		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = 0;
 	}
@@ -981,9 +981,8 @@ ID3D12RootSignature* PostProcessBaseShader::CreateGraphicsRootSignature(ID3D12De
 		pd3dRootParameters[ROOT_PARAMETER_FOG_INFO_INDEX].Descriptor.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_FOG_INFO_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Constants.Num32BitValues = 4;
-		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Descriptor.ShaderRegister = 1; // Post_Camera_Position
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Descriptor.ShaderRegister = 1; // Post_Camera_Data
 		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].Descriptor.RegisterSpace = 0;
 		pd3dRootParameters[ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
@@ -1876,7 +1875,7 @@ D3D12_SHADER_BYTECODE Deferred_Plane_Shader::CreateVertexShader(ID3DBlob** Verte
 	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Plane.hlsl", "VS_Plane", "vs_5_1", VertexShaderBlob));
 	else if (nPipelineState == 1)
-		return CompileShaderFromFile(L"Shaders.hlsl", "VS_Shadow_Plane", "vs_5_1", VertexShaderBlob);
+		return CompileShaderFromFile(L"Plane.hlsl", "VS_Shadow_Plane", "vs_5_1", VertexShaderBlob);
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };

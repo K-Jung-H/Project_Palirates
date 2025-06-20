@@ -74,10 +74,9 @@ SamplerState gssClamp : register(s1);
 struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 {
     float4 Albedo_Color : SV_TARGET0;
-    float4 world_Position : SV_TARGET1;
-    float4 world_Normal_and_Camera_Distance : SV_TARGET2;
-    float4 Velocity_Mask_Obj_Id : SV_TARGET3;
-    float viewspace_z : SV_TARGET4;
+    float4 world_Normal_and_Camera_Distance : SV_TARGET1;
+    float4 Velocity_Mask_Obj_Id : SV_TARGET2;
+    float viewspace_z : SV_TARGET3;
 };
 
 
@@ -162,7 +161,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
     
@@ -207,7 +205,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.Albedo_Color.xyz = cColor.xyz;
     output.Albedo_Color.a = (float) (material_info.light_material_ID) / 255.0f;
     
-    output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = normalW;
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
     
@@ -409,7 +406,6 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 20.0f);
     
@@ -417,11 +413,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     float3 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1).xyz;
     
     output.Albedo_Color.xyz = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-    //output.Albedo_Color.xyz = float3(1.0f, 1.0f, 1.0f);
     output.Albedo_Color.a = (float) (material_info.light_material_ID) / 255.0f;
 
     
-    output.world_Position = float4(input.positionW, 1.0f);
     output.world_Normal_and_Camera_Distance.xyz = input.normalW; //float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
     output.viewspace_z = input.positionV.z;

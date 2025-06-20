@@ -142,15 +142,6 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 		m_CascadeProj.push_back(projMat);
 		m_CascadeSplits[i] = farZ;
 
-
-		DebugOutput("Cascade " + std::to_string(i) + "\n");
-		DebugOutput("frustumCenter = (" + std::to_string(frustumCenter.x) + ", " + std::to_string(frustumCenter.y) + ", " + std::to_string(frustumCenter.z) + ")" + "\n");
-		DebugOutput("AABB min = (" + std::to_string(min.x) + ", " + std::to_string(min.y) + ", " + std::to_string(min.z) + ")" + "\n");
-		DebugOutput("AABB max = (" + std::to_string(max.x) + ", " + std::to_string(max.y) + ", " + std::to_string(max.z) + ")" + "\n");
-		DebugOutput("AABB size = (" + std::to_string(max.x - min.x) + ", " + std::to_string(max.y - min.y) + ")" + "\n");
-		DebugOutput("maxSize = " + std::to_string(maxSize) + "\n");
-		DebugOutput("texelSize = " + std::to_string(texelSize) + "\n");
-		DebugOutput("\n");
 	}
 }
 
@@ -2023,11 +2014,9 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandLis
 	{
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
-			float nearZ = 1.01f;
-			float farZ = 2000.0f;
 			int numCascades = NUM_CASCADES;
 			float lambda = 0.7f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, CAMERA_FAR, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
 			shadow_camera->update_shadow = true;
