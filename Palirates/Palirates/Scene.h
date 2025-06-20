@@ -290,6 +290,7 @@ public:
 
 	std::unordered_set<int> lockedCharacterIds;
 	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) {lockedCharacterIds = lockedIds;}
+	std::function<void(int)> OnCharacterSelectedCallback;
 };
 
 class Board_Scene : public CScene

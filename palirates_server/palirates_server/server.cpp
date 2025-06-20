@@ -169,18 +169,25 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 else if (packet.rfind("ENTER_SCENE,", 0) == 0)
                 {
                     std::string sceneName = packet.substr(strlen("ENTER_SCENE,"));
+
                     auto scene = sceneManager.getScene(clientId);
-                    if (scene)
+                    if (!scene)
                     {
-                        if (sceneName == "Game_Stage_Board")
-                            scene->SetSceneType(Scene_Type::Board);
-                        else if (sceneName == "Character_Select")
-                            scene->SetSceneType(Scene_Type::Lobby);
-                        else
-                            scene->SetSceneType(Scene_Type::None);
+                        sceneManager.addScene(clientId);
+                        scene = sceneManager.getScene(clientId);
                     }
 
-                    logger.Log("[Scene] 클라이언트 " + std::to_string(clientId) + " → " + sceneName + " 진입");
+                    if (scene)
+                    {
+                        if (sceneName == "Character_Select")
+                            scene->SetSceneType(Scene_Type::Lobby);
+                        else if (sceneName == "Game_Stage_Board")
+                            scene->SetSceneType(Scene_Type::Board);
+                        else
+                            scene->SetSceneType(Scene_Type::None);
+
+                        logger.Log("[ENTER_SCENE] 클라이언트 " + std::to_string(clientId) + " → " + sceneName);
+                    }
                 }
                 else if (packet.rfind("CHARACTER_SELECT,", 0) == 0)
                 {
@@ -605,9 +612,13 @@ void Server::BroadcastCharacterSelect(Server* pServer)
 {
     if (!pServer) return;
 
+    std::cout << "[THREAD] BroadcastCharacterSelect 스레드 시작됨\n";
+
     while (true)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        std::cout << "[THREAD] BroadcastCharacterSelect 루프 동작 중\n";
 
         bool hasCharacterSelectClients = false;
 
@@ -620,7 +631,17 @@ void Server::BroadcastCharacterSelect(Server* pServer)
             }
         }
 
-        if (!hasCharacterSelectClients) continue;
+        if (!hasCharacterSelectClients)
+        {
+            std::cout << "[THREAD] 로비에 있는 클라이언트 없음, 생략\n";
+            continue;
+        }
+
+        if (pServer->characterSelections.empty())
+        {
+            std::cout << "[THREAD] 선택된 캐릭터 없음\n";
+            continue;
+        }
 
         for (const auto& [selectedClientId, charId] : pServer->characterSelections)
         {
@@ -630,6 +651,7 @@ void Server::BroadcastCharacterSelect(Server* pServer)
             {
                 if (session.is_connected)
                 {
+                    std::cout << "[SEND] CHARACTER_STATUS → Client " << targetId << ": " << packet;
                     send(session.socket, packet.c_str(), static_cast<int>(packet.length()), 0);
                 }
             }
@@ -643,13 +665,15 @@ int main()
     server.Start();
 
 
+    std::thread characterStatusThread(&Server::BroadcastCharacterSelect, &server);
+    characterStatusThread.detach();
+
     while (true)
     {
         for (auto& [sceneId, scene] : server.getSceneManager().getAllScenes())
         {
             scene->update_player_Position();
         }
-        std::thread(&Server::BroadcastCharacterSelect, &server).detach();
         //server.BroadcastAllStates();
         //server.CheckClientLiveness();
         std::this_thread::sleep_for(std::chrono::seconds(1));

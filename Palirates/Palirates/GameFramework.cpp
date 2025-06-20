@@ -72,6 +72,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
 	
 	ConnectToServer(SERVER_IP, SERVER_PORT);
+	SendPacket("ENTER_SCENE,Character_Select\n");
 
 	Build_Default_Elements();
 	Build_Default_Scenes();
@@ -581,6 +582,13 @@ bool CGameFramework::Change_Scene()
 	{
 		if (c_signal.scene_name == "Game_Stage_Board")
 		{
+			if (selectedCharacterId == -1)
+			{
+				std::cout << "[BLOCKED] No character selected.\n";
+				return false;
+			}
+
+
 			if (!bCharacterSelectedSent)
 			{
 				for (const auto& [id, cid] : characterSelections)
@@ -613,6 +621,16 @@ bool CGameFramework::Change_Scene()
 		if (scene_manager->Find_Scene(c_signal.scene_name))
 		{
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
+
+			if (auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+			{
+				charScene->OnCharacterSelectedCallback = [this](int charId)
+					{
+						this->selectedCharacterId = charId;
+						std::cout << "[DEBUG] Selected character's ID: " << charId << std::endl;
+					};
+			}
+
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 		}
@@ -626,12 +644,23 @@ bool CGameFramework::Change_Scene()
 			WaitForGpuComplete(GPU_Stage::Compute);
 
 			scene_manager->Set_Active_Scene(c_signal.scene_name);
+
+			if (auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+			{
+				charScene->OnCharacterSelectedCallback = [this](int charId)
+					{
+						this->selectedCharacterId = charId;
+						std::cout << "[DEBUG] Selected character's ID: " << charId << std::endl;
+					};
+			}
+
 			m_pPlayer = scene_manager->Get_Active_Scene_Player();
 			Object_Manager::Reserve_Update();
 
 			if (c_signal.type == Lobby)
 			{
-				ConnectToServer(SERVER_IP, SERVER_PORT);
+				//ConnectToServer(SERVER_IP, SERVER_PORT);
+				SendPacket("ENTER_SCENE,Character_Select\n");
 			}
 		}
 
@@ -1297,8 +1326,20 @@ void CGameFramework::SendPacket()
 
 void CGameFramework::SendPacket(const std::string& packet)
 {
-	if (serverSocket != INVALID_SOCKET)
-		send(serverSocket, packet.c_str(), static_cast<int>(packet.size()), 0);
+	if (serverSocket == INVALID_SOCKET)
+	{
+		std::cerr << "[ERROR] SendPacket failed: invalid socket" << std::endl;
+		return;
+	}
+
+	int result = send(serverSocket, packet.c_str(), static_cast<int>(packet.size()), 0);
+
+	std::cout << "[SEND] " << packet;
+
+	if (result == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] Failed to send packet: " << WSAGetLastError() << std::endl;
+	}
 }
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
@@ -1443,6 +1484,8 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	}
 	if (tokens[0] == "CHARACTER_STATUS" && tokens.size() >= 3)
 	{
+		std::cout << "[DEBUG] CHARACTER_STATUS ÆÐÅ¶ ¼ö½ÅµÊ: " << receivedData << std::endl;
+
 		int playerId = std::stoi(tokens[1]);
 		int charId = std::stoi(tokens[2]);
 

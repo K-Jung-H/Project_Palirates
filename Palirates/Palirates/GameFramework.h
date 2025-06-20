@@ -255,7 +255,7 @@ public:
     void SelectCharacter(int characterId);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
     int selectedCharacterId = -1;
-    std::unordered_map<int, int> characterSelections;
+    std::unordered_map<int, int> characterSelections;// -> 벡터로 다 바꾸기. 나간플레이어 재사용처리까지 해놓기
     bool bCharacterSelectedSent = false;
     bool bCharacterSelectApproved = false;
     //=================SERVER=================

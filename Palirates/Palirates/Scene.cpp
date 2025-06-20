@@ -2325,6 +2325,15 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 		m_pLights[3].m_xmf3Position = character_pos;
 		m_pLights[3].m_xmf3Position.y += 15.0f;
 	}
+
+	//bool값으로 처리해보자
+	//선택된거는 막아버려
+
+	if (OnCharacterSelectedCallback)
+	{
+		int charId = (*player_list)[select_index]->GetID();
+		OnCharacterSelectedCallback(charId);
+	}
 }
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
