@@ -7,7 +7,7 @@
 #include "Shader.h"
 #include "Scene.h"
 
-
+std::unordered_map<std::string, std::shared_ptr<CAnimationSet>> CAnimationSets::s_GlobalAnimationSetCache;
 
 CTexture::CTexture(int nTextures, UINT nTextureType, int nSamplers,
 	int nGraphicsSrvRootParameters, int nComputeUavRootParameters, int nComputeSrvRootParameters,
@@ -943,6 +943,10 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 
 	XMStoreFloat4x4(&xmf4x4Transform, XMMatrixAffineTransformation(S, XMVectorZero(), R, T));
 #else   
+
+	if (fPosition >= m_pfKeyFrameTimes[m_nKeyFrames - 1])
+		return m_ppxmf4x4KeyFrameTransforms[m_nKeyFrames - 1][nBone];
+
 	for (int i = 0; i < (m_nKeyFrames - 1); i++)
 	{
 		if ((m_pfKeyFrameTimes[i] <= fPosition) && (fPosition < m_pfKeyFrameTimes[i + 1]))
@@ -952,7 +956,6 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 			break;
 		}
 	}
-	if (fPosition >= m_pfKeyFrameTimes[m_nKeyFrames - 1]) xmf4x4Transform = m_ppxmf4x4KeyFrameTransforms[m_nKeyFrames - 1][nBone];
 
 #endif
 	return(xmf4x4Transform);
@@ -963,17 +966,19 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 CAnimationSets::CAnimationSets(int nAnimationSets)
 {
 	m_nAnimationSets = nAnimationSets;
-	m_pAnimationSet_list = new CAnimationSet * [nAnimationSets];
+	//m_pAnimationSet_list = new CAnimationSet * [nAnimationSets];
+	m_pAnimationSet_list.resize(nAnimationSets);
 }
 
 CAnimationSets::~CAnimationSets()
 {
-	for (int i = 0; i < m_nAnimationSets; i++)
+	/*for (int i = 0; i < m_nAnimationSets; i++)
 		if (m_pAnimationSet_list[i])
 			delete m_pAnimationSet_list[i];
 
 	if (m_pAnimationSet_list)
-		delete[] m_pAnimationSet_list;
+		delete[] m_pAnimationSet_list;*/
+	m_pAnimationSet_list.clear();
 
 	//	if (m_ppBoneFrameCaches) delete[] m_ppBoneFrameCaches;
 }
@@ -1322,7 +1327,9 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		{
 			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 			{
-				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+				//CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
@@ -1399,7 +1406,9 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 	{
 		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 		{
-			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+			//CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+
 			float fPosition = m_pAnimationTracks[k].m_fPosition;
 
 			for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
@@ -1501,7 +1510,9 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, CGameObject* pRootGa
 		{
 			if (m_pAnimationTracks[k].m_bEnable)
 			{
-				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+				//CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
+				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
 
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
@@ -3108,7 +3119,7 @@ void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent)
 		CGameObject::PrintFrameInfo(pGameObject->m_pChild.get(), pGameObject);
 }
 
-void CGameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel)
+void CGameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;
@@ -3157,29 +3168,75 @@ void CGameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoaded
 			int nFramesPerSecond = ::ReadIntegerFromFile(pInFile);
 			int nKeyFrames = ::ReadIntegerFromFile(pInFile);
 
-			pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet] = new CAnimationSet(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
+//			pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet] = new CAnimationSet(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
+//
+//			for (int i = 0; i < nKeyFrames; i++)
+//			{
+//				::ReadStringFromFile(pInFile, pstrToken);
+//				if (!strcmp(pstrToken, "<Transforms>:"))
+//				{
+//					CAnimationSet* pAnimationSet = pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet];
+//
+//					int nKey = ::ReadIntegerFromFile(pInFile); //i
+//					float fKeyTime = ::ReadFloatFromFile(pInFile);
+//
+//#ifdef _WITH_ANIMATION_SRT
+//					m_pfKeyFrameScaleTimes[i] = fKeyTime;
+//					m_pfKeyFrameRotationTimes[i] = fKeyTime;
+//					m_pfKeyFrameTranslationTimes[i] = fKeyTime;
+//					nReads = (UINT)::fread(pAnimationSet->m_ppxmf3KeyFrameScales[i], sizeof(XMFLOAT3), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
+//					nReads = (UINT)::fread(pAnimationSet->m_ppxmf4KeyFrameRotations[i], sizeof(XMFLOAT4), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
+//					nReads = (UINT)::fread(pAnimationSet->m_ppxmf3KeyFrameTranslations[i], sizeof(XMFLOAT3), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
+//#else
+//					pAnimationSet->m_pfKeyFrameTimes[i] = fKeyTime;
+//					nReads = (UINT)::fread(pAnimationSet->m_ppxmf4x4KeyFrameTransforms[i], sizeof(XMFLOAT4X4), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
+//#endif
+//				}
+//			}
 
-			for (int i = 0; i < nKeyFrames; i++)
+		/*	auto animSet = std::make_shared<CAnimationSet>(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
+			std::string filename_key(pstrFileName);
+			auto sharedAnimSet = CAnimationSets::AddOrGetSharedAnimationSet(animSet, filename_key);
+			pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet] = sharedAnimSet.get();
+
+			bool bIsNew = (sharedAnimSet.get() == animSet.get());*/
+
+			auto animSet = std::make_shared<CAnimationSet>(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
+			std::string filename_key(pstrFileName);
+			auto sharedAnimSet = CAnimationSets::AddOrGetSharedAnimationSet(animSet, filename_key);
+
+			pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet] = sharedAnimSet;
+
+			bool bIsNew = (sharedAnimSet == animSet);
+
+			if (bIsNew)
 			{
-				::ReadStringFromFile(pInFile, pstrToken);
-				if (!strcmp(pstrToken, "<Transforms>:"))
+				for (int i = 0; i < nKeyFrames; i++)
 				{
-					CAnimationSet* pAnimationSet = pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet];
+					::ReadStringFromFile(pInFile, pstrToken);
+					if (!strcmp(pstrToken, "<Transforms>:"))
+					{
+						CAnimationSet* pAnimationSet = sharedAnimSet.get();
 
-					int nKey = ::ReadIntegerFromFile(pInFile); //i
-					float fKeyTime = ::ReadFloatFromFile(pInFile);
+						int nKey = ::ReadIntegerFromFile(pInFile);
+						float fKeyTime = ::ReadFloatFromFile(pInFile);
 
-#ifdef _WITH_ANIMATION_SRT
-					m_pfKeyFrameScaleTimes[i] = fKeyTime;
-					m_pfKeyFrameRotationTimes[i] = fKeyTime;
-					m_pfKeyFrameTranslationTimes[i] = fKeyTime;
-					nReads = (UINT)::fread(pAnimationSet->m_ppxmf3KeyFrameScales[i], sizeof(XMFLOAT3), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
-					nReads = (UINT)::fread(pAnimationSet->m_ppxmf4KeyFrameRotations[i], sizeof(XMFLOAT4), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
-					nReads = (UINT)::fread(pAnimationSet->m_ppxmf3KeyFrameTranslations[i], sizeof(XMFLOAT3), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
-#else
-					pAnimationSet->m_pfKeyFrameTimes[i] = fKeyTime;
-					nReads = (UINT)::fread(pAnimationSet->m_ppxmf4x4KeyFrameTransforms[i], sizeof(XMFLOAT4X4), pLoadedModel->m_pAnimationSets->m_nBoneFrames, pInFile);
-#endif
+						pAnimationSet->m_pfKeyFrameTimes[i] = fKeyTime;
+						nReads = (UINT)::fread(pAnimationSet->m_ppxmf4x4KeyFrameTransforms[i],
+							sizeof(XMFLOAT4X4),
+							pLoadedModel->m_pAnimationSets->m_nBoneFrames,
+							pInFile);
+					}
+				}
+			}
+			else
+			{
+				for (int i = 0; i < nKeyFrames; i++)
+				{
+					::ReadStringFromFile(pInFile, pstrToken); // "<Transforms>"
+					int nKey = ::ReadIntegerFromFile(pInFile); // i
+					float fKeyTime = ::ReadFloatFromFile(pInFile); // skip
+					fseek(pInFile, sizeof(XMFLOAT4X4) * pLoadedModel->m_pAnimationSets->m_nBoneFrames, SEEK_CUR); // skip fread
 				}
 			}
 		}
@@ -3215,7 +3272,7 @@ CLoadedModelInfo* CGameObject::LoadGeometryAndAnimationFromFile(ID3D12Device* pd
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{
-				CGameObject::LoadAnimationFromFile(pInFile, pLoadedModel);
+				CGameObject::LoadAnimationFromFile(pInFile, pLoadedModel, pstrFileName);
 				pLoadedModel->PrepareSkinning();
 			}
 			else if (!strcmp(pstrToken, "</Animation>:"))

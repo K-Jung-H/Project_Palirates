@@ -1531,7 +1531,7 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CGameObject>& 
 		{
 			std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(obb_info.object);
 			
-			if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
+			if (monster->GetStateMachine()->Get_State() != State::Get_Hit && monster->GetStateMachine()->Get_State() != State::Knock_Down)
 				monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
 		}
 

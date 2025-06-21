@@ -1423,6 +1423,8 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 	{
 		if (!obj || !obj->HasType(EObjectType::Monster)) continue;
 
+		if (obj->currentHP <= 0) continue;
+
 		XMVECTOR monsterPosVec = XMLoadFloat3(&obj->GetPosition());
 		float distSq = XMVectorGetX(XMVector3LengthSq(playerPos - monsterPosVec));
 		float normDist = 1.0f - (distSq / (maxDistance * maxDistance));
