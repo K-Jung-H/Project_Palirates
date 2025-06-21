@@ -44,10 +44,9 @@ Texture2D Plane_Normal_Map : register(t3);
 struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 {
     float4 Albedo_Color : SV_TARGET0;
-    float4 world_Position : SV_TARGET1;
-    float4 world_Normal_and_Camera_Distance : SV_TARGET2;
-    float4 Velocity_Mask_Obj_Id : SV_TARGET3;
-
+    float4 world_Normal_and_Camera_Distance : SV_TARGET1;
+    float4 Velocity_Mask_Obj_Id : SV_TARGET2;
+    float viewspace_z : SV_TARGET3;
 };
 
 
@@ -68,6 +67,7 @@ struct VS_TERRAIN_OUTPUT
     float2 uv0 : TEXCOORD0;
     float2 uv1 : TEXCOORD1;
     
+    float3 positionV : TEXCOORD2;
 };
 
 VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
@@ -85,10 +85,13 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
     output.positionW.y += (height * 100.0f);
     
     float4 positionV = mul(float4(output.positionW, 1.0f), gmtxView);
+    output.positionV = positionV.xyz;
+    
     output.position = mul(positionV, gmtxProjection);
     output.color = input.color;
     output.uv0 = input.uv0;
     output.uv1 = input.uv1;
+
     
     return (output);
 }
@@ -119,10 +122,6 @@ float4 PS_Plane(VS_TERRAIN_OUTPUT input) : SV_Target
     Albedo_Color.xyz = (input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f))).xyz;
     Albedo_Color.a = 0.5f;
 
-
-    //float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0).xyz;
-    //Albedo_Color = Plane_Normal_Map.Sample(gssWrap, input.uv0); // For Debug    
-   // Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
     return Albedo_Color;
 
 }
@@ -131,10 +130,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_Plane(VS_TERRAIN_OUTPUT input)
 {
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
     output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 0.0f);
-
+    output.viewspace_z = float(0.0f);
     float2 animatedUV1 = input.uv1 + float2(0.0, gfCurrentTime * 0.1f); // x√‡ »Â∏ß
 
     float4 cBaseTexColor = Plane_BaseTexture.Sample(gssWrap, input.uv0);
@@ -142,21 +140,15 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_Plane(VS_TERRAIN_OUTPUT input)
 
     output.Albedo_Color.xyz = (input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f))).xyz;
     output.Albedo_Color.a = (float) (material_info.material_ID) / 255.0f;
-    
-//       output.Albedo_Color = saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f));
-    
-//    output.Albedo_Color = Plane_Height_Map.Sample(gssWrap, input.uv0); // For Debug
-//    output.Albedo_Color = Plane_Normal_Map.Sample(gssWrap, input.uv0); // For Debug
 
-    output.world_Position = float4(input.positionW, 1.0f);
-    
     
     float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0).xyz;
 
     
     output.world_Normal_and_Camera_Distance.xyz = plane_normal;
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, 0.0f);
-    
+    output.viewspace_z = input.positionV.z;
+
     return (output);
 }
 

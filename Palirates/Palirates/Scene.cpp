@@ -23,33 +23,39 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 	XMFLOAT3 eye = mainCamera->GetPosition();
 	XMFLOAT3 lookVec = mainCamera->GetLookVector();
 	XMVECTOR eyeV = XMLoadFloat3(&eye);
-	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec); 
+	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec);
 	XMVECTOR upV = XMVectorSet(0, 1, 0, 0);
-	XMMATRIX stableView = XMMatrixLookAtLH(eyeV, atV, upV);
+	XMMATRIX view = XMMatrixLookAtLH(eyeV, atV, upV);
 
-	XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
-	XMMATRIX invViewProj = XMMatrixInverse(nullptr, stableView * proj);
+
+
+	float fov = XMConvertToRadians(60.0f);
+	float aspect = ASPECT_RATIO;
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(fov, aspect, nearZ, farZ);
+
+	//XMMATRIX view = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
+	//XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	
+
+
+	XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
 
 	float ndc[8][3] = {
 		{-1, -1, 0}, { 1, -1, 0}, { 1,  1, 0}, {-1,  1, 0},
 		{-1, -1, 1}, { 1, -1, 1}, { 1,  1, 1}, {-1,  1, 1}
 	};
 
+
 	for (int i = 0; i < 8; ++i)
 	{
-		float ndcZ = (i < 4) ? 0.0f : 1.0f;
-		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndcZ, 1.0f);
+		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndc[i][2], 1.0f);
 		pt = XMVector4Transform(pt, invViewProj);
-		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt)); 
-
-		XMVECTOR dir = XMVector3Normalize(pt - eyeV);
-		float z = (i < 4) ? nearZ : farZ;
-		XMVECTOR cornerWS = eyeV + dir * z;
-
+		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt));
 		XMFLOAT3 outCorner;
-		XMStoreFloat3(&outCorner, cornerWS);
+		XMStoreFloat3(&outCorner, pt);
 		corners[i] = outCorner;
 	}
+
 	return corners;
 }
 
@@ -59,51 +65,40 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 	m_CascadeProj.clear();
 	m_light_direction = light_direction;
 
-	// ----- Constants for all cascades -----
-	constexpr float SHADOW_MAP_SIZE = static_cast<float>(_SHADOWMAP_WIDTH); // Shadow map texture size (width/height)
-	constexpr float OVERLAP_RATIO = 0.5f;   // Overlap ratio for cascade transition smoothing
-	constexpr float SHADOW_Z_MARGIN = 500.0f; // Z margin to avoid shadow clipping (in light space)
-	constexpr float LIGHT_DIST = 10000.0f; // Distance to move the light camera back along light direction
-
-	float cameraNear = mainCamera->GetNearPlane();
-	float cameraFar = mainCamera->GetFarPlane();
-	float cameraRange = cameraFar - cameraNear;
+	constexpr float SHADOW_Z_MARGIN = 1.0f;
+	constexpr float LIGHT_DIST = 5000.0f;
+	constexpr int SHADOWMAP_RESOLUTION = 2048;
 
 	for (int i = 0; i < NUM_CASCADES; ++i)
 	{
 		float nearZ = splitDepths[i];
 		float farZ = splitDepths[i + 1];
-
-		// 1. Get frustum corners in world space for this cascade
 		std::vector<XMFLOAT3> frustumCorners = CalcFrustumCornersWorld(mainCamera, nearZ, farZ);
 
-		// 2. Calculate the center of the cascade frustum in world space
-		XMFLOAT3 frustumCenter = { 0, 0, 0 };
-		for (const auto& corner : frustumCorners)
+		XMFLOAT3 frustumCenter = { 0.f, 0.f, 0.f };
+		for (const auto& c : frustumCorners)
 		{
-			frustumCenter.x += corner.x;
-			frustumCenter.y += corner.y;
-			frustumCenter.z += corner.z;
+			frustumCenter.x += c.x;
+			frustumCenter.y += c.y;
+			frustumCenter.z += c.z;
 		}
 		frustumCenter.x /= 8.0f;
 		frustumCenter.y /= 8.0f;
 		frustumCenter.z /= 8.0f;
 
-		// 3. Compute light position: move back from frustum center along light direction
-		XMFLOAT3 lightPos = Vector3::Add(frustumCenter, Vector3::Scale(light_direction, -LIGHT_DIST));
-		XMVECTOR lightPosV = XMLoadFloat3(&lightPos);
-		XMVECTOR frustumCenterV = XMLoadFloat3(&frustumCenter);
-		XMMATRIX lightView = XMMatrixLookAtLH(lightPosV, frustumCenterV, XMVectorSet(0, 1, 0, 0));
 
-		// 4. Transform all frustum corners to light space, compute AABB
+		XMVECTOR lightDir = XMVector3Normalize(XMLoadFloat3(&light_direction));
+		XMVECTOR frustumCenterV = XMLoadFloat3(&frustumCenter);
+		XMVECTOR lightPos = frustumCenterV - lightDir * LIGHT_DIST;
+		XMMATRIX lightView = XMMatrixLookAtLH(lightPos, frustumCenterV, XMVectorSet(0, 1, 0, 0));
+
 		XMFLOAT3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
 		XMFLOAT3 max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-		for (const auto& corner : frustumCorners)
+		for (const auto& c : frustumCorners)
 		{
-			XMVECTOR cornerLS = XMVector3TransformCoord(XMLoadFloat3(&corner), lightView);
+			XMVECTOR lightSpace = XMVector3TransformCoord(XMLoadFloat3(&c), lightView);
 			XMFLOAT3 p;
-			XMStoreFloat3(&p, cornerLS);
-
+			XMStoreFloat3(&p, lightSpace);
 			min.x = std::min(min.x, p.x);
 			min.y = std::min(min.y, p.y);
 			min.z = std::min(min.z, p.z);
@@ -112,51 +107,41 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 			max.z = std::max(max.z, p.z);
 		}
 
-		// 5. Expand the AABB to create overlap between cascades (for smoother transitions)
-		float expandX = (max.x - min.x) * OVERLAP_RATIO * 0.5f;
-		float expandY = (max.y - min.y) * OVERLAP_RATIO * 0.5f;
-		min.x -= expandX;
-		max.x += expandX;
-		min.y -= expandY;
-		max.y += expandY;
-
-		// 6. Expand Z bounds in light space to avoid shadow clipping on slopes
 		min.z -= SHADOW_Z_MARGIN;
 		max.z += SHADOW_Z_MARGIN;
 
-		// 7. Texel snapping for stable shadow edges (minimize swimming)
-		float orthoWidth = max.x - min.x;
-		float orthoHeight = max.y - min.y;
-		float texelSizeX = orthoWidth / SHADOW_MAP_SIZE;
-		float texelSizeY = orthoHeight / SHADOW_MAP_SIZE;
+		float width = max.x - min.x;
+		float height = max.y - min.y;
+		float maxSize = std::max(width, height);
+		float texelSize = (2.0f * maxSize) / static_cast<float>(SHADOWMAP_RESOLUTION);
 
-		XMVECTOR frustumCenterLS = XMVector3TransformCoord(frustumCenterV, lightView);
-		frustumCenterLS = XMVectorSet(
-			floorf(XMVectorGetX(frustumCenterLS) / texelSizeX) * texelSizeX,
-			floorf(XMVectorGetY(frustumCenterLS) / texelSizeY) * texelSizeY,
-			XMVectorGetZ(frustumCenterLS),
-			1.0f
+		float cx = (min.x + max.x) * 0.5f;
+		float cy = (min.y + max.y) * 0.5f;
+
+		constexpr float SNAP_UNIT = 32.0f;
+
+		cx = floor(cx / SNAP_UNIT) * SNAP_UNIT;
+		cy = floor(cy / SNAP_UNIT) * SNAP_UNIT;
+
+		//  Snap to texel grid (world-grid 기준 정렬)
+		cx = floorf(cx / texelSize) * texelSize;
+		cy = floorf(cy / texelSize) * texelSize;
+
+		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(
+			cx - maxSize * 0.5f, cx + maxSize * 0.5f,
+			cy - maxSize * 0.5f, cy + maxSize * 0.5f,
+			min.z, max.z
 		);
 
-		XMMATRIX lightViewInv = XMMatrixInverse(nullptr, lightView);
-		XMVECTOR snappedCenterWS = XMVector3TransformCoord(frustumCenterLS, lightViewInv);
-		lightPosV = snappedCenterWS + XMLoadFloat3(&light_direction) * -LIGHT_DIST;
-		lightView = XMMatrixLookAtLH(lightPosV, snappedCenterWS, XMVectorSet(0, 1, 0, 0));
 
-		// 8. Create final orthographic projection matrix for this cascade
-		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(
-			min.x, max.x, min.y, max.y, min.z, max.z);
 
-		// 9. Store view and projection matrices for the cascade
 		XMFLOAT4X4 viewMat, projMat;
 		XMStoreFloat4x4(&viewMat, lightView);
 		XMStoreFloat4x4(&projMat, lightProj);
 		m_CascadeView.push_back(viewMat);
 		m_CascadeProj.push_back(projMat);
-
-		// 10. Store cascade split value for use in the shader (view-space Z or normalized)
 		m_CascadeSplits[i] = farZ;
-		// Option: m_CascadeSplits[i] = (farZ - cameraNear) / cameraRange; // if using normalized splits
+
 	}
 }
 
@@ -214,24 +199,19 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (m_CascadeView.size() == 0 || m_CascadeProj.size() == 0)
+	if (m_CascadeView.empty() || m_CascadeProj.empty())
 		return;
 
 	shadow_map->Update_TextureShaderVariables(pd3dCommandList);
 
-	XMMATRIX texTransform = XMMatrixSet(
-		0.5f, 0, 0, 0,
-		0, -0.5f, 0, 0,
-		0, 0, 1, 0,
-		0.5f, 0.5f, 0, 1
-	);
+	XMMATRIX texScaleBias = XMMatrixScaling(0.5f, -0.5f, 1.0f) * XMMatrixTranslation(0.5f, 0.5f, 0.0f);
 
 	for (int i = 0; i < NUM_CASCADES; ++i)
 	{
 		XMMATRIX view = XMLoadFloat4x4(&m_CascadeView[i]);
 		XMMATRIX proj = XMLoadFloat4x4(&m_CascadeProj[i]);
-		XMMATRIX viewProj = view * proj;
-		XMMATRIX viewProjTex = XMMatrixTranspose(viewProj * texTransform);
+
+		XMMATRIX viewProjTex = XMMatrixTranspose(view * proj * texScaleBias);
 
 		XMFLOAT4X4 viewProjTexFloat4x4;
 		XMStoreFloat4x4(&viewProjTexFloat4x4, viewProjTex);
@@ -242,14 +222,12 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 	m_pcb_MappedLightCamera->shadow_pass = 1;
 	m_pcb_MappedLightCamera->light_type = LIGHT_CAMERA_TYPE_DIRECTIONAL;
 	m_pcb_MappedLightCamera->LightDirectionWS = m_light_direction;
-	m_pcb_MappedLightCamera->shadow_bias = 0.005f;
-	m_pcb_MappedLightCamera->shadow_map_size = XMFLOAT2(static_cast<float>(_SHADOWMAP_WIDTH*2), static_cast<float>(_SHADOWMAP_HEIGHT*2));
+	m_pcb_MappedLightCamera->shadow_bias = 0.0f;
+	m_pcb_MappedLightCamera->shadow_map_size = XMFLOAT2(static_cast<float>(_SHADOWMAP_WIDTH), static_cast<float>(_SHADOWMAP_HEIGHT));
 	m_pcb_MappedLightCamera->inv_shadow_map_size = XMFLOAT2(1.0f / _SHADOWMAP_WIDTH, 1.0f / _SHADOWMAP_HEIGHT);
 
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_SHADOW_INFO_CBV_INDEX, m_pd3dcb_LightCamera->GetGPUVirtualAddress());
-
 }
-
 void Shadow_Camera::Update_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, int cascadeIdx)
 {
 	XMMATRIX view = XMLoadFloat4x4(&m_CascadeView[cascadeIdx]);
@@ -1230,7 +1208,7 @@ void CScene::Update_UI()
 		float player_z = m_pPlayer->GetMoveZ();
 		State currentState = m_pPlayer->GetStateMachine()->Get_State();
 		std::wstring stateStr = stateToStringMap[currentState];  
-		State LastState = m_pPlayer->GetStateMachine()->Get_LastState();
+		State LastState = m_pPlayer->GetStateMachine()->Get_State();
 		std::wstring LastStateStr = stateToStringMap[LastState];
 
 
@@ -2038,11 +2016,9 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandLis
 	{
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
-			float nearZ = 1.01f;
-			float farZ = 5000.0f;
 			int numCascades = NUM_CASCADES;
 			float lambda = 0.7f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, CAMERA_FAR, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
 			shadow_camera->update_shadow = true;

@@ -5,14 +5,13 @@
 
 
 Texture2D<float4> T_Albedo_Color : register(t0);
-Texture2D<float4> T_World_Position : register(t1);
-Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t2);
-Texture2D<float4> T_Velocity : register(t3);
-Texture2D<float4> T_ViewSpace_Z : register(t4);
+Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t1);
+Texture2D<float4> T_Velocity : register(t2);
+Texture2D<float4> T_ViewSpace_Z : register(t3);
 
 // t4 = Light_Material_Info
-Texture2D<float4> T_Fog_Noise : register(t6);
-Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t11
+Texture2D<float4> T_Fog_Noise : register(t5);
+Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t6); // t6 ~ t10
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -32,8 +31,11 @@ cbuffer cb_Fog_Info : register(b0)
 cbuffer cb_Post_Camera : register(b1)
 {
     float3 camera_pos;
+    float cb_Post_Camera_padding0;
+    
+    float4x4 g_InvView;
+    float4x4 g_InvProj;
 };
-
 
 
 
@@ -66,7 +68,7 @@ SamplerComparisonState gssShadowSampler : register(s1);
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, int cascadeIdx)
 {
     float shadowSum = 0.0f;
-    int kernelSize = 0;
+    int kernelSize = 1;
     int count = 0;
     [unroll]
     for (int dx = -kernelSize; dx <= kernelSize; ++dx)
@@ -107,7 +109,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
 
         float4 shadowCoord0 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx]);
         shadowCoord0 /= shadowCoord0.w;
-
+        
         float shadow0 = 1.0f;
         if (shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f && shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f && shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
         {
@@ -119,6 +121,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
         {
             float4 shadowCoord1 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx - 1]);
             shadowCoord1 /= shadowCoord1.w;
+
             if (shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f && shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f && shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
             {
                 shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], gssShadowSampler, shadowCoord1.xy, shadowCoord1.z - shadow_bias, cascadeIdx - 1);
@@ -126,6 +129,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
         }
         shadowFactor = lerp(shadow0, shadow1, blendWeight);
     }
+
     return shadowFactor;
 }
 
@@ -180,9 +184,19 @@ int FindCascadeIdx(float viewZ, float CascadeSplits[NUM_CASCADES])
 }
 //================================================================
 
+float3 ReconstructWorldPos(float2 uv, float linearViewZ)
+{
+    float2 ndcXY = uv * 2.0f - 1.0f;
+    ndcXY.y = -ndcXY.y;
+    float viewSpaceX = ndcXY.x * g_InvProj._11 * linearViewZ;
+    float viewSpaceY = ndcXY.y * g_InvProj._22 * linearViewZ;
 
+    float4 viewSpacePos = float4(viewSpaceX, viewSpaceY, linearViewZ, 1.0f);
 
+    float4 worldPos = mul(viewSpacePos, g_InvView);
 
+    return worldPos.xyz / worldPos.w;
+}
 //================================================================
 
 
@@ -234,21 +248,15 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_Vertex
 float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
-    float4 world_position = T_World_Position.Sample(gssWrap, input.uv);
     float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
     float viewspace_Z = T_ViewSpace_Z.Sample(gssWrap, input.uv).x;
+    float3 world_position = ReconstructWorldPos(input.uv, viewspace_Z);
 
     float3 wNormal = wNormal_CD.xyz;
     float Camera_Distance = wNormal_CD.w;
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
-
-
-
-    //    return Debug_ShadowMap(input.uv);
     
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
-
-    
 
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
     if (isEmptyPixel && Fog_Trigger == 0)
