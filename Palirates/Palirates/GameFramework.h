@@ -6,6 +6,7 @@
 #include "UI_Manager.h"
 #include "Scene_Manager.h"
 #include "Object.h"
+#include "GameFramework.h"
 
 //#define SERVER_IP "192.127.0.0.1"
 //#define SERVER_PORT 9000
@@ -128,6 +129,15 @@ public:
     int GetServerPlayerID();
     void PlayerLeave(int playerId);
     void Disconnect();
+    void HandleClientIdAssignment();
+    void DelayOrQueuePacket(const std::string& packet);
+    void RespondToPing();
+    void HandlePlayerLeave(int leaveId);
+    void HandlePlayerCreate(int id);
+    void HandleCharacterStatus(int playerId, int charId);
+    void HandleShipSync(const std::vector<std::string>& tokens);
+    void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
+    void HandlePositionUpdate(const std::vector<std::string>& tokens);
     void CreateRemotePlayer(int playerId, int characterId);
     void ProcessReceivedData(const std::string& receivedData);
     std::queue<int> pendingPlayerCreates;
@@ -138,6 +148,8 @@ public:
     Scene_Manager sceneManager;
     std::shared_ptr<Object_Manager> object_manager;
     bool bClientIdAssigned = false;
+
+    static CGameFramework* GetInstance();
     //=================SERVER=================
 
 private:
@@ -253,11 +265,19 @@ public:
     std::mutex remotePlayerUpdateMutex;
     int currentShipControllerId = -1;
     void SelectCharacter(int characterId);
+    void SendCharacterSelectPacket(int charId);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
     int selectedCharacterId = -1;
-    std::unordered_map<int, int> characterSelections;// -> 벡터로 다 바꾸기. 나간플레이어 재사용처리까지 해놓기
+    std::vector<std::pair<int, int>> characterSelections;// -> 벡터로 다 바꾸기. 나간플레이어 재사용처리까지 해놓기
     bool bCharacterSelectedSent = false;
     bool bCharacterSelectApproved = false;
+
+    int GetCharacterSelection(int playerId) const;
+    bool HasCharacterSelection(int playerId) const;
+    void SetCharacterSelection(int playerId, int characterId);
+
+    void SetupCharacterSelectScene();
+
     //=================SERVER=================
 
     uint32_t current_keyboard_inputFlags = 0;

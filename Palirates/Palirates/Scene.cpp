@@ -2308,33 +2308,51 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 		return;
 	}
 
-	if (prev_index >= 0 && prev_index < list_size && prev_index != next_index)
-	{
-		(*player_list)[prev_index]->SetOutlineColor(0);
-	}
-
-	(*player_list)[next_index]->SetOutlineColor(1);
-
-	prev_index = next_index;
 	select_index = next_index;
 
-	if (select_index != -1)
+	for (auto& player : *player_list)
 	{
-		XMFLOAT3 character_pos = (*player_list)[next_index]->GetPosition();
-		m_pLights[3].m_bEnable = true;
-		m_pLights[3].m_xmf3Position = character_pos;
-		m_pLights[3].m_xmf3Position.y += 15.0f;
+		if (!player) continue;
+		int charId = player->GetID();
+
+		if (lockedCharacterIds.find(charId) != lockedCharacterIds.end())
+		{
+			player->SetOutlineColor(0);
+		}
+		else if (charId == (*player_list)[select_index]->GetID())
+		{
+			player->SetOutlineColor(1);
+		}
+		else
+		{
+			bool selectedByOthers = false;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id != ClientNum && cid == charId)
+				{
+					selectedByOthers = true;
+					break;
+				}
+			}
+			player->SetOutlineColor(selectedByOthers ? 2 : 0);
+		}
 	}
 
-	//bool값으로 처리해보자
-	//선택된거는 막아버려
+	prev_index = select_index;
 
-	if (OnCharacterSelectedCallback)
+	// 조명 위치 조정
+	XMFLOAT3 character_pos = (*player_list)[select_index]->GetPosition();
+	m_pLights[3].m_bEnable = true;
+	m_pLights[3].m_xmf3Position = character_pos;
+	m_pLights[3].m_xmf3Position.y += 15.0f;
+
+	if (selectCharacterCallback)
 	{
 		int charId = (*player_list)[select_index]->GetID();
-		OnCharacterSelectedCallback(charId);
+		selectCharacterCallback(charId);
 	}
 }
+
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
@@ -2402,6 +2420,20 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, SelectbutttonTexture);
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	SlbTblock->onClick = [this]() {
+
+		int selectedCharId = GetSelectedCharacterId();
+		if (selectedCharId != -1)
+		{
+			if (selectCharacterCallback)
+			{
+				std::cout << "[INFO] Sending CHARACTER_SELECT: " << selectedCharId << std::endl;
+				selectCharacterCallback(selectedCharId);
+			}
+			else
+			{
+				std::cerr << "[WARN] SelectCharacterCallback is not set." << std::endl;
+			}
+		}
 
 		c_signal.change = true;
 		c_signal.scene_name = "Game_Stage_Board";
@@ -3145,3 +3177,33 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 
 //==========================================================================================
+
+void Character_Select_Scene::SetSelectCharacterCallback(std::function<void(int)> callback)
+{
+	selectCharacterCallback = std::move(callback);
+}
+
+void Character_Select_Scene::SetSendPacketCallback(std::function<void(const std::string&)> callback)
+{
+	sendPacketCallback = std::move(callback);
+}
+
+void Character_Select_Scene::SendHoverToServer(int index)
+{
+	if (sendPacketCallback)
+	{
+		std::ostringstream oss;
+		oss << "CHARACTER_PREVIEW," << ClientNum << "," << index << "\n";
+		sendPacketCallback(oss.str());
+	}
+}
+
+void Character_Select_Scene::SendSelectionToServer(int index)
+{
+	if (sendPacketCallback)
+	{
+		std::ostringstream oss;
+		oss << "CHARACTER_SELECT_REQUEST," << ClientNum << "," << index << "\n";
+		sendPacketCallback(oss.str());
+	}
+}

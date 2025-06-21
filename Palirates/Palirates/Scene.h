@@ -3,12 +3,9 @@
 #include "Object_Manager.h"
 #include "Particle_Manager.h"
 #include "UI_Manager.h"
-
 #include "Shader.h"
 #include "Shader_Compute.h"
 #include "Player.h"
-
-
 
 
 
@@ -271,6 +268,10 @@ class Character_Select_Scene : public CScene
 {
 private:
 	UINT prev_index = -1;
+	UINT select_index = -1;
+
+	std::vector<std::pair<int, int>> characterSelections;
+	int ClientNum = -1;
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -288,9 +289,32 @@ public:
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
+
 	std::unordered_set<int> lockedCharacterIds;
-	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) {lockedCharacterIds = lockedIds;}
-	std::function<void(int)> OnCharacterSelectedCallback;
+	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }
+
+	void SetSelectCharacterCallback(std::function<void(int)> callback);
+	void SetSendPacketCallback(std::function<void(const std::string&)> callback);
+	std::function<void(int)> selectCharacterCallback;
+	std::function<void(const std::string&)> sendPacketCallback;
+
+	void UpdateCharacterSelections(const std::vector<std::pair<int, int>>& selections, int clientNum)
+	{
+		characterSelections = selections;
+		ClientNum = clientNum;
+
+		UpdatePlayerSelection(select_index);
+	}
+	void SendHoverToServer(int index);
+	void SendSelectionToServer(int index);
+	int GetSelectedCharacterIndex() const { return select_index; }
+	int GetSelectedCharacterId() const
+	{
+		auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+		if (select_index >= 0 && select_index < player_list->size())
+			return (*player_list)[select_index]->GetID();
+		return -1;
+	}
 };
 
 class Board_Scene : public CScene

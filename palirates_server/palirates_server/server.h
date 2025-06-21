@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <sstream>
+#include <queue>
 #include "SceneManager.h"
 #include "DatabaseManager.h"
 #include "Logger.h"
@@ -38,6 +39,11 @@ private:
     int GetControllerId(shared_ptr<Scene> scene);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
    
+    std::queue<int> availableIds; 
+    std::unordered_set<int> activeClientIds;
+    std::mutex idMutex;
+    std::mutex clientsMutex;
+    std::mutex characterMutex;
 
 public:
     Server(int port);
@@ -60,9 +66,19 @@ public:
 
     static void BroadcastCharacterSelect(Server* pServer);
 
+    int GetNewClientId();
+
+    void DisconnectClient(int clientId);
+    void ReleaseClientId(int clientId);
+
     SceneManager& getSceneManager() { return sceneManager; }
 
     float shipX = 0.0f, shipY = 0.0f, shipZ = 0.0f;
     float shipLookX = 0.0f, shipLookY = 1.0f, shipLookZ = 0.0f;
     int currentShipControllerId = -1;
+
+    std::vector<bool> isCharacterAvailable;
+    std::vector<int> hoveredByClient;
+    std::vector<int> selectedCharacterByClient;
+
 };

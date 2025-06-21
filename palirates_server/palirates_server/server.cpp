@@ -14,6 +14,15 @@ Server::Server(int port)
 
     bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
     listen(listenSocket, SOMAXCONN);
+
+    for (int i = 0; i < 6; ++i) 
+    {
+        availableIds.push(i);
+    }
+
+    isCharacterAvailable.resize(6, true);
+    hoveredByClient.resize(6, -1);
+    selectedCharacterByClient.resize(6, -1);
 }
 
 void Server::AcceptClients()
@@ -24,42 +33,57 @@ void Server::AcceptClients()
         int addrLen = sizeof(clientAddr);
         SOCKET clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &addrLen);
 
-        int clientId = nextClientId++;
 
-        ClientSession session;
-        session.socket = clientSocket;
-        session.is_connected = true;
-        session.lastPongTime = std::chrono::steady_clock::now();
-        clients[clientId] = session;
-
-
-        sceneManager.addScene(clientId);
-        shared_ptr<Scene> scene = sceneManager.getScene(clientId);
-
-        char sendBuffer[256];
-        sprintf_s(sendBuffer, "CLIENT_ID,%d", clientId);
-        logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
-
-        scene->addPlayer(clientId, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 1.0f });
-
-        int retval = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
-        if (retval == SOCKET_ERROR)
+        if (clientSocket != INVALID_SOCKET)
         {
-            logger.Log("[서버] CLIENT_ID 전송 실패! 에러 코드: " + std::to_string(WSAGetLastError()));
-        }
-        else
-        {
-            logger.Log("[서버] CLIENT_ID 전송 성공! 보낸 데이터: " + std::string(sendBuffer));
+            int clientId = GetNewClientId();
+
+            if (clientId == -1)
+            {
+                closesocket(clientSocket);
+                std::cout << "최대인원초과, 연결 거부.\n";
+                continue;
+            }
+
+            ClientSession session;
+            session.socket = clientSocket;
+            session.is_connected = true;
+            session.lastPongTime = std::chrono::steady_clock::now();
+
+            clients[clientId] = session;
+
+            hoveredByClient[clientId] = -1;
+            selectedCharacterByClient[clientId] = -1;
+
+            sceneManager.addScene(clientId);
+            std::shared_ptr<Scene> scene = sceneManager.getScene(clientId);
+
+            char sendBuffer[256];
+            sprintf_s(sendBuffer, "CLIENT_ID,%d", clientId);
+            logger.Log("클라이언트 " + std::to_string(clientId) + " 연결됨.");
+
+            scene->addPlayer(clientId, { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 1.0f });
+
+            int retval = send(clientSocket, sendBuffer, strlen(sendBuffer), 0);
+            if (retval == SOCKET_ERROR)
+            {
+                logger.Log("[서버] CLIENT_ID 전송 실패! 에러 코드: " + std::to_string(WSAGetLastError()));
+            }
+            else
+            {
+                logger.Log("[서버] CLIENT_ID 전송 성공! 보낸 데이터: " + std::string(sendBuffer));
+            }
+
+            try
+            {
+                std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
+            }
+            catch (const std::system_error& e)
+            {
+                logger.Log("[에러] 클라이언트 패킷 처리 스레드 생성 실패: " + std::string(e.what()));
+            }
         }
 
-        try
-        {
-            std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
-        }
-        catch (const std::system_error& e) 
-        {
-            logger.Log("[에러] 클라이언트 패킷 처리 스레드 생성 실패: " + std::string(e.what()));
-        }
     }
 }
 
@@ -72,7 +96,6 @@ void Server::Server_Update()
 void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 {
     try {
-
         char buffer[1024];
         std::string recvBuffer;
 
@@ -83,7 +106,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
             if (bytesReceived <= 0)
             {
-                logger.Log("클라이언트 " + std::to_string(clientId) + " 연결 종료 또는 recv 실패");
+                logger.Log("Client " + std::to_string(clientId) + " disconnected or recv failed");
+                DisconnectClient(clientId);
                 break;
             }
 
@@ -96,79 +120,104 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 std::string packet = recvBuffer.substr(0, pos);
                 recvBuffer.erase(0, pos + 1);
 
-                //logger.Log("클라이언트 " + std::to_string(clientId) + " 패킷 수신: " + packet);
+                std::vector<std::string> tokens;
+                std::stringstream ss(packet);
+                std::string token;
 
-                int id, state;
-                uint32_t keyMask;
-                float x = 0.0f, y = 10.0f, z = 0.0f;
-                float lookX, lookY, lookZ;
+                while (std::getline(ss, token, ','))
+                    tokens.push_back(token);
 
-                if (packet.rfind("PLAYER_UPDATE,", 0) == 0)
+                if (tokens.empty()) continue;
+
+                const std::string& cmd = tokens[0];
+
+                if (cmd == "PLAYER_UPDATE")
                 {
-                    std::istringstream iss(packet);
-                    std::string token;
-                    std::vector<std::string> tokens;
-
-                    while (std::getline(iss, token, ','))
-                        tokens.push_back(token);
-
-                    if (tokens.size() >= 8)
+                    if (tokens.size() < 9)
                     {
-                        //여기를 kry_input으로 교체
-                        id = std::stoi(tokens[1]);
-                        keyMask = static_cast<uint32_t>(std::stoi(tokens[2]));
-                        lookX = std::stof(tokens[3]);
-                        lookY = std::stof(tokens[4]);
-                        lookZ = std::stof(tokens[5]);
-                        state = std::stoi(tokens[6]);
-                        int trackCount = std::stoi(tokens[7]);
-
-                        std::cout << tokens[2] << "\n";
-
-                        std::vector<float> trackPositions;
-                        std::vector<float> trackWeights; 
-                        for (int i = 0; i < trackCount; ++i)
-                        {
-                            int base = 8 + i * 2;
-                            if (base + 1 >= tokens.size())
-                                break;
-                            trackPositions.push_back(std::stof(tokens[base]));
-                            trackWeights.push_back(std::stof(tokens[base + 1]));
-                        }
-
-                        if (trackPositions.empty() || trackWeights.empty())
-                        {
-                            trackPositions.push_back(0.0f);
-                            trackWeights.push_back(1.0f);
-                            trackCount = 1;
-                        }
-
-                        shared_ptr<Scene> scene = sceneManager.getScene(clientId);
-                        if (!scene) {
-                            sceneManager.addScene(clientId);
-                            scene = sceneManager.getScene(clientId);
-                        }
-                        scene->update_player_keyinput(id, keyMask);
-                        scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
-
-                        std::ostringstream oss;
-                        oss << "PLAYER_UPDATE," << clientId << ","
-                            << x << "," << y << "," << z << ","
-                            << lookX << "," << lookY << "," << lookZ << ","
-                            << state << "," << trackCount;
-
-                        for (int i = 0; i < trackCount; ++i)
-                        {
-                            oss << "," << trackPositions[i] << "," << trackWeights[i];
-                        }
-                        oss << "\n";
-
-                        BroadcastPacket(oss.str(), clientId);
+                        continue;
                     }
+                    int id = std::stoi(tokens[1]);
+                    uint32_t keyMask = static_cast<uint32_t>(std::stoi(tokens[2]));
+                    float lookX = std::stof(tokens[3]);
+                    float lookY = std::stof(tokens[4]);
+                    float lookZ = std::stof(tokens[5]);
+                    int state = std::stoi(tokens[6]);
+                    int trackCount = std::stoi(tokens[7]);
+
+                    std::vector<float> trackPositions;
+                    std::vector<float> trackWeights;
+                    for (int i = 0; i < trackCount; ++i)
+                    {
+                        int base = 8 + i * 2;
+                        if (base + 1 >= (int)tokens.size()) break;
+                        trackPositions.push_back(std::stof(tokens[base]));
+                        trackWeights.push_back(std::stof(tokens[base + 1]));
+                    }
+
+                    auto scene = sceneManager.getScene(clientId);
+                    if (!scene) {
+                        sceneManager.addScene(clientId);
+                        scene = sceneManager.getScene(clientId);
+                    }
+                    scene->update_player_keyinput(id, keyMask);
+                    scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
+
+                    std::ostringstream oss;
+                    oss << "PLAYER_UPDATE," << clientId << ","
+                        << 0 << "," << 10 << "," << 0 << ","
+                        << lookX << "," << lookY << "," << lookZ << ","
+                        << state << "," << trackCount;
+                    for (int i = 0; i < trackCount; ++i)
+                        oss << "," << trackPositions[i] << "," << trackWeights[i];
+                    oss << "\n";
+
+                    BroadcastPacket(oss.str(), clientId);
                 }
-                else if (packet.rfind("ENTER_SCENE,", 0) == 0)
+                else if (cmd == "ENTER_SCENE")
                 {
-                    std::string sceneName = packet.substr(strlen("ENTER_SCENE,"));
+                    if (tokens.size() < 2) continue;
+                    std::string sceneName = tokens[1];
+                    auto scene = sceneManager.getScene(clientId);
+                    if (!scene)
+                    {
+                        sceneManager.addScene(clientId);
+                        scene = sceneManager.getScene(clientId);
+                    }
+                    if (sceneName == "Character_Select")
+                        scene->SetSceneType(Scene_Type::Lobby);
+                    else if (sceneName == "Game_Stage_Board")
+                        scene->SetSceneType(Scene_Type::Board);
+                    else
+                        scene->SetSceneType(Scene_Type::None);
+
+                    logger.Log("[ENTER_SCENE] Client " + std::to_string(clientId) + " → " + sceneName);
+                }
+                else if (cmd == "CHARACTER_SELECT" && tokens.size() >= 3)
+                {
+                    int selClientId = std::stoi(tokens[1]);
+                    int selectedCharId = std::stoi(tokens[2]);
+
+                    if (!clients[selClientId].is_connected)
+                        return;
+
+                    if (lockedCharacterIds.find(selectedCharId) != lockedCharacterIds.end())
+                    {
+                        std::string rejectMsg = "CHARACTER_SELECT_DENIED\n";
+                        send(clientSocket, rejectMsg.c_str(), (int)rejectMsg.length(), 0);
+                        logger.Log("[DENIED] Character " + std::to_string(selectedCharId) + " already taken.");
+                        return;
+                    }
+
+                    characterSelections[selClientId] = selectedCharId;
+                    lockedCharacterIds.insert(selectedCharId);
+
+                    std::string approveMsg = "CHARACTER_SELECT_APPROVED\n";
+                    send(clientSocket, approveMsg.c_str(), (int)approveMsg.length(), 0);
+                    logger.Log("[APPROVED] Character " + std::to_string(selectedCharId) + " assigned to client " + std::to_string(selClientId));
+
+                    std::string statusMsg = "CHARACTER_STATUS," + std::to_string(selClientId) + "," + std::to_string(selectedCharId) + "\n";
+                    BroadcastPacket(statusMsg, -1);
 
                     auto scene = sceneManager.getScene(clientId);
                     if (!scene)
@@ -176,60 +225,10 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                         sceneManager.addScene(clientId);
                         scene = sceneManager.getScene(clientId);
                     }
-
                     if (scene)
                     {
-                        if (sceneName == "Character_Select")
-                            scene->SetSceneType(Scene_Type::Lobby);
-                        else if (sceneName == "Game_Stage_Board")
-                            scene->SetSceneType(Scene_Type::Board);
-                        else
-                            scene->SetSceneType(Scene_Type::None);
-
-                        logger.Log("[ENTER_SCENE] 클라이언트 " + std::to_string(clientId) + " → " + sceneName);
-                    }
-                }
-                else if (packet.rfind("CHARACTER_SELECT,", 0) == 0)
-                {
-                    std::istringstream iss(packet);
-                    std::string token;
-                    std::vector<std::string> tokens;
-
-                    while (std::getline(iss, token, ','))
-                        tokens.push_back(token);
-
-                    if (tokens.size() >= 2)
-                    {
-                        int selectedCharId = std::stoi(tokens[1]);
-
-                        if (lockedCharacterIds.find(selectedCharId) != lockedCharacterIds.end())
-                        {
-                            std::string rejectMsg = "CHARACTER_LOCKED," + std::to_string(selectedCharId) + "\n";
-                            send(clientSocket, rejectMsg.c_str(), (int)rejectMsg.length(), 0);
-                            logger.Log("[REJECTED] Character " + std::to_string(selectedCharId) + " already selected.");
-                            return;
-                        }
-
-                        characterSelections[clientId] = selectedCharId;
-                        lockedCharacterIds.insert(selectedCharId);
-
-
-                        std::string okPacket = "CHARACTER_SELECT_OK," + std::to_string(selectedCharId) + "," + std::to_string(clientId) + "\n";
-                        BroadcastPacket(okPacket, -1);
-
-                        std::string confirmPacket = "CHARACTER_SELECTED," + std::to_string(clientId) + "," + std::to_string(selectedCharId) + "\n";
-                        BroadcastPacket(confirmPacket, -1);
-
-                        std::string statusPacket = "CHARACTER_STATUS," + std::to_string(clientId) + "," + std::to_string(selectedCharId) + "\n";
-                        BroadcastPacket(statusPacket, -1);
-
-                        logger.Log("[SELECTED] Client " + std::to_string(clientId) + " selected character " + std::to_string(selectedCharId));
-
-                        shared_ptr<Scene> scene = sceneManager.getScene(clientId);
-                        if (scene)
-                        {
-                            scene->addPlayer(clientId, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
-                        }
+                        scene->SetSceneType(Scene_Type::Lobby);
+                        scene->addPlayer(clientId, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f });
 
                         NotifyExistingPlayersAboutNew(clientId);
                         SendInitialStates(clientId);
@@ -239,120 +238,89 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
                         if (controllerId != -1)
                         {
-                            std::string packet = "SHIP_CONTROLLER_ID," + std::to_string(controllerId);
-                            BroadcastPacket(packet, -1);
+                            std::string ctrlPacket = "SHIP_CONTROLLER_ID," + std::to_string(controllerId) + "\n";
+                            BroadcastPacket(ctrlPacket, -1);
                         }
                         else
                         {
-                            logger.Log("[경고] GetControllerId() 실패로 -1 반환됨");
+                            logger.Log("[WARN] ControllerId -1 returned for client " + std::to_string(clientId));
                         }
                     }
                 }
-                else if (packet.rfind("SHIP_SYNC,", 0) == 0)
+                else if (cmd == "SHIP_SYNC")
                 {
-                    std::istringstream iss(packet);
-                    std::string token;
-                    std::vector<std::string> tokens;
+                    if (tokens.size() < 7) continue;
 
-                    while (std::getline(iss, token, ','))
-                        tokens.push_back(token);
+                    float shipX = std::stof(tokens[1]);
+                    float shipY = std::stof(tokens[2]);
+                    float shipZ = std::stof(tokens[3]);
+                    float shipLookX = std::stof(tokens[4]);
+                    float shipLookY = std::stof(tokens[5]);
+                    float shipLookZ = std::stof(tokens[6]);
 
-                    if (tokens.size() >= 7)
-                    {
-                        shipX = std::stof(tokens[1]);
-                        shipY = std::stof(tokens[2]);
-                        shipZ = std::stof(tokens[3]);
-                        shipLookX = std::stof(tokens[4]);
-                        shipLookY = std::stof(tokens[5]);
-                        shipLookZ = std::stof(tokens[6]);
+                    std::unordered_map<std::string, std::string> extraFields = ParseKeyValueFields(tokens, 7);
 
-                        std::unordered_map<std::string, std::string> extraFields = ParseKeyValueFields(tokens, 7);
+                    for (const auto& [key, value] : extraFields)
+                        logger.Log("Extra Field: " + key + " = " + value);
 
-                        for (const auto& [key, value] : extraFields)
-                            logger.Log("Extra Field: " + key + " = " + value);
+                    std::ostringstream oss;
+                    oss << "SHIP_SYNC," << shipX << "," << shipY << "," << shipZ
+                        << "," << shipLookX << "," << shipLookY << "," << shipLookZ;
 
-                        std::ostringstream oss;
-                        oss << "SHIP_SYNC," << shipX << "," << shipY << "," << shipZ
-                            << "," << shipLookX << "," << shipLookY << "," << shipLookZ;
+                    for (const auto& [key, value] : extraFields)
+                        oss << "," << key << "=" << value;
 
-                        for (const auto& [key, value] : extraFields)
-                            oss << "," << key << "=" << value;
-
-                        oss << "\n";
-                        BroadcastPacket(oss.str(), clientId);
-                    }
+                    oss << "\n";
+                    BroadcastPacket(oss.str(), clientId);
                 }
-                else if (packet.rfind("PLAYER_LEAVE,", 0) == 0)
+                else if (cmd == "PLAYER_LEAVE")
                 {
-                    logger.Log("클라이언트 " + std::to_string(clientId) + " 퇴장 처리");
-                    clients[clientId].is_connected = false;
-                    closesocket(clients[clientId].socket);
-
-                    shared_ptr<Scene> scene = sceneManager.getScene(clientId);
-                    if (scene) scene->removePlayer(clientId);
-
-                    std::string leavePacket = "PLAYER_LEAVE," + std::to_string(clientId) + "\n";
-                    BroadcastPacket(leavePacket, clientId);
-
-                    clients.erase(clientId);
+                    logger.Log("Client " + std::to_string(clientId) + " left");
+                    DisconnectClient(clientId);
+                    return;
                 }
-                else if (packet == "PING")
+                else if (cmd == "PING")
                 {
                     send(clientSocket, "PONG\n", 5, 0);
                 }
-                else if (packet == "PONG")
+                else if (cmd == "PONG")
                 {
                     clients[clientId].lastPongTime = std::chrono::steady_clock::now();
                 }
-                else if (packet.rfind("KEY_INPUT,", 0) == 0)
+                else if (cmd == "KEY_INPUT")
                 {
-                    std::istringstream iss(packet);
-                    std::string token;
-                    std::vector<std::string> tokens;
-                    
-                    while (std::getline(iss, token, ','))
-                        tokens.push_back(token);
-                    
-                    if (tokens.size() >= 2)
+                    if (tokens.size() < 2) continue;
+
+                    int keyMask = std::stoi(tokens[1]);
+
+                    auto scene = sceneManager.getScene(clientId);
+                    if (!scene)
                     {
-                        int keyMask = std::stoi(tokens[1]);
-               
-                        shared_ptr<Scene> scene = sceneManager.getScene(clientId);
-                        if (!scene)
-                        {
-                            sceneManager.addScene(clientId);
-                            scene = sceneManager.getScene(clientId);
-                        }
-                    
-                        std::shared_ptr<Player> player = scene->getPlayer(clientId);
-                        if (!player) return;
-                    
-                        player->key_input(keyMask);
-                        //player->update(); // 위치 갱신
-                    
-                        //XMFLOAT3 pos = player->GetPosition();
-                         
-                        std::cout << "test Value, ID : " << clientId << "value : " << player->test_value << "\n";
-                    //    std::ostringstream oss;
-                    //       oss << "POSITION_UPDATE," << clientId << ","
-                    //        << pos.x << "," << pos.y << "," << pos.z << "\n";
-                    //
-                    //    BroadcastPacket(oss.str(), -1);
+                        sceneManager.addScene(clientId);
+                        scene = sceneManager.getScene(clientId);
                     }
+
+                    std::shared_ptr<Player> player = scene->getPlayer(clientId);
+                    if (!player) return;
+
+                    player->key_input(keyMask);
+
+                    std::cout << "test Value, ID : " << clientId << " value : " << player->test_value << "\n";
                 }
                 else
                 {
-                    logger.Log("잘못된 패킷 형식 수신: " + packet);
+                    logger.Log("Invalid packet format received: " + packet);
                 }
             }
         }
     }
     catch (const std::exception& e)
     {
-        logger.Log("[예외] 클라이언트 " + std::to_string(clientId) + " 처리 중 예외 발생: " + e.what());
+        logger.Log("[EXCEPTION] Client " + std::to_string(clientId) + " processing error: " + e.what());
+        DisconnectClient(clientId);
     }
-
 }
+
 
 void Server::BroadcastPacket(const std::string& packet, int senderId)
 {
@@ -680,4 +648,59 @@ int main()
     }
 
     return 0;
+}
+
+
+int Server::GetNewClientId()
+{
+    std::lock_guard<std::mutex> lock(idMutex);
+
+    //if (!availableIds.empty())
+    //{
+        int id = availableIds.front();
+        availableIds.pop();
+        activeClientIds.insert(id);
+        return id;
+    //}
+    //else
+    //{
+    //    int id = nextClientId++;
+    //    activeClientIds.insert(id);
+    //    return id;
+    //}
+
+}
+void Server::ReleaseClientId(int clientId)
+{
+    std::lock_guard<std::mutex> lock(idMutex);
+
+    auto it = activeClientIds.find(clientId);
+    if (it != activeClientIds.end())
+    {
+        activeClientIds.erase(it);
+        availableIds.push(clientId);
+        std::cout << "[DEBUG] Released client ID: " << clientId << " (pushed to availableIds)\n";
+        std::cout << "[DEBUG] availableIds size: " << availableIds.size() << ", nextClientId: " << nextClientId << std::endl;
+    }
+    else
+    {
+        std::cout << "[WARN] Tried to release unused client ID: " << clientId << std::endl;
+    }
+}
+
+void Server::DisconnectClient(int clientId)
+{
+
+    if (clients.find(clientId) != clients.end())
+    {
+        closesocket(clients[clientId].socket);
+        clients.erase(clientId);
+
+        lockedCharacterIds.erase(characterSelections[clientId]);
+        characterSelections.erase(clientId);
+
+        ReleaseClientId(clientId);
+
+        std::cout << "[INFO] Client disconnected: " << clientId << std::endl;
+    }
 }
