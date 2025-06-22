@@ -2285,7 +2285,13 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 {
+	std::cout << "[DEBUG] UpdatePlayerSelection 진입, new_index=" << new_index << std::endl;
+
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+
+	std::cout << "[DEBUG] player_list.size()=" << player_list->size() << std::endl;
+	std::cout << "[DEBUG] select_index=" << select_index << std::endl;
+
 	int list_size = static_cast<int>(player_list->size());
 	if (list_size == 0) return;
 
@@ -2296,17 +2302,11 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 	{
 		int charId = (*player_list)[next_index]->GetID();
 		if (lockedCharacterIds.find(charId) == lockedCharacterIds.end())
-		{
 			break;
-		}
 		next_index = (next_index + 1) % list_size;
 		attempts++;
 	}
-
-	if (attempts >= list_size)
-	{
-		return;
-	}
+	if (attempts >= list_size) return;
 
 	select_index = next_index;
 
@@ -2314,25 +2314,16 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 	{
 		if (!player) continue;
 		int charId = player->GetID();
-
 		if (lockedCharacterIds.find(charId) != lockedCharacterIds.end())
-		{
 			player->SetOutlineColor(0);
-		}
 		else if (charId == (*player_list)[select_index]->GetID())
-		{
 			player->SetOutlineColor(1);
-		}
 		else
 		{
 			bool selectedByOthers = false;
 			for (const auto& [id, cid] : characterSelections)
 			{
-				if (id != ClientNum && cid == charId)
-				{
-					selectedByOthers = true;
-					break;
-				}
+				if (id != ClientNum && cid == charId) { selectedByOthers = true; break; }
 			}
 			player->SetOutlineColor(selectedByOthers ? 2 : 0);
 		}
@@ -2340,17 +2331,22 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 
 	prev_index = select_index;
 
-	// 조명 위치 조정
+	// 조명 연출(선택한 캐릭터 강조)
 	XMFLOAT3 character_pos = (*player_list)[select_index]->GetPosition();
 	m_pLights[3].m_bEnable = true;
 	m_pLights[3].m_xmf3Position = character_pos;
 	m_pLights[3].m_xmf3Position.y += 15.0f;
 
-	if (selectCharacterCallback)
-	{
-		int charId = (*player_list)[select_index]->GetID();
-		selectCharacterCallback(charId);
-	}
+	 if (selectCharacterCallback)
+    {
+        int charId = (*player_list)[select_index]->GetID();
+        std::cout << "[DEBUG] selectCharacterCallback called for charId=" << charId << std::endl;
+        selectCharacterCallback(charId);
+    }
+    else
+    {
+        std::cout << "[DEBUG] selectCharacterCallback is nullptr!" << std::endl;
+    }
 }
 
 
@@ -3188,6 +3184,7 @@ void Character_Select_Scene::SetSendPacketCallback(std::function<void(const std:
 	sendPacketCallback = std::move(callback);
 }
 
+
 void Character_Select_Scene::SendHoverToServer(int index)
 {
 	if (sendPacketCallback)
@@ -3203,7 +3200,15 @@ void Character_Select_Scene::SendSelectionToServer(int index)
 	if (sendPacketCallback)
 	{
 		std::ostringstream oss;
-		oss << "CHARACTER_SELECT_REQUEST," << ClientNum << "," << index << "\n";
+		oss << "CHARACTER_SELECT," << ClientNum << "," << index << "\n";
 		sendPacketCallback(oss.str());
 	}
+}
+
+int Character_Select_Scene::GetSelectedCharacterId() const
+{
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	if (select_index >= 0 && select_index < player_list->size())
+		return (*player_list)[select_index]->GetID();
+	return -1;
 }

@@ -289,12 +289,9 @@ public:
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
-
-	std::unordered_set<int> lockedCharacterIds;
-	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }
-
 	void SetSelectCharacterCallback(std::function<void(int)> callback);
 	void SetSendPacketCallback(std::function<void(const std::string&)> callback);
+
 	std::function<void(int)> selectCharacterCallback;
 	std::function<void(const std::string&)> sendPacketCallback;
 
@@ -302,19 +299,17 @@ public:
 	{
 		characterSelections = selections;
 		ClientNum = clientNum;
-
 		UpdatePlayerSelection(select_index);
 	}
+
 	void SendHoverToServer(int index);
 	void SendSelectionToServer(int index);
+
 	int GetSelectedCharacterIndex() const { return select_index; }
-	int GetSelectedCharacterId() const
-	{
-		auto player_list = obj_manager->Get_Object_List(Object_Type::player);
-		if (select_index >= 0 && select_index < player_list->size())
-			return (*player_list)[select_index]->GetID();
-		return -1;
-	}
+	int GetSelectedCharacterId() const;
+
+	std::unordered_set<int> lockedCharacterIds;
+	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }
 };
 
 class Board_Scene : public CScene

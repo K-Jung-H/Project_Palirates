@@ -18,3 +18,8 @@ const std::unordered_map<int, std::shared_ptr<Scene>>& SceneManager::getAllScene
 {
     return scenes;
 }
+
+void SceneManager::removeScene(int clientId)
+{
+    scenes.erase(clientId);
+}

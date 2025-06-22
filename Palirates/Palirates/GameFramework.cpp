@@ -577,10 +577,15 @@ void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 
 bool CGameFramework::Change_Scene()
 {
+	std::cout << "[DEBUG] Change_Scene 진입" << std::endl;
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
-	if (!c_signal.change) return false;
+	std::cout << "[DEBUG] c_signal.change=" << c_signal.change << ", scene_name=" << c_signal.scene_name << std::endl;
+	if (!c_signal.change)
+	{
+		std::cout << "[DEBUG] Change_Scene: change==false, return" << std::endl;
+		return false;
+	}
 
-	// 캐릭터 선택 관련 블록 (기존 내용 유지)
 	if (c_signal.scene_name == "Game_Stage_Board")
 	{
 		if (selectedCharacterId == -1)
@@ -621,19 +626,19 @@ bool CGameFramework::Change_Scene()
 
 	auto RegisterCharacterSelectCallbacks = [this]()
 		{
+			std::cout << "[DEBUG] RegisterCharacterSelectCallbacks 진입" << std::endl;
 			if (auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
 			{
-				charScene->UpdateCharacterSelections(characterSelections, ClientNum);
-
+				std::cout << "[DEBUG] charScene is valid, registering callbacks!" << std::endl;
 				charScene->SetSelectCharacterCallback([this](int charId)
-					{
-						SendCharacterSelectPacket(charId);
-					});
-
+					{ SendCharacterSelectPacket(charId); });
 				charScene->SetSendPacketCallback([this](const std::string& packet)
-					{
-						SendPacket(packet);
-					});
+					{ SendPacket(packet); });
+				charScene->UpdateCharacterSelections(characterSelections, ClientNum);
+			}
+			else
+			{
+				std::cout << "[ERROR] charScene dynamic_cast 실패" << std::endl;
 			}
 		};
 

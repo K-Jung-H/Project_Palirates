@@ -1,6 +1,8 @@
 ﻿#include "stdafx.h"
 #include "server.h"
 
+const int MAX_CLIENTS = 6;
+
 Server::Server(int port)
 {
     WSADATA wsaData;
@@ -52,9 +54,13 @@ void Server::AcceptClients()
 
             clients[clientId] = session;
 
-            hoveredByClient[clientId] = -1;
-            selectedCharacterByClient[clientId] = -1;
+            if (clientId >= hoveredByClient.size())
+                hoveredByClient.resize(clientId + 1, -1);
+            if (clientId >= selectedCharacterByClient.size())
+                selectedCharacterByClient.resize(clientId + 1, -1);
 
+
+            sceneManager.removeScene(clientId);
             sceneManager.addScene(clientId);
             std::shared_ptr<Scene> scene = sceneManager.getScene(clientId);
 
@@ -586,7 +592,7 @@ void Server::BroadcastCharacterSelect(Server* pServer)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-        std::cout << "[THREAD] BroadcastCharacterSelect 루프 동작 중\n";
+        //std::cout << "[THREAD] BroadcastCharacterSelect 루프 동작 중\n";
 
         bool hasCharacterSelectClients = false;
 
@@ -655,29 +661,27 @@ int Server::GetNewClientId()
 {
     std::lock_guard<std::mutex> lock(idMutex);
 
-    //if (!availableIds.empty())
-    //{
-        int id = availableIds.front();
+    int id;
+    if (!availableIds.empty())
+    {
+        id = availableIds.top();
         availableIds.pop();
-        activeClientIds.insert(id);
-        return id;
-    //}
-    //else
-    //{
-    //    int id = nextClientId++;
-    //    activeClientIds.insert(id);
-    //    return id;
-    //}
-
+    }
+    else
+    {
+        id = nextClientId++;
+    }
+    activeClientIds.insert(id);
+    return id;
 }
+
 void Server::ReleaseClientId(int clientId)
 {
     std::lock_guard<std::mutex> lock(idMutex);
 
-    auto it = activeClientIds.find(clientId);
-    if (it != activeClientIds.end())
+    size_t erased = activeClientIds.erase(clientId);
+    if (erased > 0)
     {
-        activeClientIds.erase(it);
         availableIds.push(clientId);
         std::cout << "[DEBUG] Released client ID: " << clientId << " (pushed to availableIds)\n";
         std::cout << "[DEBUG] availableIds size: " << availableIds.size() << ", nextClientId: " << nextClientId << std::endl;
@@ -688,19 +692,33 @@ void Server::ReleaseClientId(int clientId)
     }
 }
 
+
 void Server::DisconnectClient(int clientId)
 {
-
-    if (clients.find(clientId) != clients.end())
     {
-        closesocket(clients[clientId].socket);
-        clients.erase(clientId);
+        std::lock_guard<std::mutex> lock(clientsMutex);
 
-        lockedCharacterIds.erase(characterSelections[clientId]);
-        characterSelections.erase(clientId);
+        sceneManager.removeScene(clientId);
 
-        ReleaseClientId(clientId);
-
-        std::cout << "[INFO] Client disconnected: " << clientId << std::endl;
+        auto it = clients.find(clientId);
+        if (it != clients.end())
+        {
+            closesocket(it->second.socket);
+            clients.erase(it);
+        }
     }
+
+    {
+        std::lock_guard<std::mutex> lock(characterMutex);
+
+        auto selIt = characterSelections.find(clientId);
+        if (selIt != characterSelections.end()) {
+            lockedCharacterIds.erase(selIt->second);
+            characterSelections.erase(selIt);    
+        }
+    }
+
+    ReleaseClientId(clientId);
+
+    std::cout << "[INFO] Client disconnected: " << clientId << std::endl;
 }

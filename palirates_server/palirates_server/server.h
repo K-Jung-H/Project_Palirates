@@ -39,7 +39,7 @@ private:
     int GetControllerId(shared_ptr<Scene> scene);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
    
-    std::queue<int> availableIds; 
+    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
     std::unordered_set<int> activeClientIds;
     std::mutex idMutex;
     std::mutex clientsMutex;
