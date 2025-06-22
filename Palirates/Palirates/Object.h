@@ -384,7 +384,8 @@ public:
 
 public:
     int                        m_nAnimationSets = 0;
-    CAnimationSet** m_pAnimationSet_list = NULL;
+   // CAnimationSet** m_pAnimationSet_list = NULL;
+    std::vector<std::shared_ptr<CAnimationSet>> m_pAnimationSet_list;
 
     std::vector<int> m_vecUpperBodyBoneIndices;  
     std::vector<int> m_vecLowerBodyBoneIndices;  
@@ -394,6 +395,21 @@ public:
     void Bone_Info();
     std::string CAnimationSets::GetBoneName(int index);
     void ClassifyBones();
+
+private:
+    static std::unordered_map<std::string, std::shared_ptr<CAnimationSet>> s_GlobalAnimationSetCache;
+public:
+    static std::shared_ptr<CAnimationSet> AddOrGetSharedAnimationSet(std::shared_ptr<CAnimationSet> animSet, const std::string& fileName)
+    {
+        std::string key = fileName + "::" + animSet->m_pstrAnimationSetName;
+
+        auto it = s_GlobalAnimationSetCache.find(key);
+        if (it != s_GlobalAnimationSetCache.end())
+            return it->second;
+
+        s_GlobalAnimationSetCache[key] = animSet;
+        return animSet;
+    }
 };
 
 class CAnimationTrack
@@ -511,7 +527,6 @@ public:
     XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };
     XMFLOAT3 m_xmf3PrevHipsPosition{ 0.0f, 0.0f, 0.0f };
 };
-
 
 //==================================================================================
 
@@ -762,7 +777,7 @@ public:
     
     void LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
 
-    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel);
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
     static std::shared_ptr<CGameObject> LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes);
     static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
 
