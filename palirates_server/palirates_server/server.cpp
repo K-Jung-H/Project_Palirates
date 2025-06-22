@@ -199,7 +199,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
                     logger.Log("[ENTER_SCENE] Client " + std::to_string(clientId) + " → " + sceneName);
                 }
-                else if (cmd == "CHARACTER_SELECT" && tokens.size() >= 3)
+                else if (
+                    (cmd == "CHARACTER_SELECT" || cmd == "CHARACTER_SELECT_REQUEST") && tokens.size() >= 3)
                 {
                     int selClientId = std::stoi(tokens[1]);
                     int selectedCharId = std::stoi(tokens[2]);
@@ -630,6 +631,35 @@ void Server::BroadcastCharacterSelect(Server* pServer)
                 }
             }
         }
+
+        bool allSelected = true;
+        int lobbyCount = 0;
+        for (const auto& [clientId, scenePtr] : pServer->sceneManager.getAllScenes())
+        {
+            if (scenePtr && scenePtr->GetSceneType() == Scene_Type::Lobby)
+            {
+                lobbyCount++;
+                auto it = pServer->characterSelections.find(clientId);
+                if (it == pServer->characterSelections.end() || it->second == -1)
+                {
+                    allSelected = false;
+                    break;
+                }
+            }
+        }
+
+        if (allSelected && lobbyCount > 0 && !pServer->allSelectedSent)
+        {
+            std::string startMsg = "ENTER_SCENE,Game_Stage_Board\n";
+            for (const auto& [targetId, session] : pServer->clients)
+                if (session.is_connected)
+                    send(session.socket, startMsg.c_str(), (int)startMsg.length(), 0);
+
+            pServer->allSelectedSent = true;
+            std::cout << "[서버] 모든 유저가 선택 완료 → ENTER_SCENE,Game_Stage_Board 전송\n";
+        }
+
+        if (!allSelected) pServer->allSelectedSent = false;
     }
 }
 

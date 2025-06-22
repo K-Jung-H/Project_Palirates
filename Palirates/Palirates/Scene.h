@@ -289,11 +289,6 @@ public:
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
-	void SetSelectCharacterCallback(std::function<void(int)> callback);
-	void SetSendPacketCallback(std::function<void(const std::string&)> callback);
-
-	std::function<void(int)> selectCharacterCallback;
-	std::function<void(const std::string&)> sendPacketCallback;
 
 	void UpdateCharacterSelections(const std::vector<std::pair<int, int>>& selections, int clientNum)
 	{

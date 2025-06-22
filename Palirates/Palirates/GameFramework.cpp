@@ -577,45 +577,49 @@ void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 
 bool CGameFramework::Change_Scene()
 {
-	std::cout << "[DEBUG] Change_Scene 진입" << std::endl;
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
-	std::cout << "[DEBUG] c_signal.change=" << c_signal.change << ", scene_name=" << c_signal.scene_name << std::endl;
+	
 	if (!c_signal.change)
-	{
-		std::cout << "[DEBUG] Change_Scene: change==false, return" << std::endl;
 		return false;
-	}
+
 
 	if (c_signal.scene_name == "Game_Stage_Board")
 	{
-		if (selectedCharacterId == -1)
+		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
+		if (charScene)
 		{
-			std::cout << "[BLOCKED] No character selected.\n";
-			return false;
-		}
-
-		if (!bCharacterSelectedSent)
-		{
-			for (const auto& [id, cid] : characterSelections)
+			int selectedCharId = charScene->GetSelectedCharacterId();
+			if (selectedCharId == -1)
 			{
-				if (id != ClientNum && cid == selectedCharacterId)
-				{
-					std::cout << "[BLOCKED] That character has already been selected.\n";
-					return false;
-				}
+				std::cout << "[BLOCKED] No character selected.\n";
+				return false;
 			}
-
-			std::ostringstream oss;
-			oss << "CHARACTER_SELECT_REQUEST," << selectedCharacterId << "\n";
-			SendPacket(oss.str());
-			bCharacterSelectedSent = true;
-			std::cout << "[DEBUG] Send character selection request.\n";
-			return false;
+			if (!bCharacterSelectedSent)
+			{
+				for (const auto& [id, cid] : characterSelections)
+				{
+					if (id != ClientNum && cid == selectedCharId)
+					{
+						std::cout << "[BLOCKED] That character has already been selected.\n";
+						return false;
+					}
+				}
+				std::ostringstream oss;
+				oss << "CHARACTER_SELECT_REQUEST," << ClientNum << "," << selectedCharId << "\n";
+				SendPacket(oss.str());
+				bCharacterSelectedSent = true;
+				std::cout << "[DEBUG] Send character selection request.\n";
+				return false;
+			}
+			if (!bCharacterSelectApproved)
+			{
+				std::cout << "[BLOCKED] Waiting for character select approval from server.\n";
+				return false;
+			}
 		}
-
-		if (!bCharacterSelectApproved)
+		else
 		{
-			std::cout << "[BLOCKED] Waiting for character select approval from server.\n";
+			std::cout << "[ERROR] Current scene is not Character_Select_Scene.\n";
 			return false;
 		}
 	}
@@ -624,28 +628,19 @@ bool CGameFramework::Change_Scene()
 	scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
 	SendPacket(scenePacket.str());
 
-	auto RegisterCharacterSelectCallbacks = [this]()
-		{
-			std::cout << "[DEBUG] RegisterCharacterSelectCallbacks 진입" << std::endl;
-			if (auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
-			{
-				std::cout << "[DEBUG] charScene is valid, registering callbacks!" << std::endl;
-				charScene->SetSelectCharacterCallback([this](int charId)
-					{ SendCharacterSelectPacket(charId); });
-				charScene->SetSendPacketCallback([this](const std::string& packet)
-					{ SendPacket(packet); });
-				charScene->UpdateCharacterSelections(characterSelections, ClientNum);
-			}
-			else
-			{
-				std::cout << "[ERROR] charScene dynamic_cast 실패" << std::endl;
-			}
-		};
+	
+	if (c_signal.scene_name == "Character_Select")
+	{
+		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
+		if (charScene) {
+			charScene->UpdateCharacterSelections(characterSelections, ClientNum);
+		}
+	}
+
 
 	if (scene_manager->Find_Scene(c_signal.scene_name))
 	{
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
-		RegisterCharacterSelectCallbacks();
 		m_pPlayer = scene_manager->Get_Active_Scene_Player();
 		Object_Manager::Reserve_Update();
 	}
@@ -657,7 +652,6 @@ bool CGameFramework::Change_Scene()
 		WaitForGpuComplete(GPU_Stage::Compute);
 
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
-		RegisterCharacterSelectCallbacks();
 		m_pPlayer = scene_manager->Get_Active_Scene_Player();
 		Object_Manager::Reserve_Update();
 
@@ -667,6 +661,7 @@ bool CGameFramework::Change_Scene()
 		}
 	}
 
+	c_signal.change = false;
 	return true;
 }
 
@@ -1433,6 +1428,25 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandlePositionUpdate(tokens);
 		return;
 	}
+	else if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
+	{
+		std::string sceneName = tokens[1];
+		std::cout << "[INFO] ENTER_SCENE received: " << sceneName << std::endl;
+
+		auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
+		if (activeScene)
+		{
+			Change_Signal& c_signal = activeScene->Get_Change_Signal();
+			c_signal.change = true;
+			c_signal.scene_name = "Game_Stage_Board";
+			c_signal.type = Scene_Type::Board;
+		}
+		else
+		{
+			std::cout << "[ERROR] Active scene is nullptr!\n";
+		}
+		return;
+	}
 	else
 	{
 		std::cout << "[WARN] Unknown or invalid packet: " << receivedData << std::endl;
@@ -1918,10 +1932,6 @@ void CGameFramework::SetCharacterSelection(int playerId, int characterId)
 void CGameFramework::SetupCharacterSelectScene()
 {
 	auto charScene = std::make_shared<Character_Select_Scene>();
-
-	charScene->SetSelectCharacterCallback([this](int charId) { SendCharacterSelectPacket(charId); });
-
-	charScene->SetSendPacketCallback([this](const std::string& packet) { SendPacket(packet); });
 
 	scene_manager->Set_Active_Scene("Character_Select");
 

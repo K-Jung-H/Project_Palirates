@@ -2163,7 +2163,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
 		player->Set_Child(player->m_pRootModel);
 		player->SetupWeaponCollider();
-
+		player->SetID(i);
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
 		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
@@ -2337,16 +2337,6 @@ void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 	m_pLights[3].m_xmf3Position = character_pos;
 	m_pLights[3].m_xmf3Position.y += 15.0f;
 
-	 if (selectCharacterCallback)
-    {
-        int charId = (*player_list)[select_index]->GetID();
-        std::cout << "[DEBUG] selectCharacterCallback called for charId=" << charId << std::endl;
-        selectCharacterCallback(charId);
-    }
-    else
-    {
-        std::cout << "[DEBUG] selectCharacterCallback is nullptr!" << std::endl;
-    }
 }
 
 
@@ -2416,20 +2406,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, SelectbutttonTexture);
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	SlbTblock->onClick = [this]() {
-
-		int selectedCharId = GetSelectedCharacterId();
-		if (selectedCharId != -1)
-		{
-			if (selectCharacterCallback)
-			{
-				std::cout << "[INFO] Sending CHARACTER_SELECT: " << selectedCharId << std::endl;
-				selectCharacterCallback(selectedCharId);
-			}
-			else
-			{
-				std::cerr << "[WARN] SelectCharacterCallback is not set." << std::endl;
-			}
-		}
 
 		c_signal.change = true;
 		c_signal.scene_name = "Game_Stage_Board";
@@ -3088,7 +3064,6 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		c_signal.change = true;
 		c_signal.scene_name = "Stage_1";
 		c_signal.type = Scene_Type::Stage_1;
-
 		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -3174,41 +3149,18 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 //==========================================================================================
 
-void Character_Select_Scene::SetSelectCharacterCallback(std::function<void(int)> callback)
-{
-	selectCharacterCallback = std::move(callback);
-}
-
-void Character_Select_Scene::SetSendPacketCallback(std::function<void(const std::string&)> callback)
-{
-	sendPacketCallback = std::move(callback);
-}
-
-
-void Character_Select_Scene::SendHoverToServer(int index)
-{
-	if (sendPacketCallback)
-	{
-		std::ostringstream oss;
-		oss << "CHARACTER_PREVIEW," << ClientNum << "," << index << "\n";
-		sendPacketCallback(oss.str());
-	}
-}
-
-void Character_Select_Scene::SendSelectionToServer(int index)
-{
-	if (sendPacketCallback)
-	{
-		std::ostringstream oss;
-		oss << "CHARACTER_SELECT," << ClientNum << "," << index << "\n";
-		sendPacketCallback(oss.str());
-	}
-}
 
 int Character_Select_Scene::GetSelectedCharacterId() const
 {
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index
+		<< ", player_list.size()=" << player_list->size() << std::endl;
 	if (select_index >= 0 && select_index < player_list->size())
-		return (*player_list)[select_index]->GetID();
+	{
+		int id = (*player_list)[select_index]->GetID();
+		std::cout << "[DEBUG] Selected character id: " << id << std::endl;
+		return id;
+	}
+	std::cout << "[DEBUG] Invalid select_index or empty player_list!" << std::endl;
 	return -1;
 }

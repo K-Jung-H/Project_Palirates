@@ -45,6 +45,8 @@ private:
     std::mutex clientsMutex;
     std::mutex characterMutex;
 
+    bool allSelectedSent = false;
+
 public:
     Server(int port);
     ~Server();
