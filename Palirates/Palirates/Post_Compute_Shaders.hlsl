@@ -189,7 +189,6 @@ void CS_EdgeDetection(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThrea
 //========================================================================================
 
 
-
 static const float BlurScale = 0.5f; // 감도 조절
 static const float MaxBlurLength = 0.05f; // 최대 블러 길이 (NDC)
 static const float VelocityThreshold = 1e-4f; // 블러 생략 기준
@@ -252,3 +251,76 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
     float3 finalColor = accum / (samples + 1);
     gtxtRWOutput[gid.xy] = float4(finalColor, 1.0f);
 }
+
+//========================================================================================
+
+SamplerState samplerLinearClamp : register(s0);
+
+#define MAX_OBJECT_NUM 2
+
+cbuffer Zoom_Blur_Info : register(b0)
+{
+    float4 obj_screen_pos[MAX_OBJECT_NUM]; // if float2(-1.0f,-1.0f)  -> None
+    float4 blur_params;
+};
+
+
+[numthreads(CX_THREADS, CY_THREADS, 1)]
+void CS_ZoomBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
+{
+    int2 coord = int2(gid.xy);
+    uint2 texSize;
+    gtxtInput.GetDimensions(texSize.x, texSize.y);
+
+    if (coord.x < 0 || coord.y < 0 || uint(coord.x) >= texSize.x || uint(coord.y) >= texSize.y)
+        return;
+
+    if (obj_screen_pos[0].x == 0.5f && obj_screen_pos[0].y == 0.5f)
+    {
+        gtxtRWOutput[coord] = float4(1.0f, 0.0f, 0.0f, 1.0f);
+        return;
+    }
+    
+    //int samples_as_int = (int) round(blur_params.y); // round()를 사용하여 반올림 처리
+    //if (blur_params.x == 1.0f && samples_as_int == 32)
+    
+        float2 uv = (coord + 0.5) / texSize;
+
+
+    // 1. 가장 가까운 활성 center를 찾아 그 방향으로 줌 블러 적용
+        float2 nearest_center = float2(-1, -1);
+        float min_dist = 1e9;
+    //[unroll]
+    //    for (int j = 0; j < MAX_OBJECT_NUM; ++j)
+    //    {
+    //        if (obj_screen_pos[j].x < 0.0f)
+    //            continue; // 비활성 center skip
+
+    //        float d = length(uv - obj_screen_pos[j]);
+    //        if (d < min_dist)
+    //        {
+    //            min_dist = d;
+    //            nearest_center = obj_screen_pos[j];
+    //        }
+    //    }
+
+        if (nearest_center.x < 0.0f)
+        {
+        // 유효 중심이 없다면 원본 복사 (또는 디버깅)
+            gtxtRWOutput[coord] = gtxtInput[coord];
+        // gtxtRWOutput[coord] = float4(1.0f, 0.0f ,0.0f ,1.0f); // 빨강 디버깅
+            return;
+        }
+
+    // 2. 줌 블러 (최근접 중심점 방향)
+    int N = max(blur_params.y, 1);
+    float s = blur_params.x;
+        float4 accum = float4(0, 0, 0, 0);
+        for (int k = 0; k < N; ++k)
+        {
+            float t = (float) k / (N - 1);
+            float2 sample_uv = lerp(uv, nearest_center, t * s);
+            accum += gtxtInput.SampleLevel(samplerLinearClamp, sample_uv, 0);
+        }
+        gtxtRWOutput[coord] = accum / N;
+    }

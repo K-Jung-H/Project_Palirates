@@ -69,8 +69,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
-	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
-	
+
 	Build_Default_Elements();
 	Build_Default_Scenes();
 	return(true);
@@ -507,8 +506,11 @@ void CGameFramework::Build_Default_Elements()
 {
 	BeginGPUStage(GPU_Stage::Render);
 
-	CreateShaderVariables();
 
+	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
+	post_effect_manager->CreateShaderResource(m_pd3dDevice, Active_CommandList);
+
+	CreateShaderVariables();
 	//==========================================
 	// Multi - Render Target Shader
 	MRT_shader = new G_BufferMerger_Shader();
@@ -1055,9 +1057,12 @@ void CGameFramework::FrameAdvance()
 
 		// Reserve Effects
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
-		
+		//post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
+		//post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
+		vector<XMFLOAT4> test_list;
+		post_effect_manager->Add_Effect(Effect_Type::Zoom, 1, &Velocity_G_Buffer_SRV_handle);
+		post_effect_manager->Set_Zoom_Focus_List(test_list);
+
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();

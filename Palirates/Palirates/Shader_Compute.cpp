@@ -73,7 +73,7 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 		pd3dDescriptorRanges[2].OffsetInDescriptorsFromTableStart = 0;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[3];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
 	{
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].DescriptorTable.NumDescriptorRanges = 1;
@@ -89,6 +89,11 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[2]; //RWTexture2D
 		pd3dRootParameters[RESULT_ROOT_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].Descriptor.ShaderRegister = 0;
+		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = 
@@ -97,11 +102,28 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
 		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
+
+	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[1];
+
+	pd3dSamplerDescs[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	pd3dSamplerDescs[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	pd3dSamplerDescs[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	pd3dSamplerDescs[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	pd3dSamplerDescs[0].MipLODBias = 0;
+	pd3dSamplerDescs[0].MaxAnisotropy = 1;
+	pd3dSamplerDescs[0].ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	pd3dSamplerDescs[0].MinLOD = 0;
+	pd3dSamplerDescs[0].MaxLOD = D3D12_FLOAT32_MAX;
+	pd3dSamplerDescs[0].ShaderRegister = 0;
+	pd3dSamplerDescs[0].RegisterSpace = 0;
+	pd3dSamplerDescs[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+
 	D3D12_ROOT_SIGNATURE_DESC d3dRootSignatureDesc = {};
 	d3dRootSignatureDesc.NumParameters = _countof(pd3dRootParameters);
 	d3dRootSignatureDesc.pParameters = pd3dRootParameters;
-	d3dRootSignatureDesc.NumStaticSamplers = 0;
-	d3dRootSignatureDesc.pStaticSamplers = nullptr;
+	d3dRootSignatureDesc.NumStaticSamplers = _countof(pd3dSamplerDescs);
+	d3dRootSignatureDesc.pStaticSamplers = pd3dSamplerDescs;
 	d3dRootSignatureDesc.Flags = d3dRootSignatureFlags;
 
 	ID3DBlob* pd3dSignatureBlob = NULL;
@@ -219,7 +241,6 @@ void Post_ComputeShader::Set_BackBuffer_SRV(ID3D12GraphicsCommandList* pd3dComma
 void Post_ComputeShader::Set_RootSignature_SRV(ID3D12GraphicsCommandList* pd3dCommandList, int rootsignature_index, D3D12_GPU_DESCRIPTOR_HANDLE srv_handle)
 {
 	pd3dCommandList->SetComputeRootDescriptorTable(rootsignature_index, srv_handle);
-
 }
 
 
@@ -283,6 +304,28 @@ void CMotionBlurShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGrou
 	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
 }
 
+//==========================================================================================
+
+CZoomBlurShader::CZoomBlurShader()
+{
+}
+
+CZoomBlurShader::~CZoomBlurShader()
+{
+}
+
+
+D3D12_SHADER_BYTECODE CZoomBlurShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_ZoomBlur", "cs_5_1", ppd3dShaderBlob));
+}
+
+void CZoomBlurShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
+{
+	Post_ComputeShader::CreateShader(pd3dDevice, cxThreadGroups, cyThreadGroups, czThreadGroups, nPipelineState);
+
+	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
+}
 
 //==========================================================================================
 
@@ -468,19 +511,28 @@ Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 {
 	CEdgeDetectCSShader* edge_detect_shader = new CEdgeDetectCSShader();
 	CMotionBlurShader* motion_blur_shader = new CMotionBlurShader();
+	CZoomBlurShader* zoom_shader = new CZoomBlurShader();
 
 	fullscreen_shader = new CTextureToFullScreenShader();
 
 
 	m_EffectMap[Effect_Type::Motion_Blur] = motion_blur_shader;
 	m_EffectMap[Effect_Type::Outline] = edge_detect_shader;
+	m_EffectMap[Effect_Type::Zoom] = zoom_shader;
 	m_EffectMap[Effect_Type::etc] = NULL;
 
 
 	edge_detect_shader->CreateShader(pd3dDevice);
 	motion_blur_shader->CreateShader(pd3dDevice);
+	zoom_shader->CreateShader(pd3dDevice);
 
 	fullscreen_shader->CreateShader(pd3dDevice);
+}
+
+void Post_Effect_Manager::CreateShaderResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if(m_EffectMap[Effect_Type::Zoom] != NULL)
+		Create_ZoomBlur_Info(pd3dDevice, pd3dCommandList);
 }
 
 void Post_Effect_Manager::Clear_Reserved_Effect()
@@ -513,6 +565,10 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 		if (!shader) 
 			continue;
 
+		if (reserved.type == Effect_Type::Zoom)
+			Update_ZoomBlur_Info(pd3dCommandList);
+
+
 		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(),
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -544,9 +600,33 @@ void Post_Effect_Manager::Resize_Screen_Size(UINT new_width, UINT new_height)
 {
 	Frame_Buffer_Width = new_width;
 	Frame_Buffer_Height = new_height;
-
-
 }
+
+void Post_Effect_Manager::Set_Zoom_Focus_List(std::vector<XMFLOAT4> pos_list)
+{
+	gameobj_screen_pos_list.assign(MAX_OBJECT_NUM, XMFLOAT4(-1.0f, -1.0f, -1.0f, -1.0f));
+	std::copy_n(pos_list.begin(), std::min<size_t>(pos_list.size(), MAX_OBJECT_NUM), gameobj_screen_pos_list.begin());
+	gameobj_screen_pos_list[0] = XMFLOAT4(0.5f, 0.5f, 1,1);
+}
+
+void Post_Effect_Manager::Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(ZoomBlur_Info) + 255) & ~255); //256 * N
+	m_pd3dcb_zoomblur_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcb_zoomblur_info->Map(0, NULL, (void**)&m_pcb_Mapped_zoomblur_info);
+}
+
+
+void Post_Effect_Manager::Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	memcpy(m_pcb_Mapped_zoomblur_info->obj_screen_pos, gameobj_screen_pos_list.data(), sizeof(XMFLOAT4) * MAX_OBJECT_NUM);
+	m_pcb_Mapped_zoomblur_info->blur_params.x = 1.0f; // strength
+	m_pcb_Mapped_zoomblur_info->blur_params.y = 32; // samples
+
+	pd3dCommandList->SetComputeRootConstantBufferView(ZOOM_INFO_PARAMETER_INDEX, m_pd3dcb_zoomblur_info->GetGPUVirtualAddress());
+}
+
 //=====================================================================
 float CS_Wave_Shader::total_time = 0.0f;
 WaveParams* CS_Wave_Shader::update_wave_info = NULL;
