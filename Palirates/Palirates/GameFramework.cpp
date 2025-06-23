@@ -579,6 +579,13 @@ bool CGameFramework::Change_Scene()
 {
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	
+	if (bEnterSceneByServer && c_signal.scene_name == "Game_Stage_Board")
+	{
+		std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
+		bEnterSceneByServer = false;
+		goto SCENE_CHANGE;
+	}
+
 	if (!c_signal.change)
 		return false;
 
@@ -624,11 +631,12 @@ bool CGameFramework::Change_Scene()
 		}
 	}
 
+SCENE_CHANGE:
+	std::cout << "[DEBUG] SCENE_CHANGE 레이블 진입. c_signal.scene_name = " << c_signal.scene_name << std::endl;
 	std::ostringstream scenePacket;
 	scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
 	SendPacket(scenePacket.str());
 
-	
 	if (c_signal.scene_name == "Character_Select")
 	{
 		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
@@ -636,7 +644,6 @@ bool CGameFramework::Change_Scene()
 			charScene->UpdateCharacterSelections(characterSelections, ClientNum);
 		}
 	}
-
 
 	if (scene_manager->Find_Scene(c_signal.scene_name))
 	{
@@ -1428,11 +1435,10 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandlePositionUpdate(tokens);
 		return;
 	}
-	else if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
+	if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
 	{
 		std::string sceneName = tokens[1];
 		std::cout << "[INFO] ENTER_SCENE received: " << sceneName << std::endl;
-
 		auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
 		if (activeScene)
 		{
@@ -1440,6 +1446,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			c_signal.change = true;
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;
+			bEnterSceneByServer = true;
 		}
 		else
 		{

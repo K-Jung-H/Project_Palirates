@@ -446,7 +446,7 @@ void Server::NotifyExistingPlayersAboutNew(int newClientId)
         }
     }
 
-    logger.Log("[서버] 기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
+    //logger.Log("[서버] 기존 유저들에게 신규 클라이언트 " + std::to_string(newClientId) + " 상태 전송 완료");
 }
 
 
@@ -608,13 +608,13 @@ void Server::BroadcastCharacterSelect(Server* pServer)
 
         if (!hasCharacterSelectClients)
         {
-            std::cout << "[THREAD] 로비에 있는 클라이언트 없음, 생략\n";
+            //std::cout << "[THREAD] 로비에 있는 클라이언트 없음, 생략\n";
             continue;
         }
 
         if (pServer->characterSelections.empty())
         {
-            std::cout << "[THREAD] 선택된 캐릭터 없음\n";
+           // std::cout << "[THREAD] 선택된 캐릭터 없음\n";
             continue;
         }
 
@@ -626,7 +626,7 @@ void Server::BroadcastCharacterSelect(Server* pServer)
             {
                 if (session.is_connected)
                 {
-                    std::cout << "[SEND] CHARACTER_STATUS → Client " << targetId << ": " << packet;
+                    //std::cout << "[SEND] CHARACTER_STATUS → Client " << targetId << ": " << packet;
                     send(session.socket, packet.c_str(), static_cast<int>(packet.length()), 0);
                 }
             }
@@ -713,8 +713,8 @@ void Server::ReleaseClientId(int clientId)
     if (erased > 0)
     {
         availableIds.push(clientId);
-        std::cout << "[DEBUG] Released client ID: " << clientId << " (pushed to availableIds)\n";
-        std::cout << "[DEBUG] availableIds size: " << availableIds.size() << ", nextClientId: " << nextClientId << std::endl;
+        //std::cout << "[DEBUG] Released client ID: " << clientId << " (pushed to availableIds)\n";
+        //std::cout << "[DEBUG] availableIds size: " << availableIds.size() << ", nextClientId: " << nextClientId << std::endl;
     }
     else
     {

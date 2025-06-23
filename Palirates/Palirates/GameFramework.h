@@ -277,6 +277,7 @@ public:
     void SetCharacterSelection(int playerId, int characterId);
 
     void SetupCharacterSelectScene();
+    bool bEnterSceneByServer = false;
 
     //=================SERVER=================
 

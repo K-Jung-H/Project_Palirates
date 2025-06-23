@@ -2285,12 +2285,12 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 {
-	std::cout << "[DEBUG] UpdatePlayerSelection 진입, new_index=" << new_index << std::endl;
+	//std::cout << "[DEBUG] UpdatePlayerSelection 진입, new_index=" << new_index << std::endl;
 
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
 
-	std::cout << "[DEBUG] player_list.size()=" << player_list->size() << std::endl;
-	std::cout << "[DEBUG] select_index=" << select_index << std::endl;
+	//std::cout << "[DEBUG] player_list.size()=" << player_list->size() << std::endl;
+	//std::cout << "[DEBUG] select_index=" << select_index << std::endl;
 
 	int list_size = static_cast<int>(player_list->size());
 	if (list_size == 0) return;
