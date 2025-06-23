@@ -6,12 +6,13 @@
 
 Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t1);
-Texture2D<float4> T_Velocity : register(t2);
-Texture2D<float4> T_ViewSpace_Z : register(t3);
+Texture2D<float4> T_Blur_Info : register(t2);
+Texture2D<float4> T_Velocity : register(t3);
+Texture2D<float4> T_ViewSpace_Z : register(t4);
 
-// t4 = Light_Material_Info
-Texture2D<float4> T_Fog_Noise : register(t5);
-Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t6); // t6 ~ t10
+// t5 = Light_Material_Info
+Texture2D<float4> T_Fog_Noise : register(t6);
+Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t11
 
 cbuffer cb_Fog_Info : register(b0)
 {

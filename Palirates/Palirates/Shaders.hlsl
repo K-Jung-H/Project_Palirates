@@ -12,9 +12,9 @@ struct Material_Info
 {
     float4 gAlbedoColor;
     uint light_material_ID;
-    uint Outline_Color_ID;
     uint Blur_Mask;
-    uint padding;
+    uint Object_Type_ID;
+    uint Outline_Color_ID;
 };
 
 cbuffer cbGameObjectInfo : register(b1)
@@ -75,8 +75,9 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 {
     float4 Albedo_Color : SV_TARGET0;
     float4 world_Normal_and_Camera_Distance : SV_TARGET1;
-    float4 Velocity_Mask_Obj_Id : SV_TARGET2;
-    float viewspace_z : SV_TARGET3;
+    float4 Blur_Info : SV_TARGET2;
+    float2 Velocity : SV_TARGET3;
+    float viewspace_z : SV_TARGET4;
 };
 
 
@@ -162,7 +163,10 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    output.Blur_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Velocity= float2(0.0f, 0.0f);
+    output.viewspace_z = float(0.0f);
+    
     
     float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
     if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
@@ -208,9 +212,12 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Normal_and_Camera_Distance.xyz = normalW;
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
     
-    output.Velocity_Mask_Obj_Id.xy = input.velocity.xy;
-    output.Velocity_Mask_Obj_Id.z = material_info.Blur_Mask; // mask
-    output.Velocity_Mask_Obj_Id.w = material_info.Outline_Color_ID; // outline_id
+    
+    output.Blur_Info.x = material_info.Blur_Mask; // mask
+    output.Blur_Info.y = material_info.Outline_Color_ID; // outline_id
+    output.Blur_Info.z = material_info.Object_Type_ID;
+    
+    output.Velocity.xy = input.velocity.xy;
     output.viewspace_z = input.positionV.z;
     return (output);
 
@@ -407,7 +414,9 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 20.0f);
+    output.Blur_Info = float4(1.0f, 0.0f, 0.0f, 0.0f);
+    output.Velocity = float2(0.0f, 0.0f);
+    output.viewspace_z = float(0.0f);
     
     float3 cBaseTexColor = gtxtTerrainBaseTexture.Sample(gssWrap, input.uv0).xyz;
     float3 cDetailTexColor = gtxtTerrainDetailTexture.Sample(gssWrap, input.uv1).xyz;
@@ -419,6 +428,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     output.world_Normal_and_Camera_Distance.xyz = input.normalW; //float3(0.0f, 1.0f, 0.0f);
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
     output.viewspace_z = input.positionV.z;
+    
     return (output);
 }
 //=============================================================

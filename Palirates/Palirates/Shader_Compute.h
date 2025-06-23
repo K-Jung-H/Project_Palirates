@@ -2,9 +2,10 @@
 #include "Shader.h"
 
 #define BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX 0 // 이전 렌더링 결과물
-#define MOTION_VELOCITY_SRV_ROOT_PARAMETER_INDEX 1 // 모션 블러 G 버퍼
-#define RESULT_ROOT_PARAMETER_INDEX 2 // CS 동작 후 결과물
-#define ZOOM_INFO_PARAMETER_INDEX 3 // ZoomBlur에 필요한 정보
+#define BLUR_INFO_SRV_ROOT_PARAMETER_INDEX 1 // 블러 정보 G 버퍼
+#define VELOCITY_SRV_ROOT_PARAMETER_INDEX 2 // 속도 G 버퍼
+#define RESULT_ROOT_PARAMETER_INDEX 3 // CS 동작 후 결과물
+#define ZOOM_INFO_PARAMETER_INDEX 4 // ZoomBlur에 필요한 정보
 
 class Post_ComputeShader : public PostProcessBaseShader
 {
@@ -127,12 +128,25 @@ public:
 
 //========================================================================
 
-#define MAX_OBJECT_NUM 2
+#define MAX_OBJECT_NUM 64
 
-struct alignas(16) ZoomBlur_Info
+struct ZoomBlurInfo_CB
 {
+	// obj_screen_pos:
+	//   x, y: 스크린 좌표 (0.0 ~ 1.0 UV)
+	//   z: Obj ID (음수 또는 특정 값으로 비활성 객체 표시)
+	//   w: 블러 적용 범위 (Influence Radius) 또는 강도 (Blur Strength Multiplier)
 	XMFLOAT4 obj_screen_pos[MAX_OBJECT_NUM];
-	XMFLOAT4 blur_params;
+
+
+	float s_base_blur_strength;   // 기본 블러 강도
+	float N_max_samples;          // 최대 샘플 수
+	float distance_factor;        // 거리에 따른 샘플 수 감소 계수
+	float min_influence_dist;     // 최소 영향 거리
+
+
+	int active_object_count;      
+	float padding[3]; 
 };
 
 enum class Effect_Type
@@ -143,12 +157,12 @@ enum class Effect_Type
 	 etc,
 };
 
-struct ReservedEffect
+struct Resource_Bind_Set
 {
-	Effect_Type type;
 	UINT root_param_index;
 	const D3D12_GPU_DESCRIPTOR_HANDLE* srv_handle = nullptr;
 };
+
 
 class Post_Effect_Manager
 {
@@ -157,12 +171,12 @@ private:
 	static UINT Frame_Buffer_Height;
 
 	std::unordered_map<Effect_Type, Post_ComputeShader*> m_EffectMap;
-	std::vector<ReservedEffect> m_ActiveEffects;
+	std::unordered_map<Effect_Type, vector<Resource_Bind_Set>> m_Effect_reserved;
 
-	std::vector<XMFLOAT4> gameobj_screen_pos_list;
+	std::vector<XMFLOAT4> gameobj_info_list;
 
 	ID3D12Resource* m_pd3dcb_zoomblur_info = NULL;
-	ZoomBlur_Info* m_pcb_Mapped_zoomblur_info = NULL;
+	ZoomBlurInfo_CB* m_pcb_Mapped_zoomblur_info = NULL;
 
 public:
 	CTextureToFullScreenShader* fullscreen_shader = NULL;
@@ -172,12 +186,12 @@ public:
 
 
 	void Clear_Reserved_Effect();                    
-	void Add_Effect(Effect_Type type, UINT rootIndex, D3D12_GPU_DESCRIPTOR_HANDLE* srvHandle);
+	void Add_Effect(Effect_Type type, Resource_Bind_Set reserved);
 	void Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index);
 
 	void Resize_Screen_Size(UINT new_width, UINT new_height);
 
-	void Set_Zoom_Focus_List(std::vector<XMFLOAT4> pos_list);
+	void Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> pos_list);
 	void Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -185,15 +199,6 @@ public:
 
 //========================================================================
 
-
-//struct Wave_Frame_Info 
-//{
-//	XMFLOAT3 boat_pos;
-//	float ElapsedTime;
-//
-//	XMFLOAT3 boat_dir;
-//	float total_time;
-//};
 
 struct alignas(16) WaveParams
 {

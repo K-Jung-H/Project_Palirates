@@ -3047,6 +3047,26 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 }
 
+
+void Board_Scene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, main_Camera.get());
+
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+	{
+		particle_manager->Render_All(pd3dCommandList, main_Camera.get());
+	}
+#endif
+
+#ifdef USING_OBB
+	if (bOBBRender)
+		obj_manager->Render_OBB(pd3dCommandList, main_Camera.get());
+#endif
+
+}
+
+
 bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	switch (nMessageID)

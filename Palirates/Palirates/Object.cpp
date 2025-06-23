@@ -474,6 +474,7 @@ CMaterial::CMaterial(const CMaterial& other)
 	m_nTextures = other.m_nTextures;
 	m_Material_ID = other.m_Material_ID;
 	Outline_Color_ID = other.Outline_Color_ID;
+	Object_Type_ID = other.Object_Type_ID;
 
 	if (other.m_ppstrTextureNames != nullptr)
 	{
@@ -520,6 +521,7 @@ std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 	clone->m_nType = this->m_nType;
 	clone->m_Material_ID = this->m_Material_ID;
 	clone->Outline_Color_ID = this->Outline_Color_ID;
+	clone->Object_Type_ID = this->Object_Type_ID;
 
 	if (this->m_ppstrTextureNames)
 	{
@@ -613,9 +615,9 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	Material_GPU_Packet material_packet{};
 	material_packet.gAlbedoColor = m_cAlbedo;
 	material_packet.light_material_ID = m_Material_ID;
+	material_packet.Blur_Mask_ID = Blur_Mask_ID;
 	material_packet.Outline_Color_ID = Outline_Color_ID;
-	material_packet.Blur_Mask = Blur_Mask_ID;
-
+	material_packet.Object_Type_ID = Object_Type_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
@@ -1951,6 +1953,22 @@ void CGameObject::SetMaterial(int nMaterial, CMaterial* pMaterial)
 }
 
 
+void CGameObject::SetBlurMask(bool value)
+{
+	if (Material_list.size())
+	{
+		for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			material_ptr->Blur_Mask_ID = value;
+	}
+
+	if (m_pSibling)
+		m_pSibling->SetBlurMask(value);
+
+	if (m_pChild)
+		m_pChild->SetBlurMask(value);
+}
+
+
 void CGameObject::SetOutlineColor(int id)
 {
 	if (Material_list.size())
@@ -1966,20 +1984,107 @@ void CGameObject::SetOutlineColor(int id)
 		m_pChild->SetOutlineColor(id);
 }
 
-void CGameObject::SetBlurMask(bool value)
+void CGameObject::SetObject_Type_ID(int id)
 {
 	if (Material_list.size())
 	{
 		for (std::shared_ptr<CMaterial> material_ptr : Material_list)
-			material_ptr->Blur_Mask_ID = value;
+			material_ptr->Object_Type_ID = id;
 	}
 
 	if (m_pSibling)
-		m_pSibling->SetBlurMask(value);
+		m_pSibling->SetObject_Type_ID(id);
 
 	if (m_pChild)
-		m_pChild->SetBlurMask(value);
+		m_pChild->SetObject_Type_ID(id);
 }
+
+
+bool CGameObject::GetBlurMask() 
+{
+	if (Material_list.size())
+	{
+		return Material_list[0]->Blur_Mask_ID;
+	}
+
+	if (m_pSibling)
+	{
+		bool sibling_value = m_pSibling->GetBlurMask();
+		if (sibling_value) return sibling_value;
+	}
+
+	if (m_pChild)
+	{
+		bool child_value = m_pChild->GetBlurMask();
+		if (child_value) return child_value;
+	}
+
+	return false;
+}
+
+int CGameObject::GetOutlineColor() 
+{
+	if (Material_list.size())
+	{
+		if (Material_list[0]->Outline_Color_ID != -1)
+		{
+			return Material_list[0]->Outline_Color_ID;
+		}
+	}
+
+	if (m_pSibling)
+	{
+		int sibling_id = m_pSibling->GetOutlineColor();
+		if (sibling_id != -1)
+		{
+			return sibling_id;
+		}
+	}
+
+	if (m_pChild)
+	{
+		int child_id = m_pChild->GetOutlineColor();
+		if (child_id != -1)
+		{
+			return child_id;
+		}
+	}
+
+	return -1;
+}
+
+int CGameObject::GetObject_Type_ID() 
+{
+	if (Material_list.size())
+	{
+		if (Material_list[0]->Object_Type_ID != -1)
+		{
+			return Material_list[0]->Object_Type_ID;
+		}
+	}
+
+	if (m_pSibling)
+	{
+		int sibling_id = m_pSibling->GetObject_Type_ID();
+		if (sibling_id != -1)
+		{
+			return sibling_id;
+		}
+	}
+
+	if (m_pChild)
+	{
+		int child_id = m_pChild->GetObject_Type_ID();
+		if (child_id != -1)
+		{
+			return child_id;
+		}
+	}
+
+	return -1;
+}
+
+
 
 void CGameObject::Set_Color_Blending(XMFLOAT3& blending_color, float blending_value)
 {

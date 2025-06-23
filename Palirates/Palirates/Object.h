@@ -180,7 +180,6 @@ private:
     std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_d3dDsvCPUDescriptorHandles;
 
 
-    //D3D12_CPU_DESCRIPTOR_HANDLE m_d3dDsvCPUDescriptorHandle{}; // only one
 };
 
 
@@ -193,6 +192,14 @@ private:
 #define MATERIAL_EMISSION_MAP         0x10
 #define MATERIAL_DETAIL_ALBEDO_MAP      0x20
 #define MATERIAL_DETAIL_NORMAL_MAP      0x40
+
+
+
+#define MATERIAL_Object_Type_ID_None 0
+#define MATERIAL_Object_Type_ID_Player 1
+#define MATERIAL_Object_Type_ID_Monster 2
+#define MATERIAL_Object_Type_ID_Environment 3
+
 
 class CGameObject;
 
@@ -221,9 +228,9 @@ struct Material_GPU_Packet
 {
     XMFLOAT4 gAlbedoColor;
     UINT light_material_ID;
+    UINT Blur_Mask_ID;
+    UINT Object_Type_ID;
     UINT Outline_Color_ID;
-    UINT Blur_Mask;
-    UINT  padding0;
 };
 
 class CMaterial
@@ -237,8 +244,9 @@ public:
 public:
     XMFLOAT4 m_cAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
     UINT m_Material_ID = 0;
-    UINT Outline_Color_ID = 0;
     UINT Blur_Mask_ID = 0;
+    UINT Outline_Color_ID = 0;
+    UINT Object_Type_ID = 0;
 
 public:
     // not use
@@ -678,8 +686,15 @@ public:
     void SetShader(CShader* pShader);
     void SetShader(int nMaterial, CShader* pShader);
     void SetMaterial(int nMaterial, CMaterial* pMaterial);
+
     void SetOutlineColor(int id);
+    void SetObject_Type_ID(int id); // for zoom effect type
     void SetBlurMask(bool value);
+
+    bool GetBlurMask();
+    int GetOutlineColor();
+    int GetObject_Type_ID();
+
     void Set_Color_Blending(XMFLOAT3& color = XMFLOAT3(1.0f, 1.0f, 1.0), float blending_value = 1.0f);
     void Update_Color_Blending(float update_bleeding_value = 1.0f);
 
