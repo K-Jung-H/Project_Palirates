@@ -568,7 +568,7 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 	for (const std::pair<Effect_Type, std::vector<Resource_Bind_Set>>& pair : m_Effect_reserved)
 	{
 		Effect_Type reserved_type = pair.first;
-		const std::vector<Resource_Bind_Set>& reserved_bind_list = pair.second; // use reference
+		const std::vector<Resource_Bind_Set>& reserved_bind_list = pair.second; 
 
 		shader = m_EffectMap[reserved_type];
 		if (!shader)
@@ -614,25 +614,38 @@ void Post_Effect_Manager::Resize_Screen_Size(UINT new_width, UINT new_height)
 	Frame_Buffer_Height = new_height;
 }
 
-void Post_Effect_Manager::Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> obj_list)
+void Post_Effect_Manager::Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> obj_list, shared_ptr<CCamera> main_camera_ptr)
 {
 	gameobj_info_list.assign(MAX_OBJECT_NUM, XMFLOAT4(-1.0f, -1.0f, -1.0f, -1.0f));
 	int i = 0;
-	XMFLOAT2 screen_pos{};
+
+	XMFLOAT3 world_pos;
+	XMMATRIX matViewProj = XMLoadFloat4x4(&main_camera_ptr->GetViewMatrix()) * XMLoadFloat4x4(&main_camera_ptr->GetProjectionMatrix());
 
 	for (shared_ptr<CGameObject> game_obj : obj_list)
-	{	
-		gameobj_info_list[i].x = screen_pos.x;
-		gameobj_info_list[i].y = screen_pos.y;
-		gameobj_info_list[i].z = game_obj->GetObject_Type_ID();
+	{
+		world_pos = game_obj->GetPosition();
+		XMVECTOR vWorld = XMLoadFloat3(&world_pos);
+
+		XMVECTOR vClip = XMVector3TransformCoord(vWorld, matViewProj);
+
+		float ndc_x = XMVectorGetX(vClip);
+		float ndc_y = XMVectorGetY(vClip);
+
+		float screen_x = ndc_x * 0.5f + 0.5f;
+		float screen_y = 1.0f - (ndc_y * 0.5f + 0.5f); 
+
+		gameobj_info_list[i].x = screen_x;
+		gameobj_info_list[i].y = screen_y;
+		gameobj_info_list[i].z = 1;//game_obj->GetObject_Type_ID();
 		gameobj_info_list[i].w = 0.0f;
+
+		i++;
 	}
 
 	m_pcb_Mapped_zoomblur_info->active_object_count = obj_list.size();
 
 	//=====================================
-	
-	gameobj_info_list[0] = XMFLOAT4(0.5f, 0.5f, 1,1);
 }
 
 void Post_Effect_Manager::Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)

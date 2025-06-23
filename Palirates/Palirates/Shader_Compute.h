@@ -191,7 +191,7 @@ public:
 
 	void Resize_Screen_Size(UINT new_width, UINT new_height);
 
-	void Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> pos_list);
+	void Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> pos_list, shared_ptr<CCamera> main_camera_ptr);
 	void Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 

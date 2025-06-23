@@ -62,7 +62,7 @@ public:
 
     void Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
 
-
+    std::vector<std::shared_ptr<CGameObject>> Get_Active_Scene_Zoom_Object_List();
 
     void Update_UI();
     void Update_Texture_UI(float currentTime, float elapsedTime);

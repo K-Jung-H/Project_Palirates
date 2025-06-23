@@ -367,6 +367,18 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
 #endif
 }
 
+std::vector<std::shared_ptr<CGameObject>> Scene_Manager::Get_Active_Scene_Zoom_Object_List()
+{
+    if (activeScene)
+    {
+        return activeScene->Get_Zoom_Object_List();
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+    return {};
+
+}
+
 void Scene_Manager::After_Update_Active_Objects()
 {
     if (activeScene)

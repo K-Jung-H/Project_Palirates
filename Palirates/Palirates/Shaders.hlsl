@@ -163,7 +163,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Blur_Info = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    output.Blur_Info = float4(0.0f, 0.0f, 0.0f, 0.0f);
     output.Velocity= float2(0.0f, 0.0f);
     output.viewspace_z = float(0.0f);
     
@@ -213,7 +213,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
     output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
     
     
-    output.Blur_Info.x = material_info.Blur_Mask; // mask
+    output.Blur_Info.x = (float) material_info.Blur_Mask; // mask
     output.Blur_Info.y = material_info.Outline_Color_ID; // outline_id
     output.Blur_Info.z = material_info.Object_Type_ID;
     
@@ -414,7 +414,7 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSTerrain(VS_TERRAIN_OUTPUT input)
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Blur_Info = float4(1.0f, 0.0f, 0.0f, 0.0f);
+    output.Blur_Info = float4(0.0f, 0.0f, 0.0f, 0.0f);
     output.Velocity = float2(0.0f, 0.0f);
     output.viewspace_z = float(0.0f);
     

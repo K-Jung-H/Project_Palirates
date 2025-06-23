@@ -2007,6 +2007,18 @@ void CScene::After_Update_Objects()
 
 }
 
+std::vector<std::shared_ptr<CGameObject>> CScene::Get_Zoom_Object_List()
+{
+	if (!obj_manager)
+	{
+		return {};
+	}
+
+	std::vector<std::shared_ptr<CGameObject>> zoom_list = obj_manager->Get_Zoom_List();
+
+	return zoom_list;
+}
+
 void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!shadow_camera || shadow_camera->update_shadow == false)

@@ -184,6 +184,11 @@ void CS_EdgeDetection(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThrea
 #endif
 #endif
     }
+    else
+    {
+
+        gtxtRWOutput[gid.xy] = float4(0, 0, 0, 0);
+    }
 #endif
 }
 
@@ -278,49 +283,49 @@ cbuffer Zoom_Info : register(b0)
     float padding[3];
 };
 
+#define MARK_RADIUS 4 // Circle radius in pixel
 
 [numthreads(CX_THREADS, CY_THREADS, 1)]
 void CS_ZoomBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
 {
-    //int2 coord = int2(gid.xy);
-    //uint2 texSize;
-    //gtxtInput.GetDimensions(texSize.x, texSize.y);
+    int2 coord = int2(gid.xy);
+    uint2 texSize;
+    gtxtInput.GetDimensions(texSize.x, texSize.y);
 
-    //if (coord.x < 0 || coord.y < 0 || uint(coord.x) >= texSize.x || uint(coord.y) >= texSize.y)
-    //    return;
+    if (coord.x < 0 || coord.y < 0 || uint(coord.x) >= texSize.x || uint(coord.y) >= texSize.y)
+        return;
 
-    //float2 uv = (coord + 0.5) / texSize;
+    float2 uv = (coord + 0.5) / texSize;
+    bool isRed = false;
 
-    //float2 nearest_center = float2(-1, -1);
-    //float min_dist = 1e9;
-    //[unroll]
-    //for (int j = 0; j < MAX_OBJECT_NUM; ++j)
-    //{
-    //    if (obj_blur_info[j].x < 0.0f)
-    //        continue;
+    // Check if current pixel is near any valid object blur center
+    [unroll]
+    for (int j = 0; j < MAX_OBJECT_NUM; ++j)
+    {
+        if (obj_blur_info[j].x < 0.0f)
+            continue;
 
-    //    float d = length(uv - obj_blur_info[j].xy);
-    //    if (d < min_dist)
-    //    {
-    //        min_dist = d;
-    //        nearest_center = obj_blur_info[j].xy;
-    //    }
-    //}
+        // Convert UV to texel position
+        int2 obj_coord = int2(obj_blur_info[j].xy * texSize);
 
-    //if (nearest_center.x < 0.0f)
-    //{
-    //    gtxtRWOutput[coord] = gtxtInput[coord];
-    //    return;
-    //}
+        // Draw a filled circle of radius MARK_RADIUS around the object center
+        int2 diff = coord - obj_coord;
+        float dist = length(float2(diff));
+        if (dist <= MARK_RADIUS)
+        {
+            isRed = true;
+            break;
+        }
+    }
 
-    //int N = max(blur_params.y, 1);
-    //float s = blur_params.x;
-    //float4 accum = float4(0, 0, 0, 0);
-    //for (int k = 0; k < N; ++k)
-    //{
-    //    float t = (float) k / (N - 1);
-    //    float2 sample_uv = lerp(uv, nearest_center, t * s);
-    //    accum += gtxtInput.SampleLevel(samplerLinearClamp, sample_uv, 0);
-    //}
-    //gtxtRWOutput[coord] = accum / N;
+    if (isRed)
+    {
+        // Draw red mark (circle)
+        gtxtRWOutput[coord] = float4(1, 0, 0, 1); // Red color
+    }
+    else
+    {
+        // Copy input as usual
+        gtxtRWOutput[coord] = gtxtInput[coord];
+    }
 }

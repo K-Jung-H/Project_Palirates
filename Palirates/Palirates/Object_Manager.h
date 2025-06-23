@@ -269,6 +269,9 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
+
+	std::vector<std::shared_ptr<CGameObject>> Get_Zoom_List();
+
 	// Instancing update flag
 	static std::shared_ptr<CShader> instance_shader;
 	static bool do_instance_update;

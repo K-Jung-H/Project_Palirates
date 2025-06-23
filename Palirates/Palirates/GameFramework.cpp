@@ -363,6 +363,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 				case VK_SPACE:
+					test_button = !test_button;
 					break;
 
 				case VK_RETURN:
@@ -1055,17 +1056,25 @@ void CGameFramework::FrameAdvance()
 		D3D12_GPU_DESCRIPTOR_HANDLE  Blur_Info_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
 
-		Resource_Bind_Set motion_blur = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
 		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 		Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 
-		//		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur);
-		//		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
 
-		//vector<std::shared_ptr<CGameObject>> obj_list;
-		//post_effect_manager->Add_Effect(Effect_Type::Zoom, outline_blur);
-		//post_effect_manager->Set_Zoom_Focus_List(obj_list);
+		if (test_button)
+		{
+		//	post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
 
+			vector<std::shared_ptr<CGameObject>> zoom_obj_list = scene_manager->Get_Active_Scene_Zoom_Object_List();
+			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
+
+			post_effect_manager->Set_Zoom_Focus_List(zoom_obj_list, scene_camera);
+			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
+		}
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();

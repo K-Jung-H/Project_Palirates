@@ -260,6 +260,9 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
 
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
+    
+
+    
     if (isEmptyPixel && Fog_Trigger == 0)
     {
         discard;
@@ -348,8 +351,6 @@ float4 PS_FullScreen(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float3 colorTexture = Screen_Texture.Sample(gssWrap, input.uv).xyz;
 
     return float4(colorTexture, 1.0f);
-    
-
 }
 
 
