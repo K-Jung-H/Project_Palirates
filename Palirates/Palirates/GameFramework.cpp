@@ -632,6 +632,17 @@ bool CGameFramework::Change_Scene()
 	}
 
 SCENE_CHANGE:
+
+	std::cout << "[DEBUG] Board 씬 Build/Set 강제 진입" << std::endl;
+	scene_manager->Build_Scene(Scene_Type::Board, "Game_Stage_Board", m_pd3dDevice, Active_CommandList);
+	scene_manager->Set_Active_Scene("Game_Stage_Board");
+
+	std::cout << "[DEBUG] 활성 씬 이름: " << scene_manager->Get_Active_Scene() << std::endl;
+	std::cout << "[DEBUG] 활성 씬 포인터: " << scene_manager->Get_Active_Scene_Ptr() << std::endl;
+
+	m_pPlayer = scene_manager->Get_Active_Scene_Player();
+	Object_Manager::Reserve_Update();
+
 	std::cout << "[DEBUG] SCENE_CHANGE 레이블 진입. c_signal.scene_name = " << c_signal.scene_name << std::endl;
 	std::ostringstream scenePacket;
 	scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
@@ -661,11 +672,6 @@ SCENE_CHANGE:
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
 		m_pPlayer = scene_manager->Get_Active_Scene_Player();
 		Object_Manager::Reserve_Update();
-
-		if (c_signal.type == Scene_Type::Lobby)
-		{
-			SendPacket("ENTER_SCENE,Character_Select\n");
-		}
 	}
 
 	c_signal.change = false;
@@ -1437,21 +1443,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	}
 	if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
 	{
-		std::string sceneName = tokens[1];
-		std::cout << "[INFO] ENTER_SCENE received: " << sceneName << std::endl;
-		auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
-		if (activeScene)
-		{
-			Change_Signal& c_signal = activeScene->Get_Change_Signal();
-			c_signal.change = true;
-			c_signal.scene_name = "Game_Stage_Board";
-			c_signal.type = Scene_Type::Board;
-			bEnterSceneByServer = true;
-		}
-		else
-		{
-			std::cout << "[ERROR] Active scene is nullptr!\n";
-		}
+		HandleChangeScene(tokens);
 		return;
 	}
 	else
@@ -1617,6 +1609,25 @@ void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
 			ship->SetPosition(XMFLOAT3(x, y, z));
 			ship->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
 		}
+	}
+}
+
+void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
+{
+	std::string sceneName = tokens[1];
+	std::cout << "[INFO] ENTER_SCENE received: " << sceneName << std::endl;
+	auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
+	if (activeScene)
+	{
+		Change_Signal& c_signal = activeScene->Get_Change_Signal();
+		c_signal.change = true;
+		c_signal.scene_name = "Game_Stage_Board";
+		c_signal.type = Scene_Type::Board;
+		bEnterSceneByServer = true;
+	}
+	else
+	{
+		std::cout << "[ERROR] Active scene is nullptr!\n";
 	}
 }
 
@@ -1789,6 +1800,8 @@ void CGameFramework::CreateRemotePlayer(int playerId, int characterId)
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 }
+
+
 
 
 void CGameFramework::Disconnect()
