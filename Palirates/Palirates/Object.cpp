@@ -4835,6 +4835,9 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Set_Collider(body);
 
 	Set_Name("FishMan");
+
+
+
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -4898,6 +4901,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	Set_Collider(body);
 
 	Set_Name("Anubis");
+
 }
 
 ///////////////////////////////////////////////////////////////////

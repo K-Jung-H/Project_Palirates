@@ -263,69 +263,112 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
 
 SamplerState samplerLinearClamp : register(s0);
 
-#define MAX_OBJECT_NUM 64
 
 cbuffer Zoom_Info : register(b0)
 {
-    float4 obj_blur_info[MAX_OBJECT_NUM]; // if float2(-1.0f,-1.0f)  -> None
-  	// obj_blur_info:
-	//   x, y: 스크린 좌표 (0.0 ~ 1.0 UV)
-	//   z: Obj ID (음수 또는 특정 값으로 비활성 객체 표시)
-	//   w: 블러 적용 범위 (Influence Radius) 또는 강도 (Blur Strength Multiplier)  
-    
+    float2 screen_pos;
+    float elapsed_time;
     float s_base_blur_strength;
-    float N_max_samples; 
-    float distance_factor; 
     float min_influence_dist;
 
+    float ripple_speed;
+    float ripple_strength;
+    float ripple_width;
 
-    int active_object_count;
-    float padding[3];
+    float4 ripple_blend_color; 
+    
+    float ripple_interval = 0.5f;
+    int max_ripples = 5;
+    
+    float2 padding0;
 };
 
-#define MARK_RADIUS 4 // Circle radius in pixel
+
+#define Object_Type_None        0
+#define Object_Type_Player      1
+#define Object_Type_Monster     2
+#define Object_Type_Environment 3
+
+
+
+float ComputeWaveSum(float dist, float elapsed_time, float ripple_speed, float ripple_width, float ripple_interval, int max_ripples)
+{
+    float waveSum = 0.0;
+
+    for (int i = 0; i < max_ripples; ++i)
+    {
+        float waveStartTime = i * ripple_interval;
+        float waveAge = elapsed_time - waveStartTime;
+
+        if (waveAge < 0.0f)
+            continue;
+
+        float waveFront = fmod(waveAge * ripple_speed, 1.0f);
+
+        float wave = smoothstep(waveFront - ripple_width, waveFront, dist) *
+                     (1.0 - smoothstep(waveFront, waveFront + ripple_width, dist));
+
+        waveSum += wave;
+    }
+
+    return waveSum;
+}
 
 [numthreads(CX_THREADS, CY_THREADS, 1)]
 void CS_ZoomBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
 {
-    int2 coord = int2(gid.xy);
-    uint2 texSize;
-    gtxtInput.GetDimensions(texSize.x, texSize.y);
+    uint2 resolution;
+    gtxtInput.GetDimensions(resolution.x, resolution.y);
 
-    if (coord.x < 0 || coord.y < 0 || uint(coord.x) >= texSize.x || uint(coord.y) >= texSize.y)
-        return;
+    float4 blurInfo = gtxtBlur_Info.Load(int3(gid.xy, 0));
 
-    float2 uv = (coord + 0.5) / texSize;
-    bool isRed = false;
-
-    // Check if current pixel is near any valid object blur center
-    [unroll]
-    for (int j = 0; j < MAX_OBJECT_NUM; ++j)
+    if (blurInfo.x == 1.0 || blurInfo.z == Object_Type_Player || blurInfo.z == Object_Type_Monster)
     {
-        if (obj_blur_info[j].x < 0.0f)
-            continue;
-
-        // Convert UV to texel position
-        int2 obj_coord = int2(obj_blur_info[j].xy * texSize);
-
-        // Draw a filled circle of radius MARK_RADIUS around the object center
-        int2 diff = coord - obj_coord;
-        float dist = length(float2(diff));
-        if (dist <= MARK_RADIUS)
-        {
-            isRed = true;
-            break;
-        }
+        gtxtRWOutput[gid.xy] = gtxtInput.Load(int3(gid.xy, 0));
+        return;
     }
 
-    if (isRed)
+    float2 uv = (gid.xy + 0.5) / resolution;
+    float2 toCenter = uv - screen_pos;
+    float dist = length(toCenter);
+
+    float waveSum = ComputeWaveSum(dist, elapsed_time, ripple_speed, ripple_width, ripple_interval, max_ripples);
+
+    // 왜곡 적용
+    uv += normalize(toCenter) * waveSum * ripple_strength;
+
+    float distToCenter = length(uv - screen_pos);
+    float blurStrength = s_base_blur_strength * saturate(distToCenter * 2.0);
+
+    float4 finalColor;
+
+    if (distToCenter * resolution.x > min_influence_dist)
     {
-        // Draw red mark (circle)
-        gtxtRWOutput[coord] = float4(1, 0, 0, 1); // Red color
+        const int sampleCount = 8;
+        float4 accumColor = float4(0, 0, 0, 0);
+
+        for (int i = 0; i < sampleCount; ++i)
+        {
+            float lerpFactor = float(i) / sampleCount;
+            float2 sampleUV = uv + (screen_pos - uv) * lerpFactor * blurStrength;
+            sampleUV = saturate(sampleUV);
+
+            int2 samplePixel = int2(sampleUV * resolution);
+            samplePixel = clamp(samplePixel, int2(0, 0), resolution - 1);
+
+            accumColor += gtxtInput.Load(int3(samplePixel, 0));
+        }
+
+        finalColor = accumColor / sampleCount;
     }
     else
     {
-        // Copy input as usual
-        gtxtRWOutput[coord] = gtxtInput[coord];
+        finalColor = gtxtInput.Load(int3(gid.xy, 0));
     }
+
+    // 색상 블렌딩
+    finalColor.rgb = lerp(finalColor.rgb, ripple_blend_color.rgb, waveSum * ripple_blend_color.a);
+
+    gtxtRWOutput[gid.xy] = finalColor;
 }
+

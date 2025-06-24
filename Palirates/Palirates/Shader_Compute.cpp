@@ -614,37 +614,14 @@ void Post_Effect_Manager::Resize_Screen_Size(UINT new_width, UINT new_height)
 	Frame_Buffer_Height = new_height;
 }
 
-void Post_Effect_Manager::Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> obj_list, shared_ptr<CCamera> main_camera_ptr)
+void Post_Effect_Manager::Set_Zoom_Focus_and_Time(XMFLOAT2 screen_pos, float elapsed_time)
 {
-	gameobj_info_list.assign(MAX_OBJECT_NUM, XMFLOAT4(-1.0f, -1.0f, -1.0f, -1.0f));
-	int i = 0;
+	if (!m_pcb_Mapped_zoomblur_info)
+		return;
 
-	XMFLOAT3 world_pos;
-	XMMATRIX matViewProj = XMLoadFloat4x4(&main_camera_ptr->GetViewMatrix()) * XMLoadFloat4x4(&main_camera_ptr->GetProjectionMatrix());
+	Accumulated_Time += elapsed_time;
 
-	for (shared_ptr<CGameObject> game_obj : obj_list)
-	{
-		world_pos = game_obj->GetPosition();
-		XMVECTOR vWorld = XMLoadFloat3(&world_pos);
-
-		XMVECTOR vClip = XMVector3TransformCoord(vWorld, matViewProj);
-
-		float ndc_x = XMVectorGetX(vClip);
-		float ndc_y = XMVectorGetY(vClip);
-
-		float screen_x = ndc_x * 0.5f + 0.5f;
-		float screen_y = 1.0f - (ndc_y * 0.5f + 0.5f); 
-
-		gameobj_info_list[i].x = screen_x;
-		gameobj_info_list[i].y = screen_y;
-		gameobj_info_list[i].z = 1;//game_obj->GetObject_Type_ID();
-		gameobj_info_list[i].w = 0.0f;
-
-		i++;
-	}
-
-	m_pcb_Mapped_zoomblur_info->active_object_count = obj_list.size();
-
+	m_pcb_Mapped_zoomblur_info->screen_pos = screen_pos;
 	//=====================================
 }
 
@@ -662,13 +639,19 @@ void Post_Effect_Manager::Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCo
 	if (!m_pcb_Mapped_zoomblur_info) 
 		return;
 	
+	m_pcb_Mapped_zoomblur_info->elapsed_time = Accumulated_Time;       // 시간
+	m_pcb_Mapped_zoomblur_info->s_base_blur_strength = 0.08f;          // 줌 강도
+	m_pcb_Mapped_zoomblur_info->min_influence_dist = 30.0f;            // 블러 영향 시작 거리
 
-	memcpy(m_pcb_Mapped_zoomblur_info->obj_screen_pos, gameobj_info_list.data(), sizeof(XMFLOAT4) * MAX_OBJECT_NUM);
-	m_pcb_Mapped_zoomblur_info->s_base_blur_strength = 1.0f;
-	m_pcb_Mapped_zoomblur_info->N_max_samples = 8;
-	m_pcb_Mapped_zoomblur_info->distance_factor;        
-	m_pcb_Mapped_zoomblur_info->min_influence_dist;     
+	// 파동 왜곡 설정
+	m_pcb_Mapped_zoomblur_info->ripple_speed = 1.0f;                   // 초당 퍼짐 속도
+	m_pcb_Mapped_zoomblur_info->ripple_strength = 0.005f;              // 왜곡 강도
+	m_pcb_Mapped_zoomblur_info->ripple_width = 0.05f;                  // 파동 두께 (UV 단위)
 
+	m_pcb_Mapped_zoomblur_info->ripple_blend_color = { 1.0f, 0.0f, 0.0f, 0.1f };
+
+	m_pcb_Mapped_zoomblur_info->ripple_interval = 0.5f;
+	m_pcb_Mapped_zoomblur_info-> max_ripples = 5;
 
 	pd3dCommandList->SetComputeRootConstantBufferView(ZOOM_INFO_PARAMETER_INDEX, m_pd3dcb_zoomblur_info->GetGPUVirtualAddress());
 }

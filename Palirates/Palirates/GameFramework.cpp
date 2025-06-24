@@ -1065,14 +1065,13 @@ void CGameFramework::FrameAdvance()
 		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
 		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
 
-		if (test_button)
-		{
 		//	post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
 
-			vector<std::shared_ptr<CGameObject>> zoom_obj_list = scene_manager->Get_Active_Scene_Zoom_Object_List();
+		if (test_button)
+		{
 			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 
-			post_effect_manager->Set_Zoom_Focus_List(zoom_obj_list, scene_camera);
+			post_effect_manager->Set_Zoom_Focus_and_Time({ 0.5, 0.3 }, m_GameTimer.GetTimeElapsed());
 			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
 		}
 		// Apply reserved effects

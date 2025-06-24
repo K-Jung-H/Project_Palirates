@@ -1086,6 +1086,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
+		Dragon->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+
 		Dragon->SetupWeaponCollider();
 		Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -1099,6 +1101,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
+			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 			m->SetupWeaponCollider();
 			m->SetPosition(10.0f * i + 1450.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 1450.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
 			m->Set_Name(obj_name_3);
@@ -1110,7 +1113,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_3/Scene_Name.bin", NULL);
-
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 		test_scene->Set_Name("test_scene");
@@ -1997,7 +1999,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 void CScene::After_Update_Objects()
 {
-
 #ifdef RENDER_WAVE
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
@@ -2007,17 +2008,6 @@ void CScene::After_Update_Objects()
 
 }
 
-std::vector<std::shared_ptr<CGameObject>> CScene::Get_Zoom_Object_List()
-{
-	if (!obj_manager)
-	{
-		return {};
-	}
-
-	std::vector<std::shared_ptr<CGameObject>> zoom_list = obj_manager->Get_Zoom_List();
-
-	return zoom_list;
-}
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {

@@ -1330,11 +1330,7 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
-std::vector<std::shared_ptr<CGameObject>> Object_Manager::Get_Zoom_List()
-{
-	// for test
-	return skinned_object_list;
-}
+
 
 std::vector<std::shared_ptr<CGameObject>> Object_Manager::Gather_All_Fixed_Objects()
 {

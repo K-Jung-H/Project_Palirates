@@ -198,6 +198,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         Register_Scene(scene_name, in_stage_scene);
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
         pPlayer->SetupWeaponCollider();
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
@@ -220,6 +221,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         Register_Scene(scene_name, in_stage_scene);
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
         pPlayer->SetupWeaponCollider();
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
@@ -365,18 +367,6 @@ void Scene_Manager::Update_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graphi
         DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
 
 #endif
-}
-
-std::vector<std::shared_ptr<CGameObject>> Scene_Manager::Get_Active_Scene_Zoom_Object_List()
-{
-    if (activeScene)
-    {
-        return activeScene->Get_Zoom_Object_List();
-    }
-    else
-        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
-    return {};
-
 }
 
 void Scene_Manager::After_Update_Active_Objects()

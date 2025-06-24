@@ -128,26 +128,26 @@ public:
 
 //========================================================================
 
-#define MAX_OBJECT_NUM 64
-
 struct ZoomBlurInfo_CB
 {
-	// obj_screen_pos:
-	//   x, y: 스크린 좌표 (0.0 ~ 1.0 UV)
-	//   z: Obj ID (음수 또는 특정 값으로 비활성 객체 표시)
-	//   w: 블러 적용 범위 (Influence Radius) 또는 강도 (Blur Strength Multiplier)
-	XMFLOAT4 obj_screen_pos[MAX_OBJECT_NUM];
+	XMFLOAT2 screen_pos;
+	float elapsed_time;
+	float s_base_blur_strength;
 
+	float min_influence_dist;
 
-	float s_base_blur_strength;   // 기본 블러 강도
-	float N_max_samples;          // 최대 샘플 수
-	float distance_factor;        // 거리에 따른 샘플 수 감소 계수
-	float min_influence_dist;     // 최소 영향 거리
+	float ripple_speed;
+	float ripple_strength;
+	float ripple_width;
 
+	XMFLOAT4 ripple_blend_color;
 
-	int active_object_count;      
-	float padding[3]; 
+	float ripple_interval = 0.5f;
+	int max_ripples = 5;
+
+	XMFLOAT2 padding0;
 };
+
 
 enum class Effect_Type
 {
@@ -156,6 +156,7 @@ enum class Effect_Type
 	Zoom,
 	 etc,
 };
+
 
 struct Resource_Bind_Set
 {
@@ -173,10 +174,10 @@ private:
 	std::unordered_map<Effect_Type, Post_ComputeShader*> m_EffectMap;
 	std::unordered_map<Effect_Type, vector<Resource_Bind_Set>> m_Effect_reserved;
 
-	std::vector<XMFLOAT4> gameobj_info_list;
 
 	ID3D12Resource* m_pd3dcb_zoomblur_info = NULL;
 	ZoomBlurInfo_CB* m_pcb_Mapped_zoomblur_info = NULL;
+	float Accumulated_Time = 0.0f;
 
 public:
 	CTextureToFullScreenShader* fullscreen_shader = NULL;
@@ -191,7 +192,7 @@ public:
 
 	void Resize_Screen_Size(UINT new_width, UINT new_height);
 
-	void Set_Zoom_Focus_List(std::vector<shared_ptr<CGameObject>> pos_list, shared_ptr<CCamera> main_camera_ptr);
+	void Set_Zoom_Focus_and_Time(XMFLOAT2 screen_pos, float elapsed_time);
 	void Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 

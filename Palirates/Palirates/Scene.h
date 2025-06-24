@@ -211,7 +211,6 @@ public:
 	std::shared_ptr<CCamera> Get_MainCamera() { return main_Camera; }
 	std::shared_ptr<Shadow_Camera> Get_ShadowCamera() { return shadow_camera; }
 
-	std::vector<std::shared_ptr<CGameObject>> Get_Zoom_Object_List();
 	void Set_Client_Player(std::shared_ptr<CPlayer> new_player) { m_pPlayer = new_player; }
 	void Set_MainCamera(std::shared_ptr<CCamera> new_camera) { main_Camera = new_camera; }
 	
