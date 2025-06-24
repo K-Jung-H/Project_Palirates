@@ -65,7 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 20);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 400, 30);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
@@ -546,11 +546,13 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
+//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+
 
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
-
-//	scene_manager->Set_Active_Scene("Test_Scene");
 	scene_manager->Set_Active_Scene("Character_Select");
+
+//	scene_manager->Set_Active_Scene("Stage_1");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
 	//========================================================
@@ -918,6 +920,9 @@ void CGameFramework::FrameAdvance()
 	if (!scene_manager->Get_Active_Scene())
 		return;
 
+	WaitForGpuComplete(GPU_Stage::Compute);
+	WaitForGpuComplete(GPU_Stage::Render);
+	WaitForGpuComplete(GPU_Stage::Post);
 	Change_Scene();
 
 
@@ -1065,7 +1070,7 @@ void CGameFramework::FrameAdvance()
 		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
 		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
 
-		//	post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
+		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
 
 		if (test_button)
 		{
