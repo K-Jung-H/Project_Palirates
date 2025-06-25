@@ -430,36 +430,16 @@ CShader* CMaterial::m_pStandardShader = NULL;
 CMaterial::CMaterial(int nTextures)
 {
 	m_nTextures = nTextures;
-
-	m_ppTextures = new CTexture * [m_nTextures];
-	m_ppstrTextureNames = new _TCHAR[m_nTextures][64];
-	for (int i = 0; i < m_nTextures; i++) m_ppTextures[i] = NULL;
-	for (int i = 0; i < m_nTextures; i++) m_ppstrTextureNames[i][0] = '\0';
-
-
+	m_ppTextures.resize(nTextures);
+	m_ppstrTextureNames.resize(nTextures);
+	for (auto& name : m_ppstrTextureNames)
+		name[0] = '\0';
 }
+
 
 CMaterial::~CMaterial()
 {
-	if (m_nTextures > 0)
-	{
-		for (int i = 0; i < m_nTextures; i++)
-			if (m_ppTextures[i])
-				m_ppTextures[i]->Release();
-
-		delete[] m_ppTextures;
-		m_ppTextures = nullptr;
-
-		if (m_ppstrTextureNames)
-		{
-			delete[] m_ppstrTextureNames;
-			m_ppstrTextureNames = nullptr;
-		}
-	}
-
-
 	DebugOutput("\nDelete Material");
-
 }
 
 CMaterial::CMaterial(const CMaterial& other)
@@ -476,72 +456,30 @@ CMaterial::CMaterial(const CMaterial& other)
 	Outline_Color_ID = other.Outline_Color_ID;
 	Object_Type_ID = other.Object_Type_ID;
 
-	if (other.m_ppstrTextureNames != nullptr)
+	m_ppstrTextureNames = other.m_ppstrTextureNames;
+	m_ppTextures.resize(other.m_nTextures);
+	for (int i = 0; i < other.m_nTextures; ++i)
 	{
-		m_ppstrTextureNames = new _TCHAR[other.m_nTextures][64];
-		for (int i = 0; i < other.m_nTextures; ++i)
-		{
-			std::memcpy(m_ppstrTextureNames[i], other.m_ppstrTextureNames[i], sizeof(_TCHAR) * 64);
-		}
-	}
-	else {
-		m_ppstrTextureNames = nullptr;
-	}
-
-	if (other.m_ppTextures != nullptr)
-	{
-		m_ppTextures = new CTexture * [other.m_nTextures];
-		for (int i = 0; i < other.m_nTextures; ++i)
-		{
-			if (other.m_ppTextures[i])
-			{
-				m_ppTextures[i] = new CTexture(*other.m_ppTextures[i]);
-			}
-			else
-			{
-				m_ppTextures[i] = nullptr;
-			}
-		}
-	}
-	else
-	{
-		m_ppTextures = nullptr;
+		if (other.m_ppTextures[i])
+			m_ppTextures[i] = std::make_shared<CTexture>(*other.m_ppTextures[i]);
 	}
 }
 
 std::shared_ptr<CMaterial> CMaterial::CloneWithSharedTextures() const
 {
-	auto clone = std::make_shared<CMaterial>(this->m_nTextures);
+	auto clone = std::make_shared<CMaterial>(m_nTextures);
 
-	// 색상, 파라미터 값들은 복사
-	clone->m_cAlbedo = this->m_cAlbedo;
-	clone->m_fGlossiness = this->m_fGlossiness;
-	clone->m_fGlossyReflection = this->m_fGlossyReflection;
-	clone->m_pShader = this->m_pShader;
-	clone->m_nType = this->m_nType;
-	clone->m_Material_ID = this->m_Material_ID;
-	clone->Outline_Color_ID = this->Outline_Color_ID;
-	clone->Object_Type_ID = this->Object_Type_ID;
+	clone->m_cAlbedo = m_cAlbedo;
+	clone->m_fGlossiness = m_fGlossiness;
+	clone->m_fGlossyReflection = m_fGlossyReflection;
+	clone->m_pShader = m_pShader;
+	clone->m_nType = m_nType;
+	clone->m_Material_ID = m_Material_ID;
+	clone->Outline_Color_ID = Outline_Color_ID;
+	clone->Object_Type_ID = Object_Type_ID;
 
-	if (this->m_ppstrTextureNames)
-	{
-		clone->m_ppstrTextureNames = new _TCHAR[this->m_nTextures][64];
-		for (int i = 0; i < this->m_nTextures; ++i)
-		{
-			std::memcpy(clone->m_ppstrTextureNames[i], this->m_ppstrTextureNames[i], sizeof(_TCHAR) * 64);
-		}
-	}
-
-	// 텍스처 포인터는 공유 (AddRef 필요할 수도 있음)
-	if (this->m_ppTextures)
-	{
-		clone->m_ppTextures = new CTexture * [this->m_nTextures];
-		for (int i = 0; i < this->m_nTextures; ++i)
-		{
-			clone->m_ppTextures[i] = this->m_ppTextures[i];
-			if (clone->m_ppTextures[i]) clone->m_ppTextures[i]->AddRef();
-		}
-	}
+	clone->m_ppstrTextureNames = m_ppstrTextureNames;
+	clone->m_ppTextures = m_ppTextures;
 
 	return clone;
 }
@@ -563,12 +501,11 @@ void CMaterial::SetShader(CShader* pShader)
 
 }
 
-void CMaterial::SetTexture(CTexture* pTexture, UINT nTexture)
+void CMaterial::SetTexture(shared_ptr<CTexture> pTexture, UINT nTexture)
 {
-	if (m_ppTextures[nTexture]) m_ppTextures[nTexture]->Release();
 	m_ppTextures[nTexture] = pTexture;
-	if (m_ppTextures[nTexture]) m_ppTextures[nTexture]->AddRef();
 }
+
 
 void CMaterial::ReleaseUploadBuffers()
 {
@@ -638,8 +575,7 @@ void CMaterial::Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCom
 	}
 }
 
-
-void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
+void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, std::vector<std::shared_ptr<CTexture>>& textures, UINT textureIndex, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader)
 {
 	char pstrTextureName[64] = { '\0' };
 
@@ -663,8 +599,6 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		size_t nConverted = 0;
 		mbstowcs_s(&nConverted, pwstrTextureName, 64, pstrFilePath, _TRUNCATE);
 
-
-
 #ifdef _WITH_DISPLAY_TEXTURE_NAME
 		static int nTextures = 0, nRepeatedTextures = 0;
 		TCHAR pstrDebug[256] = { 0 };
@@ -673,15 +607,9 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 #endif
 		if (!bDuplicated)
 		{
-			//			*ppTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1);
-			*ppTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-
-			(*ppTexture)->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
-			if (*ppTexture) (*ppTexture)->AddRef();
-
-			//			CScene::CreateShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
-			CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, *ppTexture, 0, nRootParameter);
-
+			textures[textureIndex] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+			textures[textureIndex]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, pwstrTextureName, RESOURCE_TEXTURE2D, 0);
+			CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, textures[textureIndex].get(), 0, nRootParameter);
 		}
 		else
 		{
@@ -693,8 +621,7 @@ void CMaterial::LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 					pParent = pParent->m_pParent;
 				}
 				std::shared_ptr<CGameObject> pRootGameObject = pParent;
-				*ppTexture = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
-				if (*ppTexture) (*ppTexture)->AddRef();
+				textures[textureIndex] = pRootGameObject->FindReplicatedTexture(pwstrTextureName);
 			}
 		}
 	}
@@ -2810,26 +2737,27 @@ void CGameObject::AlignWithNormal(XMFLOAT3& newNormal)
 	UpdateTransform(nullptr);
 }
 
-CTexture* CGameObject::FindReplicatedTexture(_TCHAR* pstrTextureName)
+std::shared_ptr<CTexture> CGameObject::FindReplicatedTexture(const _TCHAR* pstrTextureName)
 {
-	for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+	for (const auto& material_ptr : Material_list)
 	{
-		for (int j = 0; j < material_ptr->m_nTextures; j++)
+		for (size_t j = 0; j < material_ptr->m_nTextures; j++)
 		{
 			if (material_ptr->m_ppTextures[j])
 			{
-				if (!_tcsncmp(material_ptr->m_ppstrTextureNames[j], pstrTextureName, _tcslen(pstrTextureName)))
-					return(material_ptr->m_ppTextures[j]);
+				if (!_tcsncmp(material_ptr->m_ppstrTextureNames[j].data(), pstrTextureName, _tcslen(pstrTextureName)))
+					return material_ptr->m_ppTextures[j];
 			}
 		}
 	}
 
-	CTexture* pTexture = NULL;
-	if (m_pSibling) if (pTexture = m_pSibling->FindReplicatedTexture(pstrTextureName)) return(pTexture);
-	if (m_pChild) if (pTexture = m_pChild->FindReplicatedTexture(pstrTextureName)) return(pTexture);
+	std::shared_ptr<CTexture> pTexture = nullptr;
+	if (m_pSibling && (pTexture = m_pSibling->FindReplicatedTexture(pstrTextureName))) return pTexture;
+	if (m_pChild && (pTexture = m_pChild->FindReplicatedTexture(pstrTextureName))) return pTexture;
 
-	return(NULL);
+	return nullptr;
 }
+
 
 int ReadIntegerFromFile(FILE* pInFile)
 {
@@ -2881,14 +2809,12 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 	int nMaterial = 0;
 	UINT nReads = 0;
 
-	// Clear old materials
 	Material_list.clear();
 	int materialCount = ReadIntegerFromFile(pInFile);
 	Material_list.reserve(materialCount);
 
 	std::shared_ptr<CMaterial> pMaterial = nullptr;
-	std::vector<Light_Material_Info> tempLightInfos;
-	tempLightInfos.resize(materialCount);
+	std::vector<Light_Material_Info> tempLightInfos(materialCount);
 
 	for (;;)
 	{
@@ -2941,54 +2867,38 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		{
 			nReads = (UINT)::fread(&(tempLightInfos[nMaterial].gMetallic), sizeof(float), 1, pInFile);
 		}
-		else if (!strcmp(pstrToken, "<Glossiness>:")) // Not Use
-		{
-			float dummy = 0.0f;
-			nReads = (UINT)::fread(&dummy, sizeof(float), 1, pInFile);
-		}
-		else if (!strcmp(pstrToken, "<GlossyReflection>:")) // Not Use
+		else if (!strcmp(pstrToken, "<Glossiness>:") || !strcmp(pstrToken, "<GlossyReflection>:"))
 		{
 			float dummy = 0.0f;
 			nReads = (UINT)::fread(&dummy, sizeof(float), 1, pInFile);
 		}
 		else if (!strcmp(pstrToken, "<AlbedoMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
-				MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX,
-				pMaterial->m_ppstrTextureNames[0], &(pMaterial->m_ppTextures[0]),
-				pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_ALBEDO_MAP, ROOT_PARAMETER_ALBEDO_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[0].data(), pMaterial->m_ppTextures, 0, pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<SpecularMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
-				MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
-				pMaterial->m_ppstrTextureNames[1], &(pMaterial->m_ppTextures[1]),
-				pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_SPECULAR_MAP, ROOT_PARAMETER_SPECULAR_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[1].data(), pMaterial->m_ppTextures, 1, pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<NormalMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
-				MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
-				pMaterial->m_ppstrTextureNames[2], &(pMaterial->m_ppTextures[2]),
-				pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_NORMAL_MAP, ROOT_PARAMETER_NORMAL_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[2].data(), pMaterial->m_ppTextures, 2, pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<MetallicMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
-				MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
-				pMaterial->m_ppstrTextureNames[3], &(pMaterial->m_ppTextures[3]),
-				pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_METALLIC_MAP, ROOT_PARAMETER_METALLIC_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[3].data(), pMaterial->m_ppTextures, 3, pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "<EmissionMap>:"))
 		{
-			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList,
-				MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
-				pMaterial->m_ppstrTextureNames[4], &(pMaterial->m_ppTextures[4]),
-				pParent, pInFile, pShader);
+			pMaterial->LoadTextureFromFile(pd3dDevice, pd3dCommandList, MATERIAL_EMISSION_MAP, ROOT_PARAMETER_EMISSION_TEXTURE_SRV_INDEX,
+				pMaterial->m_ppstrTextureNames[4].data(), pMaterial->m_ppTextures, 4, pParent, pInFile, pShader);
 		}
 		else if (!strcmp(pstrToken, "</Materials>"))
 		{
-			// 재질 등록
 			for (int i = 0; i < Material_list.size(); ++i)
 			{
 				auto& material = Material_list[i];
@@ -3011,6 +2921,7 @@ void CGameObject::LoadMaterialsFromFile(ID3D12Device* pd3dDevice, ID3D12Graphics
 		}
 	}
 }
+
 
 std::shared_ptr<CGameObject> CGameObject::LoadFrameHierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader, int* pnSkinnedMeshes)
 {
@@ -3538,8 +3449,8 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 }
 
 
-CTexture* CHeightMapTerrain::pTerrainBaseTexture = nullptr;
-CTexture* CHeightMapTerrain::pTerrainDetailTexture = nullptr;
+shared_ptr<CTexture> CHeightMapTerrain::pTerrainBaseTexture = nullptr;
+shared_ptr<CTexture> CHeightMapTerrain::pTerrainDetailTexture = nullptr;
 Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
 CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
 CHeightMapImage* CHeightMapTerrain::m_pHeightMapImage = nullptr;
@@ -3553,18 +3464,18 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	{
 		CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		pTerrainBaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+		pTerrainBaseTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 		pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds", RESOURCE_TEXTURE2D, 0);
 
-		pTerrainDetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+		pTerrainDetailTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_8.dds", RESOURCE_TEXTURE2D, 0);
 
 		pTerrainShader = new Deferred_CTerrainShader();
 		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
 		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainBaseTexture, 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
-		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainDetailTexture, 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainBaseTexture.get(), 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainDetailTexture.get(), 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
 		pTerrainMaterial = new CMaterial(2);
 		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
@@ -4014,10 +3925,11 @@ void Plane_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	if (filename == NULL)
 		return;
-	Plane_BaseTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+
+	Plane_BaseTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 	Plane_BaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_BaseTexture, 0, 3);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_BaseTexture.get(), 0, ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX);
 
 	Plane_Material->SetTexture(Plane_BaseTexture, 0);
 }
@@ -4027,10 +3939,10 @@ void Plane_Object::Set_DetailTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	if (filename == NULL)
 		return;
 
-	Plane_DetailTexture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	Plane_DetailTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 	Plane_DetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_DetailTexture, 0, 4);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Plane_DetailTexture.get(), 0, ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX);
 
 	Plane_Material->SetTexture(Plane_DetailTexture, 1);
 
@@ -4082,7 +3994,6 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	constexpr int kMaxTextureSize = 15000;
 	desiredTexelSize = 20.0f;
 
-//	PlaneMesh* plane_mesh = new PlaneMesh(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
 
@@ -4601,10 +4512,10 @@ void CSkyBox::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	if (skybox_texture)
 		skybox_texture->Release();
 
-	skybox_texture = new CTexture(1, RESOURCE_TEXTURE_CUBE, 0, 1, 0, 0, 1, 0, 0);
+	skybox_texture = make_shared<CTexture>(1, RESOURCE_TEXTURE_CUBE, 0, 1, 0, 0, 1, 0, 0);
 	skybox_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE_CUBE, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, skybox_texture, 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, skybox_texture.get(), 0, ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX);
 
 
 	skybox_material->SetTexture(skybox_texture, 0);

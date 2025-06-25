@@ -47,6 +47,8 @@ struct ServerAnimationSyncData
 class CTexture
 {
 public:
+    CTexture() = default;
+
     CTexture(int nTextures, UINT nTextureType,
         int nSamplers,
         int nGraphicsSrvRootParameters,
@@ -261,14 +263,17 @@ public:
     UINT                     m_nType = 0x00; // Texture Map Type
 
     int                      m_nTextures = 0;
-    _TCHAR(*m_ppstrTextureNames)[64] = NULL;
-    CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+    std::vector<std::array<_TCHAR, 64>> m_ppstrTextureNames;
+    std::vector<std::shared_ptr<CTexture>> m_ppTextures; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
 
-    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+//    CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+
+//    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, std::vector<std::shared_ptr<CTexture>>& textures, UINT textureIndex, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
 
     void SetShader(CShader* pShader);
     void SetMaterialType(UINT nType) { m_nType |= nType; }
-    void SetTexture(CTexture* pTexture, UINT nTexture = 0);
+    void SetTexture(shared_ptr<CTexture> pTexture, UINT nTexture = 0);
 
     virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -780,7 +785,7 @@ public:
 
     std::shared_ptr<CGameObject> FindFrame(const char* pstrFrameName);
 
-    CTexture* FindReplicatedTexture(_TCHAR* pstrTextureName);
+    std::shared_ptr<CTexture>FindReplicatedTexture(const _TCHAR* pstrTextureName);
 
     UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
 
@@ -851,8 +856,8 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 private:
-    static CTexture* pTerrainBaseTexture;
-    static CTexture* pTerrainDetailTexture;
+    static shared_ptr<CTexture> pTerrainBaseTexture;
+    static shared_ptr<CTexture> pTerrainDetailTexture;
     static Deferred_CTerrainShader* pTerrainShader;
     static CMaterial* pTerrainMaterial;
 
@@ -973,8 +978,8 @@ public:
     static Deferred_Plane_Shader* deferred_plane_shader;
 
 private:
-    CTexture* Plane_BaseTexture = NULL;
-    CTexture* Plane_DetailTexture = NULL;
+    shared_ptr<CTexture> Plane_BaseTexture = NULL;
+    shared_ptr<CTexture> Plane_DetailTexture = NULL;
 
 public:
     CMaterial* Plane_Material = NULL;
@@ -1036,7 +1041,7 @@ private:
     static CSkyBoxShader* pSkybox_shader;
     static shared_ptr<CSkyBoxMesh> pSkyBoxMesh;
 
-    CTexture* skybox_texture = NULL;
+    shared_ptr<CTexture> skybox_texture = NULL;
     shared_ptr<CMaterial>skybox_material = NULL;
 public:
     static void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
