@@ -270,6 +270,7 @@ private:
 	UINT prev_index = -1;
 	UINT select_index = -1;
 
+	std::vector<std::pair<int, int>> characterHovers;
 	std::vector<std::pair<int, int>> characterSelections;
 	int ClientNum = -1;
 public:
@@ -297,11 +298,12 @@ public:
 		UpdatePlayerSelection(select_index);
 	}
 
-	void SendHoverToServer(int index);
 	void SendSelectionToServer(int index);
 
 	int GetSelectedCharacterIndex() const { return select_index; }
 	int GetSelectedCharacterId() const;
+
+	void UpdateCharacterHovers(const std::vector<std::pair<int, int>>& hovers, int clientNum);
 
 	std::unordered_set<int> lockedCharacterIds;
 	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }

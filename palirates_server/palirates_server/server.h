@@ -45,6 +45,8 @@ private:
     std::mutex clientsMutex;
     std::mutex characterMutex;
 
+    std::vector<std::pair<int, int>> characterHovers;
+
     bool allSelectedSent = false;
 
 public:

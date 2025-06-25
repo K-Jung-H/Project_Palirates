@@ -136,6 +136,7 @@ public:
     void HandlePlayerCreate(int id);
     void HandleCharacterStatus(int playerId, int charId);
     void HandleShipSync(const std::vector<std::string>& tokens);
+    void HandleChangeScene(const std::vector<std::string>& tokens);
     void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
     void HandlePositionUpdate(const std::vector<std::string>& tokens);
     void CreateRemotePlayer(int playerId, int characterId);

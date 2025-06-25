@@ -3164,3 +3164,9 @@ int Character_Select_Scene::GetSelectedCharacterId() const
 	std::cout << "[DEBUG] Invalid select_index or empty player_list!" << std::endl;
 	return -1;
 }
+
+//void Character_Select_Scene::UpdateCharacterHovers(const std::vector<std::pair<int, int>>& hovers, int clientNum)
+//{
+//	characterHovers = hovers;
+//	UpdatePlayerSelection(select_index); 
+//}

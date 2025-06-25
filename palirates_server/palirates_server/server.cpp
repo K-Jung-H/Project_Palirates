@@ -593,10 +593,7 @@ void Server::BroadcastCharacterSelect(Server* pServer)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-        //std::cout << "[THREAD] BroadcastCharacterSelect 루프 동작 중\n";
-
         bool hasCharacterSelectClients = false;
-
         for (const auto& [clientId, scenePtr] : pServer->sceneManager.getAllScenes())
         {
             if (scenePtr && scenePtr->GetSceneType() == Scene_Type::Lobby)
@@ -608,25 +605,32 @@ void Server::BroadcastCharacterSelect(Server* pServer)
 
         if (!hasCharacterSelectClients)
         {
-            //std::cout << "[THREAD] 로비에 있는 클라이언트 없음, 생략\n";
             continue;
         }
 
         if (pServer->characterSelections.empty())
         {
-           // std::cout << "[THREAD] 선택된 캐릭터 없음\n";
             continue;
+        }
+
+        for (const auto& [clientId, scenePtr] : pServer->sceneManager.getAllScenes())
+        {
+            if (scenePtr && scenePtr->GetSceneType() == Scene_Type::Lobby)
+            {
+                auto it = pServer->characterSelections.find(clientId);
+                int charId = (it != pServer->characterSelections.end()) ? it->second : -999;
+                std::cout << "[SERVER][LOBBY] clientId=" << clientId << "  charId=" << charId << std::endl;
+            }
         }
 
         for (const auto& [selectedClientId, charId] : pServer->characterSelections)
         {
             std::string packet = "CHARACTER_STATUS," + std::to_string(selectedClientId) + "," + std::to_string(charId) + "\n";
-
             for (const auto& [targetId, session] : pServer->clients)
             {
                 if (session.is_connected)
                 {
-                    //std::cout << "[SEND] CHARACTER_STATUS → Client " << targetId << ": " << packet;
+                    std::cout << "[SERVER][SEND] CHARACTER_STATUS to Client " << targetId << " : selectedClientId=" << selectedClientId << " charId=" << charId << std::endl;
                     send(session.socket, packet.c_str(), static_cast<int>(packet.length()), 0);
                 }
             }
@@ -648,8 +652,23 @@ void Server::BroadcastCharacterSelect(Server* pServer)
             }
         }
 
+        std::cout << "[SERVER][STATUS] lobbyCount=" << lobbyCount << "  allSelected=" << (allSelected ? "true" : "false") << "  allSelectedSent=" << (pServer->allSelectedSent ? "true" : "false") << std::endl;
+        std::cout << "[SERVER][characterSelections] { ";
+        for (const auto& [id, charId] : pServer->characterSelections)
+        {
+            std::cout << id << ":" << charId << " ";
+        }
+        std::cout << "}" << std::endl;
+
         if (allSelected && lobbyCount > 0 && !pServer->allSelectedSent)
         {
+            std::cout << "[SERVER][BROADCAST] ENTER_SCENE → 모든 클라에 전송 (lobbyCount=" << lobbyCount << ")\n";
+            std::cout << "[SERVER][BROADCAST] 대상 클라 목록: ";
+            for (const auto& [targetId, session] : pServer->clients)
+                if (session.is_connected)
+                    std::cout << targetId << " ";
+            std::cout << std::endl;
+
             std::string startMsg = "ENTER_SCENE,Game_Stage_Board\n";
             for (const auto& [targetId, session] : pServer->clients)
                 if (session.is_connected)
@@ -662,6 +681,7 @@ void Server::BroadcastCharacterSelect(Server* pServer)
         if (!allSelected) pServer->allSelectedSent = false;
     }
 }
+
 
 int main()
 {

@@ -579,6 +579,8 @@ bool CGameFramework::Change_Scene()
 {
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
 	
+	//std::cout << "[CLIENT][Change_Scene] 진입, c_signal.change: " << c_signal.change << ", c_signal.scene_name: " << c_signal.scene_name << ", bEnterSceneByServer: " << bEnterSceneByServer << std::endl;
+
 	if (bEnterSceneByServer && c_signal.scene_name == "Game_Stage_Board")
 	{
 		std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
@@ -633,17 +635,18 @@ bool CGameFramework::Change_Scene()
 
 SCENE_CHANGE:
 
-	std::cout << "[DEBUG] Board 씬 Build/Set 강제 진입" << std::endl;
+	//std::cout << "[CLIENT][SCENE_CHANGE] Board 씬 Build/Set 강제 진입" << std::endl;
 	scene_manager->Build_Scene(Scene_Type::Board, "Game_Stage_Board", m_pd3dDevice, Active_CommandList);
 	scene_manager->Set_Active_Scene("Game_Stage_Board");
 
-	std::cout << "[DEBUG] 활성 씬 이름: " << scene_manager->Get_Active_Scene() << std::endl;
-	std::cout << "[DEBUG] 활성 씬 포인터: " << scene_manager->Get_Active_Scene_Ptr() << std::endl;
-
+	//std::cout << "[CLIENT][SCENE_CHANGE] 활성 씬 이름: " << scene_manager->Get_Active_Scene() << std::endl;
+	//std::cout << "[CLIENT][SCENE_CHANGE] 활성 씬 포인터: " << scene_manager->Get_Active_Scene_Ptr() << std::endl;
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
+
+	//std::cout << "[CLIENT][SCENE_CHANGE] m_pPlayer 포인터: " << m_pPlayer.get() << std::endl;
 	Object_Manager::Reserve_Update();
 
-	std::cout << "[DEBUG] SCENE_CHANGE 레이블 진입. c_signal.scene_name = " << c_signal.scene_name << std::endl;
+	//std::cout << "[DEBUG] SCENE_CHANGE 레이블 진입. c_signal.scene_name = " << c_signal.scene_name << std::endl;
 	std::ostringstream scenePacket;
 	scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
 	SendPacket(scenePacket.str());
@@ -1441,8 +1444,26 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandlePositionUpdate(tokens);
 		return;
 	}
-	if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
+	//else if (cmd == "CHARACTER_PREVIEW_STATUS")
+	//{
+	//	std::vector<std::pair<int, int>> hovers;
+	//	for (size_t i = 1; i + 1 < tokens.size(); i += 2)
+	//	{
+	//		hovers.emplace_back(std::stoi(tokens[i]), std::stoi(tokens[i + 1]));
+	//	}
+	//
+	//	auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
+	//
+	//	if (charScene)
+	//	{
+	//		charScene->UpdateCharacterHovers(hovers, ClientNum);
+	//	}
+	//
+	//	return;
+	//}
+	else if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
 	{
+		std::cout << "[CLIENT][RECV] ENTER_SCENE, tokens[1]=" << tokens[1] << std::endl;
 		HandleChangeScene(tokens);
 		return;
 	}
@@ -1615,7 +1636,7 @@ void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
 	std::string sceneName = tokens[1];
-	std::cout << "[INFO] ENTER_SCENE received: " << sceneName << std::endl;
+	std::cout << "[CLIENT][HandleChangeScene] received: " << sceneName << std::endl;
 	auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
 	if (activeScene)
 	{
@@ -1624,10 +1645,13 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 		c_signal.scene_name = "Game_Stage_Board";
 		c_signal.type = Scene_Type::Board;
 		bEnterSceneByServer = true;
+		std::cout << "[CLIENT][HandleChangeScene] c_signal.change: " << c_signal.change
+			<< ", c_signal.scene_name: " << c_signal.scene_name
+			<< ", bEnterSceneByServer: " << bEnterSceneByServer << std::endl;
 	}
 	else
 	{
-		std::cout << "[ERROR] Active scene is nullptr!\n";
+		std::cout << "[CLIENT][HandleChangeScene] [ERROR] Active scene is nullptr!\n";
 	}
 }
 
