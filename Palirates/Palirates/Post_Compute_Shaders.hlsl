@@ -18,6 +18,7 @@ float3 GetObjectColorById(float objId) // 나중에는 색상 배열을  UAV로 
         return float3(1.0, 1.0, 1.0); // White fallback
 }
 
+
 #define _WITH_BY_LUMINANCE
 #define _WITH_GROUPSHARED_MEMORY
 #define _WITH_SOBEL_EDGE
