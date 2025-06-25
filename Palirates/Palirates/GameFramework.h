@@ -219,25 +219,6 @@ public:
 #endif 
 
     //=================SERVER=================
-    void ConnectToServer(const std::string& ip, int port);
-    void SendPacket();
-    void NetworkLoop();
-    bool IsServerConnected();
-    int GetServerPlayerID();
-    void PlayerLeave(int playerId);
-    void Disconnect();
-    void CreateRemotePlayer(int playerId);
-    void CreateLocalPlayer(int playerId);
-    void ProcessReceivedData(const std::string& receivedData);
-    std::queue<int> pendingPlayerCreates;
-    std::mutex pendingCreateMutex;
-    std::unordered_map<int, std::string> pendingUpdateMap;
-    std::mutex pendingUpdateMutex;
-
-    Scene_Manager sceneManager;
-    std::shared_ptr<Object_Manager> object_manager;
-    bool bClientIdAssigned = false;
-
     Scene_Manager& GetSceneManager() { return *scene_manager; }
     CPlayer* GetPlayer() { return m_pPlayer.get(); }
     int nPlayer{ 0 };
@@ -250,6 +231,52 @@ public:
     std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
+    int currentShipControllerId = -1;
+    void SelectCharacter(int characterId);
+    void SendCharacterSelectPacket(int charId);
+    std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
+    int selectedCharacterId = -1;
+    std::vector<std::pair<int, int>> characterSelections;
+    bool bCharacterSelectedSent = false;
+    bool bCharacterSelectApproved = false;
+
+    int GetCharacterSelection(int playerId) const;
+    bool HasCharacterSelection(int playerId) const;
+    void SetCharacterSelection(int playerId, int characterId);
+
+    void SetupCharacterSelectScene();
+    bool bEnterSceneByServer = false;
+
+    void ConnectToServer(const std::string& ip, int port);
+    void SendPacket();
+    void SendPacket(const std::string& packet);
+    void NetworkLoop();
+    bool IsServerConnected();
+    int GetServerPlayerID();
+    void PlayerLeave(int playerId);
+    void Disconnect();
+    void HandleClientIdAssignment();
+    void DelayOrQueuePacket(const std::string& packet);
+    void RespondToPing();
+    void HandlePlayerLeave(int leaveId);
+    void HandlePlayerCreate(int id);
+    void HandleCharacterStatus(int playerId, int charId);
+    void HandleShipSync(const std::vector<std::string>& tokens);
+    void HandleChangeScene(const std::vector<std::string>& tokens);
+    void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
+    void HandlePositionUpdate(const std::vector<std::string>& tokens);
+    void CreateRemotePlayer(int playerId, int characterId);
+    void ProcessReceivedData(const std::string& receivedData);
+    std::queue<int> pendingPlayerCreates;
+    std::mutex pendingCreateMutex;
+    std::unordered_map<int, std::string> pendingUpdateMap;
+    std::mutex pendingUpdateMutex;
+
+    Scene_Manager sceneManager;
+    std::shared_ptr<Object_Manager> object_manager;
+    bool bClientIdAssigned = false;
+
+    uint32_t current_keyboard_inputFlags = 0;
 
     //=================SERVER=================
 

@@ -2277,7 +2277,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
 		player->Set_Child(player->m_pRootModel);
 		player->SetupWeaponCollider();
-
+		player->SetID(i);
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
 		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
@@ -2397,30 +2397,61 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	CScene::Render(pd3dDevice, pd3dCommandList);
 }
 
+
 void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 {
-	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
-	int list_size = static_cast<int>(player_list->size());
-	if (list_size == 0)
-		return;
+	//std::cout << "[DEBUG] UpdatePlayerSelection 진입, new_index=" << new_index << std::endl;
 
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+
+	//std::cout << "[DEBUG] player_list.size()=" << player_list->size() << std::endl;
+	//std::cout << "[DEBUG] select_index=" << select_index << std::endl;
+
+	int list_size = static_cast<int>(player_list->size());
+	if (list_size == 0) return;
+
+	int attempts = 0;
 	int next_index = (new_index + list_size) % list_size;
 
-	if (prev_index >= 0 && prev_index < list_size && prev_index != next_index)
-		(*player_list)[prev_index]->SetOutlineColor(0);
+	while (attempts < list_size)
+	{
+		int charId = (*player_list)[next_index]->GetID();
+		if (lockedCharacterIds.find(charId) == lockedCharacterIds.end())
+			break;
+		next_index = (next_index + 1) % list_size;
+		attempts++;
+	}
+	if (attempts >= list_size) return;
 
-	(*player_list)[next_index]->SetOutlineColor(1);
-
-	prev_index = next_index;
 	select_index = next_index;
 
-	if (select_index != -1)
+	for (auto& player : *player_list)
 	{
-		XMFLOAT3 character_pos = (*player_list)[next_index]->GetPosition();
-		m_pLights[3].m_bEnable = true;
-		m_pLights[3].m_xmf3Position = character_pos;
-		m_pLights[3].m_xmf3Position.y += 15.0f;
+		if (!player) continue;
+		int charId = player->GetID();
+		if (lockedCharacterIds.find(charId) != lockedCharacterIds.end())
+			player->SetOutlineColor(0);
+		else if (charId == (*player_list)[select_index]->GetID())
+			player->SetOutlineColor(1);
+		else
+		{
+			bool selectedByOthers = false;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id != ClientNum && cid == charId) { selectedByOthers = true; break; }
+			}
+			player->SetOutlineColor(selectedByOthers ? 2 : 0);
+		}
 	}
+
+	prev_index = select_index;
+
+	// 조명 연출(선택한 캐릭터 강조)
+	XMFLOAT3 character_pos = (*player_list)[select_index]->GetPosition();
+	m_pLights[3].m_bEnable = true;
+	m_pLights[3].m_xmf3Position = character_pos;
+	m_pLights[3].m_xmf3Position.y += 15.0f;
+
 }
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -3432,3 +3463,18 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 
 //==========================================================================================
+
+int Character_Select_Scene::GetSelectedCharacterId() const
+{
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index
+		<< ", player_list.size()=" << player_list->size() << std::endl;
+	if (select_index >= 0 && select_index < player_list->size())
+	{
+		int id = (*player_list)[select_index]->GetID();
+		std::cout << "[DEBUG] Selected character id: " << id << std::endl;
+		return id;
+	}
+	std::cout << "[DEBUG] Invalid select_index or empty player_list!" << std::endl;
+	return -1;
+}
