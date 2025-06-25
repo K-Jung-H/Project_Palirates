@@ -171,7 +171,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 	//===============================================================
 
 	shadow_map = make_shared<CMaterial>(1);
-	CTexture* shadowTexture = new CTexture(NUM_CASCADES, RESOURCE_TEXTURE2D, 0, 1, 0, 0, NUM_CASCADES, 0, 0, NUM_CASCADES);
+	shared_ptr<CTexture> shadowTexture = make_shared<CTexture>(NUM_CASCADES, RESOURCE_TEXTURE2D, 0, 1, 0, 0, NUM_CASCADES, 0, 0, NUM_CASCADES);
 
 	D3D12_CLEAR_VALUE clearValue{};
 	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
@@ -185,12 +185,12 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	for (int i = 0; i < NUM_CASCADES; i++)
 	{
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice, shadowTexture, i);
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice, shadowTexture.get(), i);
 		shadowTexture->SetDSV(i, dsvHandle);
 	}
 
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, shadowTexture, 0, ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX); 
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, shadowTexture.get(), 0, ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX);
 
 	shadow_map->SetTexture(shadowTexture, 0);
 
@@ -246,7 +246,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE Shadow_Camera::Get_Shadow_Map_DSV(int n) const
 {
 	if (shadow_map)
 	{
-		CTexture* shadowTex = shadow_map->m_ppTextures[0];
+		shared_ptr<CTexture> shadowTex = shadow_map->m_ppTextures[0];
 		if (shadowTex)
 			return shadowTex->GetDSVDescriptorHandle(n);
 	}
@@ -258,7 +258,7 @@ ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const
 {
 	if (shadow_map)
 	{
-		CTexture* shadowTex = shadow_map->m_ppTextures[0];
+		shared_ptr<CTexture> shadowTex = shadow_map->m_ppTextures[0];
 		if (shadowTex)
 			return shadowTex->GetResource(n);
 	}
@@ -652,16 +652,16 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// n = 3, t0 = Base_Texture
-		pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		// n = 4, t1 = Detail_Texture
-		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
-		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		// n = 5, t0 = Height_Map
 		pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -1086,6 +1086,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
+		Dragon->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+
 		Dragon->SetupWeaponCollider();
 		Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -1099,6 +1101,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
+			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 			m->SetupWeaponCollider();
 			m->SetPosition(10.0f * i + 1450.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 1450.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
 			m->Set_Name(obj_name_3);
@@ -1110,7 +1113,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_3/Scene_Name.bin", NULL);
-
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 		test_scene->Set_Name("test_scene");
@@ -1515,10 +1517,10 @@ void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComma
 
 
 	fog_noise = make_shared<CMaterial>(1);
-	CTexture* noise_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	shared_ptr<CTexture> noise_texture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 	noise_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Test_Noise.dds", RESOURCE_TEXTURE2D, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, noise_texture, 0, ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, noise_texture.get(), 0, ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX);
 
 	fog_noise->SetTexture(noise_texture, 0);
 }
@@ -1997,7 +1999,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 void CScene::After_Update_Objects()
 {
-
 #ifdef RENDER_WAVE
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
@@ -2006,6 +2007,7 @@ void CScene::After_Update_Objects()
 #endif
 
 }
+
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -2054,7 +2056,6 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
@@ -2677,9 +2678,12 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	wave_obj->Set_Name("board_scene_wave");
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Base_Texture_0.dds");
 	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
 	obj_manager->Set_Wave_Object(wave_obj);
+
+
+
 #endif
 
 	//=====================================================
@@ -3046,6 +3050,26 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 #endif
 
 }
+
+
+void Board_Scene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, main_Camera.get());
+
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+	{
+		particle_manager->Render_All(pd3dCommandList, main_Camera.get());
+	}
+#endif
+
+#ifdef USING_OBB
+	if (bOBBRender)
+		obj_manager->Render_OBB(pd3dCommandList, main_Camera.get());
+#endif
+
+}
+
 
 bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {

@@ -15,10 +15,10 @@ cbuffer Frame_Info : register(b0)
 struct Material_Info
 {
     float4 gAlbedoColor;
-    uint material_ID;
-    uint padding0;
-    uint padding1;
-    uint padding2;
+    uint light_material_ID;
+    uint Blur_Mask;
+    uint Object_Type_ID;
+    uint Outline_Color_ID;
 };
 
 cbuffer cbGameObjectInfo : register(b1)
@@ -45,8 +45,9 @@ struct PS_MULTIPLE_RENDER_TARGETS_OUTPUT
 {
     float4 Albedo_Color : SV_TARGET0;
     float4 world_Normal_and_Camera_Distance : SV_TARGET1;
-    float4 Velocity_Mask_Obj_Id : SV_TARGET2;
-    float viewspace_z : SV_TARGET3;
+    float4 Blur_Info : SV_TARGET2;
+    float2 Velocity : SV_TARGET3;
+    float viewspace_z : SV_TARGET4;
 };
 
 
@@ -131,15 +132,18 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_Plane(VS_TERRAIN_OUTPUT input)
     PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
     output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 0.0f);
     output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 1.0f, 0.0f);
+    output.Blur_Info = float4(1.0f, 0.0f, 0.0f, 0.0f);
+    output.Velocity = float2(0.0f, 0.0f);
     output.viewspace_z = float(0.0f);
+    
+    
     float2 animatedUV1 = input.uv1 + float2(0.0, gfCurrentTime * 0.1f); // x√‡ »Â∏ß
 
     float4 cBaseTexColor = Plane_BaseTexture.Sample(gssWrap, input.uv0);
     float4 cDetailTexColor = Plane_DetailTexture.Sample(gssWrap, animatedUV1);
 
     output.Albedo_Color.xyz = (input.color * saturate((cBaseTexColor * 0.5f) + (cDetailTexColor * 0.5f))).xyz;
-    output.Albedo_Color.a = (float) (material_info.material_ID) / 255.0f;
+    output.Albedo_Color.a = (float) (material_info.light_material_ID) / 255.0f;
 
     
     float3 plane_normal = Plane_Normal_Map.Sample(gssWrap, input.uv0).xyz;

@@ -269,6 +269,7 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
+
 	// Instancing update flag
 	static std::shared_ptr<CShader> instance_shader;
 	static bool do_instance_update;

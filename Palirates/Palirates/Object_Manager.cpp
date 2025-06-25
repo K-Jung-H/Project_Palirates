@@ -1330,6 +1330,8 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
+
+
 std::vector<std::shared_ptr<CGameObject>> Object_Manager::Gather_All_Fixed_Objects()
 {
 	size_t totalSize = 0;

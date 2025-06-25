@@ -65,12 +65,11 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 20);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 200, 400, 50);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
-	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
-	
+
 	Build_Default_Elements();
 	Build_Default_Scenes();
 	return(true);
@@ -364,6 +363,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 				case VK_SPACE:
+					test_button = !test_button;
 					break;
 
 				case VK_RETURN:
@@ -507,8 +507,11 @@ void CGameFramework::Build_Default_Elements()
 {
 	BeginGPUStage(GPU_Stage::Render);
 
-	CreateShaderVariables();
 
+	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
+	post_effect_manager->CreateShaderResource(m_pd3dDevice, Active_CommandList);
+
+	CreateShaderVariables();
 	//==========================================
 	// Multi - Render Target Shader
 	MRT_shader = new G_BufferMerger_Shader();
@@ -543,10 +546,12 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
+//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+
 
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
-
 //	scene_manager->Set_Active_Scene("Test_Scene");
+
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
@@ -915,6 +920,9 @@ void CGameFramework::FrameAdvance()
 	if (!scene_manager->Get_Active_Scene())
 		return;
 
+	WaitForGpuComplete(GPU_Stage::Compute);
+	WaitForGpuComplete(GPU_Stage::Render);
+	WaitForGpuComplete(GPU_Stage::Post);
 	Change_Scene();
 
 
@@ -978,12 +986,6 @@ void CGameFramework::FrameAdvance()
 	scene_manager->Update_UI();
 #endif
 	// ====================== [3.5] ShadowMap Phase ======================
-		BeginGPUStage(GPU_Stage::Render);
-		PrepareStage(GPU_Stage::Render);
-
-
-
-		EndGPUStage(GPU_Stage::Render);
 
 		for (int i = 0; i < NUM_CASCADES; i++)
 		{
@@ -994,7 +996,7 @@ void CGameFramework::FrameAdvance()
 				scene_manager->Prepare_Render_Scene_ShadowMap(Active_CommandList);
 				scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
 
-				EndGPUStage(GPU_Stage::Render);
+				EndGPUStage(GPU_Stage::Render, true);
 
 			}
 		}
@@ -1038,9 +1040,11 @@ void CGameFramework::FrameAdvance()
 		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
 		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList);
 	}
-	EndGPUStage(GPU_Stage::Render);
+	EndGPUStage(GPU_Stage::Render, true);
 
 	// ====================== [5] Post Process Phase - Screen Effects ======================
+
+
 	BeginGPUStage(GPU_Stage::Post);
 	PrepareStage(GPU_Stage::Post);
 	{
@@ -1054,16 +1058,38 @@ void CGameFramework::FrameAdvance()
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
-		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
-		
+		D3D12_GPU_DESCRIPTOR_HANDLE  Blur_Info_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
+		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
+
+		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
+
+		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
+
+		if (test_button)
+		{
+			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
+
+			post_effect_manager->Set_Zoom_Focus_and_Time({ 0.5, 0.3 }, m_GameTimer.GetTimeElapsed());
+			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
+		}
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
 
-
-		// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
+	}
+	EndGPUStage(GPU_Stage::Post, true);
+	
+	// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
+	BeginGPUStage(GPU_Stage::Post);
+	PrepareStage(GPU_Stage::Post);
+	{
 
 		// Use previously stored depth buffer values
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1090,17 +1116,29 @@ void CGameFramework::FrameAdvance()
 		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 
-#ifndef WRITE_TEXT_UI
+	}
+	EndGPUStage(GPU_Stage::Post, true);
+
+
+
+
+	// ====================== [6] Text UI Rendering ======================
+
+
+	BeginGPUStage(GPU_Stage::Post);
+	PrepareStage(GPU_Stage::Post);
+	{
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+#ifdef WRITE_TEXT_UI
+		scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
 #endif
+
 	}
 	EndGPUStage(GPU_Stage::Post);
 
-	// ====================== [6] Text UI Rendering ======================
-#ifdef WRITE_TEXT_UI
-	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
-#endif
+
 
 	
 

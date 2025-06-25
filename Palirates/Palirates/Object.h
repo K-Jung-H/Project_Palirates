@@ -47,6 +47,8 @@ struct ServerAnimationSyncData
 class CTexture
 {
 public:
+    CTexture() = default;
+
     CTexture(int nTextures, UINT nTextureType,
         int nSamplers,
         int nGraphicsSrvRootParameters,
@@ -180,7 +182,6 @@ private:
     std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_d3dDsvCPUDescriptorHandles;
 
 
-    //D3D12_CPU_DESCRIPTOR_HANDLE m_d3dDsvCPUDescriptorHandle{}; // only one
 };
 
 
@@ -193,6 +194,14 @@ private:
 #define MATERIAL_EMISSION_MAP         0x10
 #define MATERIAL_DETAIL_ALBEDO_MAP      0x20
 #define MATERIAL_DETAIL_NORMAL_MAP      0x40
+
+
+
+#define MATERIAL_Object_Type_ID_None 0
+#define MATERIAL_Object_Type_ID_Player 1
+#define MATERIAL_Object_Type_ID_Monster 2
+#define MATERIAL_Object_Type_ID_Environment 3
+
 
 class CGameObject;
 
@@ -221,9 +230,9 @@ struct Material_GPU_Packet
 {
     XMFLOAT4 gAlbedoColor;
     UINT light_material_ID;
+    UINT Blur_Mask_ID;
+    UINT Object_Type_ID;
     UINT Outline_Color_ID;
-    UINT Blur_Mask;
-    UINT  padding0;
 };
 
 class CMaterial
@@ -237,8 +246,9 @@ public:
 public:
     XMFLOAT4 m_cAlbedo = { 1.0f, 1.0f, 1.0f, 1.0f };
     UINT m_Material_ID = 0;
-    UINT Outline_Color_ID = 0;
     UINT Blur_Mask_ID = 0;
+    UINT Outline_Color_ID = 0;
+    UINT Object_Type_ID = 0;
 
 public:
     // not use
@@ -253,14 +263,17 @@ public:
     UINT                     m_nType = 0x00; // Texture Map Type
 
     int                      m_nTextures = 0;
-    _TCHAR(*m_ppstrTextureNames)[64] = NULL;
-    CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+    std::vector<std::array<_TCHAR, 64>> m_ppstrTextureNames;
+    std::vector<std::shared_ptr<CTexture>> m_ppTextures; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
 
-    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+//    CTexture** m_ppTextures = NULL; //0:Albedo, 1:Specular, 2:Metallic, 3:Normal, 4:Emission, 5:DetailAlbedo, 6:DetailNormal
+
+//    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, CTexture** ppTexture, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
+    void LoadTextureFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nType, UINT nRootParameter, _TCHAR* pwstrTextureName, std::vector<std::shared_ptr<CTexture>>& textures, UINT textureIndex, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
 
     void SetShader(CShader* pShader);
     void SetMaterialType(UINT nType) { m_nType |= nType; }
-    void SetTexture(CTexture* pTexture, UINT nTexture = 0);
+    void SetTexture(shared_ptr<CTexture> pTexture, UINT nTexture = 0);
 
     virtual void UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList);
     virtual void Update_TextureShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
@@ -678,8 +691,15 @@ public:
     void SetShader(CShader* pShader);
     void SetShader(int nMaterial, CShader* pShader);
     void SetMaterial(int nMaterial, CMaterial* pMaterial);
+
     void SetOutlineColor(int id);
+    void SetObject_Type_ID(int id); // for zoom effect type
     void SetBlurMask(bool value);
+
+    bool GetBlurMask();
+    int GetOutlineColor();
+    int GetObject_Type_ID();
+
     void Set_Color_Blending(XMFLOAT3& color = XMFLOAT3(1.0f, 1.0f, 1.0), float blending_value = 1.0f);
     void Update_Color_Blending(float update_bleeding_value = 1.0f);
 
@@ -765,7 +785,7 @@ public:
 
     std::shared_ptr<CGameObject> FindFrame(const char* pstrFrameName);
 
-    CTexture* FindReplicatedTexture(_TCHAR* pstrTextureName);
+    std::shared_ptr<CTexture>FindReplicatedTexture(const _TCHAR* pstrTextureName);
 
     UINT GetMeshType() { return((m_pMesh) ? m_pMesh->GetType() : 0x00); }
 
@@ -836,8 +856,8 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 private:
-    static CTexture* pTerrainBaseTexture;
-    static CTexture* pTerrainDetailTexture;
+    static shared_ptr<CTexture> pTerrainBaseTexture;
+    static shared_ptr<CTexture> pTerrainDetailTexture;
     static Deferred_CTerrainShader* pTerrainShader;
     static CMaterial* pTerrainMaterial;
 
@@ -958,8 +978,8 @@ public:
     static Deferred_Plane_Shader* deferred_plane_shader;
 
 private:
-    CTexture* Plane_BaseTexture = NULL;
-    CTexture* Plane_DetailTexture = NULL;
+    shared_ptr<CTexture> Plane_BaseTexture = NULL;
+    shared_ptr<CTexture> Plane_DetailTexture = NULL;
 
 public:
     CMaterial* Plane_Material = NULL;
@@ -1021,7 +1041,7 @@ private:
     static CSkyBoxShader* pSkybox_shader;
     static shared_ptr<CSkyBoxMesh> pSkyBoxMesh;
 
-    CTexture* skybox_texture = NULL;
+    shared_ptr<CTexture> skybox_texture = NULL;
     shared_ptr<CMaterial>skybox_material = NULL;
 public:
     static void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);

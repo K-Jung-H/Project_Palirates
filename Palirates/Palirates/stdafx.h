@@ -115,9 +115,8 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX 11
 #define ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX 12
 #define ROOT_PARAMETER_SKYBOX_TEXTURE_SRV_INDEX 13
-//=====================================
-#define ROOT_PARAMETER_OOBB_CUBE_CBV_INDEX 15
 
+//=====================================
 #define ROOT_PARAMETER_FOG_INFO_INDEX 0
 #define ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX 1
 #define ROOT_PARAMETER_POST_LIGHT_INFO_CBV_INDEX 2
@@ -126,6 +125,11 @@ extern HINSTANCE						ghAppInstance;
 #define ROOT_PARAMETER_MATERIAL_REFLECTANCE_INFO_SRV_INDEX 5
 #define ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX 6
 #define ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX 7
+//=====================================
+#define ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX 3
+#define ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX 4
+
+
 
 // #define _WITH_DISPLAY_TEXTURE_NAME
 // #define _WITH_DISPLAY_BONE_NAME
@@ -152,7 +156,7 @@ extern UINT	gnCbvSrvUavDescriptorIncrementSize;
 extern UINT	gnRtvDescriptorIncrementSize;
 extern UINT gnDsvDescriptorIncrementSize;
 
-#define RTV_Format_Num 4
+#define RTV_Format_Num 5
 struct RenderTarget_Config
 {
 	static  const int RTV_FORMAT_num = RTV_Format_Num;

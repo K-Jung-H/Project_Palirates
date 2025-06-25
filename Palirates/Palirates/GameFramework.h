@@ -63,6 +63,7 @@ extern std::unordered_map<int, RemotePlayer> remotePlayers;
 
 class CGameFramework
 {
+    bool test_button = false;
 public:
     CGameFramework();
     ~CGameFramework();

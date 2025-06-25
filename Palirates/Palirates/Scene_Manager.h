@@ -63,7 +63,6 @@ public:
     void Clear_Particles_Update_Result(ID3D12GraphicsCommandList* pd3dCommandList);
 
 
-
     void Update_UI();
     void Update_Texture_UI(float currentTime, float elapsedTime);
 
