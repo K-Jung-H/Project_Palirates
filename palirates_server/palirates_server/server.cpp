@@ -93,9 +93,17 @@ void Server::AcceptClients()
     }
 }
 
+
 void Server::Server_Update()
 {
-    // 주기적 서버 갱신 로직 작성 가능
+    //// 주기적 서버 갱신 로직 작성 가능
+    //auto scene = sceneManager.getScene(clientId);
+    //if (!scene) {
+    //    sceneManager.addScene(clientId);
+    //    scene = sceneManager.getScene(clientId);
+    //}
+    //scene->update_player_keyinput(id, keyMask);
+    //scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
 }
 
 
@@ -168,6 +176,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                     }
                     scene->update_player_keyinput(id, keyMask);
                     scene->updatePlayerAnimation(clientId, trackPositions, trackWeights);
+
+
+
 
                     std::ostringstream oss;
                     oss << "PLAYER_UPDATE," << clientId << ","
@@ -690,7 +701,10 @@ int main()
 
 
     std::thread characterStatusThread(&Server::BroadcastCharacterSelect, &server);
+    std::thread Server_Update_Thread(&Server::Server_Update, &server);
+
     characterStatusThread.detach();
+    Server_Update_Thread.detach();
 
     while (true)
     {

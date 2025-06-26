@@ -3467,8 +3467,7 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 int Character_Select_Scene::GetSelectedCharacterId() const
 {
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
-	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index
-		<< ", player_list.size()=" << player_list->size() << std::endl;
+	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index << ", player_list.size()=" << player_list->size() << std::endl;
 	if (select_index >= 0 && select_index < player_list->size())
 	{
 		int id = (*player_list)[select_index]->GetID();
