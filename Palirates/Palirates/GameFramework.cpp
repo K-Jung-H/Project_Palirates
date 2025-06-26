@@ -687,9 +687,6 @@ SCENE_CHANGE:
 
 void CGameFramework::Release_Scenes()
 {
-	//if (m_pPlayer) 
-	//	delete m_pPlayer;
-
 	delete scene_manager;
 	
 	ReleaseShaderVariables();
@@ -700,7 +697,7 @@ void CGameFramework::ProcessInput()
 	static bool last_mouse_state = false;
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
-	
+
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
 	if (GetKeyboardState(pKeysBuffer) && main_scene)
@@ -709,25 +706,58 @@ void CGameFramework::ProcessInput()
 	if (!bProcessedByScene && m_pPlayer->bIsControllable)
 	{
 		DWORD dwDirection = 0;
+		{
+			current_keyboard_inputFlags = INPUT_NONE;
 
-		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;   
-		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;  
-		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;    
-		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;   
-		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;       
-		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;      
+			if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0)) // W
+			{
+				current_keyboard_inputFlags |= INPUT_W;
+				dwDirection |= DIR_FORWARD;
+			}
+			if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0)) // S
+			{
+				current_keyboard_inputFlags |= INPUT_S;
+				dwDirection |= DIR_BACKWARD;
+			}
+			if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0)) // A
+			{
+				current_keyboard_inputFlags |= INPUT_A;
+				dwDirection |= DIR_LEFT;
+			}
+			if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0)) // D
+			{
+				current_keyboard_inputFlags |= INPUT_D;
+				dwDirection |= DIR_RIGHT;
+			}
+			if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0)) // Q
+			{
+				current_keyboard_inputFlags |= INPUT_Q;
+			}
+			if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0)) // E
+			{
+				current_keyboard_inputFlags |= INPUT_E;
+			}
+			if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
+			{
+				current_keyboard_inputFlags |= INPUT_SHIFT;
+			}
+			if (pKeysBuffer[VK_RETURN] & 0xF0) // Enter
+			{
+				current_keyboard_inputFlags |= INPUT_ENTER;
+			}
+		}
+
+
+		//=======================================================================
+
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
 		if (m_pPlayer && m_pPlayer->GetCamera())
+		{
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
-		
+		}
+
 
 		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
@@ -738,10 +768,10 @@ void CGameFramework::ProcessInput()
 		{
 			if (bMouseLocked)
 				HideCursor();
-			else		
+			else
 				ShowCursorFix();
-		
-			last_mouse_state = bMouseLocked; 
+
+			last_mouse_state = bMouseLocked;
 		}
 
 		float cxDelta = 0.0f, cyDelta = 0.0f;
@@ -776,9 +806,9 @@ void CGameFramework::ProcessInput()
 			if (dwDirection)
 				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
-		
+
 	}
-	
+
 }
 
 void CGameFramework::Animate_Scene()
@@ -1309,10 +1339,6 @@ void CGameFramework::SendPacket()
 
 	std::ostringstream oss;
 
-	//oss << "PLAYER_UPDATE," << ClientNum
-	//	<< "," << pos.x << "," << pos.y << "," << pos.z
-	//	<< "," << look.x << "," << look.y << "," << look.z
-	//	<< "," << state;
 
 	oss << "PLAYER_UPDATE," << ClientNum
 		<< "," << current_keyboard_inputFlags
