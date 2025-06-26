@@ -240,12 +240,15 @@ public:
     bool bCharacterSelectedSent = false;
     bool bCharacterSelectApproved = false;
 
+    int Change_Call_By_Server = -1;
+    Change_Signal change_signal;
+
     int GetCharacterSelection(int playerId) const;
     bool HasCharacterSelection(int playerId) const;
     void SetCharacterSelection(int playerId, int characterId);
 
     void SetupCharacterSelectScene();
-    bool bEnterSceneByServer = false;
+    bool Check_CharacterSelect_IndexList();
 
     void ConnectToServer(const std::string& ip, int port);
     void SendPacket();
@@ -272,8 +275,7 @@ public:
     std::unordered_map<int, std::string> pendingUpdateMap;
     std::mutex pendingUpdateMutex;
 
-    Scene_Manager sceneManager;
-    std::shared_ptr<Object_Manager> object_manager;
+
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;

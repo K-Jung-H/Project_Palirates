@@ -43,8 +43,6 @@ CGameFramework::CGameFramework()
 	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 
 	isRunning = false;
-
-	object_manager = std::make_shared<Object_Manager>();
 }
 
 CGameFramework::~CGameFramework()
@@ -581,87 +579,46 @@ void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 
 bool CGameFramework::Change_Scene()
 {
-	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
-
-	//std::cout << "[CLIENT][Change_Scene] 진입, c_signal.change: " << c_signal.change << ", c_signal.scene_name: " << c_signal.scene_name << ", bEnterSceneByServer: " << bEnterSceneByServer << std::endl;
-
-	if (bEnterSceneByServer && c_signal.scene_name == "Game_Stage_Board")
+	shared_ptr<CScene> active_scene = scene_manager->Get_Active_Scene();
+	Change_Signal c_signal;
+	if (isRunning) // 멀티인 경우에만 동작
 	{
-		std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
-		bEnterSceneByServer = false;
-		goto SCENE_CHANGE;
+		if (Change_Call_By_Server != -1)
+		{
+			std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
+			c_signal = change_signal;
+
+			if (active_scene->scene_type == Scene_Type::Lobby)
+			{
+				if (Check_CharacterSelect_IndexList() == false)
+					return false;
+			}
+
+
+			std::ostringstream scenePacket;
+			scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
+			SendPacket(scenePacket.str());
+
+		}
 	}
+	else // 오프라인 인 경우
+	{
+		c_signal  = active_scene->Get_Change_Signal();
+	}
+
+	//==================================================
 
 	if (!c_signal.change)
 		return false;
 
 
-	if (c_signal.scene_name == "Game_Stage_Board")
-	{
-		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
-		if (charScene)
-		{
-			int selectedCharId = charScene->GetSelectedCharacterId();
-			if (selectedCharId == -1)
-			{
-				std::cout << "[BLOCKED] No character selected.\n";
-				return false;
-			}
-			if (!bCharacterSelectedSent)
-			{
-				for (const auto& [id, cid] : characterSelections)
-				{
-					if (id != ClientNum && cid == selectedCharId)
-					{
-						std::cout << "[BLOCKED] That character has already been selected.\n";
-						return false;
-					}
-				}
-				std::ostringstream oss;
-				oss << "CHARACTER_SELECT_REQUEST," << ClientNum << "," << selectedCharId << "\n";
-				SendPacket(oss.str());
-				bCharacterSelectedSent = true;
-				std::cout << "[DEBUG] Send character selection request.\n";
-				return false;
-			}
-			if (!bCharacterSelectApproved)
-			{
-				std::cout << "[BLOCKED] Waiting for character select approval from server.\n";
-				return false;
-			}
-		}
-		else
-		{
-			std::cout << "[ERROR] Current scene is not Character_Select_Scene.\n";
-			return false;
-		}
-	}
-
-SCENE_CHANGE:
-
-	//std::cout << "[CLIENT][SCENE_CHANGE] Board 씬 Build/Set 강제 진입" << std::endl;
-	scene_manager->Build_Scene(Scene_Type::Board, "Game_Stage_Board", m_pd3dDevice, Active_CommandList);
-	scene_manager->Set_Active_Scene("Game_Stage_Board");
-
-	//std::cout << "[CLIENT][SCENE_CHANGE] 활성 씬 이름: " << scene_manager->Get_Active_Scene() << std::endl;
-	//std::cout << "[CLIENT][SCENE_CHANGE] 활성 씬 포인터: " << scene_manager->Get_Active_Scene_Ptr() << std::endl;
-	m_pPlayer = scene_manager->Get_Active_Scene_Player();
-
-	//std::cout << "[CLIENT][SCENE_CHANGE] m_pPlayer 포인터: " << m_pPlayer.get() << std::endl;
-	Object_Manager::Reserve_Update();
-
-	//std::cout << "[DEBUG] SCENE_CHANGE 레이블 진입. c_signal.scene_name = " << c_signal.scene_name << std::endl;
-	std::ostringstream scenePacket;
-	scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
-	SendPacket(scenePacket.str());
-
-	if (c_signal.scene_name == "Character_Select")
-	{
-		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
-		if (charScene) {
-			charScene->UpdateCharacterSelections(characterSelections, ClientNum);
-		}
-	}
+	//if (c_signal.scene_name == "Character_Select")
+	//{
+	//	auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
+	//	if (charScene) {
+	//		charScene->UpdateCharacterSelections(characterSelections, ClientNum);
+	//	}
+	//}
 
 	if (scene_manager->Find_Scene(c_signal.scene_name))
 	{
@@ -681,7 +638,6 @@ SCENE_CHANGE:
 		Object_Manager::Reserve_Update();
 	}
 
-	c_signal.change = false;
 	return true;
 }
 
@@ -803,8 +759,8 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
+		/*	if (dwDirection)
+				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);*/
 		}
 
 	}
@@ -1695,24 +1651,52 @@ void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
 
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
-	std::string sceneName = tokens[1];
-	std::cout << "[CLIENT][HandleChangeScene] received: " << sceneName << std::endl;
-	auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
-	if (activeScene)
+	std::string change_scene_type = tokens[1];
+	Change_Call_By_Server = std::stoi(change_scene_type);
+
+	change_signal = { false,Scene_Type::etc, "" };
+
+	switch (Change_Call_By_Server)
 	{
-		Change_Signal& c_signal = activeScene->Get_Change_Signal();
-		c_signal.change = true;
-		c_signal.scene_name = "Game_Stage_Board";
-		c_signal.type = Scene_Type::Board;
-		bEnterSceneByServer = true;
-		std::cout << "[CLIENT][HandleChangeScene] c_signal.change: " << c_signal.change
-			<< ", c_signal.scene_name: " << c_signal.scene_name
-			<< ", bEnterSceneByServer: " << bEnterSceneByServer << std::endl;
+	case -1:		// 변경 없음
+		break;
+
+	case 0:		//로비
+		change_signal.change = true;
+		change_signal.scene_name = "Character_Select";
+		change_signal.type = Scene_Type::Lobby;
+		break;
+		
+	case 1:		// 스태이지 선택
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_Select";
+		change_signal.type = Scene_Type::Board;
+		break;
+
+	case 2:		// 스테이지 1
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_1";
+		change_signal.type = Scene_Type::Stage_1;
+		break;
+
+	case 3:
+		// 스테이지 2
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_2";
+		change_signal.type = Scene_Type::Stage_2;
+		break;
+
+	case 4:
+	case 5:
+	case 6:
+	default:
+		// 추가 예정
+		break;
 	}
-	else
-	{
-		std::cout << "[CLIENT][HandleChangeScene] [ERROR] Active scene is nullptr!\n";
-	}
+	
+	std::cout << "[CLIENT][HandleChangeScene] received: " << change_signal.scene_name << std::endl;
+	std::cout << "[CLIENT][HandleChangeScene] c_signal.change: " << change_signal.change << ", c_signal.scene_name: " << change_signal.scene_name << ", c_signal.change: " << change_signal.change << std::endl;
+
 }
 
 void CGameFramework::HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData)
@@ -2020,6 +2004,7 @@ bool CGameFramework::HasCharacterSelection(int playerId) const
 	return std::any_of(characterSelections.begin(), characterSelections.end(), [playerId](const std::pair<int, int>& p) { return p.first == playerId; });
 }
 
+
 void CGameFramework::SetCharacterSelection(int playerId, int characterId)
 {
 	for (auto& p : characterSelections)
@@ -2031,7 +2016,9 @@ void CGameFramework::SetCharacterSelection(int playerId, int characterId)
 		}
 	}
 	characterSelections.emplace_back(playerId, characterId);
+
 }
+
 
 void CGameFramework::SetupCharacterSelectScene()
 {
@@ -2041,3 +2028,55 @@ void CGameFramework::SetupCharacterSelectScene()
 
 	charScene->UpdateCharacterSelections(characterSelections, ClientNum);
 }
+
+
+bool CGameFramework::Check_CharacterSelect_IndexList()
+{
+	shared_ptr<CScene> active_scene = scene_manager->Get_Active_Scene();
+	Character_Select_Scene* character_select_Scene = dynamic_cast<Character_Select_Scene*>(active_scene.get());
+
+
+	if (!character_select_Scene)
+	{
+		std::cout << "[ERROR] Current scene is not Character_Select_Scene.\n";
+		return false;
+	}
+	
+
+	int selectedCharId = character_select_Scene->GetSelectedCharacterId();
+
+	if (selectedCharId == -1)
+	{
+		std::cout << "[BLOCKED] No character selected.\n";
+		return false;
+	}
+
+	if (!bCharacterSelectedSent)
+	{
+		for (const auto& [id, cid] : characterSelections)
+		{
+			if (id != ClientNum && cid == selectedCharId)
+			{
+				std::cout << "[BLOCKED] That character has already been selected.\n";
+				return false;
+			}
+		}
+		std::ostringstream oss;
+		oss << "CHARACTER_SELECT_REQUEST," << ClientNum << "," << selectedCharId << "\n";
+		SendPacket(oss.str());
+		bCharacterSelectedSent = true;
+		std::cout << "[DEBUG] Send character selection request.\n";
+		return false;
+	}
+
+	if (!bCharacterSelectApproved)
+	{
+		std::cout << "[BLOCKED] Waiting for character select approval from server.\n";
+		return false;
+	}
+
+	// 조건을 모두 충족하면
+	return true;
+}
+
+	
