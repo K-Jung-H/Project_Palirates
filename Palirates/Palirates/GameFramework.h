@@ -63,6 +63,7 @@ extern std::unordered_map<int, RemotePlayer> remotePlayers;
 
 class CGameFramework
 {
+    bool test_button = false;
 public:
     CGameFramework();
     ~CGameFramework();
@@ -119,26 +120,7 @@ public:
     void OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
     LRESULT CALLBACK OnProcessingWindowMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
-    //=================SERVER=================
-    void ConnectToServer(const std::string& ip, int port);
-    void SendPacket();
-    void NetworkLoop();
-    bool IsServerConnected();
-    int GetServerPlayerID();
-    void PlayerLeave(int playerId);
-    void Disconnect();
-    void CreateRemotePlayer(int playerId);
-    void CreateLocalPlayer(int playerId);
-    void ProcessReceivedData(const std::string& receivedData);
-    std::queue<int> pendingPlayerCreates;
-    std::mutex pendingCreateMutex;
-    std::unordered_map<int, std::string> pendingUpdateMap;
-    std::mutex pendingUpdateMutex;
 
-    Scene_Manager sceneManager;
-    std::shared_ptr<Object_Manager> object_manager;
-    bool bClientIdAssigned = false;
-    //=================SERVER=================
 
 private:
     HINSTANCE               m_hInstance;
@@ -228,11 +210,9 @@ public:
 
     std::shared_ptr<CPlayer> m_pPlayer = NULL;
 
-
-    
-
     POINT                  m_ptOldCursorPos;
     _TCHAR                  m_pszFrameRate[70];
+
 
 #ifdef WRITE_TEXT_UI
     Text_UI_Renderer* text_ui_renderer = NULL;
@@ -252,46 +232,52 @@ public:
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
     int currentShipControllerId = -1;
-    std::unordered_set<int> lockedCharacterIds;
     void SelectCharacter(int characterId);
+    void SendCharacterSelectPacket(int charId);
     std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
+    int selectedCharacterId = -1;
+    std::vector<std::pair<int, int>> characterSelections;
+    bool bCharacterSelectedSent = false;
+    bool bCharacterSelectApproved = false;
+
+    int GetCharacterSelection(int playerId) const;
+    bool HasCharacterSelection(int playerId) const;
+    void SetCharacterSelection(int playerId, int characterId);
+
+    void SetupCharacterSelectScene();
+    bool bEnterSceneByServer = false;
+
+    void ConnectToServer(const std::string& ip, int port);
+    void SendPacket();
+    void SendPacket(const std::string& packet);
+    void NetworkLoop();
+    bool IsServerConnected();
+    int GetServerPlayerID();
+    void PlayerLeave(int playerId);
+    void Disconnect();
+    void HandleClientIdAssignment();
+    void DelayOrQueuePacket(const std::string& packet);
+    void RespondToPing();
+    void HandlePlayerLeave(int leaveId);
+    void HandlePlayerCreate(int id);
+    void HandleCharacterStatus(int playerId, int charId);
+    void HandleShipSync(const std::vector<std::string>& tokens);
+    void HandleChangeScene(const std::vector<std::string>& tokens);
+    void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
+    void HandlePositionUpdate(const std::vector<std::string>& tokens);
+    void CreateRemotePlayer(int playerId, int characterId);
+    void ProcessReceivedData(const std::string& receivedData);
+    std::queue<int> pendingPlayerCreates;
+    std::mutex pendingCreateMutex;
+    std::unordered_map<int, std::string> pendingUpdateMap;
+    std::mutex pendingUpdateMutex;
+
+    Scene_Manager sceneManager;
+    std::shared_ptr<Object_Manager> object_manager;
+    bool bClientIdAssigned = false;
+
+    uint32_t current_keyboard_inputFlags = 0;
 
     //=================SERVER=================
 
-    uint32_t current_keyboard_inputFlags = 0;
-};
-
-enum SHIP_INPUT_TYPE
-{
-    SHIP_NONE = 0,
-    SHIP_FORWARD = 1,
-    SHIP_LEFT = 2,
-    SHIP_RIGHT = 3
-};
-
-
-enum KeyIndex
-{
-    KEY_INDEX_W = 0,
-    KEY_INDEX_S = 1,
-    KEY_INDEX_A = 2,
-    KEY_INDEX_D = 3,
-    KEY_INDEX_Q = 4,
-    KEY_INDEX_E = 5,
-    KEY_INDEX_SHIFT = 6,
-    KEY_INDEX_ENTER = 7
-};
-
-// 실제 플래그 enum
-enum InputFlags : uint32_t
-{
-    INPUT_NONE = 0,
-    INPUT_W = 1 << KEY_INDEX_W,
-    INPUT_S = 1 << KEY_INDEX_S,
-    INPUT_A = 1 << KEY_INDEX_A,
-    INPUT_D = 1 << KEY_INDEX_D,
-    INPUT_Q = 1 << KEY_INDEX_Q,
-    INPUT_E = 1 << KEY_INDEX_E,
-    INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
-    INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };

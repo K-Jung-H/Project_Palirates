@@ -2,6 +2,16 @@
 #include "Shader.h"
 #include "Timer.h"
 
+#define UI_MONSTER_NUM				20
+
+struct MonsterUIData
+{
+    XMFLOAT3 position;
+    float hp;
+    float dist;
+    float yOffset;
+};
+
 inline D2D1_RECT_F MakeNormalizedRect(
     float normCX, float normCY, float normW,
     const CTexture* pTexture,
@@ -136,6 +146,7 @@ enum class UILayer : uint32_t
     screen = 1 << 6,
     Dialogue_Button = 1 << 7,
     Start = 1 << 8,
+    Screen_Fade = 1 << 9,
     All = 0xFFFFFFFF
 };
 
@@ -181,6 +192,7 @@ struct TextureBlock
 
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default, const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f }, const XMFLOAT2& scale = { 1.0f, 1.0f });
     TextureBlock() = default;
+    void UpdateScreenRect(float normCX, float normCY, float normW, float scaleH);
 };
 
 class Texture_UI_Renderer
@@ -217,6 +229,7 @@ private:
     std::unique_ptr<CTextureToScreenShader> textureShader;
     std::unique_ptr<Texture_UI_Renderer> textureRenderer;
     std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature = NULL;
+    std::vector<TextureBlock*> monsterHPBlocks;
 
 public:
 
@@ -244,4 +257,19 @@ public:
     std::vector<TextureBlock*> GetTextureBlockPtrs();
 
     CTextureToScreenShader* GetShader() const { return textureShader.get(); }
+
+    std::vector<TextureBlock*>& GetMonsterHPBlocks() { return monsterHPBlocks; }
+
+    void AddMonsterHPBlock(TextureBlock* block)
+    {
+        monsterHPBlocks.emplace_back(block);
+    }
+
+    void DeactivateAllMonsterHPBlocks()
+    {
+        for (auto& block : monsterHPBlocks)
+        {
+            if (block) block->bActive = false;
+        }
+    }
 };

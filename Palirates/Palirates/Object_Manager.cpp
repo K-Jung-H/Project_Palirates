@@ -1330,6 +1330,8 @@ std::unordered_map<std::string, Fixed_Object_Info>* Object_Manager::Get_Object_L
 	}
 }
 
+
+
 std::vector<std::shared_ptr<CGameObject>> Object_Manager::Gather_All_Fixed_Objects()
 {
 	size_t totalSize = 0;
@@ -1531,7 +1533,7 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CGameObject>& 
 		{
 			std::shared_ptr<CMonsterObject> monster = std::dynamic_pointer_cast<CMonsterObject>(obb_info.object);
 			
-			if (monster->GetStateMachine()->Get_State() != State::Get_Hit)
+			if (monster->GetStateMachine()->Get_State() != State::Get_Hit && monster->GetStateMachine()->Get_State() != State::Knock_Down)
 				monster->GetStateMachine()->changeState(State::Get_Hit, Key_Value::None);
 		}
 
@@ -1560,9 +1562,9 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CPlayer>& play
 		if (obb_info.type == EObjectType::MainPlayer)
 			return;
 
-		if (obb_info.type == EObjectType::MonsterWeapon)
-			if (player_ptr->GetStateMachine()->Get_State() != State::Get_Hit_F2 && obb_info.object->bUpdateOBB)
-				player_ptr->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+		//if (obb_info.type == EObjectType::MonsterWeapon)
+			//if (player_ptr->GetStateMachine()->Get_State() != State::Get_Hit_F2 && obb_info.object->bUpdateOBB)
+				//player_ptr->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 	}
 }
 

@@ -132,8 +132,6 @@ struct PS__BILLBOARD_INPUT
 };
 
 
-
-
 VS_BILLBOARD_OUTPUT VS_BILLBOARD_PARTICLE_DRAW(VS_INSTANCE_BILLBOARD_PARTICLE_DRAW_INPUT input)
 {
     VS_BILLBOARD_OUTPUT output;
@@ -177,47 +175,6 @@ float4 PS_BILLBOARD_PARTICLE_DRAW(PS__BILLBOARD_INPUT input) : SV_Target
     float4 base_texture = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
     return base_texture * input.color;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Pixel Shader - Not Use
-PS_MULTIPLE_RENDER_TARGETS_OUTPUT PS_Deffered_ParticleDraw(VS_INSTANCE_PARTICLE_DRAW_OUTPUT input)
-{
-    PS_MULTIPLE_RENDER_TARGETS_OUTPUT output;
-    output.Albedo_Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Position = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.world_Normal_and_Camera_Distance = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    output.Velocity_Mask_Obj_Id = float4(0.0f, 0.0f, 0.0f, 0.0f);
-    
-
-
-    output.Albedo_Color = input.color;
-    
-    output.world_Position = float4(input.positionW, 1.0f);
-    output.world_Normal_and_Camera_Distance.xyz = float3(0.0f, 1.0f, 0.0f);
-    output.world_Normal_and_Camera_Distance.w = distance(input.positionW, gvCameraPosition);
-    output.Velocity_Mask_Obj_Id = float4(input.velocity, 0.0f, 1.0f);
-
-    return output;
-}
-
 
 //==================================================================
 

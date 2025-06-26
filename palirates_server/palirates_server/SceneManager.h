@@ -11,5 +11,6 @@ private:
 public:
     std::shared_ptr<Scene> getScene(int clientId);
     void addScene(int clientId);
+    void removeScene(int clientId);
     const std::unordered_map<int, std::shared_ptr<Scene>>& getAllScenes() const;
 };

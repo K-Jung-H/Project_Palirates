@@ -65,13 +65,13 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 100, 300, 20);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 200, 400, 50);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
-	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
-	
+
 	ConnectToServer(SERVER_IP, SERVER_PORT);
+	SendPacket("ENTER_SCENE,Character_Select\n");
 
 	Build_Default_Elements();
 	Build_Default_Scenes();
@@ -365,11 +365,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case WM_KEYUP:
 			switch (wParam)
 			{
-				case VK_ESCAPE:
-					::PostQuitMessage(0);
-					break;
-
 				case VK_SPACE:
+					test_button = !test_button;
 					break;
 
 				case VK_RETURN:
@@ -513,8 +510,11 @@ void CGameFramework::Build_Default_Elements()
 {
 	BeginGPUStage(GPU_Stage::Render);
 
-	CreateShaderVariables();
 
+	post_effect_manager = new Post_Effect_Manager(m_pd3dDevice);
+	post_effect_manager->CreateShaderResource(m_pd3dDevice, Active_CommandList);
+
+	CreateShaderVariables();
 	//==========================================
 	// Multi - Render Target Shader
 	MRT_shader = new G_BufferMerger_Shader();
@@ -528,7 +528,8 @@ void CGameFramework::Build_Default_Elements()
 
 	D3D12_GPU_DESCRIPTOR_HANDLE d3dDsvGPUDescriptorHandle = CDescriptor_Heap::CreateShaderResourceView(m_pd3dDevice, m_pd3dDepthStencilBuffer, DXGI_FORMAT_R24_UNORM_X8_TYPELESS);
 
-	scene_manager->Set_Shader(MRT_shader);
+	scene_manager->Set_MRT_Shader(MRT_shader);
+	
 
 	Post_ComputeShader::CreateComputeRootSignature(m_pd3dDevice);
 
@@ -548,7 +549,11 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
+//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
 
+
+//	Build_Scene(Scene_Type::Test, "Test_Scene");
+//	scene_manager->Set_Active_Scene("Test_Scene");
 
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
@@ -577,40 +582,114 @@ void CGameFramework::Build_Scene(Scene_Type scene_type, string scene_name)
 bool CGameFramework::Change_Scene()
 {
 	Change_Signal c_signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
-	if (c_signal.change)
+
+	//std::cout << "[CLIENT][Change_Scene] 진입, c_signal.change: " << c_signal.change << ", c_signal.scene_name: " << c_signal.scene_name << ", bEnterSceneByServer: " << bEnterSceneByServer << std::endl;
+
+	if (bEnterSceneByServer && c_signal.scene_name == "Game_Stage_Board")
 	{
-		if (scene_manager->Find_Scene(c_signal.scene_name))
-		{
-			scene_manager->Set_Active_Scene(c_signal.scene_name);
-			m_pPlayer = scene_manager->Get_Active_Scene_Player();
-			Object_Manager::Reserve_Update();
-		}
-		else 
-		{
-			BeginGPUStage(GPU_Stage::Compute);
-			{
-				scene_manager->Build_Scene(c_signal.type, c_signal.scene_name, m_pd3dDevice, Active_CommandList);
-			}
-			EndGPUStage(GPU_Stage::Compute);
-			WaitForGpuComplete(GPU_Stage::Compute);
-
-			scene_manager->Set_Active_Scene(c_signal.scene_name);
-			m_pPlayer = scene_manager->Get_Active_Scene_Player();
-			Object_Manager::Reserve_Update();
-
-			if (c_signal.type == Lobby)
-			{
-				ConnectToServer(SERVER_IP, SERVER_PORT);
-			}
-		}
-
-		return true;
+		std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
+		bEnterSceneByServer = false;
+		goto SCENE_CHANGE;
 	}
-	return false;
+
+	if (!c_signal.change)
+		return false;
+
+
+	if (c_signal.scene_name == "Game_Stage_Board")
+	{
+		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
+		if (charScene)
+		{
+			int selectedCharId = charScene->GetSelectedCharacterId();
+			if (selectedCharId == -1)
+			{
+				std::cout << "[BLOCKED] No character selected.\n";
+				return false;
+			}
+			if (!bCharacterSelectedSent)
+			{
+				for (const auto& [id, cid] : characterSelections)
+				{
+					if (id != ClientNum && cid == selectedCharId)
+					{
+						std::cout << "[BLOCKED] That character has already been selected.\n";
+						return false;
+					}
+				}
+				std::ostringstream oss;
+				oss << "CHARACTER_SELECT_REQUEST," << ClientNum << "," << selectedCharId << "\n";
+				SendPacket(oss.str());
+				bCharacterSelectedSent = true;
+				std::cout << "[DEBUG] Send character selection request.\n";
+				return false;
+			}
+			if (!bCharacterSelectApproved)
+			{
+				std::cout << "[BLOCKED] Waiting for character select approval from server.\n";
+				return false;
+			}
+		}
+		else
+		{
+			std::cout << "[ERROR] Current scene is not Character_Select_Scene.\n";
+			return false;
+		}
+	}
+
+SCENE_CHANGE:
+
+	//std::cout << "[CLIENT][SCENE_CHANGE] Board 씬 Build/Set 강제 진입" << std::endl;
+	scene_manager->Build_Scene(Scene_Type::Board, "Game_Stage_Board", m_pd3dDevice, Active_CommandList);
+	scene_manager->Set_Active_Scene("Game_Stage_Board");
+
+	//std::cout << "[CLIENT][SCENE_CHANGE] 활성 씬 이름: " << scene_manager->Get_Active_Scene() << std::endl;
+	//std::cout << "[CLIENT][SCENE_CHANGE] 활성 씬 포인터: " << scene_manager->Get_Active_Scene_Ptr() << std::endl;
+	m_pPlayer = scene_manager->Get_Active_Scene_Player();
+
+	//std::cout << "[CLIENT][SCENE_CHANGE] m_pPlayer 포인터: " << m_pPlayer.get() << std::endl;
+	Object_Manager::Reserve_Update();
+
+	//std::cout << "[DEBUG] SCENE_CHANGE 레이블 진입. c_signal.scene_name = " << c_signal.scene_name << std::endl;
+	std::ostringstream scenePacket;
+	scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
+	SendPacket(scenePacket.str());
+
+	if (c_signal.scene_name == "Character_Select")
+	{
+		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
+		if (charScene) {
+			charScene->UpdateCharacterSelections(characterSelections, ClientNum);
+		}
+	}
+
+	if (scene_manager->Find_Scene(c_signal.scene_name))
+	{
+		scene_manager->Set_Active_Scene(c_signal.scene_name);
+		m_pPlayer = scene_manager->Get_Active_Scene_Player();
+		Object_Manager::Reserve_Update();
+	}
+	else
+	{
+		BeginGPUStage(GPU_Stage::Compute);
+		scene_manager->Build_Scene(c_signal.type, c_signal.scene_name, m_pd3dDevice, Active_CommandList);
+		EndGPUStage(GPU_Stage::Compute);
+		WaitForGpuComplete(GPU_Stage::Compute);
+
+		scene_manager->Set_Active_Scene(c_signal.scene_name);
+		m_pPlayer = scene_manager->Get_Active_Scene_Player();
+		Object_Manager::Reserve_Update();
+	}
+
+	c_signal.change = false;
+	return true;
 }
 
 void CGameFramework::Release_Scenes()
 {
+	//if (m_pPlayer) 
+	//	delete m_pPlayer;
+
 	delete scene_manager;
 	
 	ReleaseShaderVariables();
@@ -618,9 +697,10 @@ void CGameFramework::Release_Scenes()
 
 void CGameFramework::ProcessInput()
 {
+	static bool last_mouse_state = false;
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
-
+	
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
 	if (GetKeyboardState(pKeysBuffer) && main_scene)
@@ -631,103 +711,74 @@ void CGameFramework::ProcessInput()
 		DWORD dwDirection = 0;
 
 		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0))
-			dwDirection |= DIR_FORWARD;
+			dwDirection |= DIR_FORWARD;   
 		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0))
-			dwDirection |= DIR_BACKWARD;
+			dwDirection |= DIR_BACKWARD;  
 		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0))
-			dwDirection |= DIR_LEFT;
+			dwDirection |= DIR_LEFT;    
 		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0))
-			dwDirection |= DIR_RIGHT;
+			dwDirection |= DIR_RIGHT;   
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0))
-			dwDirection |= DIR_UP;
+			dwDirection |= DIR_UP;       
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0))
-			dwDirection |= DIR_DOWN;
-
-		{
-			current_keyboard_inputFlags = INPUT_NONE;
-
-			if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0)) // W
-			{
-				current_keyboard_inputFlags |= INPUT_W;
-				dwDirection |= DIR_FORWARD;
-			}
-			if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0)) // S
-			{
-				current_keyboard_inputFlags |= INPUT_S;
-				dwDirection |= DIR_BACKWARD;
-			}
-			if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0)) // A
-			{
-				current_keyboard_inputFlags |= INPUT_A;
-				dwDirection |= DIR_LEFT;
-			}
-			if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0)) // D
-			{
-				current_keyboard_inputFlags |= INPUT_D;
-				dwDirection |= DIR_RIGHT;
-			}
-			if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0)) // Q
-			{
-				current_keyboard_inputFlags |= INPUT_Q;
-			}
-			if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0)) // E
-			{
-				current_keyboard_inputFlags |= INPUT_E;
-			}
-			if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
-			{
-				current_keyboard_inputFlags |= INPUT_SHIFT;
-			}
-			if (pKeysBuffer[VK_RETURN] & 0xF0) // Enter
-			{
-				current_keyboard_inputFlags |= INPUT_ENTER;
-			}
-		}
-
+			dwDirection |= DIR_DOWN;      
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
 		if (m_pPlayer && m_pPlayer->GetCamera())
-		{
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
-		}
+		
 
 		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
-		float cxDelta = 0.0f, cyDelta = 0.0f;
-		POINT ptCursorPos;
-		if (GetCapture() == m_hWnd)
+
+		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
+
+		if (bMouseLocked != last_mouse_state)
 		{
-			SetCursor(NULL);
-			GetCursorPos(&ptCursorPos);
-			cxDelta = (float)(ptCursorPos.x - m_ptOldCursorPos.x) / 3.0f;
-			cyDelta = (float)(ptCursorPos.y - m_ptOldCursorPos.y) / 3.0f;
-			SetCursorPos(m_ptOldCursorPos.x, m_ptOldCursorPos.y);
+			if (bMouseLocked)
+				HideCursor();
+			else		
+				ShowCursorFix();
+		
+			last_mouse_state = bMouseLocked; 
 		}
 
-		if (m_pPlayer->GetID() == currentShipControllerId)
+		float cxDelta = 0.0f, cyDelta = 0.0f;
+		POINT ptCursorPos;
+		POINT ptCenter = { m_nWndClientWidth / 2, m_nWndClientHeight / 2 };
+		ClientToScreen(m_hWnd, &ptCenter);
+
+		if (bMouseLocked)
 		{
-			if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
+
+			if (GetCursorPos(&ptCursorPos))
 			{
-				if (cxDelta || cyDelta)
-				{
-					if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-						m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-					else
-						m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
-				}
-				if (dwDirection)
-					m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
+				cxDelta = (float)(ptCursorPos.x - ptCenter.x);
+				cyDelta = (float)(ptCursorPos.y - ptCenter.y);
+
+				SetCursorPos(ptCenter.x, ptCenter.y);
 			}
 		}
-		else
+
+
+
+		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
 			if (cxDelta || cyDelta)
 			{
-				m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
+
+					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+				else
+					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
+			if (dwDirection)
+				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
+		
 	}
+	
 }
 
 void CGameFramework::Animate_Scene()
@@ -735,6 +786,18 @@ void CGameFramework::Animate_Scene()
 	float fTimeElapsed = m_GameTimer.GetTimeElapsed();
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
+
+	// Server logic EX
+	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
+	//data.position.x += 10.0f;
+
+	//GetSyncManager().AddPlayerSyncData(ClientNum, data);
+	////m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
+
+	//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
+	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
+
+	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
 
 	//===============================================================
 
@@ -926,6 +989,9 @@ void CGameFramework::FrameAdvance()
 	if (!scene_manager->Get_Active_Scene())
 		return;
 
+	WaitForGpuComplete(GPU_Stage::Compute);
+	WaitForGpuComplete(GPU_Stage::Render);
+	WaitForGpuComplete(GPU_Stage::Post);
 	Change_Scene();
 
 
@@ -952,7 +1018,18 @@ void CGameFramework::FrameAdvance()
 		{
 			int playerId = pendingPlayerCreates.front();
 			pendingPlayerCreates.pop();
-			CreateRemotePlayer(playerId);
+
+			int charId = 0;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id == playerId)
+				{
+					charId = cid;
+					break;
+				}
+			}
+
+			CreateRemotePlayer(playerId, charId);
 		}
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
@@ -990,15 +1067,19 @@ void CGameFramework::FrameAdvance()
 #endif
 	// ====================== [3.5] ShadowMap Phase ======================
 
-	for (int i = 0; i < NUM_CASCADES; i++)
-	{
-		BeginGPUStage(GPU_Stage::Render);
-		PrepareStage(GPU_Stage::Render);
+		for (int i = 0; i < NUM_CASCADES; i++)
 		{
-			scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+			{
+				BeginGPUStage(GPU_Stage::Render);
+				PrepareStage(GPU_Stage::Render);
+
+				scene_manager->Prepare_Render_Scene_ShadowMap(Active_CommandList);
+				scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+
+				EndGPUStage(GPU_Stage::Render, true);
+
+			}
 		}
-		EndGPUStage(GPU_Stage::Render);
-	}
 	
 
 	
@@ -1039,9 +1120,11 @@ void CGameFramework::FrameAdvance()
 		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
 		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList);
 	}
-	EndGPUStage(GPU_Stage::Render);
+	EndGPUStage(GPU_Stage::Render, true);
 
 	// ====================== [5] Post Process Phase - Screen Effects ======================
+
+
 	BeginGPUStage(GPU_Stage::Post);
 	PrepareStage(GPU_Stage::Post);
 	{
@@ -1055,16 +1138,38 @@ void CGameFramework::FrameAdvance()
 		//post_effect_manager->fullscreen_shader->Render(Active_CommandList);
 
 		// Reserve Effects
+		D3D12_GPU_DESCRIPTOR_HANDLE  Blur_Info_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, 1, &Velocity_G_Buffer_SRV_handle);
-		post_effect_manager->Add_Effect(Effect_Type::Outline, 1, &Velocity_G_Buffer_SRV_handle);
-		
+
+		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
+		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
+
+		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
+
+		if (test_button)
+		{
+			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
+
+			post_effect_manager->Set_Zoom_Focus_and_Time({ 0.5, 0.3 }, m_GameTimer.GetTimeElapsed());
+			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
+		}
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
 
-
-		// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
+	}
+	EndGPUStage(GPU_Stage::Post, true);
+	
+	// ====================== [5] Post Process Phase - Overlay Alpha Effects ======================
+	BeginGPUStage(GPU_Stage::Post);
+	PrepareStage(GPU_Stage::Post);
+	{
 
 		// Use previously stored depth buffer values
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1083,20 +1188,37 @@ void CGameFramework::FrameAdvance()
 		{
 			m_pPlayer->Record_Last_Pos();
 		}
+
+		// Check MouseLock & FadeEffect
+		scene_manager->Render_ScreenFade(m_pd3dDevice, Active_CommandList);
+
+
 		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 
-#ifndef WRITE_TEXT_UI
+	}
+	EndGPUStage(GPU_Stage::Post, true);
+
+
+
+
+	// ====================== [6] Text UI Rendering ======================
+
+
+	BeginGPUStage(GPU_Stage::Post);
+	PrepareStage(GPU_Stage::Post);
+	{
 		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index],
 			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+
+#ifdef WRITE_TEXT_UI
+		scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
 #endif
+
 	}
 	EndGPUStage(GPU_Stage::Post);
 
-	// ====================== [6] Text UI Rendering ======================
-#ifdef WRITE_TEXT_UI
-	scene_manager->Render_Scene_UI(SwapChainBuffer_Index);
-#endif
+
 
 	
 
@@ -1200,6 +1322,7 @@ void CGameFramework::SendPacket()
 	int trackCount = m_pPlayer->n_Animation;
 	oss << "," << trackCount;
 
+
 	for (int i = 0; i < trackCount; ++i)
 	{
 		float pos = controller->m_pAnimationTracks[i].m_fPosition;
@@ -1245,6 +1368,8 @@ void CGameFramework::SendPacket()
 	}
 
 
+	std::cout << packet << "\n";
+
 	if (result == SOCKET_ERROR)
 	{
 		std::cerr << "[ERROR] Failed to send PLAYER_UPDATE: " << WSAGetLastError() << std::endl;
@@ -1255,326 +1380,423 @@ void CGameFramework::SendPacket()
 	}
 }
 
+void CGameFramework::SendPacket(const std::string& packet)
+{
+	if (serverSocket == INVALID_SOCKET)
+	{
+		std::cerr << "[ERROR] SendPacket failed: invalid socket" << std::endl;
+		return;
+	}
+
+	int result = send(serverSocket, packet.c_str(), static_cast<int>(packet.size()), 0);
+
+	std::cout << "[SEND] " << packet;
+
+	if (result == SOCKET_ERROR)
+	{
+		std::cerr << "[ERROR] Failed to send packet: " << WSAGetLastError() << std::endl;
+	}
+}
+
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
 	std::cout << "[DEBUG] ProcessReceivedData() called" << std::endl;
 
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
-		std::cout << "[DEBUG] Received my client ID: " << ClientNum << std::endl;
-		bClientIdAssigned = true;
-
-		scene_manager->Get_Active_Scene_Main_Camera();
-		shared_ptr<CCamera>m_pCamera = scene_manager->Get_Active_Scene_Main_Camera();
-
-		if (m_pCamera && m_pPlayer)
-			m_pCamera->SetPlayer(m_pPlayer.get());
-
-		while (!pendingPlayerCreates.empty()) {
-			int pendingId = pendingPlayerCreates.front();
-			pendingPlayerCreates.pop();
-			if (pendingId != ClientNum)
-				CreateRemotePlayer(pendingId);
-
-			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
-			if (pendingUpdateMap.contains(pendingId)) {
-				ProcessReceivedData(pendingUpdateMap[pendingId]);
-				pendingUpdateMap.erase(pendingId);
-			}
-		}
+		HandleClientIdAssignment();
 		return;
 	}
 
 	if (!bClientIdAssigned)
 	{
-		std::cout << "[WARNING] CLIENT_ID not received yet; delaying packet processing: " << receivedData << std::endl;
-		int playerId;
-		if (sscanf_s(receivedData.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
-		{
-			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
-			pendingUpdateMap[playerId] = receivedData;
-		}
+		DelayOrQueuePacket(receivedData);
+		return;
+	}
+
+	if (receivedData.find("PING") == 0)
+	{
+		RespondToPing();
 		return;
 	}
 
 	std::vector<std::string> tokens;
 	std::stringstream ss(receivedData);
 	std::string item;
-
-	while (std::getline(ss, item, ',')) {
+	while (std::getline(ss, item, ','))
+	{
 		tokens.push_back(item);
 	}
 
 	if (tokens.empty()) return;
 
-	if (tokens[0] == "PLAYER_LEAVE" && tokens.size() >= 2)
+	const std::string& cmd = tokens[0];
+
+	if (cmd == "PLAYER_LEAVE" && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
-		std::cout << "\[DEBUG] PLAYER\_LEAVE detected: " << leaveId << std::endl;
-
-
-		std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
-
-		auto it = m_pRemotePlayers.find(leaveId);
-		if (it != m_pRemotePlayers.end())
-		{
-			CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-			if (scene && scene->obj_manager)
-			{
-				auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
-				playerList->erase(
-					std::remove_if(playerList->begin(), playerList->end(),
-						[leaveId](const std::shared_ptr<CGameObject>& obj) {
-					return obj && obj->GetID() == leaveId;
-				}),
-					playerList->end()
-				);
-			}
-
-			m_pRemotePlayers.erase(it);
-		}
-
-
+		HandlePlayerLeave(leaveId);
 		return;
 	}
-
-	if (tokens[0] == "SHIP_CONTROLLER_ID" && tokens.size() >= 2)
+	else if (cmd == "PLAYER_CREATE" && tokens.size() >= 2)
 	{
-		currentShipControllerId = std::stoi(tokens[1]);
-		std::cout << "[DEBUG] Received SHIP_CONTROLLER_ID: " << currentShipControllerId << std::endl;
+		int id = std::stoi(tokens[1]);
+		HandlePlayerCreate(id);
 		return;
 	}
-
-	if (tokens[0] == "SHIP_SYNC" && tokens.size() >= 7)
+	else if (cmd == "CHARACTER_SELECT_APPROVED")
 	{
-		float x = std::stof(tokens[1]);
-		float y = std::stof(tokens[2]);
-		float z = std::stof(tokens[3]);
-		float lookX = std::stof(tokens[4]);
-		float lookY = std::stof(tokens[5]);
-		float lookZ = std::stof(tokens[6]);
-
-		std::cout << "[SYNC] Ship position: (" << x << ", " << y << ", " << z << "), "
-			<< "look: (" << lookX << ", " << lookY << ", " << lookZ << ")" << std::endl;
-
-		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-		if (!scene || !scene->obj_manager) return;
-
-		auto* shipList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
-		for (auto& ship : *shipList)
-		{
-			if (ship && ship->Get_Name() == "player's pirate_ship")
-			{
-				ship->SetPosition(XMFLOAT3(x, y, z));
-				ship->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-			}
-		}
-		//======================================================================================
-		//
-		//      // Parse additional key-value fields, speed=3.5, boost=true, etc....
-		//      std::unordered_map<std::string, std::string> extraFields; -> Declare the fields you want to write additionally.
-		//      for (size_t i = 7; i < tokens.size(); ++i) -> Declare the size next to the existing token size
-		//      {
-		//          size_t eqPos = tokens[i].find('=');
-		//          if (eqPos != std::string::npos && eqPos > 0 && eqPos + 1 < tokens[i].length())
-		//          {
-		//              std::string key = tokens[i].substr(0, eqPos);
-		//              std::string value = tokens[i].substr(eqPos + 1);
-		//              extraFields[key] = value; 
-		//          } -> Add additional information with key and value
-		//      }
-		//
-		//      // Example: if a 'speed' parameter is included, parse and apply it
-		//      float parsedSpeed = 0.0f;
-		//      if (extraFields.find("speed") != extraFields.end())
-		//		{
-		//			parsedSpeed = std::stof(extraFields["speed"]);
-		//			std::cout << "[SHIP_SYNC] Detected speed field: " << parsedSpeed << std::endl;
-		//		}
-		//
-		//      // Update the ship object with position and look direction
-		//      auto ship = scene->obj_manager->Find_Object_By_Name("player's pirate_ship");
-		//      if (ship)
-		//      {
-		//          ship->SetPosition(XMFLOAT3(x, y, z));
-		//          ship->SetLook(XMFLOAT3(lookX, lookY, lookZ));
-		//
-		//          // Apply extended fields if needed
-		//          if (parsedSpeed > 0.0f)
-		//              ship->SetSpeed(parsedSpeed); // Example: apply custom ship speed
-		//      }
-		//  }
-		//==========================================================================================
+		bCharacterSelectApproved = true;
+		std::cout << "[APPROVED] Character selection approved by server.\n";
+		return;
 	}
-
-	if (tokens[0] == "PLAYER_UPDATE")
+	else if (cmd == "CHARACTER_SELECT_DENIED")
+	{
+		bCharacterSelectApproved = false;
+		std::cout << "[DENIED] That character has already been selected by another player.\n";
+		return;
+	}
+	else if (cmd == "CHARACTER_STATUS" && tokens.size() >= 3)
 	{
 		int playerId = std::stoi(tokens[1]);
-		float px = std::stof(tokens[2]);
-		float py = std::stof(tokens[3]);
-		float pz = std::stof(tokens[4]);
-		float lookX = std::stof(tokens[5]);
-		float lookY = std::stof(tokens[6]);
-		float lookZ = std::stof(tokens[7]);
-		int state = std::stoi(tokens[8]);
-
-		XMFLOAT3 pos(px, py, pz);
-		XMFLOAT3 look(lookX, lookY, lookZ);
-
-		ServerAnimationSyncData syncData;
-		syncData.position = pos;
-		syncData.lookVector = look;
-		syncData.currentState = static_cast<State>(state);
-
-		if (tokens.size() > 9) {
-			int trackCount = std::stoi(tokens[9]);
-			for (int i = 0; i < trackCount; ++i) {
-				int baseIdx = 10 + i * 2;
-				if (baseIdx + 1 < tokens.size()) {
-					float animPos = std::stof(tokens[baseIdx]);
-					float animWeight = std::stof(tokens[baseIdx + 1]);
-					syncData.trackPositions.push_back(animPos);
-					syncData.Weights.push_back(animWeight);
-				}
-			}
-		}
-
-		if (playerId == ClientNum)
-		{
-			if (px == 0.0f && py == 0.0f && pz == 0.0f) return;
-
-			if (m_pPlayer)
-			{
-				m_pPlayer->SetPosition(pos);
-				m_pPlayer->SetLookDirection(look);
-
-				if (m_pPlayer->GetStateMachine())
-					m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
-
-				m_pPlayer->ApplySyncData(syncData);
-			}
-		}
-		else
-		{
-			auto it = m_pRemotePlayers.find(playerId);
-			if (it == m_pRemotePlayers.end())
-			{
-				std::queue<int> tempQueue = pendingPlayerCreates;
-				bool alreadyQueued = false;
-				while (!tempQueue.empty())
-				{
-					if (tempQueue.front() == playerId) {
-						alreadyQueued = true; break;
-					}
-					tempQueue.pop();
-				}
-				if (!alreadyQueued) {
-					std::lock_guard<std::mutex> lock(pendingCreateMutex);
-					pendingPlayerCreates.push(playerId);
-					std::cout << "[DEBUG] playerId " << playerId << " added to remote queue" << std::endl;
-				}
-				return;
-			}
-
-			auto remotePlayer = it->second;
-			if (remotePlayer) {
-				std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
-				remotePlayer->SetPosition(pos);
-				remotePlayer->SetLookDirection(look);
-				remotePlayer->ApplySyncData(syncData);
-			}
-		}
+		int charId = std::stoi(tokens[2]);
+		HandleCharacterStatus(playerId, charId);
+		return;
 	}
-
-	//if (tokens[0] == "MONSTER_UPDATE")
+	else if (cmd == "SHIP_SYNC" && tokens.size() >= 7)
+	{
+		HandleShipSync(tokens);
+		return;
+	}
+	else if (cmd == "PLAYER_UPDATE")
+	{
+		HandlePlayerUpdate(tokens, receivedData);
+		return;
+	}
+	else if (cmd == "POSITION_UPDATE")
+	{
+		HandlePositionUpdate(tokens);
+		return;
+	}
+	//else if (cmd == "CHARACTER_PREVIEW_STATUS")
 	//{
-	//	int monsterId = std::stoi(tokens[1]);
-	//	float px = std::stof(tokens[2]);
-	//	float py = std::stof(tokens[3]);
-	//	float pz = std::stof(tokens[4]);
-	//	float lookX = std::stof(tokens[5]);
-	//	float lookY = std::stof(tokens[6]);
-	//	float lookZ = std::stof(tokens[7]);
-	//	int state = std::stoi(tokens[8]);
-	//
-	//	XMFLOAT3 pos(px, py, pz);
-	//	XMFLOAT3 look(lookX, lookY, lookZ);
-	//
-	//	ServerAnimationSyncData syncData;
-	//	syncData.position = pos;
-	//	syncData.lookVector = look;
-	//	syncData.currentState = static_cast<State>(state);
-	//
-	//	if (tokens.size() > 9) 
+	//	std::vector<std::pair<int, int>> hovers;
+	//	for (size_t i = 1; i + 1 < tokens.size(); i += 2)
 	//	{
-	//		int trackCount = std::stoi(tokens[9]);
-	//		for (int i = 0; i < trackCount; ++i)
-	//		{
-	//			int baseIdx = 10 + i * 2;
-	//			if (baseIdx + 1 < tokens.size())
-	//			{
-	//				float animPos = std::stof(tokens[baseIdx]);
-	//				float animWeight = std::stof(tokens[baseIdx + 1]);
-	//				syncData.trackPositions.push_back(animPos);
-	//				syncData.Weights.push_back(animWeight);
-	//			}
-	//		}
+	//		hovers.emplace_back(std::stoi(tokens[i]), std::stoi(tokens[i + 1]));
 	//	}
 	//
+	//	auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
 	//
-	//	int type = std::stoi(tokens[10]);
-	//
-	//
-	//	auto* monsterList = scene_manager->Get_Active_Scene()->obj_manager->Get_Object_List(Object_Type::skinned);
-	//	auto found = std::find_if(monsterList->begin(), monsterList->end(), [&](const auto& obj) {
-	//		return obj && obj->GetID() == monsterId;
-	//		});
-	//
-	//	if (found == monsterList->end())
+	//	if (charScene)
 	//	{
-	//		std::shared_ptr<CGameObject> pMonster;
-	//
-	//		switch (static_cast<Monster_Type>(type))
-	//		{
-	//		case Monster_Type::Fishman:
-	//			pMonster = std::make_shared<CFishManObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
-	//			break;
-	//		case Monster_Type::Anubis:
-	//			pMonster = std::make_shared<CAnubisObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
-	//			break;
-	//		case Monster_Type::Dragon:
-	//			pMonster = std::make_shared<CDragonObject>(m_pd3dDevice, Active_CommandList, scene_manager->Get_Active_Scene()->Get_MRT_GraphicsRootSignature());
-	//			break;
-	//		default:
-	//			return;
-	//		}
-	//
-	//		pMonster->SetID(monsterId);
-	//		pMonster->SetPosition(pos);
-	//		pMonster->SetLookDirection(look);
-	//		pMonster->Object_type = OBJECT_TPYE_MONSTER_SERVER;
-	//		pMonster->Set_Child(pMonster->m_pRootModel);
-	//		pMonster->Set_Active(true);
-	//		pMonster->SetScale(1.0f, 1.0f, 1.0f);
-	//		pMonster->Set_Name("Monster_" + std::to_string(monsterId));
-	//
-	//		scene_manager->Get_Active_Scene()->obj_manager->Add_Object(pMonster, Object_Type::skinned);
-	//		pMonster->ApplySyncData(syncData);
-	//	}
-	//	else
-	//	{
-	//		auto monster = std::dynamic_pointer_cast<CMonsterObject>(*found);
-	//		if (monster)
-	//			monster->ApplySyncData(syncData);
+	//		charScene->UpdateCharacterHovers(hovers, ClientNum);
 	//	}
 	//
+	//	return;
 	//}
-
+	else if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
+	{
+		std::cout << "[CLIENT][RECV] ENTER_SCENE, tokens[1]=" << tokens[1] << std::endl;
+		HandleChangeScene(tokens);
+		return;
+	}
+	else
+	{
+		std::cout << "[WARN] Unknown or invalid packet: " << receivedData << std::endl;
+	}
 }
 
 
-void CGameFramework::CreateRemotePlayer(int playerId)
+void CGameFramework::HandleClientIdAssignment()
 {
+	std::cout << "[DEBUG] Received my client ID: " << ClientNum << std::endl;
+	bClientIdAssigned = true;
+
+	auto scene = scene_manager->Get_Active_Scene();
+
+	if (!m_pPlayer)
+	{
+		int charId = selectedCharacterId;
+		m_pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList,
+			scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get(), charId);
+		m_pPlayer->SetID(ClientNum);
+		m_pPlayer->Set_Name("LocalPlayer_" + std::to_string(ClientNum));
+		m_pPlayer->Set_Active(true);
+		scene->obj_manager->Add_Object(m_pPlayer, Object_Type::player);
+	}
+
+	auto m_pCamera = scene_manager->Get_Active_Scene_Main_Camera();
+	if (m_pCamera && m_pPlayer)
+		m_pCamera->SetPlayer(m_pPlayer.get());
+
+	std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+	if (pendingUpdateMap.contains(ClientNum)) {
+		std::string delayedPacket = pendingUpdateMap[ClientNum];
+		ProcessReceivedData(delayedPacket);
+		pendingUpdateMap.erase(ClientNum);
+	}
+
+	while (!pendingPlayerCreates.empty())
+	{
+		int pendingId = pendingPlayerCreates.front();
+		pendingPlayerCreates.pop();
+
+		if (pendingId != ClientNum)
+		{
+			auto it = std::find_if(characterSelections.begin(), characterSelections.end(),
+				[pendingId](const std::pair<int, int>& p) { return p.first == pendingId; });
+
+			int charId = (it != characterSelections.end()) ? it->second : 0;
+
+			CreateRemotePlayer(pendingId, charId);
+		}
+
+		if (pendingUpdateMap.contains(pendingId)) {
+			ProcessReceivedData(pendingUpdateMap[pendingId]);
+			pendingUpdateMap.erase(pendingId);
+		}
+	}
+}
+
+void CGameFramework::DelayOrQueuePacket(const std::string& packet)
+{
+	std::cout << "[WARNING] CLIENT_ID not assigned yet, delaying packet: " << packet << std::endl;
+	int playerId;
+	if (sscanf_s(packet.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
+	{
+		std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+		pendingUpdateMap[playerId] = packet;
+	}
+}
+
+void CGameFramework::RespondToPing()
+{
+	std::string pong = "PONG\n";
+	send(serverSocket, pong.c_str(), (int)pong.length(), 0);
+	std::cout << "[DEBUG] Received PING → sent PONG\n";
+}
+
+void CGameFramework::HandlePlayerLeave(int leaveId)
+{
+	std::cout << "[DEBUG] PLAYER_LEAVE detected: " << leaveId << std::endl;
+
+	std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
+	auto it = m_pRemotePlayers.find(leaveId);
+	if (it != m_pRemotePlayers.end())
+	{
+		CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+		if (scene && scene->obj_manager)
+		{
+			auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
+			playerList->erase(
+				std::remove_if(playerList->begin(), playerList->end(),
+					[leaveId](const std::shared_ptr<CGameObject>& obj) {
+						return obj && obj->GetID() == leaveId;
+					}),
+				playerList->end()
+			);
+		}
+		m_pRemotePlayers.erase(it);
+	}
+}
+
+void CGameFramework::HandlePlayerCreate(int id)
+{
+	if (id != ClientNum)
+	{
+		std::queue<int> tempQueue = pendingPlayerCreates;
+		bool alreadyQueued = false;
+		while (!tempQueue.empty())
+		{
+			if (tempQueue.front() == id) {
+				alreadyQueued = true;
+				break;
+			}
+			tempQueue.pop();
+		}
+
+		if (!alreadyQueued)
+		{
+			std::lock_guard<std::mutex> lock(pendingCreateMutex);
+			pendingPlayerCreates.push(id);
+			std::cout << "[DEBUG] PLAYER_CREATE received, remote player " << id << " added to queue" << std::endl;
+		}
+	}
+}
+
+void CGameFramework::HandleCharacterStatus(int playerId, int charId)
+{
+	SetCharacterSelection(playerId, charId);
+
+	if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
+	{
+		std::unordered_set<int> lockedIds;
+		for (const auto& [id, cid] : characterSelections)
+		{
+			if (id != ClientNum) lockedIds.insert(cid);
+		}
+		scene->UpdateLockedCharacters(lockedIds);
+		scene->UpdateCharacterSelections(characterSelections, ClientNum);
+	}
+}
+
+void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
+{
+	float x = std::stof(tokens[1]);
+	float y = std::stof(tokens[2]);
+	float z = std::stof(tokens[3]);
+	float lookX = std::stof(tokens[4]);
+	float lookY = std::stof(tokens[5]);
+	float lookZ = std::stof(tokens[6]);
+
+	std::cout << "[SYNC] Ship position: (" << x << ", " << y << ", " << z << "), "
+		<< "look: (" << lookX << ", " << lookY << ", " << lookZ << ")" << std::endl;
+
+	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
+	if (!scene || !scene->obj_manager) return;
+
+	auto* shipList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
+	for (auto& ship : *shipList)
+	{
+		if (ship && ship->Get_Name() == "player's pirate_ship")
+		{
+			ship->SetPosition(XMFLOAT3(x, y, z));
+			ship->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
+		}
+	}
+}
+
+void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
+{
+	std::string sceneName = tokens[1];
+	std::cout << "[CLIENT][HandleChangeScene] received: " << sceneName << std::endl;
+	auto* activeScene = scene_manager->Get_Active_Scene_Ptr();
+	if (activeScene)
+	{
+		Change_Signal& c_signal = activeScene->Get_Change_Signal();
+		c_signal.change = true;
+		c_signal.scene_name = "Game_Stage_Board";
+		c_signal.type = Scene_Type::Board;
+		bEnterSceneByServer = true;
+		std::cout << "[CLIENT][HandleChangeScene] c_signal.change: " << c_signal.change
+			<< ", c_signal.scene_name: " << c_signal.scene_name
+			<< ", bEnterSceneByServer: " << bEnterSceneByServer << std::endl;
+	}
+	else
+	{
+		std::cout << "[CLIENT][HandleChangeScene] [ERROR] Active scene is nullptr!\n";
+	}
+}
+
+void CGameFramework::HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData)
+{
+	int playerId = std::stoi(tokens[1]);
+	float px = std::stof(tokens[2]);
+	float py = std::stof(tokens[3]);
+	float pz = std::stof(tokens[4]);
+	float lookX = std::stof(tokens[5]);
+	float lookY = std::stof(tokens[6]);
+	float lookZ = std::stof(tokens[7]);
+	int state = std::stoi(tokens[8]);
+
+	XMFLOAT3 pos(px, py, pz);
+	XMFLOAT3 look(lookX, lookY, lookZ);
+
+	ServerAnimationSyncData syncData;
+	syncData.position = pos;
+	syncData.lookVector = look;
+	syncData.currentState = static_cast<State>(state);
+
+	if (tokens.size() > 9) {
+		int trackCount = std::stoi(tokens[9]);
+		for (int i = 0; i < trackCount; ++i)
+		{
+			int baseIdx = 10 + i * 2;
+			if (baseIdx + 1 >= tokens.size())
+				break;
+
+			float animPos = std::stof(tokens[baseIdx]);
+			float animWeight = std::stof(tokens[baseIdx + 1]);
+			syncData.trackPositions.push_back(animPos);
+			syncData.Weights.push_back(animWeight);
+		}
+	}
+
+	if (playerId == ClientNum)
+	{
+		if (px == 0.0f && py == 0.0f && pz == 0.0f) return;
+
+		if (!m_pPlayer)
+		{
+			std::lock_guard<std::mutex> lock(pendingUpdateMutex);
+			pendingUpdateMap[playerId] = receivedData;
+			return;
+		}
+
+		m_pPlayer->SetPosition(pos);
+		m_pPlayer->SetLookDirection(look);
+		if (m_pPlayer->GetStateMachine())
+			m_pPlayer->GetStateMachine()->changeState(static_cast<State>(state), Key_Value::None);
+		m_pPlayer->ApplySyncData(syncData);
+	}
+	else
+	{
+		auto it = m_pRemotePlayers.find(playerId);
+		if (it == m_pRemotePlayers.end())
+		{
+			std::queue<int> tempQueue = pendingPlayerCreates;
+			bool alreadyQueued = false;
+			while (!tempQueue.empty())
+			{
+				if (tempQueue.front() == playerId) {
+					alreadyQueued = true; break;
+				}
+				tempQueue.pop();
+			}
+			if (!alreadyQueued) {
+				std::lock_guard<std::mutex> lock(pendingCreateMutex);
+				pendingPlayerCreates.push(playerId);
+				std::cout << "[DEBUG] playerId " << playerId << " added to remote queue" << std::endl;
+			}
+			return;
+		}
+
+		auto remotePlayer = it->second;
+		if (remotePlayer) {
+			std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
+			remotePlayer->SetPosition(pos);
+			remotePlayer->SetLookDirection(look);
+			remotePlayer->ApplySyncData(syncData);
+		}
+	}
+}
+
+void CGameFramework::HandlePositionUpdate(const std::vector<std::string>& tokens)
+{
+	int playerId = std::stoi(tokens[1]);
+	float x = std::stof(tokens[2]);
+	float y = std::stof(tokens[3]);
+	float z = std::stof(tokens[4]);
+
+	if (playerId == ClientNum) return;
+
+	auto it = m_pRemotePlayers.find(playerId);
+	if (it != m_pRemotePlayers.end()) {
+		it->second->SetPosition(XMFLOAT3(x, y, z));
+	}
+}
+
+
+
+void CGameFramework::CreateRemotePlayer(int playerId, int characterId)
+{
+	auto signal = scene_manager->Get_Active_Scene()->Get_Change_Signal();
+	if (signal.type != Scene_Type::Stage_1)
+	{
+		return;
+	}
+
 	std::cout << "[DEBUG] CreateRemotePlayer() called - ID: " << playerId << std::endl;
 
 	if (m_pRemotePlayers.find(playerId) != m_pRemotePlayers.end())
@@ -1590,7 +1812,6 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 		return;
 	}
 
-	
 	auto* playerList = scene->obj_manager->Get_Object_List(Object_Type::player);
 	for (const auto& obj : *playerList)
 	{
@@ -1607,7 +1828,14 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 		return;
 	}
 
-	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get());
+	int charId = -1;
+
+	if (HasCharacterSelection(playerId))
+	{
+		charId = GetCharacterSelection(playerId);
+	}
+
+	auto remotePlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get(), charId);
 
 
 	remotePlayer->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
@@ -1623,12 +1851,15 @@ void CGameFramework::CreateRemotePlayer(int playerId)
 	remotePlayer->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	remotePlayer->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
+
 	scene->obj_manager->Add_Object(remotePlayer, Object_Type::player);
 	scene_manager->RegisterRemotePlayer(playerId, remotePlayer);
 	m_pRemotePlayers[playerId] = remotePlayer;
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 }
+
+
 
 
 void CGameFramework::Disconnect()
@@ -1642,13 +1873,14 @@ void CGameFramework::Disconnect()
 	closesocket(serverSocket);
 	WSACleanup();
 
+
+
 	std::cout << "[INFO] Disconnected from server" << std::endl;
 
 }
 
 void CGameFramework::NetworkLoop()
 {
-
 
 	while (isRunning)
 	{
@@ -1711,19 +1943,6 @@ void CGameFramework::PlayerLeave(int playerId)
 	}
 }
 
-void CGameFramework::SelectCharacter(int characterId)
-{
-	if (lockedCharacterIds.contains(characterId))
-	{
-		std::cout << "[REJECTED] Character " << characterId << " is already selected.\n";
-		return;
-	}
-
-	std::string packet = "CHARACTER_SELECT," + std::to_string(characterId);
-	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
-
-	std::cout << "[REQUEST] Sent character selection: " << characterId << "\n";
-}
 
 std::unordered_map<std::string, std::string> CGameFramework::ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex)
 {
@@ -1740,4 +1959,59 @@ std::unordered_map<std::string, std::string> CGameFramework::ParseKeyValueFields
 		}
 	}
 	return result;
+}
+
+void CGameFramework::SelectCharacter(int characterId)
+{
+	std::string packet = "CHARACTER_SELECT," + std::to_string(characterId) + "\n";
+	SendPacket(packet);
+
+	std::cout << "[REQUEST] Sent character selection: " << characterId << "\n";
+}
+
+void CGameFramework::SendCharacterSelectPacket(int charId)
+{
+	selectedCharacterId = charId;
+
+	std::ostringstream oss;
+	oss << "CHARACTER_SELECT," << ClientNum << "," << charId << "\n";
+	SendPacket(oss.str());
+
+	std::cout << "[INFO] Sent CHARACTER_SELECT with ID: " << charId << std::endl;
+}
+
+int CGameFramework::GetCharacterSelection(int playerId) const
+{
+	for (const auto& [id, charId] : characterSelections)
+	{
+		if (id == playerId) return charId;
+	}
+	return -1;
+}
+
+bool CGameFramework::HasCharacterSelection(int playerId) const
+{
+	return std::any_of(characterSelections.begin(), characterSelections.end(), [playerId](const std::pair<int, int>& p) { return p.first == playerId; });
+}
+
+void CGameFramework::SetCharacterSelection(int playerId, int characterId)
+{
+	for (auto& p : characterSelections)
+	{
+		if (p.first == playerId)
+		{
+			p.second = characterId;
+			return;
+		}
+	}
+	characterSelections.emplace_back(playerId, characterId);
+}
+
+void CGameFramework::SetupCharacterSelectScene()
+{
+	auto charScene = std::make_shared<Character_Select_Scene>();
+
+	scene_manager->Set_Active_Scene("Character_Select");
+
+	charScene->UpdateCharacterSelections(characterSelections, ClientNum);
 }

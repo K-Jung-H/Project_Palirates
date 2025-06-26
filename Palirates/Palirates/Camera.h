@@ -2,6 +2,10 @@
 
 #define ASPECT_RATIO				(float(FRAME_BUFFER_WIDTH) / float(FRAME_BUFFER_HEIGHT))
 
+#define CAMERA_FAR 3000.0f
+#define CAMERA_NEAR 1.0f
+
+
 #define FIRST_PERSON_CAMERA			0x01
 #define SPACESHIP_CAMERA			0x02
 #define THIRD_PERSON_CAMERA			0x03
@@ -21,14 +25,23 @@ struct VS_CB_CAMERA_INFO
 	XMFLOAT3							m_xmf3Position;
 };
 
+struct VS_CB_DEFFERED_CAMERA_INFO
+{
+	XMFLOAT3 m_xmf3Position;
+	float padding0;
+
+	XMFLOAT4X4 m_xmf4x4InvView;
+	XMFLOAT4X4 m_xmf4x4InvProj;
+};
+
 
 class CPlayer;
 
 class CCamera
 {
 protected:
-	float m_fNearPlane = 1.0f; 
-	float m_fFarPlane = 5000.0f;
+	float m_fNearPlane = CAMERA_NEAR;
+	float m_fFarPlane = CAMERA_FAR;
 
 	XMFLOAT3						m_xmf3Position;
 	XMFLOAT3						m_xmf3Right;
@@ -64,11 +77,16 @@ protected:
 	XMFLOAT4X4						m_xmf4x4_Prev_View;
 	XMFLOAT4X4						m_xmf4x4_Prev_Projection;
 
-	ID3D12Resource* m_pd3dcb_Prev_Camera = NULL;
-	VS_CB_PREV_CAMERA_INFO* m_pcbMapped_Prev_Camera = NULL;
-
+	ID3D12Resource* m_pd3dcb_Prev_Camera_Info = NULL; // Last frame camera data - For Camera Motion Blur
+	VS_CB_PREV_CAMERA_INFO* m_pcbMapped_Prev_Camera_Info = NULL;
 
 	//==============================================
+
+	ID3D12Resource* m_pd3dcb_Deffered_Camera_Info = NULL; // For Deffered Render
+	VS_CB_DEFFERED_CAMERA_INFO* m_pcbMapped_Deffered_Camera_Info = NULL;
+	
+	//==============================================
+
 
 private:
 	bool m_bMouseButtonHeld = false;
@@ -166,6 +184,8 @@ public:
 	
 	const BoundingFrustum& Get_Frustum() const { return m_xmFrustum; }
 
+
+	XMFLOAT2 CCamera::WorldToNormalizedScreen(const XMFLOAT3& worldPos, const XMFLOAT4X4& view, const XMFLOAT4X4& proj, const D3D12_VIEWPORT& viewport);
 };
 
 class CSpaceShipCamera : public CCamera

@@ -6,6 +6,7 @@
 
 void MonsterManager::UpdateAI(float deltaTime)
 {
+    std::lock_guard<std::mutex> lock(GetMonsterMutex());
     for (auto& [id, m] : monster_map)
     {
         m.stateElapsedTime += deltaTime;

@@ -23,33 +23,39 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 	XMFLOAT3 eye = mainCamera->GetPosition();
 	XMFLOAT3 lookVec = mainCamera->GetLookVector();
 	XMVECTOR eyeV = XMLoadFloat3(&eye);
-	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec); 
+	XMVECTOR atV = eyeV + XMLoadFloat3(&lookVec);
 	XMVECTOR upV = XMVectorSet(0, 1, 0, 0);
-	XMMATRIX stableView = XMMatrixLookAtLH(eyeV, atV, upV);
+	XMMATRIX view = XMMatrixLookAtLH(eyeV, atV, upV);
 
-	XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
-	XMMATRIX invViewProj = XMMatrixInverse(nullptr, stableView * proj);
+
+
+	float fov = XMConvertToRadians(60.0f);
+	float aspect = ASPECT_RATIO;
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(fov, aspect, nearZ, farZ);
+
+	//XMMATRIX view = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
+	//XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
+	
+
+
+	XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
 
 	float ndc[8][3] = {
 		{-1, -1, 0}, { 1, -1, 0}, { 1,  1, 0}, {-1,  1, 0},
 		{-1, -1, 1}, { 1, -1, 1}, { 1,  1, 1}, {-1,  1, 1}
 	};
 
+
 	for (int i = 0; i < 8; ++i)
 	{
-		float ndcZ = (i < 4) ? 0.0f : 1.0f;
-		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndcZ, 1.0f);
+		XMVECTOR pt = XMVectorSet(ndc[i][0], ndc[i][1], ndc[i][2], 1.0f);
 		pt = XMVector4Transform(pt, invViewProj);
-		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt)); 
-
-		XMVECTOR dir = XMVector3Normalize(pt - eyeV);
-		float z = (i < 4) ? nearZ : farZ;
-		XMVECTOR cornerWS = eyeV + dir * z;
-
+		pt = XMVectorScale(pt, 1.0f / XMVectorGetW(pt));
 		XMFLOAT3 outCorner;
-		XMStoreFloat3(&outCorner, cornerWS);
+		XMStoreFloat3(&outCorner, pt);
 		corners[i] = outCorner;
 	}
+
 	return corners;
 }
 
@@ -59,51 +65,40 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 	m_CascadeProj.clear();
 	m_light_direction = light_direction;
 
-	// ----- Constants for all cascades -----
-	constexpr float SHADOW_MAP_SIZE = static_cast<float>(_SHADOWMAP_WIDTH); // Shadow map texture size (width/height)
-	constexpr float OVERLAP_RATIO = 0.5f;   // Overlap ratio for cascade transition smoothing
-	constexpr float SHADOW_Z_MARGIN = 500.0f; // Z margin to avoid shadow clipping (in light space)
-	constexpr float LIGHT_DIST = 10000.0f; // Distance to move the light camera back along light direction
-
-	float cameraNear = mainCamera->GetNearPlane();
-	float cameraFar = mainCamera->GetFarPlane();
-	float cameraRange = cameraFar - cameraNear;
+	constexpr float SHADOW_Z_MARGIN = 1.0f;
+	constexpr float LIGHT_DIST = 5000.0f;
+	constexpr int SHADOWMAP_RESOLUTION = 2048;
 
 	for (int i = 0; i < NUM_CASCADES; ++i)
 	{
 		float nearZ = splitDepths[i];
 		float farZ = splitDepths[i + 1];
-
-		// 1. Get frustum corners in world space for this cascade
 		std::vector<XMFLOAT3> frustumCorners = CalcFrustumCornersWorld(mainCamera, nearZ, farZ);
 
-		// 2. Calculate the center of the cascade frustum in world space
-		XMFLOAT3 frustumCenter = { 0, 0, 0 };
-		for (const auto& corner : frustumCorners)
+		XMFLOAT3 frustumCenter = { 0.f, 0.f, 0.f };
+		for (const auto& c : frustumCorners)
 		{
-			frustumCenter.x += corner.x;
-			frustumCenter.y += corner.y;
-			frustumCenter.z += corner.z;
+			frustumCenter.x += c.x;
+			frustumCenter.y += c.y;
+			frustumCenter.z += c.z;
 		}
 		frustumCenter.x /= 8.0f;
 		frustumCenter.y /= 8.0f;
 		frustumCenter.z /= 8.0f;
 
-		// 3. Compute light position: move back from frustum center along light direction
-		XMFLOAT3 lightPos = Vector3::Add(frustumCenter, Vector3::Scale(light_direction, -LIGHT_DIST));
-		XMVECTOR lightPosV = XMLoadFloat3(&lightPos);
-		XMVECTOR frustumCenterV = XMLoadFloat3(&frustumCenter);
-		XMMATRIX lightView = XMMatrixLookAtLH(lightPosV, frustumCenterV, XMVectorSet(0, 1, 0, 0));
 
-		// 4. Transform all frustum corners to light space, compute AABB
+		XMVECTOR lightDir = XMVector3Normalize(XMLoadFloat3(&light_direction));
+		XMVECTOR frustumCenterV = XMLoadFloat3(&frustumCenter);
+		XMVECTOR lightPos = frustumCenterV - lightDir * LIGHT_DIST;
+		XMMATRIX lightView = XMMatrixLookAtLH(lightPos, frustumCenterV, XMVectorSet(0, 1, 0, 0));
+
 		XMFLOAT3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
 		XMFLOAT3 max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-		for (const auto& corner : frustumCorners)
+		for (const auto& c : frustumCorners)
 		{
-			XMVECTOR cornerLS = XMVector3TransformCoord(XMLoadFloat3(&corner), lightView);
+			XMVECTOR lightSpace = XMVector3TransformCoord(XMLoadFloat3(&c), lightView);
 			XMFLOAT3 p;
-			XMStoreFloat3(&p, cornerLS);
-
+			XMStoreFloat3(&p, lightSpace);
 			min.x = std::min(min.x, p.x);
 			min.y = std::min(min.y, p.y);
 			min.z = std::min(min.z, p.z);
@@ -112,51 +107,41 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 			max.z = std::max(max.z, p.z);
 		}
 
-		// 5. Expand the AABB to create overlap between cascades (for smoother transitions)
-		float expandX = (max.x - min.x) * OVERLAP_RATIO * 0.5f;
-		float expandY = (max.y - min.y) * OVERLAP_RATIO * 0.5f;
-		min.x -= expandX;
-		max.x += expandX;
-		min.y -= expandY;
-		max.y += expandY;
-
-		// 6. Expand Z bounds in light space to avoid shadow clipping on slopes
 		min.z -= SHADOW_Z_MARGIN;
 		max.z += SHADOW_Z_MARGIN;
 
-		// 7. Texel snapping for stable shadow edges (minimize swimming)
-		float orthoWidth = max.x - min.x;
-		float orthoHeight = max.y - min.y;
-		float texelSizeX = orthoWidth / SHADOW_MAP_SIZE;
-		float texelSizeY = orthoHeight / SHADOW_MAP_SIZE;
+		float width = max.x - min.x;
+		float height = max.y - min.y;
+		float maxSize = std::max(width, height);
+		float texelSize = (2.0f * maxSize) / static_cast<float>(SHADOWMAP_RESOLUTION);
 
-		XMVECTOR frustumCenterLS = XMVector3TransformCoord(frustumCenterV, lightView);
-		frustumCenterLS = XMVectorSet(
-			floorf(XMVectorGetX(frustumCenterLS) / texelSizeX) * texelSizeX,
-			floorf(XMVectorGetY(frustumCenterLS) / texelSizeY) * texelSizeY,
-			XMVectorGetZ(frustumCenterLS),
-			1.0f
+		float cx = (min.x + max.x) * 0.5f;
+		float cy = (min.y + max.y) * 0.5f;
+
+		constexpr float SNAP_UNIT = 32.0f;
+
+		cx = floor(cx / SNAP_UNIT) * SNAP_UNIT;
+		cy = floor(cy / SNAP_UNIT) * SNAP_UNIT;
+
+		//  Snap to texel grid (world-grid 기준 정렬)
+		cx = floorf(cx / texelSize) * texelSize;
+		cy = floorf(cy / texelSize) * texelSize;
+
+		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(
+			cx - maxSize * 0.5f, cx + maxSize * 0.5f,
+			cy - maxSize * 0.5f, cy + maxSize * 0.5f,
+			min.z, max.z
 		);
 
-		XMMATRIX lightViewInv = XMMatrixInverse(nullptr, lightView);
-		XMVECTOR snappedCenterWS = XMVector3TransformCoord(frustumCenterLS, lightViewInv);
-		lightPosV = snappedCenterWS + XMLoadFloat3(&light_direction) * -LIGHT_DIST;
-		lightView = XMMatrixLookAtLH(lightPosV, snappedCenterWS, XMVectorSet(0, 1, 0, 0));
 
-		// 8. Create final orthographic projection matrix for this cascade
-		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(
-			min.x, max.x, min.y, max.y, min.z, max.z);
 
-		// 9. Store view and projection matrices for the cascade
 		XMFLOAT4X4 viewMat, projMat;
 		XMStoreFloat4x4(&viewMat, lightView);
 		XMStoreFloat4x4(&projMat, lightProj);
 		m_CascadeView.push_back(viewMat);
 		m_CascadeProj.push_back(projMat);
-
-		// 10. Store cascade split value for use in the shader (view-space Z or normalized)
 		m_CascadeSplits[i] = farZ;
-		// Option: m_CascadeSplits[i] = (farZ - cameraNear) / cameraRange; // if using normalized splits
+
 	}
 }
 
@@ -186,7 +171,7 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 	//===============================================================
 
 	shadow_map = make_shared<CMaterial>(1);
-	CTexture* shadowTexture = new CTexture(NUM_CASCADES, RESOURCE_TEXTURE2D, 0, 1, 0, 0, NUM_CASCADES, 0, 0, NUM_CASCADES);
+	shared_ptr<CTexture> shadowTexture = make_shared<CTexture>(NUM_CASCADES, RESOURCE_TEXTURE2D, 0, 1, 0, 0, NUM_CASCADES, 0, 0, NUM_CASCADES);
 
 	D3D12_CLEAR_VALUE clearValue{};
 	clearValue.Format = DXGI_FORMAT_D32_FLOAT;
@@ -200,12 +185,12 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 	for (int i = 0; i < NUM_CASCADES; i++)
 	{
-		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice, shadowTexture, i);
+		D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = CDescriptor_Heap::Get_Instance()->CreateDsv(pd3dDevice, shadowTexture.get(), i);
 		shadowTexture->SetDSV(i, dsvHandle);
 	}
 
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, shadowTexture, 0, ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX); 
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, shadowTexture.get(), 0, ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX);
 
 	shadow_map->SetTexture(shadowTexture, 0);
 
@@ -214,24 +199,19 @@ void Shadow_Camera::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12Graphi
 
 void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (m_CascadeView.size() == 0 || m_CascadeProj.size() == 0)
+	if (m_CascadeView.empty() || m_CascadeProj.empty())
 		return;
 
 	shadow_map->Update_TextureShaderVariables(pd3dCommandList);
 
-	XMMATRIX texTransform = XMMatrixSet(
-		0.5f, 0, 0, 0,
-		0, -0.5f, 0, 0,
-		0, 0, 1, 0,
-		0.5f, 0.5f, 0, 1
-	);
+	XMMATRIX texScaleBias = XMMatrixScaling(0.5f, -0.5f, 1.0f) * XMMatrixTranslation(0.5f, 0.5f, 0.0f);
 
 	for (int i = 0; i < NUM_CASCADES; ++i)
 	{
 		XMMATRIX view = XMLoadFloat4x4(&m_CascadeView[i]);
 		XMMATRIX proj = XMLoadFloat4x4(&m_CascadeProj[i]);
-		XMMATRIX viewProj = view * proj;
-		XMMATRIX viewProjTex = XMMatrixTranspose(viewProj * texTransform);
+
+		XMMATRIX viewProjTex = XMMatrixTranspose(view * proj * texScaleBias);
 
 		XMFLOAT4X4 viewProjTexFloat4x4;
 		XMStoreFloat4x4(&viewProjTexFloat4x4, viewProjTex);
@@ -242,14 +222,12 @@ void Shadow_Camera::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommand
 	m_pcb_MappedLightCamera->shadow_pass = 1;
 	m_pcb_MappedLightCamera->light_type = LIGHT_CAMERA_TYPE_DIRECTIONAL;
 	m_pcb_MappedLightCamera->LightDirectionWS = m_light_direction;
-	m_pcb_MappedLightCamera->shadow_bias = 0.005f;
-	m_pcb_MappedLightCamera->shadow_map_size = XMFLOAT2(static_cast<float>(_SHADOWMAP_WIDTH*2), static_cast<float>(_SHADOWMAP_HEIGHT*2));
+	m_pcb_MappedLightCamera->shadow_bias = 0.0f;
+	m_pcb_MappedLightCamera->shadow_map_size = XMFLOAT2(static_cast<float>(_SHADOWMAP_WIDTH), static_cast<float>(_SHADOWMAP_HEIGHT));
 	m_pcb_MappedLightCamera->inv_shadow_map_size = XMFLOAT2(1.0f / _SHADOWMAP_WIDTH, 1.0f / _SHADOWMAP_HEIGHT);
 
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_SHADOW_INFO_CBV_INDEX, m_pd3dcb_LightCamera->GetGPUVirtualAddress());
-
 }
-
 void Shadow_Camera::Update_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList, int cascadeIdx)
 {
 	XMMATRIX view = XMLoadFloat4x4(&m_CascadeView[cascadeIdx]);
@@ -268,7 +246,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE Shadow_Camera::Get_Shadow_Map_DSV(int n) const
 {
 	if (shadow_map)
 	{
-		CTexture* shadowTex = shadow_map->m_ppTextures[0];
+		shared_ptr<CTexture> shadowTex = shadow_map->m_ppTextures[0];
 		if (shadowTex)
 			return shadowTex->GetDSVDescriptorHandle(n);
 	}
@@ -280,7 +258,7 @@ ID3D12Resource* Shadow_Camera::Get_Shadow_Map_Resource(int n) const
 {
 	if (shadow_map)
 	{
-		CTexture* shadowTex = shadow_map->m_ppTextures[0];
+		shared_ptr<CTexture> shadowTex = shadow_map->m_ppTextures[0];
 		if (shadowTex)
 			return shadowTex->GetResource(n);
 	}
@@ -296,12 +274,14 @@ std::shared_ptr<ID3D12RootSignature> CScene::m_Plane_GraphicsRootSignature = NUL
 std::shared_ptr<ID3D12RootSignature> CScene::m_UI_GraphicsRootSignature = NULL;
 
 bool CScene::bOBBRender = false;
-
+bool CScene::Mouse_Lock = false;
+bool CScene::Screen_Fade = false;
 UINT CScene::select_index = 0;
 
 
 CScene::CScene()
 {
+	scene_type = Scene_Type::etc;
 }
 
 CScene::~CScene()
@@ -672,16 +652,16 @@ ID3D12RootSignature* CScene::Create_Plane_GraphicsRootSignature(ID3D12Device* pd
 		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// n = 3, t0 = Base_Texture
-		pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_BASE_TEXTURE_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		// n = 4, t1 = Detail_Texture
-		pd3dRootParameters[4].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[4].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[4].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
-		pd3dRootParameters[4].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[1]);
+		pd3dRootParameters[ROOT_PARAMETER_PLANE_DETAIL_TEXTURE_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		// n = 5, t0 = Height_Map
 		pd3dRootParameters[5].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
@@ -1106,6 +1086,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
+		Dragon->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+
 		Dragon->SetupWeaponCollider();
 		Dragon->SetPosition(1550.0f, m_pTerrain->Get_Mesh_Height(1550.0f, 680.0f), 680.0f);
 		Dragon->SetRotationAxis(XMFLOAT3(1.0f, 0.0f, 0.0f));
@@ -1119,6 +1101,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
+			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 			m->SetupWeaponCollider();
 			m->SetPosition(10.0f * i + 1450.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 1450.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
 			m->Set_Name(obj_name_3);
@@ -1130,7 +1113,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_3/Scene_Name.bin", NULL);
-
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 		test_scene->Set_Name("test_scene");
@@ -1228,7 +1210,7 @@ void CScene::Update_UI()
 		float player_z = m_pPlayer->GetMoveZ();
 		State currentState = m_pPlayer->GetStateMachine()->Get_State();
 		std::wstring stateStr = stateToStringMap[currentState];  
-		State LastState = m_pPlayer->GetStateMachine()->Get_LastState();
+		State LastState = m_pPlayer->GetStateMachine()->Get_State();
 		std::wstring LastStateStr = stateToStringMap[LastState];
 
 
@@ -1287,6 +1269,22 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	HFblock->ui_type = UI_EFFECT_CUT_HP;
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
+	for (int i = 0; i < UI_MONSTER_NUM; ++i)
+	{
+		D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
+		TextureBlock* HBblock = new TextureBlock(HpBack, HBscreenRect, mesh);
+		HBblock->bActive = false;
+		texture_ui_manager->AddMonsterHPBlock(HBblock);
+
+		D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
+		TextureBlock* HFblock = new TextureBlock(HpFront, HFscreenRect, mesh, UILayer::HP_bar);
+		HFblock->bActive = false;
+		HFblock->ui_type = UI_EFFECT_CUT_HP;
+		texture_ui_manager->AddMonsterHPBlock(HFblock);
+	}
+
+	auto t = texture_ui_manager->GetMonsterHPBlocks();
+
 	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	if (select_index == Captain)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
@@ -1309,15 +1307,48 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	replay->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/undo-arrow.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
 	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, replay);
-	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable);
-	REblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Character_Select";
-		c_signal.type = Scene_Type::Lobby;
+	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	REblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Character_Select";
+			c_signal.type = Scene_Type::Lobby;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+
+			}
 		};
 	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	REblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(REblock));
+
+
+	CTexture* return_to_game = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	return_to_game->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_game, 0, 0);
+	D2D1_RECT_F RTG_screenRect = MakeNormalizedRect(0.8f, 0.1f, 0.05f, return_to_game);
+	std::unique_ptr<TextureBlock> RTG_block = std::make_unique<TextureBlock>(return_to_game, RTG_screenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	RTG_block->onClick = [this]()
+		{
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Mouse_Lock = true;
+				Screen_Fade = false;
+			}
+		};
+	RTG_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	RTG_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	RTG_block->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(RTG_block));
+
+	
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1331,6 +1362,7 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
 	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive) {
+
 		std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
 		for (auto& block : blocks)
@@ -1375,6 +1407,91 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 			}
 		}
 	}
+	Update_Monster_HP_bar(currentTime, elapsedTime, 100.0f);
+}
+
+std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(float maxDistance)
+{
+	if (!obj_manager || !m_pPlayer) return nullptr;
+
+	const std::vector<std::shared_ptr<CGameObject>>* allObjects = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!allObjects) return nullptr;
+
+	auto filtered = std::make_shared<std::vector<MonsterUIData>>();
+
+	XMVECTOR playerPos = XMLoadFloat3(&m_pPlayer->GetPosition());
+
+	for (const auto& obj : *allObjects)
+	{
+		if (!obj || !obj->HasType(EObjectType::Monster)) continue;
+
+		if (obj->currentHP <= 0) continue;
+
+		XMVECTOR monsterPosVec = XMLoadFloat3(&obj->GetPosition());
+		float distSq = XMVectorGetX(XMVector3LengthSq(playerPos - monsterPosVec));
+		float normDist = 1.0f - (distSq / (maxDistance * maxDistance));
+		normDist = std::clamp(normDist, 0.0f, 1.0f);
+
+		if (distSq <= maxDistance * maxDistance)
+		{
+			MonsterUIData data;
+			data.position = obj->GetPosition();
+			data.hp = float(obj->currentHP) / obj->maxHP;
+			data.dist = normDist;
+			if (std::string(obj->Get_Name()) == "FishMan") {
+				data.yOffset = 20.0f;
+			}
+			
+			filtered->emplace_back(data);
+		}
+	}
+
+	return filtered;
+}
+
+void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float maxDistance)
+{
+	auto mList = GetNearbyMonstersUIData(maxDistance);
+	if (!mList) return;
+
+	texture_ui_manager->DeactivateAllMonsterHPBlocks();
+	auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
+
+	size_t blockIndex = 0;
+
+	for (const auto& monster : *mList)
+	{
+		if (blockIndex + 1 >= hpBlocks.size()) break;
+
+		XMFLOAT3 headWorldPos = monster.position;
+		headWorldPos.y += monster.yOffset;
+
+		XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
+			headWorldPos,
+			main_Camera->GetViewMatrix(),
+			main_Camera->GetProjectionMatrix(),
+			main_Camera->GetViewport());
+
+		if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
+			continue; 
+
+		float scale = 0.25f + 0.75f * monster.dist;
+
+		TextureBlock* back = hpBlocks[blockIndex++];
+		back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+		back->bActive = true;
+
+		TextureBlock* front = hpBlocks[blockIndex++];
+		front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+		float targetHP = monster.hp;
+		float speed = 15.0f;
+		front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+
+		if (abs(front->hp - targetHP) < 0.001f) {
+			front->hp = targetHP;
+		}
+		front->bActive = true;
+	}
 }
 
 void CScene::ReleaseObjects()
@@ -1400,10 +1517,10 @@ void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComma
 
 
 	fog_noise = make_shared<CMaterial>(1);
-	CTexture* noise_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	shared_ptr<CTexture> noise_texture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 	noise_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Test_Noise.dds", RESOURCE_TEXTURE2D, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, noise_texture, 0, ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, noise_texture.get(), 0, ROOT_PARAMETER_FOG_NOISE_TEXTURE_SRV_INDEX);
 
 	fog_noise->SetTexture(noise_texture, 0);
 }
@@ -1527,6 +1644,22 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		case VK_ESCAPE:
+		{
+			if (Screen_Fade == true && Mouse_Lock == false)
+				::PostQuitMessage(0);
+
+			Mouse_Lock = false;
+			Screen_Fade = true;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, true);
+			}
+		}
+		break;
+
 		case 'Q':
 			{
 			blur_effect = !blur_effect;
@@ -1642,7 +1775,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'Z':
 		{
 			m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
 		case 'X':
@@ -1867,7 +1999,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 void CScene::After_Update_Objects()
 {
-
 #ifdef RENDER_WAVE
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
@@ -1877,7 +2008,8 @@ void CScene::After_Update_Objects()
 
 }
 
-void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
+
+void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
@@ -1886,11 +2018,9 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	{
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
-			float nearZ = 1.01f;
-			float farZ = 5000.0f;
 			int numCascades = NUM_CASCADES;
 			float lambda = 0.7f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(nearZ, farZ, numCascades, lambda);
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, CAMERA_FAR, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
 			shadow_camera->update_shadow = true;
@@ -1899,10 +2029,18 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 
 
+}
+
+void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
+{
+	if (!shadow_camera || shadow_camera->update_shadow == false)
+		return;
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
 	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+
 
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
 
@@ -1914,34 +2052,10 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, shadow_camera.get());
 	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get()); 
 
-
-	/* {
-		for (int i = 0; i < NUM_CASCADES; ++i)
-		{
-			ID3D12Resource* depthResource = fixed_shadow_camera->Get_Shadow_Map_Resource(i);
-			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = fixed_shadow_camera->Get_Shadow_Map_DSV(i);
-			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-			fixed_shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
-
-			// 2. 
-			pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
-			pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-			// 3. 
-			fixed_shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, i);
-			obj_manager->Render_Objects_Shadow_All(pd3dCommandList, fixed_shadow_camera.get());
-
-			::SynchronizeResourceTransition(pd3dCommandList, depthResource, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
-	} */
-
-
 }
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
@@ -2163,7 +2277,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		std::shared_ptr<CTerrainPlayer> player = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, (void*)NULL, i);
 		player->Set_Child(player->m_pRootModel);
 		player->SetupWeaponCollider();
-
+		player->SetID(i);
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
 		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
@@ -2283,30 +2397,61 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	CScene::Render(pd3dDevice, pd3dCommandList);
 }
 
+
 void Character_Select_Scene::UpdatePlayerSelection(int new_index)
 {
-	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
-	int list_size = static_cast<int>(player_list->size());
-	if (list_size == 0)
-		return;
+	//std::cout << "[DEBUG] UpdatePlayerSelection 진입, new_index=" << new_index << std::endl;
 
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+
+	//std::cout << "[DEBUG] player_list.size()=" << player_list->size() << std::endl;
+	//std::cout << "[DEBUG] select_index=" << select_index << std::endl;
+
+	int list_size = static_cast<int>(player_list->size());
+	if (list_size == 0) return;
+
+	int attempts = 0;
 	int next_index = (new_index + list_size) % list_size;
 
-	if (prev_index >= 0 && prev_index < list_size && prev_index != next_index)
-		(*player_list)[prev_index]->SetOutlineColor(0);
+	while (attempts < list_size)
+	{
+		int charId = (*player_list)[next_index]->GetID();
+		if (lockedCharacterIds.find(charId) == lockedCharacterIds.end())
+			break;
+		next_index = (next_index + 1) % list_size;
+		attempts++;
+	}
+	if (attempts >= list_size) return;
 
-	(*player_list)[next_index]->SetOutlineColor(1);
-
-	prev_index = next_index;
 	select_index = next_index;
 
-	if (select_index != -1)
+	for (auto& player : *player_list)
 	{
-		XMFLOAT3 character_pos = (*player_list)[next_index]->GetPosition();
-		m_pLights[3].m_bEnable = true;
-		m_pLights[3].m_xmf3Position = character_pos;
-		m_pLights[3].m_xmf3Position.y += 15.0f;
+		if (!player) continue;
+		int charId = player->GetID();
+		if (lockedCharacterIds.find(charId) != lockedCharacterIds.end())
+			player->SetOutlineColor(0);
+		else if (charId == (*player_list)[select_index]->GetID())
+			player->SetOutlineColor(1);
+		else
+		{
+			bool selectedByOthers = false;
+			for (const auto& [id, cid] : characterSelections)
+			{
+				if (id != ClientNum && cid == charId) { selectedByOthers = true; break; }
+			}
+			player->SetOutlineColor(selectedByOthers ? 2 : 0);
+		}
 	}
+
+	prev_index = select_index;
+
+	// 조명 연출(선택한 캐릭터 강조)
+	XMFLOAT3 character_pos = (*player_list)[select_index]->GetPosition();
+	m_pLights[3].m_bEnable = true;
+	m_pLights[3].m_xmf3Position = character_pos;
+	m_pLights[3].m_xmf3Position.y += 15.0f;
+
 }
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
@@ -2316,6 +2461,22 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		case VK_ESCAPE:
+		{
+			if (Screen_Fade == true && Mouse_Lock == false)
+				::PostQuitMessage(0);
+
+			Screen_Fade = true;
+			Mouse_Lock = false;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, true);
+			}
+		}
+		break;
+
 		case 'Z':
 			UpdatePlayerSelection(select_index - 1);
 			break;
@@ -2323,15 +2484,18 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		case 'C':
 			UpdatePlayerSelection(select_index + 1);
 			break;
-		case VK_RETURN: {
+
+		case VK_RETURN:
+		{
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
-				Set_UI_Layer_Active(blocks, UILayer::Menu, !bMenuActive);
-				bMenuActive = !bMenuActive;
+				Set_UI_Layer_Active(blocks, UILayer::Menu, true);
+				Screen_Fade = true;
 			}
 		}
-					   break;
+		break;
+
 		case 'F':		case 'f':
 		{
 			// Toggle Fog On/Off
@@ -2339,6 +2503,20 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		}
 		break;
 
+		case VK_CONTROL:
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Stage_1";
+			c_signal.type = Scene_Type::Stage_1;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
+		}
 				
 		default:
 			break;
@@ -2374,10 +2552,18 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectbutttonTexture, 0, 0);
 	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, SelectbutttonTexture);
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	SlbTblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Game_Stage_Board";
-		c_signal.type = Scene_Type::Board;
+	SlbTblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Game_Stage_Board";
+			c_signal.type = Scene_Type::Board;
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+
+			}
 		};
 	SlbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	SlbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -2396,6 +2582,29 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	SlTTblock->bActive = false;
 	SlTTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SlTTblock));
+
+	CTexture* return_to_select = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	return_to_select->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_select, 0, 0);
+	D2D1_RECT_F RTS_screenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, return_to_select);
+	std::unique_ptr<TextureBlock> RTS_block = std::make_unique<TextureBlock>(return_to_select, RTS_screenRect, mesh, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade);
+	RTS_block->onClick = [this]()
+		{
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				bMenuActive = false;
+
+			}
+		};
+	RTS_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	RTS_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	RTS_block->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(RTS_block));
+
+
 
 	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/upper-login.dds", RESOURCE_TEXTURE2D, 0);
@@ -2500,9 +2709,12 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	wave_obj->Set_Name("board_scene_wave");
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Base_Texture_0.dds");
 	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Water_Detail_Texture_0.dds");
 	obj_manager->Set_Wave_Object(wave_obj);
+
+
+
 #endif
 
 	//=====================================================
@@ -2766,18 +2978,28 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		pCamera->SetLookDirection(XMFLOAT3(0.0f, -0.866f, -0.5f));
 	}
 
+
 	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 	if (!blocks.empty())
 	{
-		bool is_nearby = Check_Island_Range(300.0f);
+		bool is_nearby = Check_Island_Range(300.0f); 
 
-		if (is_nearby != bMenuActive)
+		if (is_nearby)
 		{
-			bMenuActive = is_nearby; 
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, bMenuActive);
+			if (!bMenuActive && !bClosedByUser)
+			{
+				bMenuActive = true;
+				Screen_Fade = true;
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, true);
+			}
+		}
+		else
+		{
+			bMenuActive = false;
+			bClosedByUser = false;
+			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 		}
 	}
-
 }
 
 void Board_Scene::After_Update_Objects()
@@ -2860,6 +3082,26 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 }
 
+
+void Board_Scene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	obj_manager->Render_Transparent_Objects_All(pd3dCommandList, main_Camera.get());
+
+#ifdef RENDER_PARTICLE
+	if (particle_manager)
+	{
+		particle_manager->Render_All(pd3dCommandList, main_Camera.get());
+	}
+#endif
+
+#ifdef USING_OBB
+	if (bOBBRender)
+		obj_manager->Render_OBB(pd3dCommandList, main_Camera.get());
+#endif
+
+}
+
+
 bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
 	switch (nMessageID)
@@ -2867,6 +3109,22 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 	case WM_KEYDOWN:
 		switch (wParam)
 		{
+		case VK_ESCAPE:
+		{
+			if (Screen_Fade == true && Mouse_Lock == false)
+				::PostQuitMessage(0);
+
+			Screen_Fade = true;
+			Mouse_Lock = false;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, true);
+			}
+		}
+		break;
+
 		case 'Q':
 		{
 			if (test_button)
@@ -2934,6 +3192,8 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			}
 		}
 			break;
+
+
 		default:
 			break;
 		}
@@ -3028,11 +3288,19 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, YesButton, 0, 0);
 	D2D1_RECT_F YesscreenRect = MakeNormalizedRect(0.68f, 0.85f, 0.05f, YesButton);
 	std::unique_ptr<TextureBlock> Yesblock = std::make_unique<TextureBlock>(YesButton, YesscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue | UILayer::Dialogue_Button);
-	Yesblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Stage_1";
-		c_signal.type = Scene_Type::Stage_1;
+	Yesblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Stage_1";
+			c_signal.type = Scene_Type::Stage_1;
 
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
 		};
 	Yesblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Yesblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -3040,61 +3308,139 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Yesblock));
 
-	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
-	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable);
-	TestSkipblock->onClick = [this]() {
-		c_signal.change = true;
-		c_signal.scene_name = "Stage_1";
-		c_signal.type = Scene_Type::Stage_1;
-
-		};
-	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
-	TestSkipblock->hp = 1;
-	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
 
 	CTexture* NoButton = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	NoButton->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, NoButton, 0, 0);
 	D2D1_RECT_F NoscreenRect = MakeNormalizedRect(0.75f, 0.85f, 0.05f, NoButton);
 	std::unique_ptr<TextureBlock> Noblock = std::make_unique<TextureBlock>(NoButton, NoscreenRect, mesh, UILayer::Interactable | UILayer::Dialogue | UILayer::Dialogue_Button);
-	Noblock->onClick = [this]() {
-		std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-		if (!blocks.empty())
+	Noblock->onClick = [this]()
 		{
-			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
-			bMenuActive = false;
-		}
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+				bMenuActive = false;
+				bClosedByUser = true;
+				Screen_Fade = false;
+			}
 		};
 	Noblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	Noblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	Noblock->hp = 1;
 	Noblock->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(Noblock));
+
+
+
+	CTexture* return_to_game = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	return_to_game->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_game, 0, 0);
+	D2D1_RECT_F RTG_screenRect = MakeNormalizedRect(0.7f, 0.1f, 0.05f, return_to_game);
+	std::unique_ptr<TextureBlock> RTG_block = std::make_unique<TextureBlock>(return_to_game, RTG_screenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	RTG_block->onClick = [this]()
+		{
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+
+			}
+		};
+	RTG_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	RTG_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	RTG_block->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(RTG_block));
+
+
+	CTexture* replay = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	replay->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/undo-arrow.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, replay, 0, 0);
+	D2D1_RECT_F REscreenRect = MakeNormalizedRect(0.8f, 0.1f, 0.05f, replay);
+	std::unique_ptr<TextureBlock> REblock = std::make_unique<TextureBlock>(replay, REscreenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	REblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Character_Select";
+			c_signal.type = Scene_Type::Lobby;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+			}
+		};
+	REblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	REblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	REblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(REblock));
+
+
+	D2D1_RECT_F TestSkipscreenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, YesButton);
+	std::unique_ptr<TextureBlock> TestSkipblock = std::make_unique<TextureBlock>(YesButton, TestSkipscreenRect, mesh, UILayer::Interactable | UILayer::Screen_Fade);
+	TestSkipblock->onClick = [this]()
+		{
+			c_signal.change = true;
+			c_signal.scene_name = "Stage_1";
+			c_signal.type = Scene_Type::Stage_1;
+
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			if (!blocks.empty())
+			{
+				Set_UI_Layer_Active(blocks, UILayer::Screen_Fade, false);
+				Screen_Fade = false;
+				Mouse_Lock = true;
+			}
+		};
+	TestSkipblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	TestSkipblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	TestSkipblock->hp = 1;
+	TestSkipblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(TestSkipblock));
 }
 
+void Board_Scene::OnMenuCloseButtonClicked(std::vector<TextureBlock*>& blocks)
+{
+	bMenuActive = false;
+	Screen_Fade = false;
+	bClosedByUser = true;
+	Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+}
 
 //==========================================================================================
+
 
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
+
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+
 
 #ifdef RENDER_PARTICLE
-	particle_manager = make_shared<Particle_Manager>();
-	particle_manager->Create_Particle_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
 
-
-	obj_manager = make_shared<Object_Manager>();
-
-	//=====================================================
-
-	Object_Manager::Reserve_Update();
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 }
 
 void Test_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -3117,3 +3463,18 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 
 //==========================================================================================
+
+int Character_Select_Scene::GetSelectedCharacterId() const
+{
+	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index
+		<< ", player_list.size()=" << player_list->size() << std::endl;
+	if (select_index >= 0 && select_index < player_list->size())
+	{
+		int id = (*player_list)[select_index]->GetID();
+		std::cout << "[DEBUG] Selected character id: " << id << std::endl;
+		return id;
+	}
+	std::cout << "[DEBUG] Invalid select_index or empty player_list!" << std::endl;
+	return -1;
+}

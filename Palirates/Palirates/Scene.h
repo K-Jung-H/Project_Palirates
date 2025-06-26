@@ -89,8 +89,8 @@ struct alignas(16) LightCamera_Info
 
 #define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
-#define _SHADOWMAP_WIDTH 2048 * 3
-#define _SHADOWMAP_HEIGHT 2048 * 3
+#define _SHADOWMAP_WIDTH 2048 
+#define _SHADOWMAP_HEIGHT 2048 
 
 class Shadow_Camera : public CCamera
 {
@@ -135,6 +135,10 @@ class CScene
 public:
 	static bool bOBBRender;
 	static UINT select_index;
+	static bool Mouse_Lock;
+	static bool Screen_Fade;
+
+	Scene_Type scene_type;
 
 	Change_Signal c_signal;
 	float current_time = 0.0f;
@@ -183,16 +187,17 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
-
+	
+	virtual void Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
-	void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Render_SkyBox(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Prepare_Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 
 	void Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -260,7 +265,8 @@ public:
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 	std::vector<TextureBlock*> Get_Texture_List();
 	virtual void Update_Texture_UI(float currentTime, float elapsedTime);
-
+	virtual std::shared_ptr<std::vector<MonsterUIData>> GetNearbyMonstersUIData(float maxDistance);
+	virtual void Update_Monster_HP_bar(float currentTime, float elapsedTime, float maxDistance);
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 	virtual void Bind_Player_UI_Callback();
@@ -271,7 +277,11 @@ class Character_Select_Scene : public CScene
 {
 private:
 	UINT prev_index = -1;
+	UINT select_index = -1;
 
+	std::vector<std::pair<int, int>> characterHovers;
+	std::vector<std::pair<int, int>> characterSelections;
+	int ClientNum = -1;
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -290,6 +300,22 @@ public:
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
 
+	void UpdateCharacterSelections(const std::vector<std::pair<int, int>>& selections, int clientNum)
+	{
+		characterSelections = selections;
+		ClientNum = clientNum;
+		UpdatePlayerSelection(select_index);
+	}
+
+	void SendSelectionToServer(int index);
+
+	int GetSelectedCharacterIndex() const { return select_index; }
+	int GetSelectedCharacterId() const;
+
+	void UpdateCharacterHovers(const std::vector<std::pair<int, int>>& hovers, int clientNum);
+
+	std::unordered_set<int> lockedCharacterIds;
+	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }
 };
 
 class Board_Scene : public CScene
@@ -307,6 +333,8 @@ private:
 	bool focus_button = false;
 	float cameraYOffset{ 0.0f };
 
+	bool bClosedByUser = false;
+
 private:
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -321,10 +349,16 @@ private:
 
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
+	
+	void OnMenuCloseButtonClicked(std::vector<TextureBlock*>& blocks);
+
+
 	void SetcameraYOffset(float offset) { cameraYOffset = offset; }
 };
 

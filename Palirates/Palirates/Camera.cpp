@@ -15,8 +15,8 @@ CCamera::CCamera()
 	m_fPitch = 0.0f;
 	m_fRoll = 0.0f;
 	m_fYaw = 0.0f;
-	m_fNearPlane = 1.0f;
-	m_fFarPlane = 5000.0f;
+	m_fNearPlane = CAMERA_NEAR;
+	m_fFarPlane = CAMERA_FAR;
 	m_xmf3Offset = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	m_fTimeLag = 0.0f;
 	m_xmf3LookAtWorld = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -115,18 +115,24 @@ void CCamera::RegenerateViewMatrix()
 
 void CCamera::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); //256의 배수
+	UINT ncbElementBytes = ((sizeof(VS_CB_CAMERA_INFO) + 255) & ~255); //256
 	m_pd3dcbCamera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbCamera->Map(0, NULL, (void **)&m_pcbMappedCamera);
 
 	//=================================================================================
 
-	ncbElementBytes = ((sizeof(VS_CB_PREV_CAMERA_INFO) + 255) & ~255); //256의 배수
-	m_pd3dcb_Prev_Camera = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+	ncbElementBytes = ((sizeof(VS_CB_PREV_CAMERA_INFO) + 255) & ~255); //256
+	m_pd3dcb_Prev_Camera_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
-	m_pd3dcb_Prev_Camera->Map(0, NULL, (void**)&m_pcbMapped_Prev_Camera);
+	m_pd3dcb_Prev_Camera_Info->Map(0, NULL, (void**)&m_pcbMapped_Prev_Camera_Info);
 
+	//=================================================================================
+
+	ncbElementBytes = ((sizeof(VS_CB_DEFFERED_CAMERA_INFO) + 255) & ~255); //256
+	m_pd3dcb_Deffered_Camera_Info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcb_Deffered_Camera_Info->Map(0, NULL, (void**)&m_pcbMapped_Deffered_Camera_Info);
 
 }
 
@@ -155,23 +161,35 @@ void CCamera::Update_Last_Frame_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 	XMFLOAT4X4 xmf4x4PrevViewProj;
 	XMStoreFloat4x4(&xmf4x4PrevViewProj, xmPrevViewProj);
 
-	memcpy(&m_pcbMapped_Prev_Camera->m_xmf4x4PrevViewProj, &xmf4x4PrevViewProj, sizeof(XMFLOAT4X4));
+	memcpy(&m_pcbMapped_Prev_Camera_Info->m_xmf4x4PrevViewProj, &xmf4x4PrevViewProj, sizeof(XMFLOAT4X4));
 
 
 
-	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress_2 = m_pd3dcb_Prev_Camera->GetGPUVirtualAddress();
+	D3D12_GPU_VIRTUAL_ADDRESS d3dGpuVirtualAddress_2 = m_pd3dcb_Prev_Camera_Info->GetGPUVirtualAddress();
 	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_PREV_CAMERA_CBV_INDEX, d3dGpuVirtualAddress_2);
 
 	m_xmf4x4_Prev_View = m_xmf4x4View;
 	m_xmf4x4_Prev_Projection = m_xmf4x4Projection;
 }
 
-
 void CCamera::Update_Deffered_Render_ShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
-{	
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, 3, &m_xmf3Position, 0);
-}
+{
+	XMMATRIX view = XMLoadFloat4x4(&m_xmf4x4View);
+	XMMATRIX proj = XMLoadFloat4x4(&m_xmf4x4Projection);
 
+	XMMATRIX invView = XMMatrixInverse(nullptr, view);
+	XMMATRIX invProj = XMMatrixInverse(nullptr, proj);
+
+	memcpy(&m_pcbMapped_Deffered_Camera_Info->m_xmf3Position, &m_xmf3Position, sizeof(XMFLOAT3));
+
+	XMStoreFloat4x4(&m_pcbMapped_Deffered_Camera_Info->m_xmf4x4InvView, XMMatrixTranspose(invView));
+	XMStoreFloat4x4(&m_pcbMapped_Deffered_Camera_Info->m_xmf4x4InvProj, XMMatrixTranspose(invProj));
+
+	m_pcbMapped_Deffered_Camera_Info->padding0 = 0.0f;
+
+
+	pd3dCommandList->SetGraphicsRootConstantBufferView(ROOT_PARAMETER_POST_CAMERA_POSITION_INDEX, m_pd3dcb_Deffered_Camera_Info->GetGPUVirtualAddress());
+}
 
 void CCamera::ReleaseShaderVariables()
 {
@@ -266,6 +284,38 @@ void CCamera::UpdateFocusTracking(XMFLOAT3& new_camera_pos)
 	SetLookDirection(toFocus);
 	RegenerateViewMatrix();
 }
+
+
+XMFLOAT2 CCamera::WorldToNormalizedScreen(
+	const XMFLOAT3& worldPos,
+	const XMFLOAT4X4& view,
+	const XMFLOAT4X4& proj,
+	const D3D12_VIEWPORT& viewport)
+{
+	XMMATRIX mView = XMLoadFloat4x4(&view);
+	XMMATRIX mProj = XMLoadFloat4x4(&proj);
+
+	XMVECTOR pos = XMLoadFloat3(&worldPos);
+	pos = XMVector3Transform(pos, mView);           // 월드 → 뷰
+	pos = XMVectorSetW(pos, 1.0f);
+	pos = XMVector4Transform(pos, mProj);           // 뷰 → 클립
+
+	XMFLOAT4 projected;
+	XMStoreFloat4(&projected, pos);
+
+	if (projected.w <= 0.0f)
+		return XMFLOAT2(-1.0f, -1.0f); // 클립 공간 바깥
+
+	// NDC (-1~+1) → 정규화 화면 공간 (0~1)
+	float ndcX = projected.x / projected.w;
+	float ndcY = projected.y / projected.w;
+
+	float screenX = ndcX * 0.5f + 0.5f;            // 좌(-1) → 0, 우(+1) → 1
+	float screenY = 1.0f - (ndcY * 0.5f + 0.5f);    // 위(+1) → 0, 아래(-1) → 1 (Y축 반전)
+
+	return XMFLOAT2(screenX, screenY);
+}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CSpaceShipCamera

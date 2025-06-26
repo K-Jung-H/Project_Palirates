@@ -34,4 +34,6 @@ public:
     virtual void animate(float Elapsedtime);
     virtual void update();
 
+    XMFLOAT3 inputDirection = { 0.0f, 0.0f, 0.0f };
+    float test_value = 0;
 };

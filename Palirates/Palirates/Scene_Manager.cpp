@@ -10,6 +10,16 @@ Scene_Manager::Scene_Manager()
 
 Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12CommandQueue* pd3dCommandQueue, ID3D12Resource** ppd3dRenderTargets, UINT nWidth, UINT nHeight)
 {
+    if (Fade_shader == NULL)
+    {
+        auto com_deleter = [](ID3D12RootSignature* p) { if (p) p->Release(); };
+
+        if (!Empty_GraphicsRootSignature)
+            Empty_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_EmptyRootSignature(pd3dDevice), com_deleter);
+
+        Fade_shader = new ScreenFade_Shader();
+        Fade_shader->CreateShader(pd3dDevice, NULL, Empty_GraphicsRootSignature);
+    }
 
 #ifdef WRITE_TEXT_UI
     text_ui_renderer = make_shared<Text_UI_Renderer>(nFrames, pd3dDevice, pd3dCommandQueue, ppd3dRenderTargets, nWidth, nHeight);
@@ -24,6 +34,51 @@ Scene_Manager::~Scene_Manager()
     }
     sceneCache.clear();
 
+}
+
+ID3D12RootSignature* Scene_Manager::Create_EmptyRootSignature(ID3D12Device* pd3dDevice)
+{
+    ID3D12RootSignature* pRootSignature = nullptr;
+
+    // No root parameters, no static samplers
+    D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+    rootSignatureDesc.NumParameters = 0;
+    rootSignatureDesc.pParameters = nullptr;
+    rootSignatureDesc.NumStaticSamplers = 0;
+    rootSignatureDesc.pStaticSamplers = nullptr;
+    rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    ID3DBlob* signatureBlob = nullptr;
+    ID3DBlob* errorBlob = nullptr;
+    HRESULT hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signatureBlob, &errorBlob);
+
+    if (FAILED(hr))
+    {
+        if (errorBlob)
+        {
+            OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+            errorBlob->Release();
+        }
+        return nullptr;
+    }
+
+    hr = pd3dDevice->CreateRootSignature(
+        0,
+        signatureBlob->GetBufferPointer(),
+        signatureBlob->GetBufferSize(),
+        IID_PPV_ARGS(&pRootSignature)
+    );
+
+    if (FAILED(hr))
+    {
+        OutputDebugStringA("[Empty RS] Root Signature creation failed!\n");
+        if (signatureBlob) signatureBlob->Release();
+        return nullptr;
+    }
+
+    if (signatureBlob) signatureBlob->Release();
+
+    return pRootSignature;
 }
 
 void Build_Scene(Scene_Type scene_type, string scene_name)
@@ -84,6 +139,24 @@ bool Scene_Manager::Find_Scene(std::string_view sceneName)
     return false;
 }
 
+bool Scene_Manager::Get_Active_Scene_Mouse_State()
+{
+    if (activeScene == nullptr)
+        return false;
+
+    bool mouse_locked = CScene::Mouse_Lock;
+    return mouse_locked;
+}
+
+bool Scene_Manager::Get_Active_Scene_Fade_State()
+{
+    if (activeScene == nullptr)
+        return false;
+
+    bool Screen_Faded = CScene::Screen_Fade;
+    return Screen_Faded;
+}
+
 void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 
@@ -94,6 +167,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     {
         std::shared_ptr<Character_Select_Scene> character_select_scene = std::make_shared<Character_Select_Scene>();
         character_select_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        character_select_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, character_select_scene);
         std::shared_ptr<Observer> select_scene_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, character_select_scene->Get_MRT_GraphicsRootSignature());
@@ -107,6 +181,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     {
         std::shared_ptr<Board_Scene> game_board_scene = std::make_shared<Board_Scene>();
         game_board_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        game_board_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, game_board_scene);
         std::shared_ptr<Observer> game_board_observer = std::make_shared<Observer>(pd3dDevice, pd3dCommandList, game_board_scene->Get_MRT_GraphicsRootSignature());
@@ -116,13 +191,14 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
     case Stage_1:
     {
-
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
 
         Register_Scene(scene_name, in_stage_scene);
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
         pPlayer->SetupWeaponCollider();
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
@@ -136,6 +212,27 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     }
     break;
 
+    case Test:
+    {
+        std::shared_ptr<Test_Scene> in_stage_scene = std::make_shared<Test_Scene>();
+        in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
+
+        Register_Scene(scene_name, in_stage_scene);
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), in_stage_scene->select_index);
+        pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
+        pPlayer->SetupWeaponCollider();
+        pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
+        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
+        in_stage_scene->Bind_Player_UI_Callback();
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
+    }
+    break;
     case etc:
     default:
         break;
@@ -143,9 +240,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
 
 
-#ifdef WRITE_TEXT_UI
-        it->second->Build_Text_UI(text_ui_renderer.get());
-#endif
+
 
 
 }
@@ -342,6 +437,15 @@ void Scene_Manager::Unload_Scene()
     activeScene.reset();
 }
 
+void Scene_Manager::Prepare_Render_Scene_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+    if (activeScene)
+    {
+        activeScene->Prepare_Shadow_Map_Render(pd3dCommandList);
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+}
 
 void Scene_Manager::Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
 {
@@ -416,7 +520,6 @@ void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3
     if (MRT_shader)
         MRT_shader->OnPostRenderTarget(pd3dCommandList);
 }
-
 void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
@@ -464,17 +567,29 @@ void Scene_Manager::Render_Scene_UI(UINT nFrame)
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 #endif
 }
-
 void Scene_Manager::Render_Scene_Texture_UI(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime)
 {
     if (activeScene) {
-        if (activeScene->texture_ui_manager) {
+        if (activeScene->texture_ui_manager) 
+        {
             activeScene->texture_ui_manager->RenderAll(cmdList, currentTime, elapsedTime);
             activeScene->current_time = currentTime;
         }
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+}
+
+void Scene_Manager::Render_ScreenFade(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+    if (Get_Active_Scene_Fade_State())
+    {
+        pd3dCommandList->SetGraphicsRootSignature(Empty_GraphicsRootSignature.get());
+        Fade_shader->Setting_Render(pd3dCommandList);
+
+        pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        pd3dCommandList->DrawInstanced(6, 1, 0, 0);
+    }
 }
 
 void Scene_Manager::ReleaseUploadBuffers()
@@ -484,6 +599,9 @@ void Scene_Manager::ReleaseUploadBuffers()
         pair.second->ReleaseUploadBuffers();
     }
 }
+
+
+
 
 //===============¼­¹ö===============
 CPlayer* Scene_Manager::GetPlayerById(int playerId)
