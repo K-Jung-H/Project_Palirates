@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+*.zip
 
 # Compiled Object files
 *.slo
@@ -31,6 +32,13 @@
 *.out
 *.app
 
+<<<<<<< Server---KJH
+=======
+/palirates_server/.vs
+/palirates_server/palirates_server/x64
+/palirates_server/x64
+
+>>>>>>> main
 /Palirates/.vs
 /Palirates/Palirates/x64
 /Palirates/x64
