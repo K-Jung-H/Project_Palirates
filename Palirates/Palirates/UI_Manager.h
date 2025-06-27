@@ -2,7 +2,7 @@
 #include "Shader.h"
 #include "Timer.h"
 
-#define UI_MONSTER_NUM				20
+#define MONSTER_HP_UI_MAX_NUM				20
 
 struct MonsterUIData
 {
