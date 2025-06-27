@@ -1,7 +1,9 @@
 #pragma once
-#include <iostream>
+#include "GameObject.h"
 
-enum class EState : int
+
+
+enum class Player_State : int
 {
     Idle,
     Walk,
@@ -12,43 +14,26 @@ enum class EState : int
     ETC
 };
 
-class Player
+
+
+class Player : public Skinned_GameObject
 {
+private:
+    int player_id;
+    Player_State player_state;
+
 public:
-    int id;
-    float x, y, z;
-    float lookX, lookY, lookZ;
-    EState state;
 
-    Player(int playerId, float startX, float startY, float startZ,
-        float startLookX, float startLookY, float startLookZ, int startState = 1)
-        : id(playerId), x(startX), y(startY), z(startZ),
-        lookX(startLookX), lookY(startLookY), lookZ(startLookZ),
-        state((startState >= 0 && startState <= static_cast<int>(EState::ETC))
-            ? static_cast<EState>(startState)
-            : EState::Idle) {}
+    Player(int playerId);
+    virtual ~Player() {}
 
-    void setPosition(float newX, float newY, float newZ)
-    {
-        x = newX;
-        y = newY;
-        z = newZ;
-    }
+    Player_State GetState() { return player_state; }
+    void SetState(Player_State newState) { player_state = newState; }
 
-    void setLookVec(float newLookX, float newLookY, float newLookZ)
-    {
-        lookX = newLookX;
-        lookY = newLookY;
-        lookZ = newLookZ;
-    }
+    void key_input(uint32_t keyState);
+    virtual void animate(float Elapsedtime);
+    virtual void update();
 
-    void setState(::EState newState)
-    {
-        state = newState;
-    }
-
-    void printInfo()
-    {
-        std::cout << "캐릭터 " << id << " 위치: (" << x << ", " << y << ", " << z << "), 상태: " << static_cast<int>(state) << std::endl;
-    }
+    XMFLOAT3 inputDirection = { 0.0f, 0.0f, 0.0f };
+    float test_value = 0;
 };

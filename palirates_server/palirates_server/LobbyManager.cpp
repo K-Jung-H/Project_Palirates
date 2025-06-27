@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include "LobbyManager.h"
 
 LobbyManager::LobbyManager() : nextRoomId(1) {}

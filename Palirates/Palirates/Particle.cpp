@@ -639,10 +639,10 @@ void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 	particle_Material = std::make_shared<CMaterial>(1);
 
-	CTexture* base_texture = new CTexture(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+	shared_ptr<CTexture> base_texture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 	base_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, base_texture, 0, 3);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, base_texture.get(), 0, 3);
 
 	particle_Material->SetTexture(base_texture, 0);
 }

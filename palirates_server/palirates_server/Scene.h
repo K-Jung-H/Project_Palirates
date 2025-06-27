@@ -1,63 +1,46 @@
 #pragma once
 #include <unordered_map>
-#include <iostream>
-#include "GameCharacter.h"
+#include <memory>
+#include "stdafx.h"
 #include "Player.h"
 #include "Monster.h"
 
-enum SceneState
+enum class Scene_Type
 {
-    Character_Select,
-    Game_Board,
-    In_Stage
+    None,
+    Lobby,
+    Board,
+    Stage,
 };
-
-
 
 class Scene
 {
 private:
-    std::unordered_map<int, GameCharacter> players;
-    SceneState state;
+    mutable std::recursive_mutex sceneMutex;
+    std::unordered_map<int, std::shared_ptr<Player>> player_data_map;
+    std::unordered_map<int, Monster> monster_map;
+    Scene_Type sceneType = Scene_Type::None;
+
+    mutable std::recursive_mutex player_mutex;
+    mutable std::recursive_mutex monster_mutex;
 
 public:
+    std::recursive_mutex& GetSceneMutex() const;
+    std::shared_ptr<Player> getPlayer(int id);
+    std::shared_ptr<Player> addPlayer(int id, XMFLOAT3 pos, XMFLOAT3 look);
+    void removePlayer(int id);
+    void update_player_keyinput(int id, uint32_t keystate);
+    void update_player_Position();
+    void update_player_LookV(int id, XMFLOAT3 new_lookV);
 
-    Scene() : state(In_Stage) {}
-    SceneState getState() const { return state; }
-    void setState(SceneState newState) { state = newState; }
+    void updatePlayerPosition(int id, float x, float y, float z,
+        float lookX, float lookY, float lookZ, Player_State state);
 
-    void updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state);
+    void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
+    
+    Scene_Type GetSceneType() const { return sceneType; }
+    void SetSceneType(Scene_Type type) { sceneType = type; }
 
-    const std::unordered_map<int, GameCharacter>& getPlayers() const
-    {
-        return players;
-    }
+    const std::unordered_map<int, std::shared_ptr<Player>>& getPlayers() const;
 
-    const GameCharacter* getPlayer(int id) const
-    {
-        auto it = players.find(id);
-        return it != players.end() ? &it->second : nullptr;
-    }
-
-    GameCharacter* getPlayer(int id);
-
-    void addPlayer(int id)
-    {
-        //players[id] = GameCharacter();
-    }
-
-    void removePlayer(int id)
-    {
-        players.erase(id);
-    }
-
-    const std::unordered_map<int, Monster>& getMonsters() const { return monsterMap; }
-    void addMonster(int id, const Monster& monster);
-    void addMonster(int id, float x, float y, float z, float lookX, float lookY, float lookZ, int hp, int state, Monster_Type type);
-
-    void printScene();
-    Player* getPlayerById(int id);
-    std::unordered_map<int, Player*> playerMap;
-    std::unordered_map<int, Monster> monsterMap;
-    void updatePlayerAnimation(int playerId, const std::vector<float>& trackPositions, const std::vector<float>& trackWeights);
 };

@@ -10,7 +10,6 @@
 // CPlayer
 
 CPlayer::CPlayer() 
-
 {
 	
 	m_StateMachine = std::make_unique<PlayerStateMachine>(this);

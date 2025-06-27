@@ -1,14 +1,16 @@
 #pragma once
 #include <unordered_map>
+#include <memory>
 #include "Scene.h"
 
-class Scene_Manager
+class SceneManager
 {
 private:
-    std::unordered_map<int, Scene> scenes;
+    std::unordered_map<int, std::shared_ptr<Scene>> scenes;
 
 public:
+    std::shared_ptr<Scene> getScene(int clientId);
     void addScene(int clientId);
-    Scene* getScene(int clientId);
-   std::unordered_map<int, Scene>& getAllScenes() { return scenes; }
+    void removeScene(int clientId);
+    const std::unordered_map<int, std::shared_ptr<Scene>>& getAllScenes() const;
 };

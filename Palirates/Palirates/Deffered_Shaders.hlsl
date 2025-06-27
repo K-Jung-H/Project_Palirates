@@ -6,12 +6,13 @@
 
 Texture2D<float4> T_Albedo_Color : register(t0);
 Texture2D<float4> T_World_Normal_and_Camera_Distance : register(t1);
-Texture2D<float4> T_Velocity : register(t2);
-Texture2D<float4> T_ViewSpace_Z : register(t3);
+Texture2D<float4> T_Blur_Info : register(t2);
+Texture2D<float4> T_Velocity : register(t3);
+Texture2D<float4> T_ViewSpace_Z : register(t4);
 
-// t4 = Light_Material_Info
-Texture2D<float4> T_Fog_Noise : register(t5);
-Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t6); // t6 ~ t10
+// t5 = Light_Material_Info
+Texture2D<float4> T_Fog_Noise : register(t6);
+Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t11
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -259,6 +260,9 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
 
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
+    
+
+    
     if (isEmptyPixel && Fog_Trigger == 0)
     {
         discard;
@@ -347,8 +351,6 @@ float4 PS_FullScreen(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float3 colorTexture = Screen_Texture.Sample(gssWrap, input.uv).xyz;
 
     return float4(colorTexture, 1.0f);
-    
-
 }
 
 

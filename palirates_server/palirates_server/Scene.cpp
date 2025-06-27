@@ -1,78 +1,92 @@
+#include "stdafx.h"
 #include "Scene.h"
-#include "Player.h"
 
-void Scene::updatePlayerPosition(int clientId, float x, float y, float z, float lookX, float lookY, float lookZ, EState state)
+std::shared_ptr<Player> Scene::getPlayer(int id)
 {
-    Player* player = getPlayerById(clientId);
-
-    if (!player)
-    {
-        player = new Player(clientId, x, y, z, lookX, lookY, lookZ, static_cast<int>(state));
-        //players[clientId] = *player;
-
-        player->setPosition(x, y, z);
-        player->setState(state);
-        player->setLookVec(lookX, lookY, lookZ);
-
-        playerMap[clientId] = player;
-
-        std::cout << "[INFO] [자동 생성] Player 객체 생성 및 등록: ID=" << clientId << std::endl;
-    }
-    else
-    {
-        player->setPosition(x, y, z);
-        player->setState(state);
-        player->setLookVec(lookX, lookY, lookZ);
-    }
-
-    // std::cout << "[DEBUG] updatePlayerPosition → ID=" << clientId
-    //     << " Pos=(" << x << "," << y << "," << z << ")"
-    //     << " State=" << state << std::endl;
-
-
-}
-
-void Scene::addMonster(int id, float x, float y, float z, float lookX, float lookY, float lookZ, int hp, int state, Monster_Type type)
-{
-    Monster m(id, x, y, z, lookX, lookY, lookZ, hp, state, type);
-    addMonster(id, m);
-}
-
-void Scene::addMonster(int id, const Monster& monster)
-{
-    monsterMap[id] = monster;
-}
-
-void Scene::printScene()
-{
-    std::cout << "현재 씬의 플레이어 목록:\n";
-    for (const auto& [id, player] : players)
-    {
-        std::cout << "플레이어 " << id << ": (" << player.x << ", " << player.y << ", " << player.z << ") 상태: " << static_cast<int>(player.state) << std::endl;
-    }
-}
-
-Player* Scene::getPlayerById(int id)
-{
-    auto it = playerMap.find(id);
-    if (it != playerMap.end())
-    {
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    auto it = player_data_map.find(id);
+    if (it != player_data_map.end())
         return it->second;
-    }
     return nullptr;
 }
 
-void Scene::updatePlayerAnimation(int playerId, const std::vector<float>& trackPositions, const std::vector<float>& trackWeights)
+std::shared_ptr<Player> Scene::addPlayer(int id, XMFLOAT3 pos, XMFLOAT3 look)
 {
-    GameCharacter* player = getPlayer(playerId);
-    if (!player) return;
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    auto player = std::make_shared<Player>(id);
 
-    player->animPositions = trackPositions;
-    player->animWeights = trackWeights;
+    player->SetPosition(pos);
+    player->SetLook(look);
+
+    player_data_map[id] = player;
+
+    return player;
 }
 
-GameCharacter* Scene::getPlayer(int id)
+void Scene::removePlayer(int id)
 {
-    if (players.find(id) == players.end()) return nullptr;
-    return &players[id];
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    player_data_map.erase(id);
+}
+
+void Scene::update_player_keyinput(int id, uint32_t keystate)
+{
+    auto player = getPlayer(id);
+    if (!player) return;
+
+    player->key_input(keystate);
+}
+
+void Scene::update_player_Position()
+{
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    for (auto& [id, player] : player_data_map)
+    {
+        player->update();
+    }
+}
+
+void Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
+{
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    auto player = getPlayer(id);
+    if (!player) return;
+
+    player->SetLook(new_lookV);
+
+}
+
+void Scene::updatePlayerPosition(int id, float x, float y, float z, float lookX, float lookY, float lookZ, Player_State state)
+{
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    auto player = getPlayer(id);
+    if (!player) return;
+
+    XMFLOAT3 new_lookV = { lookX, lookY, lookZ };
+
+    player->SetPosition(x, y, z);
+    player->SetLook(new_lookV);
+    player->SetState(state);
+}
+
+void Scene::updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights)
+{
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    auto player = getPlayer(id);
+    if (!player) return;
+
+
+    player->SetAnimPositions(positions);
+    player->SetAnimWeights(weights);
+}
+
+const std::unordered_map<int, std::shared_ptr<Player>>& Scene::getPlayers() const
+{
+    std::lock_guard<std::recursive_mutex> lock(this->GetSceneMutex());
+    return player_data_map;
+}
+
+std::recursive_mutex& Scene::GetSceneMutex() const
+{
+    return sceneMutex;
 }

@@ -11,6 +11,7 @@ enum GameState
     IN_GAME_STATE
 };
 
+
 struct GameRoom
 {
     int roomId;
