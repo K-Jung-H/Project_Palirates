@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Scene.h"
 
+int Scene::active_client_num;
+
 Scene::Scene(Scene_Type type)
     : sceneType(type)
 {
@@ -83,11 +85,15 @@ Scene_Type Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (scene_transitionTriggered)
+    if (Change_Scene_Trigger)
+        return Scene_Type::Stage_1;
+    else
         return Scene_Type::None;
+}
 
-    scene_transitionTriggered = true;
-    return Scene_Type::Stage_1;
+void Scene::Update_Scene()
+{
+
 }
 
 //======================================================
@@ -96,24 +102,24 @@ bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    // 해당 캐릭터가 이미 다른 클라이언트에 의해 선택된 경우
     auto it = characterSlots.find(characterId);
-    if (it != characterSlots.end() && it->second.first != clientId)
+    if (it != characterSlots.end())
     {
-        return false; // 중복 선택 불가
+        int ownerId = it->second.first;
+        bool ownerReady = it->second.second;
+
+        if (ownerId != clientId && ownerReady)
+        {
+            return false;
+        }
     }
 
-    // 먼저 이전 선택 제거
     for (auto it = characterSlots.begin(); it != characterSlots.end(); )
     {
         if (it->second.first == clientId)
-        {
             it = characterSlots.erase(it);
-        }
         else
-        {
             ++it;
-        }
     }
 
     characterSlots[characterId] = { clientId, isReady };
@@ -126,17 +132,19 @@ bool Lobby_Scene::IsAllReadyAndValid()
 
     if (characterSlots.empty()) return false;
 
-    if (characterSlots.size() < getPlayers().size()) return false;
+    int readyCount = 0;
 
     for (const auto& [charId, pair] : characterSlots)
     {
-        if (!pair.second) return false; // 아직 준비 안 된 슬롯 존재
+        if (pair.second) // 레디 상태인 경우
+            ++readyCount;
     }
 
-    return true;
+    if (readyCount == active_client_num)
+        int a = 1;
+
+    return (readyCount == active_client_num);
 }
-
-
 
 void Lobby_Scene::ResetCharacterSlot(int clientId)
 {
@@ -155,13 +163,63 @@ void Lobby_Scene::ResetCharacterSlot(int clientId)
     }
 }
 
+
 Scene_Type Lobby_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (!IsAllReadyAndValid() || scene_transitionTriggered)
+
+    if (Change_Scene_Trigger)
+        return Scene_Type::Board;
+    else
         return Scene_Type::None;
 
-    scene_transitionTriggered = true;
-    return Scene_Type::Board;
+}
+
+
+void Lobby_Scene::Update_Scene()
+{
+
+    Change_Scene_Trigger = IsAllReadyAndValid();
+
+}
+
+
+//======================================================
+
+Scene_Type Board_Scene::CheckSceneTransition()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+
+    if (Change_Scene_Trigger)
+        return Scene_Type::Stage_1;
+
+    return Scene_Type::None;
+}
+
+
+void Board_Scene::Update_Scene()
+{
+
+}
+
+
+//======================================================
+
+Scene_Type Stage_Scene::CheckSceneTransition()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (Change_Scene_Trigger)
+        return Scene_Type::Stage_1;
+    else
+        return Scene_Type::None;
+
+}
+
+
+void Stage_Scene::Update_Scene()
+{
+
 }

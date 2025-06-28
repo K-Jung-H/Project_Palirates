@@ -70,6 +70,8 @@ private:
     std::mutex characterMutex;
     std::mutex activeSceneMutex;
 
+    std::atomic<int> activeClientCount = 0;
+
     std::shared_ptr<Scene> activeScene;
 
     int nextClientId = 0;

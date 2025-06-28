@@ -591,8 +591,6 @@ bool CGameFramework::Change_Scene()
 			Change_Call_By_Server = -1;
 			change_signal.change = false;
 
-			std::cout << "[DEBUG] 씬 전환 완료: " << c_signal.scene_name << std::endl;
-			return true;
 		}
 	}
 	else // 오프라인 인 경우
@@ -605,14 +603,6 @@ bool CGameFramework::Change_Scene()
 	if (!c_signal.change)
 		return false;
 
-
-	//if (c_signal.scene_name == "Character_Select")
-	//{
-	//	auto* charScene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr());
-	//	if (charScene) {
-	//		charScene->UpdateCharacterSelections(characterSelections, ClientNum);
-	//	}
-	//}
 
 	if (scene_manager->Find_Scene(c_signal.scene_name))
 	{
@@ -1416,24 +1406,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandleCharacterStatus(playerId, charId);
 		return;
 	}
-	else if (cmd == "SHIP_SYNC" && tokens.size() >= 7)
-	{
-		HandleShipSync(tokens);
-		return;
-	}
-	else if (cmd == "PLAYER_UPDATE")
-	{
-		HandlePlayerUpdate(tokens, receivedData);
-		return;
-	}
-	else if (cmd == "POSITION_UPDATE")
-	{
-		HandlePositionUpdate(tokens);
-		return;
-	}
 	else if (cmd == "CHANGE_SCENE" && tokens.size() >= 2)
 	{
-		std::cout << "[CLIENT][RECV] CHANGE_SCENE, tokens[1]=" << tokens[1] << std::endl;
+		std::cout << "[CLIENT][RECV] CHANGE_SCENE " << tokens[1] << std::endl;
 		HandleChangeScene(tokens);
 		return;
 	}
@@ -1597,17 +1572,8 @@ void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
 
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
-	std::vector<std::string> tokens_trimmed = tokens;
-	for (auto& t : tokens_trimmed) {
-		t.erase(std::remove_if(t.begin(), t.end(), [](unsigned char ch) {
-			return ch == '\n' || ch == '\r' || ch == '\t' || ch == ' ';
-		}), t.end());
-	}
-
-	if (tokens_trimmed.size() <= 1 || !IsNumber(tokens_trimmed[1])) {
-		std::cout << "[ERROR][HandleChangeScene] Invalid or missing scene type: ";
-		if (tokens_trimmed.size() > 1) std::cout << tokens_trimmed[1];
-		std::cout << std::endl;
+	if (tokens.size() < 2) {
+		std::cerr << "[ERROR][HandleChangeScene] Scene type 정보 부족" << std::endl;
 		return;
 	}
 

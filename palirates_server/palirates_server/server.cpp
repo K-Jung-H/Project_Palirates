@@ -62,6 +62,8 @@ void Server::AcceptClients()
             clients[clientId] = { clientSocket, true, std::chrono::steady_clock::now() };
         }
 
+        activeClientCount++; // 현재 활성화된 클라 스레드 개수
+
         std::string idPacket = "CLIENT_ID," + std::to_string(clientId) + "\n";
         send(clientSocket, idPacket.c_str(), static_cast<int>(idPacket.length()), 0);
 
@@ -129,6 +131,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             }
         }
     }
+
+    activeClientCount--; // 현재 활성화된 클라 스레드 개수
+
 }
 
 
@@ -141,28 +146,27 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
         return;
     }
 
+
     int selected_character_index = std::stoi(tokens[3]);
 
-    bool character_select_status = false;
-    const std::string& statusStr = tokens[4];
-    if (statusStr == "1" || statusStr == "true" || statusStr == "TRUE")
-    {
-        character_select_status = true;
-    }
+    bool character_select_status = std::stoi(tokens[4]);
 
-    // 디버깅 로그
+    if (selected_character_index == -1)
+        return;
+
     std::cout << "[LOBBY] clientId=" << clientId
         << " 선택 캐릭터=" << selected_character_index
         << " 준비 상태=" << (character_select_status ? "true" : "false") << std::endl;
 
-    // 예시: LobbyScene에 저장
-    auto lobbyIt = scenes.find(Scene_Type::Lobby);
-    if (lobbyIt == scenes.end()) return;
 
-    auto lobbyScene = std::dynamic_pointer_cast<Lobby_Scene>(lobbyIt->second);
-    if (!lobbyScene) return;
+    auto scene_It = scenes.find(Scene_Type::Lobby);
+    if (scene_It == scenes.end()) return;
 
-    bool success = lobbyScene->SelectCharacter(clientId, selected_character_index, character_select_status);
+    std::shared_ptr<Scene> baseScene = scene_It->second;
+    shared_ptr<Lobby_Scene> lobby_Scene = dynamic_pointer_cast<Lobby_Scene>(baseScene);
+
+
+    bool success = lobby_Scene->SelectCharacter(clientId, selected_character_index, character_select_status);
 
     // 응답
     std::string response = success
@@ -244,10 +248,12 @@ void Server::Server_Update()
 {
     while (true)
     {
+        Scene::active_client_num = activeClientCount;
+
         std::shared_ptr<Scene> scene = GetActiveScene();
         if (!scene) return;
 
-        scene->Update();
+        scene->Update_Scene();
 
 
 
@@ -269,6 +275,8 @@ void Server::Server_Update()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));  
     }
+
+
 }
 
 

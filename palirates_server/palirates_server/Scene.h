@@ -8,16 +8,20 @@
 
 class Scene
 {
+public:
+    static int active_client_num;
+
 protected:
     mutable std::recursive_mutex sceneMutex;
     std::unordered_map<int, std::shared_ptr<Player>> player_map;
+
     Scene_Type sceneType;
-    bool scene_transitionTriggered = false;
+    bool Change_Scene_Trigger = false;
 
 public:
     Scene(Scene_Type type = Scene_Type::Test);
 
-    std::recursive_mutex& GetSceneMutex() const;
+    std::recursive_mutex& GetSceneMutex() const { return sceneMutex; }
 
     Scene_Type GetSceneType() const;
 
@@ -27,13 +31,15 @@ public:
     const std::unordered_map<int, std::shared_ptr<Player>>& getPlayers() const;
 
     // --- 상태 업데이트 함수 ---
+    virtual void Update_Scene();
+
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_Position();
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
     void updatePlayerPosition(int id, float x, float y, float z, float lookX, float lookY, float lookZ, Player_State state);
     void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
 
-    virtual void Update() {}
+
     virtual Scene_Type CheckSceneTransition();
 };
 
@@ -42,8 +48,12 @@ class Lobby_Scene : public Scene
 {
 private:
     std::unordered_map<int, std::pair<int, bool>> characterSlots;
+
 public:
     Lobby_Scene() : Scene(Scene_Type::Lobby) {}
+
+    virtual void Update_Scene();
+
 
     bool SelectCharacter(int clientId, int characterId, bool isReady);
     bool IsAllReadyAndValid();
@@ -61,12 +71,22 @@ private:
 public:
     Board_Scene() : Scene(Scene_Type::Board) {}
 
+    virtual void Update_Scene();
+
+    virtual Scene_Type CheckSceneTransition();
+
 };
 
 class Stage_Scene : public Scene
 {
+private:
 
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) {}
+
+    virtual void Update_Scene();
+
+
+    virtual Scene_Type CheckSceneTransition();
 
 };
