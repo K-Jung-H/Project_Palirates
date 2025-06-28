@@ -26,4 +26,6 @@ enum Scene_Type
 	Stage_1,
 	Stage_2,
 	Test,
+	etc,
+	None,
 };

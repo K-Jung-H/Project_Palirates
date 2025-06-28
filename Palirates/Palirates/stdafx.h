@@ -178,7 +178,8 @@ enum Scene_Type
 	Stage_1,
 	Stage_2,
 	Test,
-	etc
+	etc,
+	None
 };
 
 struct Change_Signal

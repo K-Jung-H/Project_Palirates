@@ -2555,6 +2555,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	SlbTblock->onClick = [this]()
 		{
 			this->bSelectRequested = true;
+			is_selected = 1;
 			c_signal.change = true;
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;

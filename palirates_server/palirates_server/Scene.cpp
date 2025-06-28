@@ -78,3 +78,90 @@ Scene_Type Scene::GetSceneType() const
 {
     return sceneType;
 }
+
+Scene_Type Scene::CheckSceneTransition()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (scene_transitionTriggered)
+        return Scene_Type::None;
+
+    scene_transitionTriggered = true;
+    return Scene_Type::Stage_1;
+}
+
+//======================================================
+
+bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    // 해당 캐릭터가 이미 다른 클라이언트에 의해 선택된 경우
+    auto it = characterSlots.find(characterId);
+    if (it != characterSlots.end() && it->second.first != clientId)
+    {
+        return false; // 중복 선택 불가
+    }
+
+    // 먼저 이전 선택 제거
+    for (auto it = characterSlots.begin(); it != characterSlots.end(); )
+    {
+        if (it->second.first == clientId)
+        {
+            it = characterSlots.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    characterSlots[characterId] = { clientId, isReady };
+    return true;
+}
+
+bool Lobby_Scene::IsAllReadyAndValid()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (characterSlots.empty()) return false;
+
+    if (characterSlots.size() < getPlayers().size()) return false;
+
+    for (const auto& [charId, pair] : characterSlots)
+    {
+        if (!pair.second) return false; // 아직 준비 안 된 슬롯 존재
+    }
+
+    return true;
+}
+
+
+
+void Lobby_Scene::ResetCharacterSlot(int clientId)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (auto it = characterSlots.begin(); it != characterSlots.end(); )
+    {
+        if (it->second.first == clientId)
+        {
+            it = characterSlots.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+Scene_Type Lobby_Scene::CheckSceneTransition()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (!IsAllReadyAndValid() || scene_transitionTriggered)
+        return Scene_Type::None;
+
+    scene_transitionTriggered = true;
+    return Scene_Type::Board;
+}

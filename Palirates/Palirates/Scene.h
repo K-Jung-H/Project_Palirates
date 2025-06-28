@@ -278,10 +278,12 @@ class Character_Select_Scene : public CScene
 private:
 	UINT prev_index = -1;
 	UINT select_index = -1;
+	int is_selected = 0; // 버튼 눌렀는지 유무
 
-	std::vector<std::pair<int, int>> characterHovers;
 	std::vector<std::pair<int, int>> characterSelections;
 	int ClientNum = -1;
+
+
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -311,7 +313,9 @@ public:
 
 	bool bSelectRequested = false;
 
-	int GetSelectedCharacterIndex() const { return select_index; }
+	int Get_Selected_Character_Index() const { return select_index; }
+	int Get_Character_Select_Status() const { return is_selected; }
+
 	int GetSelectedCharacterId() const;
 	void OnSelectButtonPressed();
 
