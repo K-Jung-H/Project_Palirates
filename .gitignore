@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+*.zip
 
 # Compiled Object files
 *.slo
@@ -31,11 +32,13 @@
 *.out
 *.app
 
-/palirates_server
+/palirates_server/.vs
+/palirates_server/palirates_server/x64
+/palirates_server/x64
+
 /Palirates/.vs
 /Palirates/Palirates/x64
 /Palirates/x64
 /Palirates/Palirates/Scene/Havana.bin
 /Palirates/Palirates/Scene/**/*.txt
 /Palirates/Palirates/CONERR$
-서버 할거.txt

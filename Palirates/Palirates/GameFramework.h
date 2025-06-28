@@ -240,12 +240,15 @@ public:
     bool bCharacterSelectedSent = false;
     bool bCharacterSelectApproved = false;
 
+    int Change_Call_By_Server = -1;
+    Change_Signal change_signal;
+
     int GetCharacterSelection(int playerId) const;
     bool HasCharacterSelection(int playerId) const;
     void SetCharacterSelection(int playerId, int characterId);
 
     void SetupCharacterSelectScene();
-    bool bEnterSceneByServer = false;
+    bool Check_CharacterSelect_IndexList();
 
     void ConnectToServer(const std::string& ip, int port);
     void SendPacket();
@@ -272,8 +275,7 @@ public:
     std::unordered_map<int, std::string> pendingUpdateMap;
     std::mutex pendingUpdateMutex;
 
-    Scene_Manager sceneManager;
-    std::shared_ptr<Object_Manager> object_manager;
+
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;
@@ -281,3 +283,44 @@ public:
     //=================SERVER=================
 
 };
+
+
+enum SHIP_INPUT_TYPE
+{
+    SHIP_NONE = 0,
+    SHIP_FORWARD = 1,
+    SHIP_LEFT = 2,
+    SHIP_RIGHT = 3
+};
+
+
+enum KeyIndex
+{
+    KEY_INDEX_W = 0,
+    KEY_INDEX_S = 1,
+    KEY_INDEX_A = 2,
+    KEY_INDEX_D = 3,
+    KEY_INDEX_Q = 4,
+    KEY_INDEX_E = 5,
+    KEY_INDEX_SHIFT = 6,
+    KEY_INDEX_ENTER = 7
+};
+
+// 실제 플래그 enum
+enum InputFlags : uint32_t
+{
+    INPUT_NONE = 0,
+    INPUT_W = 1 << KEY_INDEX_W,
+    INPUT_S = 1 << KEY_INDEX_S,
+    INPUT_A = 1 << KEY_INDEX_A,
+    INPUT_D = 1 << KEY_INDEX_D,
+    INPUT_Q = 1 << KEY_INDEX_Q,
+    INPUT_E = 1 << KEY_INDEX_E,
+    INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
+    INPUT_ENTER = 1 << KEY_INDEX_ENTER
+};
+
+inline bool IsNumber(const std::string& s)
+{
+    return !s.empty() && (s[0] == '-' || std::isdigit(s[0])) && std::all_of(s.begin() + 1, s.end(), ::isdigit);
+}

@@ -309,8 +309,11 @@ public:
 
 	void SendSelectionToServer(int index);
 
+	bool bSelectRequested = false;
+
 	int GetSelectedCharacterIndex() const { return select_index; }
 	int GetSelectedCharacterId() const;
+	void OnSelectButtonPressed();
 
 	void UpdateCharacterHovers(const std::vector<std::pair<int, int>>& hovers, int clientNum);
 
