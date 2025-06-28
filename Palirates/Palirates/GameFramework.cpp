@@ -1399,7 +1399,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandlePlayerCreate(id);
 		return;
 	}
-	else if (cmd == "CHARACTER_STATUS" && tokens.size() >= 3)
+	else if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 3)
 	{
 		int playerId = std::stoi(tokens[1]);
 		int charId = std::stoi(tokens[2]);
@@ -1541,32 +1541,6 @@ void CGameFramework::HandleCharacterStatus(int playerId, int charId)
 		}
 		scene->UpdateLockedCharacters(lockedIds);
 		scene->UpdateCharacterSelections(characterSelections, ClientNum);
-	}
-}
-
-void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
-{
-	float x = std::stof(tokens[1]);
-	float y = std::stof(tokens[2]);
-	float z = std::stof(tokens[3]);
-	float lookX = std::stof(tokens[4]);
-	float lookY = std::stof(tokens[5]);
-	float lookZ = std::stof(tokens[6]);
-
-	std::cout << "[SYNC] Ship position: (" << x << ", " << y << ", " << z << "), "
-		<< "look: (" << lookX << ", " << lookY << ", " << lookZ << ")" << std::endl;
-
-	CScene* scene = scene_manager->Get_Active_Scene_Ptr();
-	if (!scene || !scene->obj_manager) return;
-
-	auto* shipList = scene->obj_manager->Get_Object_List(Object_Type::non_skinned);
-	for (auto& ship : *shipList)
-	{
-		if (ship && ship->Get_Name() == "player's pirate_ship")
-		{
-			ship->SetPosition(XMFLOAT3(x, y, z));
-			ship->SetLookDirection(XMFLOAT3(lookX, lookY, lookZ));
-		}
 	}
 }
 

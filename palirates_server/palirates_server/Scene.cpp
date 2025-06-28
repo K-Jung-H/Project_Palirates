@@ -130,7 +130,7 @@ bool Lobby_Scene::IsAllReadyAndValid()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (characterSlots.empty()) return false;
+    if (characterSlots.empty() || active_client_num == 0) return false;
 
     int readyCount = 0;
 
@@ -140,8 +140,6 @@ bool Lobby_Scene::IsAllReadyAndValid()
             ++readyCount;
     }
 
-    if (readyCount == active_client_num)
-        int a = 1;
 
     return (readyCount == active_client_num);
 }

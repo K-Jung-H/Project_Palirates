@@ -50,7 +50,11 @@ private:
     std::unordered_map<int, std::pair<int, bool>> characterSlots;
 
 public:
-    Lobby_Scene() : Scene(Scene_Type::Lobby) {}
+    Lobby_Scene() : Scene(Scene_Type::Lobby) 
+    {
+        for (int charId = 0; charId <= 5; ++charId)
+            characterSlots[charId] = { -1, false };
+    }
 
     virtual void Update_Scene();
 
@@ -59,6 +63,8 @@ public:
     bool IsAllReadyAndValid();
     void ResetCharacterSlot(int clientId); // 클라이언트(clientId)가 선택한 캐릭터 슬롯을 초기화
     virtual Scene_Type CheckSceneTransition();
+    
+    std::unordered_map<int, std::pair<int, bool>> Get_Select_Status() { return characterSlots; }
 
 
 };

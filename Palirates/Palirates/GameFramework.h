@@ -260,8 +260,10 @@ public:
     void HandlePlayerLeave(int leaveId);
     void HandlePlayerCreate(int id);
     void HandleCharacterStatus(int playerId, int charId);
-    void HandleShipSync(const std::vector<std::string>& tokens);
+
+
     void HandleChangeScene(const std::vector<std::string>& tokens);
+
     void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
     void HandlePositionUpdate(const std::vector<std::string>& tokens);
     void CreateRemotePlayer(int playerId, int characterId);
@@ -316,7 +318,3 @@ enum InputFlags : uint32_t
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };
 
-inline bool IsNumber(const std::string& s)
-{
-    return !s.empty() && (s[0] == '-' || std::isdigit(s[0])) && std::all_of(s.begin() + 1, s.end(), ::isdigit);
-}

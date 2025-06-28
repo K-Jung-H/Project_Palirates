@@ -76,14 +76,14 @@ private:
 
     int nextClientId = 0;
     bool allSelectedSent = false;
-
-    void HandleSceneBroadcast();
-    void BroadcastLobbyScene(const std::shared_ptr<Scene>& scene);
-    void BroadcastStage1Scene(const std::shared_ptr<Scene>& scene);
-    void BroadcastStage2Scene(const std::shared_ptr<Scene>& scene);
-    void BroadcastBoardScene(const std::shared_ptr<Scene>& scene);
+    bool HandleSceneBroadcast(std::string& outPacket);
+    std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
+    std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
+    std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
+    std::string Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
 
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
-    void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 };

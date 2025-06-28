@@ -191,57 +191,129 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
 
 void Server::BroadcastAllStates()
 {
-    HandleSceneBroadcast();
-}
-
-
-void Server::HandleSceneBroadcast()
-{
-    auto scene = GetActiveScene();
-    if (!scene) return;
-
-    switch (scene->GetSceneType())
+    std::string packet;
+    if (HandleSceneBroadcast(packet))
     {
-    case Scene_Type::Lobby:
-        BroadcastLobbyScene(scene);
-        break;
-    case Scene_Type::Stage_1:
-        BroadcastStage1Scene(scene);
-        break;
-    case Scene_Type::Stage_2:
-        BroadcastStage2Scene(scene);
-        break;
-    case Scene_Type::Board:
-        BroadcastBoardScene(scene);
-        break;
-    default:
-        break;
+        std::lock_guard<std::mutex> lock(clientsMutex);
+        for (const auto& [clientId, session] : clients)
+        {
+            if (session.is_connected)
+            {
+                send(session.socket, packet.c_str(), static_cast<int>(packet.size()), 0);
+            }
+        }
     }
 }
 
 
-void Server::BroadcastLobbyScene(const std::shared_ptr<Scene>& scene)
+bool Server::HandleSceneBroadcast(std::string& outPacket)
 {
-    // 구현 필요
+    auto scene = GetActiveScene();
+    if (!scene) return false;
+
+    switch (scene->GetSceneType())
+    {
+    case Scene_Type::Lobby:
+    {
+        auto lobby = std::dynamic_pointer_cast<Lobby_Scene>(scene);
+        if (!lobby) return false;
+
+        outPacket = Build_LobbyScene_Packet(lobby);
+        return true;
+    }   break;
+
+    case Scene_Type::Board:
+    {
+        auto board = std::dynamic_pointer_cast<Board_Scene>(scene);
+        if (!board) return false;
+
+        outPacket = Build_BoardScene_Packet(board);
+        return true;
+    }   break;
+
+    case Scene_Type::Stage_1:
+    {
+        auto stage_1 = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        if (!stage_1) return false;
+
+        outPacket = Build_Stage_1_Scene_Packet(stage_1);
+        return true;
+    }   break;
+
+    case Scene_Type::Stage_2:
+    {
+        auto stage_2 = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        if (!stage_2) return false;
+
+        outPacket = Build_Stage_2_Scene_Packet(stage_2);
+        return true;
+    }   break;
+
+    default:
+        return false;
+    }
 }
 
 
-void Server::BroadcastStage1Scene(const std::shared_ptr<Scene>& scene)
+std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby)
 {
-    // 구현 필요
+    std::ostringstream oss;
+    oss << "CHARACTER_SELECT_SCENE";
+
+    auto status = lobby->Get_Select_Status();
+    for (int charId = 0; charId < 6; ++charId)
+    {
+        auto it = status.find(charId);
+        int ownerId = -1;
+        bool isReady = false;
+
+        if (it != status.end())
+        {
+            ownerId = it->second.first;
+            isReady = it->second.second;
+        }
+
+        oss << "," << charId << "," << ownerId << "," << (isReady ? 1 : 0);
+    }
+
+    oss << "\n";
+    return oss.str();
 }
 
-
-void Server::BroadcastStage2Scene(const std::shared_ptr<Scene>& scene)
+std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board)
 {
-    // 구현 필요
+    std::ostringstream oss;
+    oss << "BOARD_SCENE,";
+    {
+
+    }
+    oss << "\n";
+    return oss.str();
+
 }
 
-
-void Server::BroadcastBoardScene(const std::shared_ptr<Scene>& scene)
+std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage)
 {
-    // 구현 필요
+    std::ostringstream oss;
+    oss << "STAGE_1,";
+    {
+
+    }
+    oss << "\n";
+    return oss.str();
 }
+
+std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage)
+{
+    std::ostringstream oss;
+    oss << "STAGE_2,";
+    {
+
+    }
+    oss << "\n";
+    return oss.str();
+}
+
 
 
 void Server::Server_Update()
@@ -344,6 +416,7 @@ int Server::GetNewClientId()
 
 void Server::BroadcastPacket(const std::string& packet, int senderId)
 {
+    std::lock_guard<std::mutex> lock(clientsMutex);
     for (const auto& [id, session] : clients)
     {
         if (!session.is_connected || id == senderId) continue;
