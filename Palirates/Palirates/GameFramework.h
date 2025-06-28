@@ -320,3 +320,7 @@ enum InputFlags : uint32_t
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };
 
+inline bool IsNumber(const std::string& s)
+{
+    return !s.empty() && (s[0] == '-' || std::isdigit(s[0])) && std::all_of(s.begin() + 1, s.end(), ::isdigit);
+}

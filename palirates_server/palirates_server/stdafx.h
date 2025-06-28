@@ -18,3 +18,12 @@
 #include <mutex>
 
 using namespace std;
+
+enum Scene_Type
+{
+	Lobby,
+	Board,
+	Stage_1,
+	Stage_2,
+	Test,
+};

@@ -588,17 +588,25 @@ bool CGameFramework::Change_Scene()
 			std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
 			c_signal = change_signal;
 
-			if (active_scene->scene_type == Scene_Type::Lobby)
+			if (!scene_manager->Find_Scene(c_signal.scene_name))
 			{
-				if (Check_CharacterSelect_IndexList() == false)
-					return false;
+				BeginGPUStage(GPU_Stage::Compute);
+				scene_manager->Build_Scene(c_signal.type, c_signal.scene_name, m_pd3dDevice, Active_CommandList);
+				EndGPUStage(GPU_Stage::Compute);
+				WaitForGpuComplete(GPU_Stage::Compute);
 			}
 
+			scene_manager->Set_Active_Scene(c_signal.scene_name);
+			m_pPlayer = scene_manager->Get_Active_Scene_Player();
+			Object_Manager::Reserve_Update();
 
-			std::ostringstream scenePacket;
-			scenePacket << "ENTER_SCENE," << c_signal.scene_name << "\n";
-			SendPacket(scenePacket.str());
+			bCharacterSelectedSent = false;
+			bCharacterSelectApproved = false;
+			Change_Call_By_Server = -1;
+			change_signal.change = false;
 
+			std::cout << "[DEBUG] 씬 전환 완료: " << c_signal.scene_name << std::endl;
+			return true;
 		}
 	}
 	else // 오프라인 인 경우
@@ -625,6 +633,9 @@ bool CGameFramework::Change_Scene()
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
 		m_pPlayer = scene_manager->Get_Active_Scene_Player();
 		Object_Manager::Reserve_Update();
+
+		bCharacterSelectedSent = false;
+		bCharacterSelectApproved = false;
 	}
 	else
 	{
@@ -636,6 +647,9 @@ bool CGameFramework::Change_Scene()
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
 		m_pPlayer = scene_manager->Get_Active_Scene_Player();
 		Object_Manager::Reserve_Update();
+
+		bCharacterSelectedSent = false;
+		bCharacterSelectApproved = false;
 	}
 
 	return true;
@@ -1016,6 +1030,22 @@ void CGameFramework::FrameAdvance()
 			}
 
 			CreateRemotePlayer(playerId, charId);
+		}
+	}
+
+	{
+		auto* scene = scene_manager->Get_Active_Scene_Ptr();
+		auto* charScene = dynamic_cast<Character_Select_Scene*>(scene);
+
+		if (charScene && charScene->bSelectRequested)
+		{
+			std::cout << "[DEBUG] bSelectRequested 감지, SendCharacterSelectPacket 시도" << std::endl;
+			charScene->bSelectRequested = false;
+			int charId = charScene->GetSelectedCharacterId();
+			if (charId != -1)
+				SendCharacterSelectPacket(charId);
+			else
+				std::cout << "[BLOCKED] No character selected.\n";
 		}
 	}
 	EndGPUStage(GPU_Stage::Compute, true);
@@ -1479,6 +1509,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	//}
 	else if (cmd == "ENTER_SCENE" && tokens.size() >= 2)
 	{
+		bCharacterSelectApproved = false;
+		bCharacterSelectedSent = false;
+
 		std::cout << "[CLIENT][RECV] ENTER_SCENE, tokens[1]=" << tokens[1] << std::endl;
 		HandleChangeScene(tokens);
 		return;
@@ -1651,6 +1684,20 @@ void CGameFramework::HandleShipSync(const std::vector<std::string>& tokens)
 
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
+	std::vector<std::string> tokens_trimmed = tokens;
+	for (auto& t : tokens_trimmed) {
+		t.erase(std::remove_if(t.begin(), t.end(), [](unsigned char ch) {
+			return ch == '\n' || ch == '\r' || ch == '\t' || ch == ' ';
+		}), t.end());
+	}
+
+	if (tokens_trimmed.size() <= 1 || !IsNumber(tokens_trimmed[1])) {
+		std::cout << "[ERROR][HandleChangeScene] Invalid or missing scene type: ";
+		if (tokens_trimmed.size() > 1) std::cout << tokens_trimmed[1];
+		std::cout << std::endl;
+		return;
+	}
+
 	std::string change_scene_type = tokens[1];
 	Change_Call_By_Server = std::stoi(change_scene_type);
 
@@ -1973,14 +2020,14 @@ std::unordered_map<std::string, std::string> CGameFramework::ParseKeyValueFields
 
 void CGameFramework::SelectCharacter(int characterId)
 {
-	std::string packet = "CHARACTER_SELECT," + std::to_string(characterId) + "\n";
+	std::string packet = "CHARACTER_SELECT," + std::to_string(ClientNum) + "," + std::to_string(characterId) + "\n";
 	SendPacket(packet);
-
-	std::cout << "[REQUEST] Sent character selection: " << characterId << "\n";
+	std::cout << "[REQUEST] Sent character selection: " << characterId << " (ClientNum: " << ClientNum << ")\n";
 }
 
 void CGameFramework::SendCharacterSelectPacket(int charId)
 {
+	std::cout << "[DEBUG] SendCharacterSelectPacket 호출, charId = " << charId << std::endl;
 	selectedCharacterId = charId;
 
 	std::ostringstream oss;

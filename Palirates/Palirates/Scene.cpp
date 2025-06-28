@@ -2554,6 +2554,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	SlbTblock->onClick = [this]()
 		{
+			this->bSelectRequested = true;
 			c_signal.change = true;
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;
@@ -3467,7 +3468,8 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 int Character_Select_Scene::GetSelectedCharacterId() const
 {
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
-	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index << ", player_list.size()=" << player_list->size() << std::endl;
+	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index
+		<< ", player_list.size()=" << player_list->size() << std::endl;
 	if (select_index >= 0 && select_index < player_list->size())
 	{
 		int id = (*player_list)[select_index]->GetID();
@@ -3476,4 +3478,16 @@ int Character_Select_Scene::GetSelectedCharacterId() const
 	}
 	std::cout << "[DEBUG] Invalid select_index or empty player_list!" << std::endl;
 	return -1;
+}
+
+void Character_Select_Scene::OnSelectButtonPressed()
+{
+	std::cout << "[DEBUG] Select 버튼 핸들러 진입, select_index=" << select_index << std::endl;
+	if (select_index == -1)
+	{
+		std::cout << "[BLOCKED] No character selected.\n";
+		return;
+	}
+	bSelectRequested = true;
+	std::cout << "[DEBUG] bSelectRequested set true" << std::endl;
 }
