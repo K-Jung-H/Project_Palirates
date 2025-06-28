@@ -1300,6 +1300,9 @@ void CGameFramework::SendPacket()
 
 		oss << "," << current_keyboard_inputFlags << ","
 			<< look.x << "," << look.y << "," << look.z;
+		
+		// + 스테이지 선택 확정 유무 bool 값 전달하기
+		
 	}
 	break;
 
@@ -1358,6 +1361,7 @@ int CGameFramework::SendPacket_String(const std::string& packet)
 	}
 }
 
+
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
 	std::cout << "[DEBUG] ProcessReceivedData() called" << std::endl;
@@ -1374,19 +1378,17 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-
 	std::vector<std::string> tokens;
 	std::stringstream ss(receivedData);
 	std::string item;
 	while (std::getline(ss, item, ','))
-	{
 		tokens.push_back(item);
-	}
 
 	if (tokens.empty()) return;
 
 	const std::string& cmd = tokens[0];
 
+	// 공통 처리
 	if (cmd == "PLAYER_LEAVE" && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
@@ -1399,25 +1401,65 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandlePlayerCreate(id);
 		return;
 	}
-	else if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 3)
-	{
-		int playerId = std::stoi(tokens[1]);
-		int charId = std::stoi(tokens[2]);
-		HandleCharacterStatus(playerId, charId);
-		return;
-	}
 	else if (cmd == "CHANGE_SCENE" && tokens.size() >= 2)
 	{
 		std::cout << "[CLIENT][RECV] CHANGE_SCENE " << tokens[1] << std::endl;
 		HandleChangeScene(tokens);
 		return;
 	}
-	else
+
+	// 씬 별 처리
+	auto active_scene = scene_manager->Get_Active_Scene();
+	if (!active_scene) return;
+
+	switch (active_scene->scene_type)
 	{
-		std::cout << "[WARN] Unknown or invalid packet: " << receivedData << std::endl;
+	case Scene_Type::Lobby:
+	{
+		if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 19) // 1(cmd) + 6 * 3
+		{
+			for (int i = 1; i + 2 < tokens.size(); i += 3)
+			{
+				int charId = std::stoi(tokens[i]);
+				int ownerId = std::stoi(tokens[i + 1]);
+				bool isReady = (tokens[i + 2] == "1" || tokens[i + 2] == "true");
+
+				HandleCharacterStatus(charId, ownerId, isReady);
+			}
+		}
+		else if (cmd == "CHARACTER_SELECT_SUCCESS")
+		{
+			// 캐릭터 선택 변경 차단하기
+		}
+		else if (cmd == "CHARACTER_SELECT_FAIL")
+		{
+			// select 버튼 처리 값 초기화 하기
+		}
+	}
+	break;
+
+	case Scene_Type::Board:
+	{
+		if (cmd == "SHIP_INFO") 
+		{
+		}
+	}
+	break;
+
+	case Scene_Type::Stage_1:
+	{
+	}
+	break;
+
+	case Scene_Type::Stage_2:
+	{
+	}
+	break;
+
+	default:
+		return;
 	}
 }
-
 
 void CGameFramework::HandleClientIdAssignment()
 {
