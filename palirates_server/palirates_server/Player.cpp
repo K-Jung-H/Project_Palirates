@@ -5,6 +5,7 @@ Player::Player(int playerId) : Skinned_GameObject()
 {
     player_id = playerId;
     player_state = Player_State::Idle;
+    inputDirection = { 0.0f, 0.0f, 0.0f };
 }
 
 void Player::key_input(uint32_t keyState)
@@ -37,14 +38,12 @@ void Player::key_input(uint32_t keyState)
     //else
     //    player_state = Player_State::Idle;
 
-
-    std::cout << "cliend ID : " << player_id << ", value : " << test_value << "\n";
-
+    std::cout << "client ID : " << player_id << ", value : " << test_value << "\n";
 }
 
 void Player::animate(float Elapsedtime)
 {
-
+   
 }
 
 void Player::update()

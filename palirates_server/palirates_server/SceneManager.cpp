@@ -1,25 +1,34 @@
 #include "stdafx.h"
 #include "SceneManager.h"
 
-std::shared_ptr<Scene> SceneManager::getScene(int clientId)
+SceneManager::SceneManager()
 {
-    auto it = scenes.find(clientId);
-    if (it != scenes.end())
-        return it->second;
-    return nullptr;
+    
 }
 
-void SceneManager::addScene(int clientId)
+SceneManager::~SceneManager()
 {
-    scenes[clientId] = std::make_shared<Scene>();
+    
 }
 
-const std::unordered_map<int, std::shared_ptr<Scene>>& SceneManager::getAllScenes() const
+std::shared_ptr<Scene> SceneManager::getScene(Scene_Type type)
+{
+    auto it = scenes.find(type);
+    return (it != scenes.end()) ? it->second : nullptr;
+}
+
+void SceneManager::addScene(Scene_Type type)
+{
+    if (scenes.find(type) == scenes.end())
+        scenes[type] = std::make_shared<Scene>(type);
+}
+
+void SceneManager::removeScene(Scene_Type type)
+{
+    scenes.erase(type);
+}
+
+const std::unordered_map<Scene_Type, std::shared_ptr<Scene>>& SceneManager::getAllScenes() const
 {
     return scenes;
-}
-
-void SceneManager::removeScene(int clientId)
-{
-    scenes.erase(clientId);
 }

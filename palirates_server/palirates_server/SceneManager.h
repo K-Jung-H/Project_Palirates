@@ -6,11 +6,14 @@
 class SceneManager
 {
 private:
-    std::unordered_map<int, std::shared_ptr<Scene>> scenes;
+    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
 
 public:
-    std::shared_ptr<Scene> getScene(int clientId);
-    void addScene(int clientId);
-    void removeScene(int clientId);
-    const std::unordered_map<int, std::shared_ptr<Scene>>& getAllScenes() const;
+    SceneManager();
+    ~SceneManager();
+
+    std::shared_ptr<Scene> getScene(Scene_Type type);
+    void addScene(Scene_Type type);
+    void removeScene(Scene_Type type);
+    const std::unordered_map<Scene_Type, std::shared_ptr<Scene>>& getAllScenes() const;
 };

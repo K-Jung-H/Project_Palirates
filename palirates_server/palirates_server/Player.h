@@ -19,18 +19,19 @@ enum class Player_State : int
 class Player : public Skinned_GameObject
 {
 private:
-    int player_id;
-    Player_State player_state;
+    int player_id = -1;
+    Player_State player_state = Player_State::Idle;
 
 public:
-
     Player(int playerId);
     virtual ~Player() {}
 
-    Player_State GetState() { return player_state; }
-    void SetState(Player_State newState) { player_state = newState; }
+    int GetID() const { return player_id; }
+    Player_State GetState() const { return player_state; }
+    void SetState(Player_State s) { player_state = s; }
 
     void key_input(uint32_t keyState);
+
     virtual void animate(float Elapsedtime);
     virtual void update();
 
