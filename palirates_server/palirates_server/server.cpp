@@ -28,6 +28,7 @@ Server::Server(int port)
     activeScene = scenes[Scene_Type::Lobby];
 }
 
+
 Server::~Server()
 {
     for (const auto& [id, session] : clients)
@@ -35,6 +36,7 @@ Server::~Server()
     closesocket(listenSocket);
     WSACleanup();
 }
+
 
 void Server::Start()
 {
@@ -48,6 +50,7 @@ void Server::Start()
         }
         }).detach();
 }
+
 
 void Server::AcceptClients()
 {
@@ -67,10 +70,10 @@ void Server::AcceptClients()
         std::string idPacket = "CLIENT_ID," + std::to_string(clientId) + "\n";
         send(clientSocket, idPacket.c_str(), static_cast<int>(idPacket.length()), 0);
 
-
         std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
     }
 }
+
 
 void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 {
@@ -87,7 +90,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-//            std::cout << buffer << std::endl;
+            std::cout << buffer << std::endl;
         }
 
         buffer[bytesReceived] = '\0';
@@ -155,10 +158,6 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
         return;
 
 
-
-
-
-
     auto scene_It = scenes.find(Scene_Type::Lobby);
     if (scene_It == scenes.end()) return;
 
@@ -178,9 +177,28 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
 
 void Server::HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
-    // 구현 필요
-}
+    if (tokens.size() < 5)
+    {
+        std::cerr << "[ERROR] HandleBoardPacket: 토큰 개수 부족" << std::endl;
+        return;
+    }
 
+    uint32_t inputFlags = static_cast<uint32_t>(std::stoul(tokens[3]));
+    float Selected_Stage = std::stoi(tokens[4]);
+    bool is_Selected = (tokens[5] == "1" || tokens[5] == "true");
+
+
+    auto it = scenes.find(Scene_Type::Board);
+    if (it == scenes.end()) return;
+
+    std::shared_ptr<Scene> baseScene = it->second;
+    std::shared_ptr<Board_Scene> boardScene = std::dynamic_pointer_cast<Board_Scene>(baseScene);
+    if (!boardScene) return;
+
+
+    boardScene->Update_KeyState(clientId, inputFlags);
+
+}
 
 void Server::HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
@@ -298,15 +316,16 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
 std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board)
 {
+    XMFLOAT3 pos = board->Get_PirateShip_Position();
+    XMFLOAT3 look = board->Get_PirateShip_Look();
+
     std::ostringstream oss;
-    oss << "BOARD_SCENE,";
-    {
+    oss << "BOARD_SCENE," << pos.x << "," << pos.y << "," << pos.z << "," << look.x << "," << look.y << "," << look.z << "\n";
 
-    }
-    oss << "\n";
     return oss.str();
-
 }
+
+
 
 std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage)
 {

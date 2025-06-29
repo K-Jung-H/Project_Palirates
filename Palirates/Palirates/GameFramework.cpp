@@ -1300,10 +1300,11 @@ void CGameFramework::SendPacket()
 	{
 		shared_ptr<Board_Scene>board_Scene = std::dynamic_pointer_cast<Board_Scene>(active_scene);
 
-		oss << "," << current_keyboard_inputFlags << ","
-			<< look.x << "," << look.y << "," << look.z;
+		int Selected_Stage = -1;
+		bool is_Selected = false;
+
+		oss << "," << current_keyboard_inputFlags << "," << to_string(Selected_Stage) << "," << to_string(is_Selected);
 		
-		// + 스테이지 선택 확정 유무 bool 값 전달하기
 		
 	}
 	break;

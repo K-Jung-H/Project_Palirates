@@ -259,7 +259,6 @@ public:
 
     void HandlePlayerLeave(int leaveId);
     void HandlePlayerCreate(int id);
-    void HandleCharacterStatus(int playerId, int charId);
 
 
     void HandleChangeScene(const std::vector<std::string>& tokens);
@@ -280,15 +279,6 @@ public:
 
     //=================SERVER=================
 
-};
-
-
-enum SHIP_INPUT_TYPE
-{
-    SHIP_NONE = 0,
-    SHIP_FORWARD = 1,
-    SHIP_LEFT = 2,
-    SHIP_RIGHT = 3
 };
 
 

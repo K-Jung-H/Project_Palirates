@@ -190,12 +190,60 @@ Scene_Type Board_Scene::CheckSceneTransition()
     return Scene_Type::None;
 }
 
+void Board_Scene::Update_KeyState(int Client_ID, int32_t keyState)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (Client_ID >= 0 && Client_ID < MaxPlayer)
+        player_keyState[Client_ID] = keyState; 
+    else
+        cout << "Error - [Update_KeyState]: Wrong_Index \n";
+    
+}
+
 
 void Board_Scene::Update_Scene()
 {
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    float deltaTime = 0.016f;
+    auto boat = dynamic_pointer_cast<Boat_Object>(pirate_ship);
+    
+    if (!boat) return;
+
+    int fwd = 0, back = 0, left = 0, right = 0;
+ 
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+        int32_t key = player_keyState[i];
+        if (key & INPUT_W) fwd++;
+        if (key & INPUT_S) back++;
+        if (key & INPUT_A) left++;
+        if (key & INPUT_D) right++;
+    }
+
+    if (fwd) boat->MoveForward(10.0f * fwd);
+    if (back) boat->MoveForward(-10.0f * back);
+    if (left) boat->Add_Rotate(-1.0f * left);
+    if (right) boat->Add_Rotate(1.0f * right);
+
+    boat->Animate(deltaTime);
 
 }
 
+XMFLOAT3 Board_Scene::Get_PirateShip_Position() const
+{
+    if (pirate_ship)
+        return pirate_ship->GetPosition();
+    return XMFLOAT3(0.0f, 0.0f, 0.0f); 
+}
+
+XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
+{
+    if (pirate_ship)
+        return pirate_ship->GetLook();
+    return XMFLOAT3(0.0f, 0.0f, 1.0f); 
+}
 
 //======================================================
 

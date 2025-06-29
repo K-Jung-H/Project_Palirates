@@ -3144,17 +3144,23 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			test_button = true;
 		}	break;
 
-		case 'W':		case 'w':
-		{
-			pirate_ship->MoveForward(20);
-		}
-		break;
+		//case 'W':		case 'w':
+		//{
+		//	pirate_ship->MoveForward(20);
+		//}
+		//break;
 
-		case 'A':		case 'a':
-		{
-			pirate_ship->Add_Rotate(-10.0f);
-		}
-		break;
+		//case 'A':		case 'a':
+		//{
+		//	pirate_ship->Add_Rotate(-10.0f);
+		//}
+		//break;
+
+		//case 'D':		case 'd':
+		//{
+		//	pirate_ship->Add_Rotate(10.0f);
+		//}
+		//break;
 
 		case 'F':		case 'f':
 		{
@@ -3163,11 +3169,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'D':		case 'd':
-		{
-			pirate_ship->Add_Rotate(10.0f);
-		}
-		break;
+
 
 		case '1':
 			SetCameraTarget("Captain");

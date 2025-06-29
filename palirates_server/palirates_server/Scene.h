@@ -84,15 +84,20 @@ public:
 class Board_Scene : public Scene
 {
 private:
-    shared_ptr<GameObject> pirate_ship;
+    shared_ptr<Boat_Object> pirate_ship;
+    array<int32_t, MaxPlayer> player_keyState;
 
 public:
     Board_Scene() : Scene(Scene_Type::Board) {}
 
     virtual void Update_Scene();
 
+    void Update_KeyState(int Client_ID, int32_t keyState);
+    
     virtual Scene_Type CheckSceneTransition();
 
+    XMFLOAT3 Get_PirateShip_Position() const;
+    XMFLOAT3 Get_PirateShip_Look() const;
 };
 
 class Stage_Scene : public Scene

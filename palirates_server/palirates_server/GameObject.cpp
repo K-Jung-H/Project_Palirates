@@ -203,3 +203,78 @@ void GameObject::SetRight(XMFLOAT3 xmf3Right)
 
 	UpdateTransform(nullptr);
 }
+
+//===================================================================
+
+Boat_Object::Boat_Object()
+	: GameObject()
+{
+	m_fMaxVelocityXZ = 200.0f;
+	m_xmf3Velocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	m_fFriction = 50.0f;
+}
+
+Boat_Object::~Boat_Object() {}
+
+void Boat_Object::MoveForward(float speed)
+{
+	XMFLOAT3 look = Vector3::Normalize(GetLook());
+	XMFLOAT3 shift = Vector3::ScalarProduct(look, speed, false);
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, shift);
+}
+
+void Boat_Object::Add_Rotate(float angleDelta)
+{
+	m_fRotationSpeed += angleDelta;
+	m_fRotationSpeed = std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f);
+}
+
+void Boat_Object::Animate(float fTimeElapsed)
+{
+	// Limit velocity
+	float speed = Vector3::Length(m_xmf3Velocity);
+	if (speed > m_fMaxVelocityXZ)
+	{
+		float scale = m_fMaxVelocityXZ / speed;
+		m_xmf3Velocity.x *= scale;
+		m_xmf3Velocity.z *= scale;
+	}
+
+	// Movement update
+	XMFLOAT3 look = Vector3::Normalize(GetLook());
+	XMFLOAT3 deltaMove = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	XMFLOAT3 pos = GetPosition();
+	SetPosition(Vector3::Add(pos, deltaMove));
+
+	// Rotation apply
+	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
+	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
+
+	// Deceleration
+	float decel = m_fFriction * fTimeElapsed;
+	if (decel > speed) decel = speed;
+	speed -= decel;
+
+	m_xmf3Velocity = Vector3::ScalarProduct(look, speed, false);
+}
+
+void Boat_Object::HandleBoundaryReflection(float boundary)
+{
+	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 vel = Get_Velocity();
+	bool bounced = false;
+
+	if (pos.x > boundary || pos.x < -boundary) {
+		vel.x *= -1.0f; bounced = true;
+	}
+	if (pos.z > boundary || pos.z < -boundary) {
+		vel.z *= -1.0f; bounced = true;
+	}
+
+	if (bounced) {
+		Set_Velocity(vel);
+		XMFLOAT3 newLook = Vector3::Normalize(vel);
+		SetLook(newLook);
+	}
+}
