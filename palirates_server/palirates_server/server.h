@@ -1,88 +1,89 @@
 #pragma once
 #include <unordered_map>
+#include <unordered_set>
+#include <queue>
+#include <thread>
+#include <mutex>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <thread>
-#include <unordered_map>
-#include <unordered_set>
-#include <algorithm>
-#include <sstream>
-#include <queue>
+#include <memory>
+#include <string>
+#include <vector>
 #include "SceneManager.h"
-#include "DatabaseManager.h"
 #include "Logger.h"
 #include "Player.h"
 
-#define NOMINMAX
 #pragma comment(lib, "ws2_32.lib")
-
 
 struct ClientSession
 {
     SOCKET socket;
     bool is_connected = true;
-    std::chrono::steady_clock::time_point lastPongTime;
+    std::chrono::steady_clock::time_point lastActiveTime;
+    ~ClientSession()
+    {
+
+    };
 };
 
 class Server
 {
-private:
-    SceneManager sceneManager;
-    //DatabaseManager dbManager;
-    
-    std::unordered_map<int, ClientSession> clients;
-    SOCKET listenSocket;
-    Logger logger;
-    
-    std::unordered_map<int, int> controllerIdByScene;
-    
-    int GetControllerId(shared_ptr<Scene> scene);
-    std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
-   
-    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
-    std::unordered_set<int> activeClientIds;
-    std::mutex idMutex;
-    std::mutex clientsMutex;
-    std::mutex characterMutex;
-
-    std::vector<std::pair<int, int>> characterHovers;
-
-    bool allSelectedSent = false;
-
 public:
     Server(int port);
     ~Server();
 
-    int nextClientId = 0;
-
     void Start();
     void AcceptClients();
-    void Server_Update();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
-    void BroadcastPacket(const std::string& packet, int senderId);
-    void SendInitialStates(int clientId);
     void BroadcastAllStates();
-    void NotifyExistingPlayersAboutNew(int clientId);
-    void MonsterUpdate(int monsterId, float x, float y, float z, float lookX, float lookY, float lookZ, float aniPos, float aniWei);
-    std::unordered_map<int, int> characterSelections;
-    std::unordered_set<int> lockedCharacterIds;
-    void CheckClientLiveness();
-
-    static void BroadcastCharacterSelect(Server* pServer);
-
-    int GetNewClientId();
+    void Server_Update();
 
     void DisconnectClient(int clientId);
     void ReleaseClientId(int clientId);
+    int GetNewClientId();
 
-    SceneManager& getSceneManager() { return sceneManager; }
+    void BroadcastPacket(const std::string& packet, int senderId);
 
-    float shipX = 0.0f, shipY = 0.0f, shipZ = 0.0f;
-    float shipLookX = 0.0f, shipLookY = 1.0f, shipLookZ = 0.0f;
-    int currentShipControllerId = -1;
+    void SetActiveScene(const Scene_Type scene_type);
+    std::shared_ptr<Scene> GetActiveScene();
 
-    std::vector<bool> isCharacterAvailable;
-    std::vector<int> hoveredByClient;
-    std::vector<int> selectedCharacterByClient;
+    void CleanupInactiveClients();
+    void addPlayerToScene(const Scene_Type scene_type, int clientId, std::shared_ptr<Player> player);
+    void removePlayerFromAllScenes(int clientId);
 
+
+private:
+    SOCKET listenSocket;
+    Logger logger;
+
+    std::unordered_map<int, ClientSession> clients;
+    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
+
+    std::unordered_map<int, int> characterSelections;
+    std::unordered_set<int> lockedCharacterIds;
+
+    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
+    std::unordered_set<int> activeClientIds;
+
+    std::mutex idMutex;
+    std::mutex clientsMutex;
+    std::mutex characterMutex;
+    std::mutex activeSceneMutex;
+
+    std::atomic<int> activeClientCount = 0;
+
+    std::shared_ptr<Scene> activeScene;
+
+    int nextClientId = 0;
+    bool allSelectedSent = false;
+    bool HandleSceneBroadcast(std::string& outPacket);
+    std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
+    std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
+    std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
+    std::string Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
+
+    void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 };

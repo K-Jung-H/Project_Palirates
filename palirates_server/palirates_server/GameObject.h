@@ -5,7 +5,7 @@
 
 using namespace std;
 
-enum Object_Type
+enum class Object_Type
 {
     player,
     monster,

@@ -276,12 +276,14 @@ public:
 class Character_Select_Scene : public CScene
 {
 private:
-	UINT prev_index = -1;
 	UINT select_index = -1;
+	int is_Ready = 0; // 버튼 눌렀는지 유무
 
-	std::vector<std::pair<int, int>> characterHovers;
-	std::vector<std::pair<int, int>> characterSelections;
-	int ClientNum = -1;
+
+	std::array<int, MaxPlayer> readyClientIds;
+	std::array<std::bitset<MaxPlayer>, MaxPlayer> characterSelections;
+
+
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -295,27 +297,22 @@ public:
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
-	void UpdatePlayerSelection(int new_index);
+	void UpdatePlayerSelection();
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
+	int Get_Selected_Character_Index() const { return select_index; }
+	int Get_Character_Select_Status() const { return is_Ready; }
+	void Set_Character_Select_Status(bool new_is_selected) { is_Ready = new_is_selected; }
 
-	void UpdateCharacterSelections(const std::vector<std::pair<int, int>>& selections, int clientNum)
-	{
-		characterSelections = selections;
-		ClientNum = clientNum;
-		UpdatePlayerSelection(select_index);
-	}
 
-	void SendSelectionToServer(int index);
 
-	int GetSelectedCharacterIndex() const { return select_index; }
-	int GetSelectedCharacterId() const;
+	const std::array<int, MaxPlayer>& GetReadyClientIds() const { return readyClientIds; }
+	const std::array<std::bitset<MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
 
-	void UpdateCharacterHovers(const std::vector<std::pair<int, int>>& hovers, int clientNum);
+	void SetReadyClientIds(const std::array<int, MaxPlayer>& readyIds) { readyClientIds = readyIds; }
+	void SetCharacterSelections(const std::array<std::bitset<MaxPlayer>, MaxPlayer>& selections) { characterSelections = selections; }
 
-	std::unordered_set<int> lockedCharacterIds;
-	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }
 };
 
 class Board_Scene : public CScene

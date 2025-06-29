@@ -41,6 +41,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include<bitset>
+
 #pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -87,6 +89,8 @@ extern HINSTANCE						ghAppInstance;
 
 //=============================================
 
+#define MaxPlayer 6
+extern bool isRunning;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 #define FRAME_BUFFER_WIDTH				1280
@@ -178,7 +182,8 @@ enum Scene_Type
 	Stage_1,
 	Stage_2,
 	Test,
-	etc
+	etc,
+	None
 };
 
 struct Change_Signal
