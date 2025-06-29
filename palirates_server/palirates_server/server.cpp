@@ -90,7 +90,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-            std::cout << buffer << std::endl;
+//            std::cout << buffer << std::endl;
         }
 
         buffer[bytesReceived] = '\0';
@@ -177,7 +177,7 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
 
 void Server::HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
-    if (tokens.size() < 5)
+    if (tokens.size() < 6)
     {
         std::cerr << "[ERROR] HandleBoardPacket: 토큰 개수 부족" << std::endl;
         return;
@@ -321,6 +321,7 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
 
     std::ostringstream oss;
     oss << "BOARD_SCENE," << pos.x << "," << pos.y << "," << pos.z << "," << look.x << "," << look.y << "," << look.z << "\n";
+    std::cout << "[SERVER] Build_BoardScene_Packet: " << oss.str();
 
     return oss.str();
 }

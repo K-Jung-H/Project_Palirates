@@ -206,7 +206,7 @@ void Board_Scene::Update_Scene()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    float deltaTime = 0.016f;
+    float deltaTime = 0.006f;
     auto boat = dynamic_pointer_cast<Boat_Object>(pirate_ship);
     
     if (!boat) return;
@@ -222,10 +222,14 @@ void Board_Scene::Update_Scene()
         if (key & INPUT_D) right++;
     }
 
-    if (fwd) boat->MoveForward(10.0f * fwd);
-    if (back) boat->MoveForward(-10.0f * back);
-    if (left) boat->Add_Rotate(-1.0f * left);
-    if (right) boat->Add_Rotate(1.0f * right);
+    if (fwd) 
+        boat->MoveForward(100.0f * fwd);
+    if (back) 
+        boat->MoveForward(-100.0f * back);
+    if (left) 
+        boat->Add_Rotate(-100.0f * left);
+    if (right) 
+        boat->Add_Rotate(100.0f * right);
 
     boat->Animate(deltaTime);
 

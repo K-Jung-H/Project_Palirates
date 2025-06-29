@@ -88,7 +88,12 @@ private:
     array<int32_t, MaxPlayer> player_keyState;
 
 public:
-    Board_Scene() : Scene(Scene_Type::Board) {}
+    Board_Scene() : Scene(Scene_Type::Board)
+    {
+        pirate_ship = make_shared<Boat_Object>();
+        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+
+    }
 
     virtual void Update_Scene();
 

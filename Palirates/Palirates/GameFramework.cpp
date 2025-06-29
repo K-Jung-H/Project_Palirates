@@ -1303,7 +1303,7 @@ void CGameFramework::SendPacket()
 		int Selected_Stage = -1;
 		bool is_Selected = false;
 
-		oss << "," << current_keyboard_inputFlags << "," << to_string(Selected_Stage) << "," << to_string(is_Selected);
+		oss << "," << current_keyboard_inputFlags << "," << to_string(Selected_Stage) << "," << to_string(0);
 		
 		
 	}
