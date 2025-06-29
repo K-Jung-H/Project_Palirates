@@ -7,6 +7,8 @@
 #include "DDSTextureLoader12.h"
 #include "WICTextureLoader12.h"
 
+bool isRunning = false;
+
 UINT gnCbvSrvUavDescriptorIncrementSize = 0;
 UINT gnRtvDescriptorIncrementSize = 0;
 UINT gnDsvDescriptorIncrementSize = 0;
@@ -21,6 +23,7 @@ UINT gnDsvDescriptorIncrementSize = 0;
 };
 
  DXGI_FORMAT RenderTarget_Config::DSV_FORMAT = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
 
 
 void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter)

@@ -1,10 +1,12 @@
 #pragma once
 #include <unordered_map>
+#include <array>
 #include <memory>
 #include "stdafx.h"
 #include "Player.h"
 #include "Monster.h"
 
+#define MaxPlayer 6
 
 class Scene
 {
@@ -47,13 +49,22 @@ public:
 class Lobby_Scene : public Scene
 {
 private:
-    std::unordered_map<int, std::pair<int, bool>> characterSlots;
+    // characterSelections[캐릭터 ID][클라이언트 ID] = 선택 여부
+    std::array<std::array<bool, MaxPlayer>, MaxPlayer> characterSelections;
 
+    // characterReady[캐릭터 ID] = Ready한 클라이언트 ID (또는 -1)
+    std::array<int, MaxPlayer> characterReady;
 public:
-    Lobby_Scene() : Scene(Scene_Type::Lobby) 
+    Lobby_Scene() : Scene(Scene_Type::Lobby)
     {
-        for (int charId = 0; charId <= 5; ++charId)
-            characterSlots[charId] = { -1, false };
+        for (int i = 0; i < MaxPlayer; ++i)
+        {
+            characterReady[i] = -1;
+            for (int j = 0; j < MaxPlayer; ++j)
+            {
+                characterSelections[i][j] = false;
+            }
+        }
     }
 
     virtual void Update_Scene();
@@ -64,10 +75,11 @@ public:
     void ResetCharacterSlot(int clientId); // 클라이언트(clientId)가 선택한 캐릭터 슬롯을 초기화
     virtual Scene_Type CheckSceneTransition();
     
-    std::unordered_map<int, std::pair<int, bool>> Get_Select_Status() { return characterSlots; }
-
-
+    const std::array<std::array<bool, MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
+    const std::array<int, MaxPlayer>& GetCharacterReadyStates() const { return characterReady; }
 };
+
+
 
 class Board_Scene : public Scene
 {

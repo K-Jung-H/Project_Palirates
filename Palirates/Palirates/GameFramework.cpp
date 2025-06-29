@@ -977,24 +977,25 @@ void CGameFramework::FrameAdvance()
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
+//			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
 
 	{
 		std::lock_guard<std::mutex> lock(pendingCreateMutex);
+
 		while (!pendingPlayerCreates.empty())
 		{
 			int playerId = pendingPlayerCreates.front();
 			pendingPlayerCreates.pop();
 
 			int charId = 0;
-			for (const auto& [id, cid] : characterSelections)
+			for (int i = 0; i < MaxPlayer; ++i)
 			{
-				if (id == playerId)
+				if (characterSelections[i].test(playerId))
 				{
-					charId = cid;
+					charId = i;
 					break;
 				}
 			}
@@ -1002,6 +1003,7 @@ void CGameFramework::FrameAdvance()
 			CreateRemotePlayer(playerId, charId);
 		}
 	}
+
 
 	EndGPUStage(GPU_Stage::Compute, true);
 
@@ -1353,7 +1355,7 @@ int CGameFramework::SendPacket_String(const std::string& packet)
 
 	int result = send(serverSocket, packet.c_str(), static_cast<int>(packet.size()), 0);
 
-	std::cout << "[SEND] " << packet;
+//	std::cout << "[SEND] " << packet;
 
 	if (result == SOCKET_ERROR)
 	{
@@ -1364,8 +1366,6 @@ int CGameFramework::SendPacket_String(const std::string& packet)
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-	std::cout << "[DEBUG] ProcessReceivedData() called" << std::endl;
-
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
 		HandleClientIdAssignment();
@@ -1416,16 +1416,48 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	{
 	case Scene_Type::Lobby:
 	{
-		if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 19) // 1(cmd) + 6 * 3
+		shared_ptr<Character_Select_Scene> select_scene = dynamic_pointer_cast<Character_Select_Scene>(active_scene); 
+		if (!select_scene)
+			break;
+
+		if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 2)
 		{
+			// 초기화
+			for (int charId = 0; charId < MaxPlayer; ++charId)
+			{
+				readyClientIds[charId] = -1;
+				characterSelections[charId].reset();  // 선택 여부 초기화
+			}
+
 			for (int i = 1; i + 2 < tokens.size(); i += 3)
 			{
 				int charId = std::stoi(tokens[i]);
-				int ownerId = std::stoi(tokens[i + 1]);
-				bool isReady = (tokens[i + 2] == "1" || tokens[i + 2] == "true");
+				int readyClientId = std::stoi(tokens[i + 1]);
+				std::string selectedRaw = tokens[i + 2];
 
-				HandleCharacterStatus(charId, ownerId, isReady);
+				// Ready 정보 저장
+				readyClientIds[charId] = readyClientId;
+
+				// 선택 정보 저장
+				if (selectedRaw != "-1")
+				{
+					std::stringstream ss(selectedRaw);
+					std::string part;
+					while (std::getline(ss, part, '|'))
+					{
+						try {
+							int clientId = std::stoi(part);
+							if (clientId >= 0 && clientId < MaxPlayer)
+								characterSelections[charId].set(clientId);
+						}
+						catch (...) {
+							std::cerr << "[WARN] Invalid client ID: " << part << std::endl;
+						}
+					}
+				}
 			}
+			select_scene->SetCharacterSelections(characterSelections);
+			select_scene->SetReadyClientIds(readyClientIds);
 		}
 		else if (cmd == "CHARACTER_SELECT_SUCCESS")
 		{
@@ -1434,6 +1466,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else if (cmd == "CHARACTER_SELECT_FAIL")
 		{
 			// select 버튼 처리 값 초기화 하기
+			select_scene->Set_Character_Select_Status(false);
 		}
 	}
 	break;
@@ -1470,9 +1503,7 @@ void CGameFramework::HandleClientIdAssignment()
 
 	if (!m_pPlayer)
 	{
-		int charId = selectedCharacterId;
-		m_pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList,
-			scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get(), charId);
+		m_pPlayer = std::make_shared<CTerrainPlayer>(m_pd3dDevice, Active_CommandList, scene->Get_MRT_GraphicsRootSignature(), scene->m_pTerrain.get(), 0);
 		m_pPlayer->SetID(ClientNum);
 		m_pPlayer->Set_Name("LocalPlayer_" + std::to_string(ClientNum));
 		m_pPlayer->Set_Active(true);
@@ -1497,10 +1528,15 @@ void CGameFramework::HandleClientIdAssignment()
 
 		if (pendingId != ClientNum)
 		{
-			auto it = std::find_if(characterSelections.begin(), characterSelections.end(),
-				[pendingId](const std::pair<int, int>& p) { return p.first == pendingId; });
-
-			int charId = (it != characterSelections.end()) ? it->second : 0;
+			int charId = 0;
+			for (int i = 0; i < MaxPlayer; ++i)
+			{
+				if (characterSelections[i].test(pendingId))
+				{
+					charId = i;
+					break;
+				}
+			}
 
 			CreateRemotePlayer(pendingId, charId);
 		}
@@ -1571,20 +1607,6 @@ void CGameFramework::HandlePlayerCreate(int id)
 	}
 }
 
-void CGameFramework::HandleCharacterStatus(int playerId, int charId)
-{
-
-	if (auto* scene = dynamic_cast<Character_Select_Scene*>(scene_manager->Get_Active_Scene_Ptr()))
-	{
-		std::unordered_set<int> lockedIds;
-		for (const auto& [id, cid] : characterSelections)
-		{
-			if (id != ClientNum) lockedIds.insert(cid);
-		}
-		scene->UpdateLockedCharacters(lockedIds);
-		scene->UpdateCharacterSelections(characterSelections, ClientNum);
-	}
-}
 
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
@@ -1833,7 +1855,7 @@ void CGameFramework::NetworkLoop()
 	{
 		char buffer[1024 + 1];
 		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
 
 		if (bytesReceived > 0)
 		{
@@ -1843,7 +1865,7 @@ void CGameFramework::NetworkLoop()
 			{
 				std::lock_guard<std::mutex> lock(recvQueueMutex);
 				recvQueue.push(receivedData);
-				std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+	//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
 			}
 		}
 

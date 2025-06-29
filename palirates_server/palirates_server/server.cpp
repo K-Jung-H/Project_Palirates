@@ -87,7 +87,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-            std::cout << buffer << std::endl;
+//            std::cout << buffer << std::endl;
         }
 
         buffer[bytesReceived] = '\0';
@@ -146,32 +146,32 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
         return;
     }
 
-
+    // 토큰: [0] = "PLAYER_UPDATE", [1] = sceneType, [2] = clientId, [3] = selected_character_index, [4] = isReady
     int selected_character_index = std::stoi(tokens[3]);
+    bool isReady = (tokens[4] == "1" || tokens[4] == "true");
 
-    bool character_select_status = std::stoi(tokens[4]);
 
     if (selected_character_index == -1)
         return;
 
-    std::cout << "[LOBBY] clientId=" << clientId
-        << " 선택 캐릭터=" << selected_character_index
-        << " 준비 상태=" << (character_select_status ? "true" : "false") << std::endl;
+
+
+
 
 
     auto scene_It = scenes.find(Scene_Type::Lobby);
     if (scene_It == scenes.end()) return;
 
     std::shared_ptr<Scene> baseScene = scene_It->second;
-    shared_ptr<Lobby_Scene> lobby_Scene = dynamic_pointer_cast<Lobby_Scene>(baseScene);
+    shared_ptr<Lobby_Scene> lobbyScene = dynamic_pointer_cast<Lobby_Scene>(baseScene);
 
 
-    bool success = lobby_Scene->SelectCharacter(clientId, selected_character_index, character_select_status);
+    bool success = lobbyScene->SelectCharacter(clientId, selected_character_index, isReady);
 
-    // 응답
     std::string response = success
-        ? ("CHARACTER_SELECT_SUCCESS," + std::to_string(selected_character_index) + "," + (character_select_status ? "true" : "false") + "\n")
+        ? ("CHARACTER_SELECT_SUCCESS," + std::to_string(selected_character_index) + "," + (isReady ? "true" : "false") + "\n")
         : ("CHARACTER_SELECT_FAIL," + std::to_string(selected_character_index) + "\n");
+
 
     send(clients[clientId].socket, response.c_str(), static_cast<int>(response.length()), 0);
 }
@@ -188,9 +188,11 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
 }
 
 
-
 void Server::BroadcastAllStates()
 {
+    if (!activeClientCount)
+        return;
+
     std::string packet;
     if (HandleSceneBroadcast(packet))
     {
@@ -254,31 +256,45 @@ bool Server::HandleSceneBroadcast(std::string& outPacket)
     }
 }
 
-
 std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby)
 {
     std::ostringstream oss;
-    oss << "CHARACTER_SELECT_SCENE";
+    oss << "CHARACTER_SELECT_SCENE,";
 
-    auto status = lobby->Get_Select_Status();
-    for (int charId = 0; charId < 6; ++charId)
+    const auto& selections = lobby->GetCharacterSelections();
+    const auto& readyStates = lobby->GetCharacterReadyStates();
+
+    for (int charId = 0; charId < MaxPlayer; ++charId)
     {
-        auto it = status.find(charId);
-        int ownerId = -1;
-        bool isReady = false;
+        oss << charId << "," << readyStates[charId] << ",";
 
-        if (it != status.end())
+        bool hasSelection = false;
+        for (int clientId = 0; clientId < MaxPlayer; ++clientId)
         {
-            ownerId = it->second.first;
-            isReady = it->second.second;
+            if (selections[charId][clientId])
+            {
+                if (hasSelection) oss << "|";
+                oss << clientId;
+                hasSelection = true;
+            }
         }
 
-        oss << "," << charId << "," << ownerId << "," << (isReady ? 1 : 0);
+        if (!hasSelection)
+            oss << "-1";  
+        oss << ",";
     }
 
-    oss << "\n";
-    return oss.str();
+    std::string result = oss.str();
+    if (!result.empty() && result.back() == ',')
+        result.pop_back(); 
+
+    result += "\n";
+
+    std::cout << "[SERVER] Build_LobbyScene_Packet: " << result;
+    return result;
 }
+
+
 
 std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board)
 {

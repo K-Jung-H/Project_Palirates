@@ -187,7 +187,7 @@ private:
     sockaddr_in serverAddr;
     std::thread networkThread;
     std::mutex networkMutex;
-    bool isRunning;
+
     //=================SERVER=================
 
 
@@ -231,10 +231,10 @@ public:
     std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
-    int currentShipControllerId = -1;
 
-    int selectedCharacterId = -1;
-    std::vector<std::pair<int, int>> characterSelections;
+
+    std::array<int, MaxPlayer> readyClientIds;
+    std::array<std::bitset<MaxPlayer>, MaxPlayer> characterSelections;
 
     int selected_charecter_id = 0;
     int charecter_select_state = 0;

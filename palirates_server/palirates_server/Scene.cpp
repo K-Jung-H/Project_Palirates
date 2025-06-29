@@ -97,49 +97,47 @@ void Scene::Update_Scene()
 }
 
 //======================================================
-
 bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    auto it = characterSlots.find(characterId);
-    if (it != characterSlots.end())
-    {
-        int ownerId = it->second.first;
-        bool ownerReady = it->second.second;
+    if (characterId < 0 || characterId >= MaxPlayer) return false;
+    if (clientId < 0 || clientId >= MaxPlayer) return false;
 
-        if (ownerId != clientId && ownerReady)
-        {
-            return false;
-        }
-    }
+    // Ready 하려는 캐릭터가 이미 다른 사람이 Ready 했다면 거부
+    if (isReady && characterReady[characterId] != -1 && characterReady[characterId] != clientId)
+        return false;
 
-    for (auto it = characterSlots.begin(); it != characterSlots.end(); )
-    {
-        if (it->second.first == clientId)
-            it = characterSlots.erase(it);
-        else
-            ++it;
-    }
+    // 모든 캐릭터에서 clientId 선택 해제
+    for (int i = 0; i < MaxPlayer; ++i)
+        characterSelections[i][clientId] = false;
 
-    characterSlots[characterId] = { clientId, isReady };
+    // 선택한 캐릭터에 표시
+    characterSelections[characterId][clientId] = true;
+
+    // Ready 상태 갱신
+    if (isReady)
+        characterReady[characterId] = clientId;
+    else if (characterReady[characterId] == clientId)
+        characterReady[characterId] = -1;
+
     return true;
 }
+
 
 bool Lobby_Scene::IsAllReadyAndValid()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (characterSlots.empty() || active_client_num == 0) return false;
+    if (active_client_num == 0) return false;
 
     int readyCount = 0;
 
-    for (const auto& [charId, pair] : characterSlots)
+    for (int i = 0; i < MaxPlayer; ++i)
     {
-        if (pair.second) // 레디 상태인 경우
+        if (characterReady[i] != -1)
             ++readyCount;
     }
-
 
     return (readyCount == active_client_num);
 }
@@ -148,16 +146,12 @@ void Lobby_Scene::ResetCharacterSlot(int clientId)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    for (auto it = characterSlots.begin(); it != characterSlots.end(); )
+    for (int i = 0; i < MaxPlayer; ++i)
     {
-        if (it->second.first == clientId)
-        {
-            it = characterSlots.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
+        characterSelections[i][clientId] = false;
+
+        if (characterReady[i] == clientId)
+            characterReady[i] = -1;
     }
 }
 
