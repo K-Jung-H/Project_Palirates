@@ -2423,7 +2423,7 @@ void Character_Select_Scene::UpdatePlayerSelection()
 					if (characterSelections[charId].test(clientId))
 					{
 						colorId = clientId;
-						break;
+						//break;
 					}
 				}
 			}
@@ -2566,8 +2566,8 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	float yStart = 0.12f;
 	float xSize = 0.06f;
 	for (int i = 0; i < MaxPlayer; i++) {
-		D2D1_RECT_F mug_Rect = MakeNormalizedRect(xStart + xGap * i, yStart, xSize, Texture_UI_Manager::s_MugTextures[i].get());
-		std::shared_ptr<TextureBlock> mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[i].get(), mug_Rect, mesh);
+		D2D1_RECT_F mug_Rect = MakeNormalizedRect(xStart + xGap * i, yStart, xSize, Texture_UI_Manager::s_MugTextures[0].get());
+		std::shared_ptr<TextureBlock> mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[0].get(), mug_Rect, mesh);
 		mug_block->ui_type = UI_EFFECT_TRANSLUCENT;
 		mug_block->bActive = false;
 		texture_ui_manager->AddMugBlock(mug_block);
