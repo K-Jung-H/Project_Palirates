@@ -4,6 +4,9 @@
 
 #define MONSTER_HP_UI_MAX_NUM				20
 
+#define CHARAACTER_SELECT_CHECK_INDEX 6
+#define CHARAACTER_SELECT_CANCEL_INDEX 7
+
 struct MonsterUIData
 {
     XMFLOAT3 position;
@@ -129,6 +132,7 @@ public:
 
 };
 
+#define UI_EFFECT_NONE      0
 #define UI_EFFECT_CUT_HP     (1 << 0) // 1
 #define UI_EFFECT_FADE_OUT   (1 << 1) // 2
 #define UI_EFFECT_SLIDE_DOWN   (1 << 2) // 4
@@ -236,6 +240,8 @@ private:
     std::vector<TextureBlock*> monsterHPBlocks;
     std::vector<std::shared_ptr<TextureBlock>> mugBlocks;
     std::vector<TextureBlock*> rawMugPtrs;
+    std::vector<std::shared_ptr<TextureBlock>> readyCheckBlocks;
+    std::vector<TextureBlock*> rawReadyCheckPtrs;
 
 public:
 
@@ -267,6 +273,20 @@ public:
         for (auto& block : rawMugPtrs)
         {
             if (block) block->bActive = false;
+        }
+    }
+    std::vector<TextureBlock*>& GetReadyCheckBlocks() { return rawReadyCheckPtrs; }
+    void AddReadyCheckBlock(TextureBlock* block) { rawReadyCheckPtrs.emplace_back(block); }
+    void DeactivateReadyCheckBlocks() 
+    {
+        uint32_t targetMask = static_cast<uint32_t>(UILayer::Interactable);
+
+        for (auto& block : rawReadyCheckPtrs)
+        {
+            if (block) {
+                if (block && (static_cast<uint32_t>(block->layer) & targetMask) == 0)
+                    block->bActive = false;
+            }
         }
     }
 };

@@ -147,6 +147,7 @@ public:
 	bool bHitSignal{ false };
 	bool bMenuActive{ false };
 	bool bStartAnimation{ false };
+	bool bSelectStart{ false };
 
 
 public:

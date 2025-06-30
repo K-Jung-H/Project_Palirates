@@ -458,6 +458,12 @@ void Texture_UI_Manager::RenderAll(ID3D12GraphicsCommandList* cmdList, float cur
                 rawPtrs.push_back(block);
         }
 
+        for (auto* block : rawReadyCheckPtrs)
+        {
+            if (block && block->bActive)
+                rawPtrs.push_back(block);
+        }
+
         for (auto* block : monsterHPBlocks)
         {
             if (block && block->bActive)
