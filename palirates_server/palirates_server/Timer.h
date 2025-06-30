@@ -19,6 +19,8 @@ public:
     float GetTimeElapsed();
 	float GetTotalTime();
 
+	unsigned long GetFrameRate();
+
 private:
 	double							m_fTimeScale;						
 	float							m_fTimeElapsed;		

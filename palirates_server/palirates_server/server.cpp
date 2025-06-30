@@ -371,13 +371,12 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 
 void Server::Server_Update()
 {
-    CGameTimer gameTimer;
-    gameTimer.Reset();  
-    float FPS = 60.0f;
+    m_gameTimer.Reset();
+    float FPS = 0.0f;
     while (true)
     {
-        gameTimer.Tick(FPS);
-        float elapsedTime = gameTimer.GetTimeElapsed(); 
+        m_gameTimer.Tick(FPS);
+        float elapsedTime = m_gameTimer.GetTimeElapsed();
 
         Scene::active_client_num = activeClientCount;
 
@@ -401,10 +400,10 @@ void Server::Server_Update()
             Broadcast_Scene_State_All();
         }
 
-
+        PrintClientDebugInfo();
     }
 
-
+    
 }
 
 
@@ -516,20 +515,39 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
 
 void Server::PrintClientDebugInfo()
 {
+    system("cls");
+    std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
+
+
+    if (activeClientCount == 0)
+        return;
+
+    
     std::lock_guard<std::mutex> lock(clientsMutex);
-    system("cls"); // Clear console
+
 
     for (const auto& [clientId, session] : clients)
     {
         if (!session->is_connected) continue;
 
+        std::string recvLog;
+        std::string sendLog;
+
+        {
+            std::lock_guard<std::mutex> logLock(session->packetLogMutex);
+            recvLog = session->lastReceivedPacket;
+            sendLog = session->lastSentPacket;
+        }
+
         std::cout << "===============================================\n";
-        std::cout << "Client ID - " << clientId << "\n\n";
-        std::cout << "Receive Packet - \n\n"; // 패킷 로그 출력 예정
-        std::cout << "Send Packet - \n\n";
-        std::cout << "===============================================\n\n";
+        std::cout << "Client ID - " << clientId << "\n";
+        std::cout << "Receive Packet - " << recvLog << "\n";
+        std::cout << "Send Packet    - " << sendLog << "\n";
     }
+
+    std::cout << "===============================================\n\n";
 }
+
 
 //========================================================================================
 
