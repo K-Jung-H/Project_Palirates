@@ -1285,7 +1285,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	auto t = texture_ui_manager->GetMonsterHPBlocks();
 
-	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	/*CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	if (select_index == Captain)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
 	else if (select_index == Deckhand)
@@ -1298,9 +1298,9 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
 	else if (select_index == Skeleton)
 		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
-	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
-	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(captain_mug, CMscreenRect, mesh);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);*/
+	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, Texture_UI_Manager::s_MugTextures[select_index].get());
+	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(Texture_UI_Manager::s_MugTextures[select_index].get(), CMscreenRect, mesh);
 	texture_ui_manager->Add_TextureBlock(std::move(CMblock));
 
 	CTexture* replay = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -2566,15 +2566,16 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[3].get(), 0, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[4].get(), 0, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[5].get(), 0, 0);
-	D2D1_RECT_F Captain_mug_Rect = MakeNormalizedRect(0.04f, 0.04f, 0.06f, Texture_UI_Manager::s_MugTextures[0].get());
-	std::shared_ptr<TextureBlock> Captain_mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[0].get(), Captain_mug_Rect, mesh);
-	//Captain_mug_block->bActive = false;
-	//Captain_mug_block->ui_type = UI_EFFECT_FADE_IN;
-	texture_ui_manager->AddMugBlock(Captain_mug_block);
-	D2D1_RECT_F Deckhand_mug_Rect = MakeNormalizedRect(0.12f, 0.04f, 0.06f, Texture_UI_Manager::s_MugTextures[1].get());
-	std::shared_ptr<TextureBlock> Deckhand_mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[1].get(), Deckhand_mug_Rect, mesh);
-	texture_ui_manager->AddMugBlock(Deckhand_mug_block);
-
+	float xStart = 0.06f;
+	float xGap = 0.08f;
+	float yStart = 0.12f;
+	float xSize = 0.06f;
+	for (int i = 0; i < 6; i++) {
+		D2D1_RECT_F mug_Rect = MakeNormalizedRect(xStart + xGap * i, yStart, xSize, Texture_UI_Manager::s_MugTextures[i].get());
+		std::shared_ptr<TextureBlock> mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[i].get(), mug_Rect, mesh);
+		mug_block->ui_type = UI_EFFECT_TRANSLUCENT;
+		texture_ui_manager->AddMugBlock(mug_block);
+	}
 
 	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);

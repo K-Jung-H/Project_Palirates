@@ -133,6 +133,7 @@ public:
 #define UI_EFFECT_FADE_OUT   (1 << 1) // 2
 #define UI_EFFECT_SLIDE_DOWN   (1 << 2) // 4
 #define UI_EFFECT_FADE_IN    (1 << 3) // 8
+#define UI_EFFECT_TRANSLUCENT    (1 << 4) // 16
 
 enum class UILayer : uint32_t
 {
