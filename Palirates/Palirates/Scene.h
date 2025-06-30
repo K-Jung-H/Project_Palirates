@@ -321,6 +321,8 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 private:
+	std::vector<XMFLOAT3> island_points;
+
 	std::shared_ptr<Boat_Object> pirate_ship;
 	std::shared_ptr<Wave_Object> wave_plane;
 	std::shared_ptr<ParticleObject> water_particle_1;
@@ -340,7 +342,7 @@ private:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
-	bool Check_Island_Range(float range);
+	int Get_Closest_Island_Index(float range);
 
 	void SetCameraTarget(std::string_view target);
 
@@ -357,6 +359,13 @@ private:
 
 
 	void SetcameraYOffset(float offset) { cameraYOffset = offset; }
+
+public: // For Server Sync
+	void Sync_Boat_Server(XMFLOAT3 pos, XMFLOAT3 look);
+	pair<int, bool> Get_Sail_Status();
+private:
+	int nearest_stage_index = -1;
+	bool is_stage_select = false;
 };
 
 class Test_Scene : public CScene

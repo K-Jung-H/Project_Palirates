@@ -2715,6 +2715,16 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
+	island_points = {
+	XMFLOAT3(-1200.0f, 40.0f, -1200.0f),
+	XMFLOAT3(-1200.0f, 40.0f, 0.0f),
+	XMFLOAT3(-1200.0f, 40.0f, 1200.0f),
+	XMFLOAT3(0.0f,     40.0f, 1200.0f),
+	XMFLOAT3(1200.0f,  40.0f, 1200.0f),
+	XMFLOAT3(1200.0f,  40.0f, 0.0f),
+	XMFLOAT3(1200.0f,  40.0f, -1200.0f)
+	}; 
+
 #ifdef RENDER_WAVE
 	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 100, true);
 	wave_obj->Set_Name("board_scene_wave");
@@ -2754,29 +2764,29 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		test_Island_1->Set_Name("Island_6");
 
 
-		test_Island_0->SetPosition(-1200.0f, 40.0f, -1200.0f);
-		m_pLights[0].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, -1200.0f);
+		test_Island_0->SetPosition(island_points[0]);
+		m_pLights[0].m_xmf3Position = island_points[0];
 
-		test_Island_1->SetPosition(-1200.0f, 40.0f, 0.0f);
-		m_pLights[1].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 0.0f);
+		test_Island_1->SetPosition(island_points[1]);
+		m_pLights[1].m_xmf3Position = island_points[1];
 
 		
-		test_Island_2->SetPosition(-1200.0f, 40.0f, 1200.0f);
-		m_pLights[2].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 1200.0f);
+		test_Island_2->SetPosition(island_points[2]);
+		m_pLights[2].m_xmf3Position = island_points[2];
 
-		test_Island_3->SetPosition(0.0f, 40.0f, 1200.0f);
-		m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 40.0f, 1200.0f);
-
-
-		test_Island_4->SetPosition(1200.0f, 40.0f, 1200.0f);
-		m_pLights[4].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 1200.0f);
+		test_Island_3->SetPosition(island_points[3]);
+		m_pLights[3].m_xmf3Position = island_points[3];
 
 
-		test_Island_5->SetPosition(1200.0f, 40.0f, 0.0f);
-		m_pLights[5].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 0.0f);
+		test_Island_4->SetPosition(island_points[4]);
+		m_pLights[4].m_xmf3Position = island_points[4];
 
-		test_Island_6->SetPosition(1200.0f, 40.0f, -1200.0f);
-		m_pLights[6].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, -1200.0f);
+
+		test_Island_5->SetPosition(island_points[5]);
+		m_pLights[5].m_xmf3Position = island_points[5];
+
+		test_Island_6->SetPosition(island_points[6]);
+		m_pLights[6].m_xmf3Position = island_points[6];
 
 
 		obj_manager->Add_Object(test_Island_0, Object_Type::fixed);
@@ -2898,9 +2908,11 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 #endif
 
-
-	pirate_ship->Animate(fTimeElapsed);
-	pirate_ship->HandleBoundaryReflection(1500.0f);
+	if (!isRunning)
+	{
+		pirate_ship->Animate(fTimeElapsed);
+		pirate_ship->HandleBoundaryReflection(1500.0f);
+	}
 
 	if (m_pLights)
 	{
@@ -2993,9 +3005,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 	if (!blocks.empty())
 	{
-		bool is_nearby = Check_Island_Range(300.0f); 
+		int is_nearby = Get_Closest_Island_Index(300.0f);
 
-		if (is_nearby)
+		if (is_nearby != -1)
 		{
 			if (!bMenuActive && !bClosedByUser)
 			{
@@ -3003,12 +3015,23 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 				Screen_Fade = true;
 				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, true);
 			}
+
+			if (isRunning)
+			{
+				nearest_stage_index = is_nearby;
+			}
 		}
 		else
 		{
 			bMenuActive = false;
 			bClosedByUser = false;
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+
+			if (isRunning)
+			{
+				nearest_stage_index = -1;
+				is_stage_select = false;
+			}
 		}
 	}
 }
@@ -3019,38 +3042,30 @@ void Board_Scene::After_Update_Objects()
 
 }
 
-bool Board_Scene::Check_Island_Range(float range)
+int Board_Scene::Get_Closest_Island_Index(float range)
 {
 	XMFLOAT3 boat_pos = pirate_ship->GetPosition();
 
-	XMFLOAT3 island_points[] = 
-	{
-		   XMFLOAT3(-1200.0f, 40.0f, -1200.0f),
-		   XMFLOAT3(-1200.0f, 40.0f, 0.0f),
-		   XMFLOAT3(-1200.0f, 40.0f, 1200.0f),
-		   XMFLOAT3(0.0f,    40.0f, 1200.0f),
-		   XMFLOAT3(1200.0f, 40.0f, 1200.0f),
-		   XMFLOAT3(1200.0f, 40.0f, 0.0f),
-		   XMFLOAT3(1200.0f, 40.0f, -1200.0f)
-	};
 
-	for (const auto& point : island_points)
+	int closest_index = -1;
+	float min_distance = range + 1.0f;  // 초기값: range보다 약간 큼
+
+	for (int i = 0; i < island_points.size(); ++i)
 	{
 		XMVECTOR v1 = XMLoadFloat3(&boat_pos);
-		XMVECTOR v2 = XMLoadFloat3(&point);
+		XMVECTOR v2 = XMLoadFloat3(&island_points[i]);
 		XMVECTOR diff = XMVectorSubtract(v1, v2);
-
-
 		float distance = XMVectorGetX(XMVector3Length(diff));
 
-		if (distance <= range)
-			return true;
+		if (distance <= range && distance < min_distance)
+		{
+			min_distance = distance;
+			closest_index = i;
+		}
 	}
 
-	return false;
-
+	return closest_index;
 }
-
 
 void Board_Scene::SetCameraTarget(std::string_view target)
 {
@@ -3146,13 +3161,22 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'W':		case 'w':
 		{
-			pirate_ship->MoveForward(20);
+			if(isRunning)
+				pirate_ship->MoveForward(20);
 		}
 		break;
 
 		case 'A':		case 'a':
 		{
-			pirate_ship->Add_Rotate(-10.0f);
+			if (isRunning)
+				pirate_ship->Add_Rotate(-10.0f);
+		}
+		break;
+
+		case 'D':		case 'd':
+		{
+			if (isRunning)
+				pirate_ship->Add_Rotate(10.0f);
 		}
 		break;
 
@@ -3163,11 +3187,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'D':		case 'd':
-		{
-			pirate_ship->Add_Rotate(10.0f);
-		}
-		break;
+
 
 		case '1':
 			SetCameraTarget("Captain");
@@ -3304,7 +3324,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			c_signal.change = true;
 			c_signal.scene_name = "Stage_1";
 			c_signal.type = Scene_Type::Stage_1;
-
+			is_stage_select = true;
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
@@ -3418,6 +3438,17 @@ void Board_Scene::OnMenuCloseButtonClicked(std::vector<TextureBlock*>& blocks)
 	Screen_Fade = false;
 	bClosedByUser = true;
 	Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+}
+
+void Board_Scene::Sync_Boat_Server(XMFLOAT3 pos, XMFLOAT3 look)
+{
+	pirate_ship->SetPosition(pos); 
+	pirate_ship->SetLookDirection(look); 
+}
+
+pair<int, bool> Board_Scene::Get_Sail_Status()
+{
+	return { nearest_stage_index, is_stage_select };
 }
 
 //==========================================================================================

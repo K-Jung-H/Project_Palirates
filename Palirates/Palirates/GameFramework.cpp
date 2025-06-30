@@ -1279,15 +1279,15 @@ void CGameFramework::SendPacket()
 	int state = m_pPlayer->GetState();
 
 	std::ostringstream oss;
-	oss << "PLAYER_UPDATE,"
-		<< static_cast<int>(active_scene->scene_type) << ","
-		<< ClientNum;
+	oss << "PLAYER_UPDATE," << static_cast<int>(active_scene->scene_type) << "," << ClientNum;
 
 	switch (active_scene->scene_type)
 	{
 	case Scene_Type::Lobby:
 	{
 		shared_ptr<Character_Select_Scene>characterScene = std::dynamic_pointer_cast<Character_Select_Scene>(active_scene);
+		if (!characterScene)
+			break;
 
 		int selected_index = characterScene->Get_Selected_Character_Index();
 		int select_status = characterScene->Get_Character_Select_Status();
@@ -1299,11 +1299,16 @@ void CGameFramework::SendPacket()
 	case Scene_Type::Board:
 	{
 		shared_ptr<Board_Scene>board_Scene = std::dynamic_pointer_cast<Board_Scene>(active_scene);
+		if (!board_Scene)
+			break;
 
-		oss << "," << current_keyboard_inputFlags << ","
-			<< look.x << "," << look.y << "," << look.z;
+		auto [selected_stage, is_selected] = board_Scene->Get_Sail_Status();
+
+		if (is_selected)
+			int a = 1;
+
+		oss << "," << current_keyboard_inputFlags << "," << to_string(selected_stage) << "," << (is_selected ? "1" : "0");
 		
-		// + 스테이지 선택 확정 유무 bool 값 전달하기
 		
 	}
 	break;
@@ -1473,8 +1478,28 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	case Scene_Type::Board:
 	{
-		if (cmd == "SHIP_INFO") 
+		shared_ptr<Board_Scene>board_Scene = std::dynamic_pointer_cast<Board_Scene>(active_scene);
+		if (!board_Scene)
+			break;
+
+		if (cmd == "BOARD_SCENE") 
 		{
+			if (tokens.size() < 7)
+				break;
+
+			// pos: tokens[1]~[3], look: tokens[4]~[6]
+			XMFLOAT3 pos{
+				std::stof(tokens[1]),
+				std::stof(tokens[2]),
+				std::stof(tokens[3])
+			};
+			XMFLOAT3 look{
+				std::stof(tokens[4]),
+				std::stof(tokens[5]),
+				std::stof(tokens[6])
+			};
+
+			board_Scene->Sync_Boat_Server(pos, look);
 		}
 	}
 	break;
@@ -1904,12 +1929,10 @@ void CGameFramework::PlayerLeave(int playerId)
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
+		std::cout << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
 		std::cout << "[SEND] " << packet << std::endl;
 	}
 }
-
-

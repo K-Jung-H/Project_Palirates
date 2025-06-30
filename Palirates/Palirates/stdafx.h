@@ -560,5 +560,7 @@ namespace Plane
 
 //#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"
+//#define SERVER_IP "172.30.1.13"
 #define SERVER_IP "127.0.0.1"
+
 #define SERVER_PORT 9000
