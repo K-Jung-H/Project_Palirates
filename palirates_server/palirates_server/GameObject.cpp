@@ -203,3 +203,85 @@ void GameObject::SetRight(XMFLOAT3 xmf3Right)
 
 	UpdateTransform(nullptr);
 }
+
+//===================================================================
+
+Boat_Object::Boat_Object()
+	: GameObject()
+{
+	m_fMaxVelocityXZ = 200.0f;
+	m_xmf3Velocity = XMFLOAT3(300.0f, 0.0f, 0.0f);
+	m_fFriction = 500.0f;
+	SetLook(XMFLOAT3(0.0f, 0.0f, 1.0f));
+}
+
+Boat_Object::~Boat_Object() {}
+
+void Boat_Object::MoveForward(float speed)
+{
+	XMFLOAT3 look = Vector3::Normalize(GetLook());
+	XMFLOAT3 shift = Vector3::ScalarProduct(look, speed, false);
+	m_xmf3Velocity = Vector3::Add(m_xmf3Velocity, shift);
+}
+
+void Boat_Object::Add_Rotate(float angleDelta)
+{
+	m_fRotationSpeed += angleDelta;
+	m_fRotationSpeed = std::clamp<float>(m_fRotationSpeed, -45.0f, 45.0f);
+}
+
+void Boat_Object::Animate(float fTimeElapsed)
+{
+	// --- 속도 크기 측정 ---
+	float velocityFull = Vector3::Length(m_xmf3Velocity);
+
+	// --- 최대 속도 제한 ---
+	if (velocityFull > m_fMaxVelocityXZ)
+	{
+		float scale = m_fMaxVelocityXZ / velocityFull;
+		m_xmf3Velocity.x *= scale;
+		m_xmf3Velocity.z *= scale;
+		velocityFull = m_fMaxVelocityXZ;
+	}
+
+	// --- 이동 처리 ---
+	XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
+	XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, velocityFull, false);
+
+	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
+	SetPosition(Vector3::Add(pos, deltaMove));
+
+	// --- 회전 처리 ---
+	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
+	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
+	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
+
+	// --- 감속 처리 ---
+	float decel = m_fFriction * fTimeElapsed;
+	if (decel > velocityFull) decel = velocityFull;
+	velocityFull -= decel;
+
+	// --- 감속 적용: Look 방향 기준으로 감속된 속도 재계산 ---
+	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
+	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+}
+void Boat_Object::HandleBoundaryReflection(float boundary)
+{
+	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 vel = Get_Velocity();
+	bool bounced = false;
+
+	if (pos.x > boundary || pos.x < -boundary) {
+		vel.x *= -1.0f; bounced = true;
+	}
+	if (pos.z > boundary || pos.z < -boundary) {
+		vel.z *= -1.0f; bounced = true;
+	}
+
+	if (bounced) {
+		Set_Velocity(vel);
+		XMFLOAT3 newLook = Vector3::Normalize(vel);
+		SetLook(newLook);
+	}
+}

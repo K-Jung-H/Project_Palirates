@@ -9,9 +9,10 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "SceneManager.h"
+#include "Scene.h"
 #include "Logger.h"
 #include "Player.h"
+#include "Timer.h"
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -59,19 +60,17 @@ private:
     std::unordered_map<int, ClientSession> clients;
     std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
 
-    std::unordered_map<int, int> characterSelections;
-    std::unordered_set<int> lockedCharacterIds;
-
     std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
     std::unordered_set<int> activeClientIds;
 
     std::mutex idMutex;
     std::mutex clientsMutex;
-    std::mutex characterMutex;
     std::mutex activeSceneMutex;
 
     std::atomic<int> activeClientCount = 0;
 
+
+    CGameTimer m_gameTimer;
     std::shared_ptr<Scene> activeScene;
 
     int nextClientId = 0;

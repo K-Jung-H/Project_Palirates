@@ -66,6 +66,27 @@ public:
 };
 
 
+class Boat_Object : public GameObject
+{
+    XMFLOAT3 m_xmf3Velocity{};
+    float m_fMaxVelocityXZ = 200.0f;
+    float m_fFriction = 50.0f;
+    float m_fRotationSpeed = 0.0f;
+
+public:
+    Boat_Object();
+    virtual ~Boat_Object();
+
+    void MoveForward(float speed);
+    void Add_Rotate(float angleDelta);
+    void Animate(float fTimeElapsed);
+    void HandleBoundaryReflection(float boundary);
+
+    void Set_Velocity(const XMFLOAT3& v) { m_xmf3Velocity = v; }
+    XMFLOAT3 Get_Velocity() const { return m_xmf3Velocity; }
+};
+
+
 class Skinned_GameObject : public GameObject
 {
 protected:
