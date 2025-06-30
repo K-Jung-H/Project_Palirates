@@ -32,7 +32,7 @@ Server::Server(int port)
 Server::~Server()
 {
     for (const auto& [id, session] : clients)
-        closesocket(session.socket);
+        closesocket(session->socket);
     closesocket(listenSocket);
     WSACleanup();
 }
@@ -49,6 +49,13 @@ void Server::Start()
             CleanupInactiveClients();
         }
         }).detach();
+
+    std::thread([this]() {
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            PrintClientDebugInfo();
+        }
+        }).detach();
 }
 
 
@@ -62,13 +69,17 @@ void Server::AcceptClients()
         int clientId = GetNewClientId();
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
-            clients[clientId] = { clientSocket, true, std::chrono::steady_clock::now() };
+            clients[clientId] = std::make_shared<ClientSession>(clientSocket);
         }
 
         activeClientCount++; // 현재 활성화된 클라 스레드 개수
 
         std::string idPacket = "CLIENT_ID," + std::to_string(clientId) + "\n";
-        send(clientSocket, idPacket.c_str(), static_cast<int>(idPacket.length()), 0);
+
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex);
+            Send_Custom(clients[clientId], idPacket, true);
+        }
 
         std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
     }
@@ -87,13 +98,18 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             break;
         }
 
+        buffer[bytesReceived] = '\0';
+
+
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
-            clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-            std::cout << buffer << std::endl;
+            clients[clientId]->lastActiveTime = std::chrono::steady_clock::now();
+
+
+            std::lock_guard<std::mutex> logLock(clients[clientId]->packetLogMutex);
+            clients[clientId]->lastReceivedPacket = buffer;
         }
 
-        buffer[bytesReceived] = '\0';
         std::istringstream iss(buffer);
         std::string line;
 
@@ -172,7 +188,11 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
         : ("CHARACTER_SELECT_FAIL," + std::to_string(selected_character_index) + "\n");
 
 
-    send(clients[clientId].socket, response.c_str(), static_cast<int>(response.length()), 0);
+    {
+        std::lock_guard<std::mutex> lock(clientsMutex);
+        Send_Custom(clients[clientId], response, true);
+    }
+
 }
 
 void Server::HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
@@ -208,7 +228,7 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
 }
 
 
-void Server::BroadcastAllStates()
+void Server::Broadcast_Scene_State_All()
 {
     if (!activeClientCount)
         return;
@@ -217,12 +237,9 @@ void Server::BroadcastAllStates()
     if (HandleSceneBroadcast(packet))
     {
         std::lock_guard<std::mutex> lock(clientsMutex);
-        for (const auto& [clientId, session] : clients)
+        for (auto& [clientId, session] : clients)
         {
-            if (session.is_connected)
-            {
-                send(session.socket, packet.c_str(), static_cast<int>(packet.size()), 0);
-            }
+            Send_Custom(session, packet, true);
         }
     }
 }
@@ -310,7 +327,6 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
     result += "\n";
 
-    std::cout << "[SERVER] Build_LobbyScene_Packet: " << result;
     return result;
 }
 
@@ -355,13 +371,12 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 
 void Server::Server_Update()
 {
-    CGameTimer gameTimer;
-    gameTimer.Reset();  
-    float FPS = 60.0f;
+    m_gameTimer.Reset();
+    float FPS = 0.0f;
     while (true)
     {
-        gameTimer.Tick(FPS);
-        float elapsedTime = gameTimer.GetTimeElapsed(); 
+        m_gameTimer.Tick(FPS);
+        float elapsedTime = m_gameTimer.GetTimeElapsed();
 
         Scene::active_client_num = activeClientCount;
 
@@ -377,18 +392,18 @@ void Server::Server_Update()
         if (new_scene_type != Scene_Type::None)
         {
             std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
-            BroadcastPacket(packet, -1);
+            BroadcastPacket(packet);
             SetActiveScene(new_scene_type);
         }
         else
         {
-            BroadcastAllStates();
+            Broadcast_Scene_State_All();
         }
 
-
+        PrintClientDebugInfo();
     }
 
-
+    
 }
 
 
@@ -403,10 +418,10 @@ void Server::CleanupInactiveClients()
 
         for (const auto& [clientId, session] : clients)
         {
-            if (!session.is_connected)
+            if (!session->is_connected)
                 continue;
 
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - session.lastActiveTime);
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - session->lastActiveTime);
             if (elapsed.count() > 10) // 10초 이상 무응답
             {
                 logger.Log("[TIMEOUT] 클라이언트 " + std::to_string(clientId) + " 수신 없음 → 제거 대상");
@@ -421,7 +436,6 @@ void Server::CleanupInactiveClients()
     }
 }
 
-
 void Server::DisconnectClient(int clientId)
 {
     std::lock_guard<std::mutex> lock(clientsMutex);
@@ -429,12 +443,17 @@ void Server::DisconnectClient(int clientId)
     auto it = clients.find(clientId);
     if (it != clients.end())
     {
-        closesocket(it->second.socket);
+        closesocket(it->second->socket);
         clients.erase(it);
     }
     ReleaseClientId(clientId);
 }
 
+void Server::removePlayerFromAllScenes(int clientId)
+{
+    for (auto& [name, scene] : scenes)
+        if (scene) scene->removePlayer(clientId);
+}
 
 void Server::ReleaseClientId(int clientId)
 {
@@ -454,16 +473,6 @@ int Server::GetNewClientId()
 }
 
 
-void Server::BroadcastPacket(const std::string& packet, int senderId)
-{
-    std::lock_guard<std::mutex> lock(clientsMutex);
-    for (const auto& [id, session] : clients)
-    {
-        if (!session.is_connected || id == senderId) continue;
-        send(session.socket, packet.c_str(), static_cast<int>(packet.length()), 0);
-    }
-}
-
 
 void Server::SetActiveScene(const Scene_Type scene_type)
 {
@@ -480,14 +489,65 @@ std::shared_ptr<Scene> Server::GetActiveScene()
     return activeScene;
 }
 
-
-
-
-void Server::removePlayerFromAllScenes(int clientId)
+void Server::BroadcastPacket(const std::string& packet)
 {
-    for (auto& [name, scene] : scenes)
-        if (scene) scene->removePlayer(clientId);
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    for (auto& [id, session] : clients)
+    {
+        if (!session->is_connected) continue;
+        Send_Custom(session, packet, true);
+    }
 }
+
+
+void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog)
+{
+    if (!session->is_connected) return;
+
+    send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+
+    if (saveLog)
+    {
+        std::lock_guard<std::mutex> logLock(session->packetLogMutex);
+        session->lastSentPacket = packet;
+    }
+}
+
+void Server::PrintClientDebugInfo()
+{
+    system("cls");
+    std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
+
+
+    if (activeClientCount == 0)
+        return;
+
+    
+    std::lock_guard<std::mutex> lock(clientsMutex);
+
+
+    for (const auto& [clientId, session] : clients)
+    {
+        if (!session->is_connected) continue;
+
+        std::string recvLog;
+        std::string sendLog;
+
+        {
+            std::lock_guard<std::mutex> logLock(session->packetLogMutex);
+            recvLog = session->lastReceivedPacket;
+            sendLog = session->lastSentPacket;
+        }
+
+        std::cout << "===============================================\n";
+        std::cout << "Client ID - " << clientId << "\n";
+        std::cout << "Receive Packet - " << recvLog << "\n";
+        std::cout << "Send Packet    - " << sendLog << "\n";
+    }
+
+    std::cout << "===============================================\n\n";
+}
+
 
 //========================================================================================
 
