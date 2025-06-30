@@ -1279,9 +1279,7 @@ void CGameFramework::SendPacket()
 	int state = m_pPlayer->GetState();
 
 	std::ostringstream oss;
-	oss << "PLAYER_UPDATE,"
-		<< static_cast<int>(active_scene->scene_type) << ","
-		<< ClientNum;
+	oss << "PLAYER_UPDATE," << static_cast<int>(active_scene->scene_type) << "," << ClientNum;
 
 	switch (active_scene->scene_type)
 	{
@@ -1305,6 +1303,9 @@ void CGameFramework::SendPacket()
 			break;
 
 		auto [selected_stage, is_selected] = board_Scene->Get_Sail_Status();
+
+		if (is_selected)
+			int a = 1;
 
 		oss << "," << current_keyboard_inputFlags << "," << to_string(selected_stage) << "," << (is_selected ? "1" : "0");
 		
@@ -1928,12 +1929,10 @@ void CGameFramework::PlayerLeave(int playerId)
 	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
 	if (result == SOCKET_ERROR)
 	{
-		std::cerr << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
+		std::cout << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
 	}
 	else
 	{
 		std::cout << "[SEND] " << packet << std::endl;
 	}
 }
-
-

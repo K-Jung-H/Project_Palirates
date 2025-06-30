@@ -91,7 +91,7 @@ Scene_Type Scene::CheckSceneTransition()
         return Scene_Type::None;
 }
 
-void Scene::Update_Scene()
+void Scene::Update_Scene(float elapsedTime)
 {
 
 }
@@ -167,7 +167,7 @@ Scene_Type Lobby_Scene::CheckSceneTransition()
 }
 
 
-void Lobby_Scene::Update_Scene()
+void Lobby_Scene::Update_Scene(float elapsedTime)
 {
     Change_Scene_Trigger = IsAllReadyAndValid();
 }
@@ -182,18 +182,32 @@ bool Board_Scene::IsAllReadyAndValid()
 
     if (active_client_num == 0) return false;
 
-    const auto& first = stage_select_state[0];
+    int readyCount = 0;
+    int selectedStage = -1;
 
-    if (!first.second) return false; 
-
-    for (int i = 1; i < MaxPlayer; ++i)
+    for (int i = 0; i < MaxPlayer; ++i)
     {
-        if (stage_select_state[i] != first)
-            return false;
+        const auto& [stage, is_ready] = stage_select_state[i];
+
+        if (!is_ready)
+            continue;
+
+        if (readyCount == 0)
+        {
+            selectedStage = stage; // 기준 stage 설정
+        }
+        else if (stage != selectedStage)
+        {
+            return false; // 서로 다른 stage 선택
+        }
+
+        ++readyCount;
     }
 
-    return true;
+    return (readyCount == active_client_num);
 }
+
+
 Scene_Type Board_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -230,13 +244,10 @@ void Board_Scene::Select_State(int Client_ID, pair<int, bool> select_state)
 }
 
 
-void Board_Scene::Update_Scene()
+void Board_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    float deltaTime = 0.01f;
-
-    
     if (!pirate_ship) return;
 
 
@@ -261,7 +272,7 @@ void Board_Scene::Update_Scene()
     if (right) 
         pirate_ship->Add_Rotate(100.0f * right);
 
-    pirate_ship->Animate(deltaTime);
+    pirate_ship->Animate(elapsedTime);
     pirate_ship->HandleBoundaryReflection(1500);
 
     // 씬 전환 체크
@@ -279,6 +290,7 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 {
     if (pirate_ship)
         return pirate_ship->GetLook();
+
     return XMFLOAT3(0.0f, 0.0f, 1.0f); 
 }
 
@@ -296,7 +308,7 @@ Scene_Type Stage_Scene::CheckSceneTransition()
 }
 
 
-void Stage_Scene::Update_Scene()
+void Stage_Scene::Update_Scene(float elapsedTime)
 {
 
 }

@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "server.h"
 
-const int MAX_CLIENTS = 6;
+
 
 Server::Server(int port)
 {
@@ -323,7 +323,6 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
 
     std::ostringstream oss;
     oss << "BOARD_SCENE," << pos.x << "," << pos.y << "," << pos.z << "," << look.x << "," << look.y << "," << look.z << "\n";
- //   std::cout << "[SERVER] Build_BoardScene_Packet: " << oss.str();
 
     return oss.str();
 }
@@ -356,34 +355,37 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 
 void Server::Server_Update()
 {
+    CGameTimer gameTimer;
+    gameTimer.Reset();  
+    float FPS = 60.0f;
     while (true)
     {
+        gameTimer.Tick(FPS);
+        float elapsedTime = gameTimer.GetTimeElapsed(); 
+
         Scene::active_client_num = activeClientCount;
 
         std::shared_ptr<Scene> scene = GetActiveScene();
         if (!scene) return;
 
-        scene->Update_Scene();
 
-
+        scene->Update_Scene(elapsedTime); 
 
         //==============================================
-        // Change_Scene
-
+        // Handle Scene Chnage
         Scene_Type new_scene_type = scene->CheckSceneTransition();
         if (new_scene_type != Scene_Type::None)
         {
             std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
-
             BroadcastPacket(packet, -1);
             SetActiveScene(new_scene_type);
         }
-        else // Default
+        else
         {
             BroadcastAllStates();
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));  
+
     }
 
 
@@ -479,12 +481,7 @@ std::shared_ptr<Scene> Server::GetActiveScene()
 }
 
 
-void Server::addPlayerToScene(const Scene_Type scene_type, int clientId, std::shared_ptr<Player> player)
-{
-    auto it = scenes.find(scene_type);
-    if (it != scenes.end())
-        it->second->addPlayer(clientId, player);
-}
+
 
 void Server::removePlayerFromAllScenes(int clientId)
 {

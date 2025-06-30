@@ -211,7 +211,7 @@ Boat_Object::Boat_Object()
 {
 	m_fMaxVelocityXZ = 200.0f;
 	m_xmf3Velocity = XMFLOAT3(300.0f, 0.0f, 0.0f);
-	m_fFriction = 50.0f;
+	m_fFriction = 500.0f;
 	SetLook(XMFLOAT3(0.0f, 0.0f, 1.0f));
 }
 
@@ -232,34 +232,40 @@ void Boat_Object::Add_Rotate(float angleDelta)
 
 void Boat_Object::Animate(float fTimeElapsed)
 {
-	// Limit velocity
-	float speed = Vector3::Length(m_xmf3Velocity);
-	if (speed > m_fMaxVelocityXZ)
+	// --- 속도 크기 측정 ---
+	float velocityFull = Vector3::Length(m_xmf3Velocity);
+
+	// --- 최대 속도 제한 ---
+	if (velocityFull > m_fMaxVelocityXZ)
 	{
-		float scale = m_fMaxVelocityXZ / speed;
+		float scale = m_fMaxVelocityXZ / velocityFull;
 		m_xmf3Velocity.x *= scale;
 		m_xmf3Velocity.z *= scale;
+		velocityFull = m_fMaxVelocityXZ;
 	}
 
-	// Movement update
-	XMFLOAT3 look = Vector3::Normalize(GetLook());
-	XMFLOAT3 deltaMove = Vector3::ScalarProduct(m_xmf3Velocity, fTimeElapsed, false);
+	// --- 이동 처리 ---
+	XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
+	XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, velocityFull, false);
+
 	XMFLOAT3 pos = GetPosition();
+	XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
 	SetPosition(Vector3::Add(pos, deltaMove));
 
-	// Rotation apply
+	// --- 회전 처리 ---
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
 	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
 
-	// Deceleration
+	// --- 감속 처리 ---
 	float decel = m_fFriction * fTimeElapsed;
-	if (decel > speed) decel = speed;
-	speed -= decel;
+	if (decel > velocityFull) decel = velocityFull;
+	velocityFull -= decel;
 
-	m_xmf3Velocity = Vector3::ScalarProduct(look, speed, false);
+	// --- 감속 적용: Look 방향 기준으로 감속된 속도 재계산 ---
+	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
+	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
 }
-
 void Boat_Object::HandleBoundaryReflection(float boundary)
 {
 	XMFLOAT3 pos = GetPosition();

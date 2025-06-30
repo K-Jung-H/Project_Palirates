@@ -33,7 +33,7 @@ public:
     const std::unordered_map<int, std::shared_ptr<Player>>& getPlayers() const;
 
     // --- 상태 업데이트 함수 ---
-    virtual void Update_Scene();
+    virtual void Update_Scene(float elapsedTime);
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_Position();
@@ -67,7 +67,7 @@ public:
         }
     }
 
-    virtual void Update_Scene();
+    virtual void Update_Scene(float elapsedTime);
 
 
     bool SelectCharacter(int clientId, int characterId, bool isReady);
@@ -102,7 +102,7 @@ public:
 
     }
 
-    virtual void Update_Scene();
+    virtual void Update_Scene(float elapsedTime);
 
     void Update_KeyState(int Client_ID, int32_t keyState);
     void Select_State(int Client_ID, pair<int, bool> select_state);
@@ -121,7 +121,7 @@ private:
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) {}
 
-    virtual void Update_Scene();
+    virtual void Update_Scene(float elapsedTime);
 
 
     virtual Scene_Type CheckSceneTransition();
