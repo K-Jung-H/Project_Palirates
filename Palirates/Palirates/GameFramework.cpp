@@ -1288,6 +1288,8 @@ void CGameFramework::SendPacket()
 	case Scene_Type::Lobby:
 	{
 		shared_ptr<Character_Select_Scene>characterScene = std::dynamic_pointer_cast<Character_Select_Scene>(active_scene);
+		if (!characterScene)
+			break;
 
 		int selected_index = characterScene->Get_Selected_Character_Index();
 		int select_status = characterScene->Get_Character_Select_Status();
@@ -1299,11 +1301,12 @@ void CGameFramework::SendPacket()
 	case Scene_Type::Board:
 	{
 		shared_ptr<Board_Scene>board_Scene = std::dynamic_pointer_cast<Board_Scene>(active_scene);
+		if (!board_Scene)
+			break;
 
-		int Selected_Stage = -1;
-		bool is_Selected = false;
+		auto [selected_stage, is_selected] = board_Scene->Get_Sail_Status();
 
-		oss << "," << current_keyboard_inputFlags << "," << to_string(Selected_Stage) << "," << to_string(0);
+		oss << "," << current_keyboard_inputFlags << "," << to_string(selected_stage) << "," << (is_selected ? "1" : "0");
 		
 		
 	}
@@ -1474,8 +1477,28 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	case Scene_Type::Board:
 	{
-		if (cmd == "SHIP_INFO") 
+		shared_ptr<Board_Scene>board_Scene = std::dynamic_pointer_cast<Board_Scene>(active_scene);
+		if (!board_Scene)
+			break;
+
+		if (cmd == "BOARD_SCENE") 
 		{
+			if (tokens.size() < 7)
+				break;
+
+			// pos: tokens[1]~[3], look: tokens[4]~[6]
+			XMFLOAT3 pos{
+				std::stof(tokens[1]),
+				std::stof(tokens[2]),
+				std::stof(tokens[3])
+			};
+			XMFLOAT3 look{
+				std::stof(tokens[4]),
+				std::stof(tokens[5]),
+				std::stof(tokens[6])
+			};
+
+			board_Scene->Sync_Boat_Server(pos, look);
 		}
 	}
 	break;

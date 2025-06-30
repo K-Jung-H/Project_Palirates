@@ -124,6 +124,18 @@ bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
     return true;
 }
 
+void Lobby_Scene::ResetCharacterSlot(int clientId)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+        characterSelections[i][clientId] = false;
+
+        if (characterReady[i] == clientId)
+            characterReady[i] = -1;
+    }
+}
 
 bool Lobby_Scene::IsAllReadyAndValid()
 {
@@ -142,20 +154,6 @@ bool Lobby_Scene::IsAllReadyAndValid()
     return (readyCount == active_client_num);
 }
 
-void Lobby_Scene::ResetCharacterSlot(int clientId)
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-
-    for (int i = 0; i < MaxPlayer; ++i)
-    {
-        characterSelections[i][clientId] = false;
-
-        if (characterReady[i] == clientId)
-            characterReady[i] = -1;
-    }
-}
-
-
 Scene_Type Lobby_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -171,14 +169,31 @@ Scene_Type Lobby_Scene::CheckSceneTransition()
 
 void Lobby_Scene::Update_Scene()
 {
-
     Change_Scene_Trigger = IsAllReadyAndValid();
-
 }
 
 
 //======================================================
 
+
+bool Board_Scene::IsAllReadyAndValid()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (active_client_num == 0) return false;
+
+    const auto& first = stage_select_state[0];
+
+    if (!first.second) return false; 
+
+    for (int i = 1; i < MaxPlayer; ++i)
+    {
+        if (stage_select_state[i] != first)
+            return false;
+    }
+
+    return true;
+}
 Scene_Type Board_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -201,15 +216,29 @@ void Board_Scene::Update_KeyState(int Client_ID, int32_t keyState)
     
 }
 
+void Board_Scene::Select_State(int Client_ID, pair<int, bool> select_state)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (Client_ID >= 0 && Client_ID < MaxPlayer)
+    {
+        stage_select_state[Client_ID] = select_state; 
+    }
+    else
+        cout << "Error - [Update_KeyState]: Wrong_Index \n";
+
+}
+
 
 void Board_Scene::Update_Scene()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    float deltaTime = 0.006f;
-    auto boat = dynamic_pointer_cast<Boat_Object>(pirate_ship);
+    float deltaTime = 0.01f;
+
     
-    if (!boat) return;
+    if (!pirate_ship) return;
+
 
     int fwd = 0, back = 0, left = 0, right = 0;
  
@@ -222,17 +251,21 @@ void Board_Scene::Update_Scene()
         if (key & INPUT_D) right++;
     }
 
-    if (fwd) 
-        boat->MoveForward(100.0f * fwd);
+
+    if (fwd)
+        pirate_ship->MoveForward(100.0f * fwd);
     if (back) 
-        boat->MoveForward(-100.0f * back);
+        pirate_ship->MoveForward(-100.0f * back);
     if (left) 
-        boat->Add_Rotate(-100.0f * left);
+        pirate_ship->Add_Rotate(-100.0f * left);
     if (right) 
-        boat->Add_Rotate(100.0f * right);
+        pirate_ship->Add_Rotate(100.0f * right);
 
-    boat->Animate(deltaTime);
+    pirate_ship->Animate(deltaTime);
+    pirate_ship->HandleBoundaryReflection(1500);
 
+    // ¾À ÀüÈ¯ Ã¼Å©
+    Change_Scene_Trigger = IsAllReadyAndValid();
 }
 
 XMFLOAT3 Board_Scene::Get_PirateShip_Position() const

@@ -41,7 +41,7 @@ public:
     void updatePlayerPosition(int id, float x, float y, float z, float lookX, float lookY, float lookZ, Player_State state);
     void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
 
-
+    virtual bool IsAllReadyAndValid() { return false; }
     virtual Scene_Type CheckSceneTransition();
 };
 
@@ -71,8 +71,9 @@ public:
 
 
     bool SelectCharacter(int clientId, int characterId, bool isReady);
-    bool IsAllReadyAndValid();
     void ResetCharacterSlot(int clientId); // 클라이언트(clientId)가 선택한 캐릭터 슬롯을 초기화
+
+    virtual bool IsAllReadyAndValid();
     virtual Scene_Type CheckSceneTransition();
     
     const std::array<std::array<bool, MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
@@ -86,19 +87,27 @@ class Board_Scene : public Scene
 private:
     shared_ptr<Boat_Object> pirate_ship;
     array<int32_t, MaxPlayer> player_keyState;
-
+    array<pair<int, bool>, MaxPlayer> stage_select_state;
 public:
     Board_Scene() : Scene(Scene_Type::Board)
     {
         pirate_ship = make_shared<Boat_Object>();
         pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
 
+        for (int i = 0; i < MaxPlayer; i++)
+        {
+            player_keyState[i] = 0;
+            stage_select_state[i] = { -1, false };
+        }
+
     }
 
     virtual void Update_Scene();
 
     void Update_KeyState(int Client_ID, int32_t keyState);
-    
+    void Select_State(int Client_ID, pair<int, bool> select_state);
+
+    virtual bool IsAllReadyAndValid();
     virtual Scene_Type CheckSceneTransition();
 
     XMFLOAT3 Get_PirateShip_Position() const;

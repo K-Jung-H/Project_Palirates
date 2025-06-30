@@ -90,7 +90,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-//            std::cout << buffer << std::endl;
+            std::cout << buffer << std::endl;
         }
 
         buffer[bytesReceived] = '\0';
@@ -183,11 +183,6 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
         return;
     }
 
-    uint32_t inputFlags = static_cast<uint32_t>(std::stoul(tokens[3]));
-    float Selected_Stage = std::stoi(tokens[4]);
-    bool is_Selected = (tokens[5] == "1" || tokens[5] == "true");
-
-
     auto it = scenes.find(Scene_Type::Board);
     if (it == scenes.end()) return;
 
@@ -196,7 +191,14 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
     if (!boardScene) return;
 
 
+    uint32_t inputFlags = static_cast<uint32_t>(std::stoul(tokens[3]));
+    float Selected_Stage = std::stoi(tokens[4]);
+    bool is_Selected = (tokens[5] == "1" || tokens[5] == "true");
+
+
+
     boardScene->Update_KeyState(clientId, inputFlags);
+    boardScene->Select_State(clientId, {Selected_Stage, is_Selected});
 
 }
 
@@ -321,7 +323,7 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
 
     std::ostringstream oss;
     oss << "BOARD_SCENE," << pos.x << "," << pos.y << "," << pos.z << "," << look.x << "," << look.y << "," << look.z << "\n";
-    std::cout << "[SERVER] Build_BoardScene_Packet: " << oss.str();
+ //   std::cout << "[SERVER] Build_BoardScene_Packet: " << oss.str();
 
     return oss.str();
 }

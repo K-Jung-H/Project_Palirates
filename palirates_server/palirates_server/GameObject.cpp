@@ -211,8 +211,8 @@ Boat_Object::Boat_Object()
 {
 	m_fMaxVelocityXZ = 200.0f;
 	m_xmf3Velocity = XMFLOAT3(300.0f, 0.0f, 0.0f);
-	m_fFriction = 0.0f;
-
+	m_fFriction = 50.0f;
+	SetLook(XMFLOAT3(0.0f, 0.0f, 1.0f));
 }
 
 Boat_Object::~Boat_Object() {}
