@@ -262,4 +262,11 @@ public:
         mugBlocks.push_back(block);             
         rawMugPtrs.push_back(block.get());      
     }
+    void DeactivateAllMugBlocks()
+    {
+        for (auto& block : rawMugPtrs)
+        {
+            if (block) block->bActive = false;
+        }
+    }
 };

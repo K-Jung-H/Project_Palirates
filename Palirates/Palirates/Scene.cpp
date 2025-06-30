@@ -1285,20 +1285,6 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	auto t = texture_ui_manager->GetMonsterHPBlocks();
 
-	/*CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	if (select_index == Captain)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Deckhand)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Female_Pirate)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == First_Mate)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Seaman)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Skeleton)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);*/
 	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, Texture_UI_Manager::s_MugTextures[select_index].get());
 	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(Texture_UI_Manager::s_MugTextures[select_index].get(), CMscreenRect, mesh);
 	texture_ui_manager->Add_TextureBlock(std::move(CMblock));
@@ -2413,6 +2399,8 @@ void Character_Select_Scene::UpdatePlayerSelection()
 
 	if (isRunning)
 	{
+		auto MugList = texture_ui_manager->GetMugBlocks();
+		texture_ui_manager->DeactivateAllMugBlocks();
 		for (int charId = 0; charId < MaxPlayer; ++charId)
 		{
 			if (charId >= player_list->size()) continue;
@@ -2425,6 +2413,7 @@ void Character_Select_Scene::UpdatePlayerSelection()
 			if (readyClientIds[charId] != -1)
 			{
 				colorId = readyClientIds[charId];
+				MugList[colorId]->ui_type = 0;
 			}
 			else
 			{
@@ -2441,6 +2430,8 @@ void Character_Select_Scene::UpdatePlayerSelection()
 
 			if (colorId != -1)
 			{
+				if (!MugList[colorId]->bActive) MugList[colorId]->bActive = true;
+				MugList[colorId]->pTexture = Texture_UI_Manager::s_MugTextures[charId].get();
 				player->SetOutlineColor(colorId + 1);
 			}
 		}
@@ -2458,6 +2449,10 @@ void Character_Select_Scene::UpdatePlayerSelection()
 			m_pLights[3].m_xmf3Position = character_pos;
 			m_pLights[3].m_xmf3Position.y += 15.0f;
 		}
+
+		auto MugList = texture_ui_manager->GetMugBlocks();
+		if (!MugList[0]->bActive) MugList[0]->bActive = true;
+		MugList[0]->pTexture = Texture_UI_Manager::s_MugTextures[select_index].get();
 	}
 
 
@@ -2570,10 +2565,11 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	float xGap = 0.08f;
 	float yStart = 0.12f;
 	float xSize = 0.06f;
-	for (int i = 0; i < 6; i++) {
+	for (int i = 0; i < MaxPlayer; i++) {
 		D2D1_RECT_F mug_Rect = MakeNormalizedRect(xStart + xGap * i, yStart, xSize, Texture_UI_Manager::s_MugTextures[i].get());
 		std::shared_ptr<TextureBlock> mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[i].get(), mug_Rect, mesh);
 		mug_block->ui_type = UI_EFFECT_TRANSLUCENT;
+		mug_block->bActive = false;
 		texture_ui_manager->AddMugBlock(mug_block);
 	}
 
@@ -2607,7 +2603,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 			{
 				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
 				Screen_Fade = false;
-
 			}
 		};
 	SlbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
