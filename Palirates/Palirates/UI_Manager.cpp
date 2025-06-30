@@ -3,6 +3,8 @@
 
 using namespace std;
 
+std::array<std::shared_ptr<CTexture>, 6> Texture_UI_Manager::s_MugTextures{};
+
 Text_UI_Manager::Text_UI_Manager()
 {
 
@@ -448,6 +450,13 @@ void Texture_UI_Manager::RenderAll(ID3D12GraphicsCommandList* cmdList, float cur
         std::vector<TextureBlock*> rawPtrs;
         for (auto& block : textureBlockList)
             rawPtrs.push_back(block.get());
+
+
+        for (auto* block : rawMugPtrs)
+        {
+            if (block && block->bActive)
+                rawPtrs.push_back(block);
+        }
 
         for (auto* block : monsterHPBlocks)
         {

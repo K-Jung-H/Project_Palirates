@@ -223,6 +223,9 @@ private:
 
 class Texture_UI_Manager
 {
+public:
+    static std::array<std::shared_ptr<CTexture>, 6> s_MugTextures;
+
 private:
     std::vector<std::unique_ptr<TextureBlock>> textureBlockList;
     std::vector<TextureBlock*> rawTextureBlockList;
@@ -230,46 +233,32 @@ private:
     std::unique_ptr<Texture_UI_Renderer> textureRenderer;
     std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature = NULL;
     std::vector<TextureBlock*> monsterHPBlocks;
+    std::vector<std::shared_ptr<TextureBlock>> mugBlocks;
+    std::vector<TextureBlock*> rawMugPtrs;
 
 public:
 
-    void SetShader(std::unique_ptr<CTextureToScreenShader> shader) {
-        textureShader = std::move(shader);
-    }
-
-    void SetRenderer(std::unique_ptr<Texture_UI_Renderer> renderer) {
-        textureRenderer = std::move(renderer);
-    }
-
-    Texture_UI_Renderer* GetRenderer() const {
-        return textureRenderer.get();
-    }
-    void SetRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature) {
-        m_TextureUI_GraphicsRootSignature = rootSignature;
-    }
-
-    void Add_TextureBlock(std::unique_ptr<TextureBlock> block) {
-        textureBlockList.emplace_back(std::move(block));
-    }
-
+    void SetShader(std::unique_ptr<CTextureToScreenShader> shader) { textureShader = std::move(shader); }
+    void SetRenderer(std::unique_ptr<Texture_UI_Renderer> renderer) { textureRenderer = std::move(renderer);}
+    Texture_UI_Renderer* GetRenderer() const { return textureRenderer.get(); }
+    void SetRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature) { m_TextureUI_GraphicsRootSignature = rootSignature; }
+    void Add_TextureBlock(std::unique_ptr<TextureBlock> block) { textureBlockList.emplace_back(std::move(block)); }
     void RenderAll(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime);
-
     std::vector<TextureBlock*> GetTextureBlockPtrs();
-
     CTextureToScreenShader* GetShader() const { return textureShader.get(); }
-
     std::vector<TextureBlock*>& GetMonsterHPBlocks() { return monsterHPBlocks; }
-
-    void AddMonsterHPBlock(TextureBlock* block)
-    {
-        monsterHPBlocks.emplace_back(block);
-    }
-
+    void AddMonsterHPBlock(TextureBlock* block) { monsterHPBlocks.emplace_back(block); }
     void DeactivateAllMonsterHPBlocks()
     {
         for (auto& block : monsterHPBlocks)
         {
             if (block) block->bActive = false;
         }
+    }
+    std::vector<std::shared_ptr<TextureBlock>> GetMugBlocks() { return mugBlocks; }
+    void AddMugBlock(const std::shared_ptr<TextureBlock>& block)
+    {
+        mugBlocks.push_back(block);             
+        rawMugPtrs.push_back(block.get());      
     }
 };

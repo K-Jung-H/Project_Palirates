@@ -2548,6 +2548,34 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
+	Texture_UI_Manager::s_MugTextures[0] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[0]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[1] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[1]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[2] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[2]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[3] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[3]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[4] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[4]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[5] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[5]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[0].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[1].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[2].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[3].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[4].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[5].get(), 0, 0);
+	D2D1_RECT_F Captain_mug_Rect = MakeNormalizedRect(0.04f, 0.04f, 0.06f, Texture_UI_Manager::s_MugTextures[0].get());
+	std::shared_ptr<TextureBlock> Captain_mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[0].get(), Captain_mug_Rect, mesh);
+	//Captain_mug_block->bActive = false;
+	//Captain_mug_block->ui_type = UI_EFFECT_FADE_IN;
+	texture_ui_manager->AddMugBlock(Captain_mug_block);
+	D2D1_RECT_F Deckhand_mug_Rect = MakeNormalizedRect(0.12f, 0.04f, 0.06f, Texture_UI_Manager::s_MugTextures[1].get());
+	std::shared_ptr<TextureBlock> Deckhand_mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[1].get(), Deckhand_mug_Rect, mesh);
+	texture_ui_manager->AddMugBlock(Deckhand_mug_block);
+
+
 	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
@@ -2555,7 +2583,12 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Menu);
 	BGblock->bActive = false;
 	BGblock->ui_type = UI_EFFECT_FADE_IN;
-	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
+	//texture_ui_manager->Add_TextureBlock(std::move(BGblock));
+
+	D2D1_RECT_F CharSelectBG = MakeNormalizedRect(0.26f, 0.18f, 0.5f, BackGround, 0.2f);
+	std::unique_ptr<TextureBlock> CSBGblock = std::make_unique<TextureBlock>(BackGround, CharSelectBG, mesh);
+	//CSBGblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(CSBGblock));
 
 	CTexture* SelectbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	SelectbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downPart.dds", RESOURCE_TEXTURE2D, 0);
