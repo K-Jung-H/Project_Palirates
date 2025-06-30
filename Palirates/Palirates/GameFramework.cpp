@@ -1471,7 +1471,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else if (cmd == "CHARACTER_SELECT_FAIL")
 		{
 			// select 버튼 처리 값 초기화 하기
-			select_scene->Set_Character_Select_Status(false);
+			//select_scene->Set_Character_Select_Status(false);
 		}
 	}
 	break;

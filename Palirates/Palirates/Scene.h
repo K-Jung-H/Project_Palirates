@@ -147,6 +147,7 @@ public:
 	bool bHitSignal{ false };
 	bool bMenuActive{ false };
 	bool bStartAnimation{ false };
+	bool bSelectStart{ false };
 
 
 public:
@@ -276,8 +277,7 @@ public:
 class Character_Select_Scene : public CScene
 {
 private:
-	UINT select_index = -1;
-	int is_Ready = 0; // 버튼 눌렀는지 유무
+	int is_Ready = 0; 
 
 
 	std::array<int, MaxPlayer> readyClientIds;

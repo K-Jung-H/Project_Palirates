@@ -44,6 +44,7 @@ VS_UI_OUTPUT VS_UI(VS_UI_INPUT input)
 #define UI_EFFECT_FADE_OUT   (1 << 1) // 2
 #define UI_EFFECT_SLIDE_DOWN   (1 << 2) // 4
 #define UI_EFFECT_FADE_IN    (1 << 3) // 8
+#define UI_EFFECT_TRANSLUCENT   (1 << 4) // 16
 
 float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 {
@@ -118,6 +119,12 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
         float alpha = saturate(elapsed / fadeInDuration);
         result.a *= alpha;
     }
-
+    
+// TRANSLUCENT
+    if ((type & UI_EFFECT_TRANSLUCENT) != 0)
+    {
+        result.a *= 0.3f;
+    }
+    
     return result;
 }
