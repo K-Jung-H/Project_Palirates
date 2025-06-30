@@ -187,7 +187,7 @@ private:
     sockaddr_in serverAddr;
     std::thread networkThread;
     std::mutex networkMutex;
-    bool isRunning;
+
     //=================SERVER=================
 
 
@@ -231,41 +231,39 @@ public:
     std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
-    int currentShipControllerId = -1;
-    void SelectCharacter(int characterId);
-    void SendCharacterSelectPacket(int charId);
-    std::unordered_map<std::string, std::string> ParseKeyValueFields(const std::vector<std::string>& tokens, size_t startIndex);
-    int selectedCharacterId = -1;
-    std::vector<std::pair<int, int>> characterSelections;
-    bool bCharacterSelectedSent = false;
-    bool bCharacterSelectApproved = false;
+
+
+    std::array<int, MaxPlayer> readyClientIds;
+    std::array<std::bitset<MaxPlayer>, MaxPlayer> characterSelections;
+
+    int selected_charecter_id = 0;
+    int charecter_select_state = 0;
+
 
     int Change_Call_By_Server = -1;
     Change_Signal change_signal;
 
-    int GetCharacterSelection(int playerId) const;
-    bool HasCharacterSelection(int playerId) const;
-    void SetCharacterSelection(int playerId, int characterId);
-
-    void SetupCharacterSelectScene();
-    bool Check_CharacterSelect_IndexList();
-
+ 
     void ConnectToServer(const std::string& ip, int port);
+
     void SendPacket();
-    void SendPacket(const std::string& packet);
+    int SendPacket_String(const std::string& packet);
+
     void NetworkLoop();
     bool IsServerConnected();
     int GetServerPlayerID();
     void PlayerLeave(int playerId);
+    void StartPingThread();
     void Disconnect();
     void HandleClientIdAssignment();
     void DelayOrQueuePacket(const std::string& packet);
-    void RespondToPing();
+
     void HandlePlayerLeave(int leaveId);
     void HandlePlayerCreate(int id);
-    void HandleCharacterStatus(int playerId, int charId);
-    void HandleShipSync(const std::vector<std::string>& tokens);
+
+
     void HandleChangeScene(const std::vector<std::string>& tokens);
+
     void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
     void HandlePositionUpdate(const std::vector<std::string>& tokens);
     void CreateRemotePlayer(int playerId, int characterId);
@@ -282,15 +280,6 @@ public:
 
     //=================SERVER=================
 
-};
-
-
-enum SHIP_INPUT_TYPE
-{
-    SHIP_NONE = 0,
-    SHIP_FORWARD = 1,
-    SHIP_LEFT = 2,
-    SHIP_RIGHT = 3
 };
 
 
@@ -320,7 +309,3 @@ enum InputFlags : uint32_t
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };
 
-inline bool IsNumber(const std::string& s)
-{
-    return !s.empty() && (s[0] == '-' || std::isdigit(s[0])) && std::all_of(s.begin() + 1, s.end(), ::isdigit);
-}

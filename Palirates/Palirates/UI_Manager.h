@@ -2,7 +2,10 @@
 #include "Shader.h"
 #include "Timer.h"
 
-#define UI_MONSTER_NUM				20
+#define MONSTER_HP_UI_MAX_NUM				20
+
+#define CHARAACTER_SELECT_CHECK_INDEX 6
+#define CHARAACTER_SELECT_CANCEL_INDEX 7
 
 struct MonsterUIData
 {
@@ -129,10 +132,12 @@ public:
 
 };
 
+#define UI_EFFECT_NONE      0
 #define UI_EFFECT_CUT_HP     (1 << 0) // 1
 #define UI_EFFECT_FADE_OUT   (1 << 1) // 2
 #define UI_EFFECT_SLIDE_DOWN   (1 << 2) // 4
 #define UI_EFFECT_FADE_IN    (1 << 3) // 8
+#define UI_EFFECT_TRANSLUCENT    (1 << 4) // 16
 
 enum class UILayer : uint32_t
 {
@@ -223,6 +228,9 @@ private:
 
 class Texture_UI_Manager
 {
+public:
+    static std::array<std::shared_ptr<CTexture>, 6> s_MugTextures;
+
 private:
     std::vector<std::unique_ptr<TextureBlock>> textureBlockList;
     std::vector<TextureBlock*> rawTextureBlockList;
@@ -230,46 +238,55 @@ private:
     std::unique_ptr<Texture_UI_Renderer> textureRenderer;
     std::shared_ptr<ID3D12RootSignature> m_TextureUI_GraphicsRootSignature = NULL;
     std::vector<TextureBlock*> monsterHPBlocks;
+    std::vector<std::shared_ptr<TextureBlock>> mugBlocks;
+    std::vector<TextureBlock*> rawMugPtrs;
+    std::vector<std::shared_ptr<TextureBlock>> readyCheckBlocks;
+    std::vector<TextureBlock*> rawReadyCheckPtrs;
 
 public:
 
-    void SetShader(std::unique_ptr<CTextureToScreenShader> shader) {
-        textureShader = std::move(shader);
-    }
-
-    void SetRenderer(std::unique_ptr<Texture_UI_Renderer> renderer) {
-        textureRenderer = std::move(renderer);
-    }
-
-    Texture_UI_Renderer* GetRenderer() const {
-        return textureRenderer.get();
-    }
-    void SetRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature) {
-        m_TextureUI_GraphicsRootSignature = rootSignature;
-    }
-
-    void Add_TextureBlock(std::unique_ptr<TextureBlock> block) {
-        textureBlockList.emplace_back(std::move(block));
-    }
-
+    void SetShader(std::unique_ptr<CTextureToScreenShader> shader) { textureShader = std::move(shader); }
+    void SetRenderer(std::unique_ptr<Texture_UI_Renderer> renderer) { textureRenderer = std::move(renderer);}
+    Texture_UI_Renderer* GetRenderer() const { return textureRenderer.get(); }
+    void SetRootSignature(std::shared_ptr<ID3D12RootSignature> rootSignature) { m_TextureUI_GraphicsRootSignature = rootSignature; }
+    void Add_TextureBlock(std::unique_ptr<TextureBlock> block) { textureBlockList.emplace_back(std::move(block)); }
     void RenderAll(ID3D12GraphicsCommandList* cmdList, float currentTime, float elapsedTime);
-
     std::vector<TextureBlock*> GetTextureBlockPtrs();
-
     CTextureToScreenShader* GetShader() const { return textureShader.get(); }
-
     std::vector<TextureBlock*>& GetMonsterHPBlocks() { return monsterHPBlocks; }
-
-    void AddMonsterHPBlock(TextureBlock* block)
-    {
-        monsterHPBlocks.emplace_back(block);
-    }
-
+    void AddMonsterHPBlock(TextureBlock* block) { monsterHPBlocks.emplace_back(block); }
     void DeactivateAllMonsterHPBlocks()
     {
         for (auto& block : monsterHPBlocks)
         {
             if (block) block->bActive = false;
+        }
+    }
+    std::vector<std::shared_ptr<TextureBlock>> GetMugBlocks() { return mugBlocks; }
+    void AddMugBlock(const std::shared_ptr<TextureBlock>& block)
+    {
+        mugBlocks.push_back(block);             
+        rawMugPtrs.push_back(block.get());      
+    }
+    void DeactivateAllMugBlocks()
+    {
+        for (auto& block : rawMugPtrs)
+        {
+            if (block) block->bActive = false;
+        }
+    }
+    std::vector<TextureBlock*>& GetReadyCheckBlocks() { return rawReadyCheckPtrs; }
+    void AddReadyCheckBlock(TextureBlock* block) { rawReadyCheckPtrs.emplace_back(block); }
+    void DeactivateReadyCheckBlocks() 
+    {
+        uint32_t targetMask = static_cast<uint32_t>(UILayer::Interactable);
+
+        for (auto& block : rawReadyCheckPtrs)
+        {
+            if (block) {
+                if (block && (static_cast<uint32_t>(block->layer) & targetMask) == 0)
+                    block->bActive = false;
+            }
         }
     }
 };

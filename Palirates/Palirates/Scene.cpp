@@ -1269,7 +1269,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	HFblock->ui_type = UI_EFFECT_CUT_HP;
 	texture_ui_manager->Add_TextureBlock(std::move(HFblock));
 
-	for (int i = 0; i < UI_MONSTER_NUM; ++i)
+	for (int i = 0; i < MONSTER_HP_UI_MAX_NUM; ++i)
 	{
 		D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
 		TextureBlock* HBblock = new TextureBlock(HpBack, HBscreenRect, mesh);
@@ -1285,22 +1285,8 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 	auto t = texture_ui_manager->GetMonsterHPBlocks();
 
-	CTexture* captain_mug = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
-	if (select_index == Captain)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Deckhand)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Female_Pirate)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == First_Mate)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Seaman)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
-	else if (select_index == Skeleton)
-		captain_mug->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, captain_mug, 0, 0);
-	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, captain_mug);
-	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(captain_mug, CMscreenRect, mesh);
+	D2D1_RECT_F CMscreenRect = MakeNormalizedRect(0.07f, 0.86f, 0.13f, Texture_UI_Manager::s_MugTextures[select_index].get());
+	std::unique_ptr<TextureBlock> CMblock = std::make_unique<TextureBlock>(Texture_UI_Manager::s_MugTextures[select_index].get(), CMscreenRect, mesh);
 	texture_ui_manager->Add_TextureBlock(std::move(CMblock));
 
 	CTexture* replay = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
@@ -1609,6 +1595,23 @@ bool CScene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam,
 				}
 			}
 		}
+
+
+		std::vector<TextureBlock*> readyCheckblocks = texture_ui_manager->GetReadyCheckBlocks();
+		if (readyCheckblocks.empty()) return false;
+
+		for (auto& block : readyCheckblocks)
+		{
+			if (block && block->bActive) {
+				if (block->ui_type != UI_EFFECT_TRANSLUCENT)
+					if ((static_cast<uint32_t>(block->layer) & mask) != 0)
+						if (IsPointInRect(block->hitboxRect, fMouseX, fMouseY))
+						{
+							if (block->onClick) block->onClick();
+							return true;
+						}
+			}
+		}
 	}
 	return false;
 }
@@ -1633,6 +1636,19 @@ void CScene::UpdateUIHoverState(HWND hWnd)
 		if (block && block->bActive) {
 			if ((static_cast<uint32_t>(block->layer) & mask) != 0)
 				block->bHovered = IsPointInRect(block->hitboxRect, fMouseX, fMouseY);
+		}
+	}
+
+	std::vector<TextureBlock*> readyCheckblocks = texture_ui_manager->GetReadyCheckBlocks();
+	if (readyCheckblocks.empty()) return;
+
+	for (auto& block : readyCheckblocks)
+	{
+		if (block && block->bActive) {
+			if (block->ui_type != UI_EFFECT_TRANSLUCENT) {
+				if ((static_cast<uint32_t>(block->layer) & mask) != 0)
+					block->bHovered = IsPointInRect(block->hitboxRect, fMouseX, fMouseY);
+			}
 		}
 	}
 }
@@ -2389,6 +2405,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	UpdatePlayerSelection();
 }
 
 
@@ -2398,61 +2415,89 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 }
 
 
-void Character_Select_Scene::UpdatePlayerSelection(int new_index)
+void Character_Select_Scene::UpdatePlayerSelection()
 {
-	//std::cout << "[DEBUG] UpdatePlayerSelection 진입, new_index=" << new_index << std::endl;
-
 	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	if (!player_list) return;
 
-	//std::cout << "[DEBUG] player_list.size()=" << player_list->size() << std::endl;
-	//std::cout << "[DEBUG] select_index=" << select_index << std::endl;
-
-	int list_size = static_cast<int>(player_list->size());
-	if (list_size == 0) return;
-
-	int attempts = 0;
-	int next_index = (new_index + list_size) % list_size;
-
-	while (attempts < list_size)
-	{
-		int charId = (*player_list)[next_index]->GetID();
-		if (lockedCharacterIds.find(charId) == lockedCharacterIds.end())
-			break;
-		next_index = (next_index + 1) % list_size;
-		attempts++;
-	}
-	if (attempts >= list_size) return;
-
-	select_index = next_index;
 
 	for (auto& player : *player_list)
 	{
 		if (!player) continue;
-		int charId = player->GetID();
-		if (lockedCharacterIds.find(charId) != lockedCharacterIds.end())
-			player->SetOutlineColor(0);
-		else if (charId == (*player_list)[select_index]->GetID())
-			player->SetOutlineColor(1);
-		else
+		player->SetOutlineColor(0);
+	}
+
+	if (isRunning)
+	{
+		auto MugList = texture_ui_manager->GetMugBlocks();
+		texture_ui_manager->DeactivateAllMugBlocks();
+		auto readyList = texture_ui_manager->GetReadyCheckBlocks();
+		texture_ui_manager->DeactivateReadyCheckBlocks();
+		for (int charId = 0; charId < MaxPlayer; ++charId)
 		{
-			bool selectedByOthers = false;
-			for (const auto& [id, cid] : characterSelections)
+			if (charId >= player_list->size()) continue;
+			auto& player = (*player_list)[charId];
+			if (!player) continue;
+
+			int colorId = -1;
+
+
+			if (readyClientIds[charId] != -1)
 			{
-				if (id != ClientNum && cid == charId) { selectedByOthers = true; break; }
+				colorId = readyClientIds[charId];
+				MugList[colorId]->ui_type = UI_EFFECT_NONE;
+				if (!readyList.empty()) {
+					readyList[colorId]->bActive = true;
+				}
 			}
-			player->SetOutlineColor(selectedByOthers ? 2 : 0);
+			else
+			{
+				
+				for (int clientId = 0; clientId < MaxPlayer; ++clientId)
+				{
+					if (characterSelections[charId].test(clientId))
+					{
+						colorId = clientId;
+						//break;
+						MugList[colorId]->ui_type = UI_EFFECT_TRANSLUCENT;
+					}
+				}
+			}
+
+			if (colorId != -1)
+			{
+				if (bSelectStart) {
+					if (!MugList[colorId]->bActive) MugList[colorId]->bActive = true;
+					MugList[colorId]->pTexture = Texture_UI_Manager::s_MugTextures[charId].get();
+				}
+				player->SetOutlineColor(colorId + 1);
+			}
+		}
+	}
+	else
+	{
+		if (select_index >= 0 && select_index < player_list->size())
+		{
+			auto& selected = (*player_list)[select_index];
+			if (selected) 
+				selected->SetOutlineColor(1);
+
+			XMFLOAT3 character_pos = (*player_list)[select_index]->GetPosition();
+			m_pLights[3].m_bEnable = true;
+			m_pLights[3].m_xmf3Position = character_pos;
+			m_pLights[3].m_xmf3Position.y += 15.0f;
+		}
+
+		if (bSelectStart) {
+			auto MugList = texture_ui_manager->GetMugBlocks();
+			if (!MugList[0]->bActive) MugList[0]->bActive = true;
+			MugList[0]->pTexture = Texture_UI_Manager::s_MugTextures[select_index].get();
 		}
 	}
 
-	prev_index = select_index;
-
-	// 조명 연출(선택한 캐릭터 강조)
-	XMFLOAT3 character_pos = (*player_list)[select_index]->GetPosition();
-	m_pLights[3].m_bEnable = true;
-	m_pLights[3].m_xmf3Position = character_pos;
-	m_pLights[3].m_xmf3Position.y += 15.0f;
 
 }
+
 
 bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
@@ -2478,11 +2523,13 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		break;
 
 		case 'Z':
-			UpdatePlayerSelection(select_index - 1);
+			if (is_Ready == 0)
+				select_index = (select_index - 1 + 6) % 6;
 			break;
 
 		case 'C':
-			UpdatePlayerSelection(select_index + 1);
+			if (is_Ready == 0)
+				select_index = (select_index + 1 + 6) % 6;
 			break;
 
 		case VK_RETURN:
@@ -2538,23 +2585,53 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	texture_ui_manager->SetRootSignature(pRootSignature);
 	std::shared_ptr<CTextureMesh> mesh = std::make_shared<CTextureMesh>(pd3dDevice, pd3dCommandList, 2.0f, 2.0f);
 
+	Texture_UI_Manager::s_MugTextures[0] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[0]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Captain_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[1] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[1]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Deckhand_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[2] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[2]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Female_Pirate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[3] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[3]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/First_Mate_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[4] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[4]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Seaman_mug.dds", RESOURCE_TEXTURE2D, 0);
+	Texture_UI_Manager::s_MugTextures[5] = std::make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	Texture_UI_Manager::s_MugTextures[5]->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/Skeleton_mug.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[0].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[1].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[2].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[3].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[4].get(), 0, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, Texture_UI_Manager::s_MugTextures[5].get(), 0, 0);
+	float xStart = 0.06f;
+	float xGap = 0.08f;
+	float yStart = 0.12f;
+	float xSize = 0.06f;
+	for (int i = 0; i < MaxPlayer; i++) {
+		D2D1_RECT_F mug_Rect = MakeNormalizedRect(xStart + xGap * i, yStart, xSize, Texture_UI_Manager::s_MugTextures[0].get());
+		std::shared_ptr<TextureBlock> mug_block = std::make_shared<TextureBlock>(Texture_UI_Manager::s_MugTextures[0].get(), mug_Rect, mesh, UILayer::Menu);
+		mug_block->ui_type = UI_EFFECT_TRANSLUCENT;
+		mug_block->bActive = false;
+		texture_ui_manager->AddMugBlock(mug_block);
+	}
+
 	CTexture* BackGround = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	BackGround->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/backGround.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, BackGround, 0, 0);
-	D2D1_RECT_F BGscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.3f, BackGround);
-	std::unique_ptr<TextureBlock> BGblock = std::make_unique<TextureBlock>(BackGround, BGscreenRect, mesh, UILayer::Menu);
-	BGblock->bActive = false;
-	BGblock->ui_type = UI_EFFECT_FADE_IN;
-	texture_ui_manager->Add_TextureBlock(std::move(BGblock));
+	D2D1_RECT_F CharSelectBG = MakeNormalizedRect(0.26f, 0.18f, 0.5f, BackGround, 0.2f);
+	std::unique_ptr<TextureBlock> CSBGblock = std::make_unique<TextureBlock>(BackGround, CharSelectBG, mesh, UILayer::Menu);
+	CSBGblock->bActive = false;
+	CSBGblock->ui_type = UI_EFFECT_FADE_IN;
+	texture_ui_manager->Add_TextureBlock(std::move(CSBGblock));
 
 	CTexture* SelectbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	SelectbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/downPart.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectbutttonTexture, 0, 0);
-	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.5f, 0.5f, 0.4f, SelectbutttonTexture);
-	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
+	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.85f, 0.12f, 0.3f, SelectbutttonTexture);
+	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Menu);
 	SlbTblock->onClick = [this]()
 		{
-			this->bSelectRequested = true;
+			is_Ready = 1;
 			c_signal.change = true;
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;
@@ -2563,7 +2640,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 			{
 				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
 				Screen_Fade = false;
-
 			}
 		};
 	SlbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
@@ -2575,37 +2651,67 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CTexture* SelectTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	SelectTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/SelectTxt.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectTxtTexture, 0, 0);
-	D2D1_RECT_F SlTTscreenRect = MakeNormalizedRect(0.5f, 0.48f, 0.2f, SelectTxtTexture);
-	std::unique_ptr<TextureBlock> SlTTblock = std::make_unique<TextureBlock>(SelectTxtTexture, SlTTscreenRect, mesh, UILayer::Interactable | UILayer::Menu);
-	SlTTblock->hitboxRect = SlbTscreenRect;
+	D2D1_RECT_F SlTTscreenRect = MakeNormalizedRect(0.85f, 0.105f, 0.15f, SelectTxtTexture);
+	std::unique_ptr<TextureBlock> SlTTblock = std::make_unique<TextureBlock>(SelectTxtTexture, SlTTscreenRect, mesh, UILayer::Menu);
 	SlTTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	SlTTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	SlTTblock->bActive = false;
 	SlTTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SlTTblock));
 
+	CTexture* check = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	check->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/correct-symbol.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, check, 0, 0);
+	for (int i = 0; i < MaxPlayer; i++) {
+		D2D1_RECT_F ready_Rect = MakeNormalizedRect(xStart + xGap * i + 0.002, yStart + 0.12f, xSize, check);
+		TextureBlock* ready_block = new TextureBlock(check, ready_Rect, mesh);
+		ready_block->bActive = false;
+		texture_ui_manager->AddReadyCheckBlock(ready_block);
+	}
+
+	D2D1_RECT_F check_Rect = MakeNormalizedRect(0.81f, 0.23f, 0.05f, check);
+	TextureBlock* check_block = new TextureBlock(check, check_Rect, mesh, UILayer::Interactable | UILayer::Menu);
+	check_block->onClick = [this]()
+		{
+			is_Ready = 1;
+			c_signal.change = true;
+			c_signal.scene_name = "Game_Stage_Board";
+			c_signal.type = Scene_Type::Board;
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetReadyCheckBlocks();
+			if (!blocks.empty())
+			{
+				blocks[CHARAACTER_SELECT_CHECK_INDEX]->ui_type = UI_EFFECT_TRANSLUCENT;
+				blocks[CHARAACTER_SELECT_CHECK_INDEX]->bHovered = false;
+				blocks[CHARAACTER_SELECT_CANCEL_INDEX]->ui_type = UI_EFFECT_NONE;
+			}
+		};
+	check_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	check_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	check_block->bActive = false;
+	texture_ui_manager->AddReadyCheckBlock(check_block);
+
 	CTexture* return_to_select = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	return_to_select->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/remove-symbol.dds", RESOURCE_TEXTURE2D, 0);
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, return_to_select, 0, 0);
-	D2D1_RECT_F RTS_screenRect = MakeNormalizedRect(0.9f, 0.1f, 0.05f, return_to_select);
-	std::unique_ptr<TextureBlock> RTS_block = std::make_unique<TextureBlock>(return_to_select, RTS_screenRect, mesh, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade);
+	D2D1_RECT_F RTS_screenRect = MakeNormalizedRect(0.9f, 0.23f, 0.05f, return_to_select);
+	TextureBlock* RTS_block = new TextureBlock(return_to_select, RTS_screenRect, mesh, UILayer::Interactable | UILayer::Menu);
 	RTS_block->onClick = [this]()
 		{
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
+			is_Ready = 0;
+			c_signal.change = false;
+			std::vector<TextureBlock*> blocks = texture_ui_manager->GetReadyCheckBlocks();
 			if (!blocks.empty())
 			{
-				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
-				Screen_Fade = false;
-				bMenuActive = false;
-
+				blocks[CHARAACTER_SELECT_CHECK_INDEX]->ui_type = UI_EFFECT_NONE;
+				blocks[CHARAACTER_SELECT_CANCEL_INDEX]->ui_type = UI_EFFECT_TRANSLUCENT;
+				blocks[CHARAACTER_SELECT_CANCEL_INDEX]->bHovered = false;
 			}
 		};
 	RTS_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	RTS_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	RTS_block->bActive = false;
-	texture_ui_manager->Add_TextureBlock(std::move(RTS_block));
-
-
+	RTS_block->ui_type = UI_EFFECT_TRANSLUCENT;
+	texture_ui_manager->AddReadyCheckBlock(RTS_block);
 
 	CTexture* StartbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
 	StartbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/upper-login.dds", RESOURCE_TEXTURE2D, 0);
@@ -2617,7 +2723,14 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 		if (!blocks.empty())
 		{
 			Set_UI_Layer_Active(blocks, UILayer::Start, false);
+			Set_UI_Layer_Active(blocks, UILayer::Menu, true);
 			bStartAnimation = true;
+			bSelectStart = true;
+		}
+		std::vector<TextureBlock*> Readyblocks = texture_ui_manager->GetReadyCheckBlocks();
+		if (!Readyblocks.empty())
+		{
+			Set_UI_Layer_Active(Readyblocks, UILayer::Menu, true);
 		}
 		};
 	SbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
@@ -2705,6 +2818,16 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
 
+	island_points = {
+	XMFLOAT3(-1200.0f, 40.0f, -1200.0f),
+	XMFLOAT3(-1200.0f, 40.0f, 0.0f),
+	XMFLOAT3(-1200.0f, 40.0f, 1200.0f),
+	XMFLOAT3(0.0f,     40.0f, 1200.0f),
+	XMFLOAT3(1200.0f,  40.0f, 1200.0f),
+	XMFLOAT3(1200.0f,  40.0f, 0.0f),
+	XMFLOAT3(1200.0f,  40.0f, -1200.0f)
+	}; 
+
 #ifdef RENDER_WAVE
 	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 100, true);
 	wave_obj->Set_Name("board_scene_wave");
@@ -2744,29 +2867,29 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		test_Island_1->Set_Name("Island_6");
 
 
-		test_Island_0->SetPosition(-1200.0f, 40.0f, -1200.0f);
-		m_pLights[0].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, -1200.0f);
+		test_Island_0->SetPosition(island_points[0]);
+		m_pLights[0].m_xmf3Position = island_points[0];
 
-		test_Island_1->SetPosition(-1200.0f, 40.0f, 0.0f);
-		m_pLights[1].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 0.0f);
+		test_Island_1->SetPosition(island_points[1]);
+		m_pLights[1].m_xmf3Position = island_points[1];
 
 		
-		test_Island_2->SetPosition(-1200.0f, 40.0f, 1200.0f);
-		m_pLights[2].m_xmf3Position = XMFLOAT3(-1200.0f, 40.0f, 1200.0f);
+		test_Island_2->SetPosition(island_points[2]);
+		m_pLights[2].m_xmf3Position = island_points[2];
 
-		test_Island_3->SetPosition(0.0f, 40.0f, 1200.0f);
-		m_pLights[3].m_xmf3Position = XMFLOAT3(0.0f, 40.0f, 1200.0f);
-
-
-		test_Island_4->SetPosition(1200.0f, 40.0f, 1200.0f);
-		m_pLights[4].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 1200.0f);
+		test_Island_3->SetPosition(island_points[3]);
+		m_pLights[3].m_xmf3Position = island_points[3];
 
 
-		test_Island_5->SetPosition(1200.0f, 40.0f, 0.0f);
-		m_pLights[5].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, 0.0f);
+		test_Island_4->SetPosition(island_points[4]);
+		m_pLights[4].m_xmf3Position = island_points[4];
 
-		test_Island_6->SetPosition(1200.0f, 40.0f, -1200.0f);
-		m_pLights[6].m_xmf3Position = XMFLOAT3(1200.0f, 40.0f, -1200.0f);
+
+		test_Island_5->SetPosition(island_points[5]);
+		m_pLights[5].m_xmf3Position = island_points[5];
+
+		test_Island_6->SetPosition(island_points[6]);
+		m_pLights[6].m_xmf3Position = island_points[6];
 
 
 		obj_manager->Add_Object(test_Island_0, Object_Type::fixed);
@@ -2888,9 +3011,11 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 #endif
 
-
-	pirate_ship->Animate(fTimeElapsed);
-	pirate_ship->HandleBoundaryReflection(1500.0f);
+	if (!isRunning)
+	{
+		pirate_ship->Animate(fTimeElapsed);
+		pirate_ship->HandleBoundaryReflection(1500.0f);
+	}
 
 	if (m_pLights)
 	{
@@ -2983,9 +3108,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 	if (!blocks.empty())
 	{
-		bool is_nearby = Check_Island_Range(300.0f); 
+		int is_nearby = Get_Closest_Island_Index(300.0f);
 
-		if (is_nearby)
+		if (is_nearby != -1)
 		{
 			if (!bMenuActive && !bClosedByUser)
 			{
@@ -2993,12 +3118,23 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 				Screen_Fade = true;
 				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, true);
 			}
+
+			if (isRunning)
+			{
+				nearest_stage_index = is_nearby;
+			}
 		}
 		else
 		{
 			bMenuActive = false;
 			bClosedByUser = false;
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
+
+			if (isRunning)
+			{
+				nearest_stage_index = -1;
+				is_stage_select = false;
+			}
 		}
 	}
 }
@@ -3009,38 +3145,30 @@ void Board_Scene::After_Update_Objects()
 
 }
 
-bool Board_Scene::Check_Island_Range(float range)
+int Board_Scene::Get_Closest_Island_Index(float range)
 {
 	XMFLOAT3 boat_pos = pirate_ship->GetPosition();
 
-	XMFLOAT3 island_points[] = 
-	{
-		   XMFLOAT3(-1200.0f, 40.0f, -1200.0f),
-		   XMFLOAT3(-1200.0f, 40.0f, 0.0f),
-		   XMFLOAT3(-1200.0f, 40.0f, 1200.0f),
-		   XMFLOAT3(0.0f,    40.0f, 1200.0f),
-		   XMFLOAT3(1200.0f, 40.0f, 1200.0f),
-		   XMFLOAT3(1200.0f, 40.0f, 0.0f),
-		   XMFLOAT3(1200.0f, 40.0f, -1200.0f)
-	};
 
-	for (const auto& point : island_points)
+	int closest_index = -1;
+	float min_distance = range + 1.0f;  // 초기값: range보다 약간 큼
+
+	for (int i = 0; i < island_points.size(); ++i)
 	{
 		XMVECTOR v1 = XMLoadFloat3(&boat_pos);
-		XMVECTOR v2 = XMLoadFloat3(&point);
+		XMVECTOR v2 = XMLoadFloat3(&island_points[i]);
 		XMVECTOR diff = XMVectorSubtract(v1, v2);
-
-
 		float distance = XMVectorGetX(XMVector3Length(diff));
 
-		if (distance <= range)
-			return true;
+		if (distance <= range && distance < min_distance)
+		{
+			min_distance = distance;
+			closest_index = i;
+		}
 	}
 
-	return false;
-
+	return closest_index;
 }
-
 
 void Board_Scene::SetCameraTarget(std::string_view target)
 {
@@ -3136,13 +3264,22 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'W':		case 'w':
 		{
-			pirate_ship->MoveForward(20);
+			if(isRunning)
+				pirate_ship->MoveForward(20);
 		}
 		break;
 
 		case 'A':		case 'a':
 		{
-			pirate_ship->Add_Rotate(-10.0f);
+			if (isRunning)
+				pirate_ship->Add_Rotate(-10.0f);
+		}
+		break;
+
+		case 'D':		case 'd':
+		{
+			if (isRunning)
+				pirate_ship->Add_Rotate(10.0f);
 		}
 		break;
 
@@ -3153,11 +3290,7 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'D':		case 'd':
-		{
-			pirate_ship->Add_Rotate(10.0f);
-		}
-		break;
+
 
 		case '1':
 			SetCameraTarget("Captain");
@@ -3294,7 +3427,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 			c_signal.change = true;
 			c_signal.scene_name = "Stage_1";
 			c_signal.type = Scene_Type::Stage_1;
-
+			is_stage_select = true;
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
@@ -3410,6 +3543,17 @@ void Board_Scene::OnMenuCloseButtonClicked(std::vector<TextureBlock*>& blocks)
 	Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 }
 
+void Board_Scene::Sync_Boat_Server(XMFLOAT3 pos, XMFLOAT3 look)
+{
+	pirate_ship->SetPosition(pos); 
+	pirate_ship->SetLookDirection(look); 
+}
+
+pair<int, bool> Board_Scene::Get_Sail_Status()
+{
+	return { nearest_stage_index, is_stage_select };
+}
+
 //==========================================================================================
 
 
@@ -3464,30 +3608,3 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 
 
 //==========================================================================================
-
-int Character_Select_Scene::GetSelectedCharacterId() const
-{
-	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
-	std::cout << "[DEBUG] GetSelectedCharacterId() select_index=" << select_index
-		<< ", player_list.size()=" << player_list->size() << std::endl;
-	if (select_index >= 0 && select_index < player_list->size())
-	{
-		int id = (*player_list)[select_index]->GetID();
-		std::cout << "[DEBUG] Selected character id: " << id << std::endl;
-		return id;
-	}
-	std::cout << "[DEBUG] Invalid select_index or empty player_list!" << std::endl;
-	return -1;
-}
-
-void Character_Select_Scene::OnSelectButtonPressed()
-{
-	std::cout << "[DEBUG] Select 버튼 핸들러 진입, select_index=" << select_index << std::endl;
-	if (select_index == -1)
-	{
-		std::cout << "[BLOCKED] No character selected.\n";
-		return;
-	}
-	bSelectRequested = true;
-	std::cout << "[DEBUG] bSelectRequested set true" << std::endl;
-}

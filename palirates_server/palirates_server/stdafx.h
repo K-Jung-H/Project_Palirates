@@ -26,4 +26,33 @@ enum Scene_Type
 	Stage_1,
 	Stage_2,
 	Test,
+	etc,
+	None,
 };
+
+enum KeyIndex
+{
+    KEY_INDEX_W = 0,
+    KEY_INDEX_S = 1,
+    KEY_INDEX_A = 2,
+    KEY_INDEX_D = 3,
+    KEY_INDEX_Q = 4,
+    KEY_INDEX_E = 5,
+    KEY_INDEX_SHIFT = 6,
+    KEY_INDEX_ENTER = 7
+};
+
+// 실제 플래그 enum
+enum InputFlags : uint32_t
+{
+    INPUT_NONE = 0,
+    INPUT_W = 1 << KEY_INDEX_W,
+    INPUT_S = 1 << KEY_INDEX_S,
+    INPUT_A = 1 << KEY_INDEX_A,
+    INPUT_D = 1 << KEY_INDEX_D,
+    INPUT_Q = 1 << KEY_INDEX_Q,
+    INPUT_E = 1 << KEY_INDEX_E,
+    INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
+    INPUT_ENTER = 1 << KEY_INDEX_ENTER
+};
+

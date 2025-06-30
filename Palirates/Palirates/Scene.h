@@ -147,6 +147,7 @@ public:
 	bool bHitSignal{ false };
 	bool bMenuActive{ false };
 	bool bStartAnimation{ false };
+	bool bSelectStart{ false };
 
 
 public:
@@ -276,12 +277,13 @@ public:
 class Character_Select_Scene : public CScene
 {
 private:
-	UINT prev_index = -1;
-	UINT select_index = -1;
+	int is_Ready = 0; 
 
-	std::vector<std::pair<int, int>> characterHovers;
-	std::vector<std::pair<int, int>> characterSelections;
-	int ClientNum = -1;
+
+	std::array<int, MaxPlayer> readyClientIds;
+	std::array<std::bitset<MaxPlayer>, MaxPlayer> characterSelections;
+
+
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -295,30 +297,22 @@ public:
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
-	void UpdatePlayerSelection(int new_index);
+	void UpdatePlayerSelection();
 
 	virtual void Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, std::shared_ptr<ID3D12RootSignature> pRootSignature);
 
+	int Get_Selected_Character_Index() const { return select_index; }
+	int Get_Character_Select_Status() const { return is_Ready; }
+	void Set_Character_Select_Status(bool new_is_selected) { is_Ready = new_is_selected; }
 
-	void UpdateCharacterSelections(const std::vector<std::pair<int, int>>& selections, int clientNum)
-	{
-		characterSelections = selections;
-		ClientNum = clientNum;
-		UpdatePlayerSelection(select_index);
-	}
 
-	void SendSelectionToServer(int index);
 
-	bool bSelectRequested = false;
+	const std::array<int, MaxPlayer>& GetReadyClientIds() const { return readyClientIds; }
+	const std::array<std::bitset<MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
 
-	int GetSelectedCharacterIndex() const { return select_index; }
-	int GetSelectedCharacterId() const;
-	void OnSelectButtonPressed();
+	void SetReadyClientIds(const std::array<int, MaxPlayer>& readyIds) { readyClientIds = readyIds; }
+	void SetCharacterSelections(const std::array<std::bitset<MaxPlayer>, MaxPlayer>& selections) { characterSelections = selections; }
 
-	void UpdateCharacterHovers(const std::vector<std::pair<int, int>>& hovers, int clientNum);
-
-	std::unordered_set<int> lockedCharacterIds;
-	void UpdateLockedCharacters(const std::unordered_set<int>& lockedIds) { lockedCharacterIds = lockedIds; }
 };
 
 class Board_Scene : public CScene
@@ -327,6 +321,8 @@ public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 private:
+	std::vector<XMFLOAT3> island_points;
+
 	std::shared_ptr<Boat_Object> pirate_ship;
 	std::shared_ptr<Wave_Object> wave_plane;
 	std::shared_ptr<ParticleObject> water_particle_1;
@@ -346,7 +342,7 @@ private:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
-	bool Check_Island_Range(float range);
+	int Get_Closest_Island_Index(float range);
 
 	void SetCameraTarget(std::string_view target);
 
@@ -363,6 +359,13 @@ private:
 
 
 	void SetcameraYOffset(float offset) { cameraYOffset = offset; }
+
+public: // For Server Sync
+	void Sync_Boat_Server(XMFLOAT3 pos, XMFLOAT3 look);
+	pair<int, bool> Get_Sail_Status();
+private:
+	int nearest_stage_index = -1;
+	bool is_stage_select = false;
 };
 
 class Test_Scene : public CScene

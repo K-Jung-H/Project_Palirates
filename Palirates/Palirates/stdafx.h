@@ -41,6 +41,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include<bitset>
+
 #pragma comment(lib, "ws2_32.lib")
 
 using namespace std;
@@ -87,6 +89,8 @@ extern HINSTANCE						ghAppInstance;
 
 //=============================================
 
+#define MaxPlayer 6
+extern bool isRunning;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE
 #define FRAME_BUFFER_WIDTH				1280
@@ -178,7 +182,8 @@ enum Scene_Type
 	Stage_1,
 	Stage_2,
 	Test,
-	etc
+	etc,
+	None
 };
 
 struct Change_Signal
@@ -553,7 +558,9 @@ namespace Plane
 }
 
 
-//#define SERVER_IP "1.242.69.251"
+#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"
-#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "172.30.1.13"
+//#define SERVER_IP "127.0.0.1"
+
 #define SERVER_PORT 9000
