@@ -3264,21 +3264,21 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'W':		case 'w':
 		{
-			if(isRunning)
+			if(!isRunning)
 				pirate_ship->MoveForward(20);
 		}
 		break;
 
 		case 'A':		case 'a':
 		{
-			if (isRunning)
+			if (!isRunning)
 				pirate_ship->Add_Rotate(-10.0f);
 		}
 		break;
 
 		case 'D':		case 'd':
 		{
-			if (isRunning)
+			if (!isRunning)
 				pirate_ship->Add_Rotate(10.0f);
 		}
 		break;
