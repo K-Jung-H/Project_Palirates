@@ -21,6 +21,14 @@ struct ClientSession
     SOCKET socket;
     bool is_connected = true;
     std::chrono::steady_clock::time_point lastActiveTime;
+
+    std::string lastReceivedPacket;
+    std::string lastSentPacket;
+    std::mutex packetLogMutex;
+
+    ClientSession(SOCKET sock)
+        : socket(sock) {}
+
     ~ClientSession()
     {
 
@@ -36,28 +44,29 @@ public:
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
-    void BroadcastAllStates();
+    void Broadcast_Scene_State_All();
     void Server_Update();
 
     void DisconnectClient(int clientId);
     void ReleaseClientId(int clientId);
     int GetNewClientId();
 
-    void BroadcastPacket(const std::string& packet, int senderId);
+    void BroadcastPacket(const std::string& packet);
 
     void SetActiveScene(const Scene_Type scene_type);
     std::shared_ptr<Scene> GetActiveScene();
 
     void CleanupInactiveClients();
-    void addPlayerToScene(const Scene_Type scene_type, int clientId, std::shared_ptr<Player> player);
     void removePlayerFromAllScenes(int clientId);
 
+    void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
+    void PrintClientDebugInfo();
 
 private:
     SOCKET listenSocket;
     Logger logger;
 
-    std::unordered_map<int, ClientSession> clients;
+    std::unordered_map<int, shared_ptr<ClientSession>> clients;
     std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
 
     std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
