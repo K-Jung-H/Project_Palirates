@@ -21,6 +21,15 @@ struct ClientSession
     SOCKET socket;
     bool is_connected = true;
     std::chrono::steady_clock::time_point lastActiveTime;
+    Scene_Type client_scene_type;
+
+    std::string lastReceivedPacket;
+    std::string lastSentPacket;
+    std::mutex packetLogMutex;
+
+    ClientSession(SOCKET sock)
+        : socket(sock) {}
+
     ~ClientSession()
     {
 
@@ -36,46 +45,50 @@ public:
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
-    void BroadcastAllStates();
+    void Broadcast_Scene_State_All();
     void Server_Update();
 
     void DisconnectClient(int clientId);
     void ReleaseClientId(int clientId);
     int GetNewClientId();
 
-    void BroadcastPacket(const std::string& packet, int senderId);
+    void BroadcastPacket(const std::string& packet);
 
     void SetActiveScene(const Scene_Type scene_type);
     std::shared_ptr<Scene> GetActiveScene();
 
     void CleanupInactiveClients();
-    void addPlayerToScene(const Scene_Type scene_type, int clientId, std::shared_ptr<Player> player);
     void removePlayerFromAllScenes(int clientId);
 
+    void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
+    void PrintClientDebugInfo();
 
 private:
     SOCKET listenSocket;
     Logger logger;
 
-    std::unordered_map<int, ClientSession> clients;
-    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
-
-    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
-    std::unordered_set<int> activeClientIds;
-
     std::mutex idMutex;
     std::mutex clientsMutex;
     std::mutex activeSceneMutex;
 
+
     std::atomic<int> activeClientCount = 0;
 
+    int nextClientId = 0;
+    std::unordered_set<int> activeClientIds;
+    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
+
+    std::unordered_map<int, shared_ptr<ClientSession>> clients;
 
     CGameTimer m_gameTimer;
+
+    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
     std::shared_ptr<Scene> activeScene;
 
-    int nextClientId = 0;
-    bool allSelectedSent = false;
+
     bool HandleSceneBroadcast(std::string& outPacket);
+    bool Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket);
+
     std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
     std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
     std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
@@ -84,5 +97,4 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
-    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 };

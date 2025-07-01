@@ -32,7 +32,7 @@ Server::Server(int port)
 Server::~Server()
 {
     for (const auto& [id, session] : clients)
-        closesocket(session.socket);
+        closesocket(session->socket);
     closesocket(listenSocket);
     WSACleanup();
 }
@@ -49,6 +49,13 @@ void Server::Start()
             CleanupInactiveClients();
         }
         }).detach();
+
+    std::thread([this]() {
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            PrintClientDebugInfo();
+        }
+        }).detach();
 }
 
 
@@ -62,13 +69,17 @@ void Server::AcceptClients()
         int clientId = GetNewClientId();
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
-            clients[clientId] = { clientSocket, true, std::chrono::steady_clock::now() };
+            clients[clientId] = std::make_shared<ClientSession>(clientSocket);
         }
 
         activeClientCount++; // 현재 활성화된 클라 스레드 개수
 
         std::string idPacket = "CLIENT_ID," + std::to_string(clientId) + "\n";
-        send(clientSocket, idPacket.c_str(), static_cast<int>(idPacket.length()), 0);
+
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex);
+            Send_Custom(clients[clientId], idPacket, true);
+        }
 
         std::thread(&Server::ProcessClientPackets, this, clientSocket, clientId).detach();
     }
@@ -87,13 +98,18 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             break;
         }
 
+        buffer[bytesReceived] = '\0';
+
+
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
-            clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-            std::cout << buffer << std::endl;
+            clients[clientId]->lastActiveTime = std::chrono::steady_clock::now();
+
+
+            std::lock_guard<std::mutex> logLock(clients[clientId]->packetLogMutex);
+            clients[clientId]->lastReceivedPacket = buffer;
         }
 
-        buffer[bytesReceived] = '\0';
         std::istringstream iss(buffer);
         std::string line;
 
@@ -114,6 +130,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
             int sceneTypeInt = std::stoi(tokens[1]);
             Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
+            
+            clients[clientId]->client_scene_type = sceneType;
 
             switch (sceneType)
             {
@@ -172,7 +190,27 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
         : ("CHARACTER_SELECT_FAIL," + std::to_string(selected_character_index) + "\n");
 
 
-    send(clients[clientId].socket, response.c_str(), static_cast<int>(response.length()), 0);
+    {
+        std::lock_guard<std::mutex> lock(clientsMutex);
+        Send_Custom(clients[clientId], response, true);
+
+
+        Scene_Type active_scene_type = activeScene->GetSceneType();
+        bool diff_scene_player = clients[clientId]->client_scene_type != active_scene_type;  // 늦게 들어온 플레이어인 경우
+
+        if (diff_scene_player)
+        {
+            Scene_Type new_scene_type = lobbyScene->CheckSceneTransition();
+            if (new_scene_type != Scene_Type::None) // 씬 전환 조건이 충족 되면 해당 씬으로 전환하도록 할 것
+            {
+                std::string packet = "CHANGE_SCENE," + std::to_string(active_scene_type) + "\n";
+                Send_Custom(clients[clientId], packet, true);
+            }
+        }
+    }
+
+
+
 }
 
 void Server::HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
@@ -208,25 +246,38 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
 }
 
 
-void Server::BroadcastAllStates()
+void Server::Broadcast_Scene_State_All()
 {
-    if (!activeClientCount)
-        return;
+    if (!activeClientCount) return;
 
-    std::string packet;
-    if (HandleSceneBroadcast(packet))
+    std::unordered_map<Scene_Type, std::vector<std::shared_ptr<ClientSession>>> sceneClients;
+
     {
         std::lock_guard<std::mutex> lock(clientsMutex);
-        for (const auto& [clientId, session] : clients)
+
+        // 1. 클라이언트를 씬 타입별로 분류
+        for (auto& [clientId, session] : clients)
         {
-            if (session.is_connected)
-            {
-                send(session.socket, packet.c_str(), static_cast<int>(packet.size()), 0);
-            }
+            if (!session->is_connected) continue;
+            sceneClients[session->client_scene_type].push_back(session);
+        }
+    }
+
+    // 2. 씬 타입별로 필요한 경우에만 패킷 생성 + 송신
+    for (auto& [sceneType, sessionList] : sceneClients)
+    {
+        if (sessionList.empty()) continue;
+
+        std::string packet;
+        if (!Build_Scene_Packet_By_Type(sceneType, packet))
+            continue;
+
+        for (auto& session : sessionList)
+        {
+            Send_Custom(session, packet, true);
         }
     }
 }
-
 
 bool Server::HandleSceneBroadcast(std::string& outPacket)
 {
@@ -276,6 +327,57 @@ bool Server::HandleSceneBroadcast(std::string& outPacket)
     }
 }
 
+bool Server::Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket)
+{
+    auto it = scenes.find(type);
+    if (it == scenes.end()) return false;
+
+    std::shared_ptr<Scene> scene = it->second;
+    if (!scene) return false;
+
+    switch (type)
+    {
+    case Scene_Type::Lobby:
+    {
+        auto lobby = std::dynamic_pointer_cast<Lobby_Scene>(scene);
+        if (!lobby) return false;
+
+        outPacket = Build_LobbyScene_Packet(lobby);
+        return true;
+    }
+
+    case Scene_Type::Board:
+    {
+        auto board = std::dynamic_pointer_cast<Board_Scene>(scene);
+        if (!board) return false;
+
+        outPacket = Build_BoardScene_Packet(board);
+        return true;
+    }
+
+    case Scene_Type::Stage_1:
+    {
+        auto stage_1 = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        if (!stage_1) return false;
+
+        outPacket = Build_Stage_1_Scene_Packet(stage_1);
+        return true;
+    }
+
+    case Scene_Type::Stage_2:
+    {
+        auto stage_2 = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        if (!stage_2) return false;
+
+        outPacket = Build_Stage_2_Scene_Packet(stage_2);
+        return true;
+    }
+
+    default:
+        return false;
+    }
+}
+
 std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby)
 {
     std::ostringstream oss;
@@ -310,7 +412,6 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
     result += "\n";
 
-    std::cout << "[SERVER] Build_LobbyScene_Packet: " << result;
     return result;
 }
 
@@ -355,13 +456,12 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 
 void Server::Server_Update()
 {
-    CGameTimer gameTimer;
-    gameTimer.Reset();  
-    float FPS = 60.0f;
+    m_gameTimer.Reset();
+    float FPS = 0.0f;
     while (true)
     {
-        gameTimer.Tick(FPS);
-        float elapsedTime = gameTimer.GetTimeElapsed(); 
+        m_gameTimer.Tick(FPS);
+        float elapsedTime = m_gameTimer.GetTimeElapsed();
 
         Scene::active_client_num = activeClientCount;
 
@@ -377,18 +477,29 @@ void Server::Server_Update()
         if (new_scene_type != Scene_Type::None)
         {
             std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
-            BroadcastPacket(packet, -1);
+            BroadcastPacket(packet);
             SetActiveScene(new_scene_type);
+
+
+
+            std::shared_ptr<Scene> new_active_scene = GetActiveScene();
+            std::shared_ptr<Stage_Scene> stage_scene = dynamic_pointer_cast<Stage_Scene>(new_active_scene);
+            if (stage_scene)
+            {
+                for (const auto& [id, session] : clients)
+                    stage_scene->Add_Player(id);
+            }
+
         }
         else
         {
-            BroadcastAllStates();
+            Broadcast_Scene_State_All();
         }
 
-
+        PrintClientDebugInfo();
     }
 
-
+    
 }
 
 
@@ -403,10 +514,10 @@ void Server::CleanupInactiveClients()
 
         for (const auto& [clientId, session] : clients)
         {
-            if (!session.is_connected)
+            if (!session->is_connected)
                 continue;
 
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - session.lastActiveTime);
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - session->lastActiveTime);
             if (elapsed.count() > 10) // 10초 이상 무응답
             {
                 logger.Log("[TIMEOUT] 클라이언트 " + std::to_string(clientId) + " 수신 없음 → 제거 대상");
@@ -421,20 +532,27 @@ void Server::CleanupInactiveClients()
     }
 }
 
-
 void Server::DisconnectClient(int clientId)
 {
     std::lock_guard<std::mutex> lock(clientsMutex);
+
     removePlayerFromAllScenes(clientId);
+    
     auto it = clients.find(clientId);
     if (it != clients.end())
     {
-        closesocket(it->second.socket);
+        closesocket(it->second->socket);
         clients.erase(it);
     }
+
     ReleaseClientId(clientId);
 }
 
+void Server::removePlayerFromAllScenes(int clientId)
+{
+    for (auto& [name, scene] : scenes)
+        if (scene) scene->Remove_Player(clientId);
+}
 
 void Server::ReleaseClientId(int clientId)
 {
@@ -454,16 +572,6 @@ int Server::GetNewClientId()
 }
 
 
-void Server::BroadcastPacket(const std::string& packet, int senderId)
-{
-    std::lock_guard<std::mutex> lock(clientsMutex);
-    for (const auto& [id, session] : clients)
-    {
-        if (!session.is_connected || id == senderId) continue;
-        send(session.socket, packet.c_str(), static_cast<int>(packet.length()), 0);
-    }
-}
-
 
 void Server::SetActiveScene(const Scene_Type scene_type)
 {
@@ -480,14 +588,65 @@ std::shared_ptr<Scene> Server::GetActiveScene()
     return activeScene;
 }
 
-
-
-
-void Server::removePlayerFromAllScenes(int clientId)
+void Server::BroadcastPacket(const std::string& packet)
 {
-    for (auto& [name, scene] : scenes)
-        if (scene) scene->removePlayer(clientId);
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    for (auto& [id, session] : clients)
+    {
+        if (!session->is_connected) continue;
+        Send_Custom(session, packet, true);
+    }
 }
+
+
+void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog)
+{
+    if (!session->is_connected) return;
+
+    send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+
+    if (saveLog)
+    {
+        std::lock_guard<std::mutex> logLock(session->packetLogMutex);
+        session->lastSentPacket = packet;
+    }
+}
+
+void Server::PrintClientDebugInfo()
+{
+    system("cls");
+    std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
+
+
+    if (activeClientCount == 0)
+        return;
+
+    
+    std::lock_guard<std::mutex> lock(clientsMutex);
+
+
+    for (const auto& [clientId, session] : clients)
+    {
+        if (!session->is_connected) continue;
+
+        std::string recvLog;
+        std::string sendLog;
+
+        {
+            std::lock_guard<std::mutex> logLock(session->packetLogMutex);
+            recvLog = session->lastReceivedPacket;
+            sendLog = session->lastSentPacket;
+        }
+
+        std::cout << "===============================================\n";
+        std::cout << "Client ID - " << clientId << "\n";
+        std::cout << "Receive Packet - " << recvLog << "\n";
+        std::cout << "Send Packet    - " << sendLog << "\n";
+    }
+
+    std::cout << "===============================================\n\n";
+}
+
 
 //========================================================================================
 
