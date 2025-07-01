@@ -439,20 +439,23 @@ void Server::CleanupInactiveClients()
 void Server::DisconnectClient(int clientId)
 {
     std::lock_guard<std::mutex> lock(clientsMutex);
+
     removePlayerFromAllScenes(clientId);
+    
     auto it = clients.find(clientId);
     if (it != clients.end())
     {
         closesocket(it->second->socket);
         clients.erase(it);
     }
+
     ReleaseClientId(clientId);
 }
 
 void Server::removePlayerFromAllScenes(int clientId)
 {
     for (auto& [name, scene] : scenes)
-        if (scene) scene->removePlayer(clientId);
+        if (scene) scene->Remove_Player(clientId);
 }
 
 void Server::ReleaseClientId(int clientId)

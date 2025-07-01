@@ -2,78 +2,11 @@
 #include "Scene.h"
 
 int Scene::active_client_num;
+std::array<int, MaxPlayer> Scene::player_model_list = { -1, -1, -1, -1, -1, -1 };
 
 Scene::Scene(Scene_Type type)
     : sceneType(type)
 {
-}
-
-const std::unordered_map<int, std::shared_ptr<Player>>& Scene::getPlayers() const
-{
-    return player_map;
-}
-
-std::shared_ptr<Player> Scene::getPlayer(int id)
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-    auto it = player_map.find(id);
-    if (it != player_map.end())
-    {
-        return it->second;
-    }
-    return nullptr;
-}
-
-void Scene::addPlayer(int id, std::shared_ptr<Player> player)
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-    player_map[id] = player;
-}
-
-void Scene::removePlayer(int id)
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-    player_map.erase(id);
-}
-
-void Scene::update_player_keyinput(int id, uint32_t keystate)
-{
-    auto player = getPlayer(id);
-    if (!player) return;
-    player->key_input(keystate);
-}
-
-void Scene::update_player_Position()
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-    for (auto& [id, player] : player_map)
-    {
-        player->update();
-    }
-}
-
-void Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
-{
-    auto player = getPlayer(id);
-    if (!player) return;
-    player->SetLook(new_lookV);
-}
-
-void Scene::updatePlayerPosition(int id, float x, float y, float z, float lookX, float lookY, float lookZ, Player_State state)
-{
-    auto player = getPlayer(id);
-    if (!player) return;
-    player->SetPosition(x, y, z);
-    player->SetLook({ lookX, lookY, lookZ });
-    player->SetState(state);
-}
-
-void Scene::updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights)
-{
-    auto player = getPlayer(id);
-    if (!player) return;
-    player->SetAnimPositions(positions);
-    player->SetAnimWeights(weights);
 }
 
 Scene_Type Scene::GetSceneType() const 
@@ -97,6 +30,28 @@ void Scene::Update_Scene(float elapsedTime)
 }
 
 //======================================================
+
+void Lobby_Scene::Update_Scene(float elapsedTime)
+{
+    Change_Scene_Trigger = IsAllReadyAndValid();
+}
+
+void Lobby_Scene::Remove_Player(int id)
+{
+    if (id < 0 || id >= MaxPlayer)
+        return;
+
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+        characterSelections[i][id] = false;
+
+        if (characterReady[i] == id)
+            characterReady[i] = -1;
+    }
+}
+
 bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -124,19 +79,6 @@ bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
     return true;
 }
 
-void Lobby_Scene::ResetCharacterSlot(int clientId)
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-
-    for (int i = 0; i < MaxPlayer; ++i)
-    {
-        characterSelections[i][clientId] = false;
-
-        if (characterReady[i] == clientId)
-            characterReady[i] = -1;
-    }
-}
-
 bool Lobby_Scene::IsAllReadyAndValid()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -160,20 +102,77 @@ Scene_Type Lobby_Scene::CheckSceneTransition()
 
 
     if (Change_Scene_Trigger)
+    {
+        for (int characterId = 0; characterId < MaxPlayer; ++characterId) // Save - Client ID + Model Index
+        {
+            int clientId = characterReady[characterId];
+            if (clientId != -1)
+            {
+                player_model_list[clientId] = characterId;
+            }
+        }
+
+
         return Scene_Type::Board;
+    }
     else
         return Scene_Type::None;
 
 }
 
 
-void Lobby_Scene::Update_Scene(float elapsedTime)
+
+//======================================================
+
+void Board_Scene::Update_Scene(float elapsedTime)
 {
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (!pirate_ship) return;
+
+
+    int fwd = 0, back = 0, left = 0, right = 0;
+
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+        int modelId = Scene::player_model_list[i];
+        if (modelId == -1) continue; 
+
+        int weight = (modelId == 0) ? 2 : 1;  // 모델 0번이면 영향력 2배
+
+        int32_t key = player_keyState[i];
+        if (key & INPUT_W) fwd += weight;
+        if (key & INPUT_S) back += weight;
+        if (key & INPUT_A) left += weight;
+        if (key & INPUT_D) right += weight;
+    }
+
+    if (fwd)
+        pirate_ship->MoveForward(100.0f * fwd);
+    if (back)
+        pirate_ship->MoveForward(-100.0f * back);
+    if (left)
+        pirate_ship->Add_Rotate(-100.0f * left);
+    if (right)
+        pirate_ship->Add_Rotate(100.0f * right);
+
+    pirate_ship->Animate(elapsedTime);
+    pirate_ship->HandleBoundaryReflection(1500);
+
+    // 씬 전환 체크
     Change_Scene_Trigger = IsAllReadyAndValid();
 }
 
+void Board_Scene::Remove_Player(int id)
+{
+    if (id < 0 || id >= MaxPlayer)
+        return;
 
-//======================================================
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    player_keyState[id] = 0;
+    stage_select_state[id] = { -1, false };
+}
 
 
 bool Board_Scene::IsAllReadyAndValid()
@@ -244,40 +243,7 @@ void Board_Scene::Select_State(int Client_ID, pair<int, bool> select_state)
 }
 
 
-void Board_Scene::Update_Scene(float elapsedTime)
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (!pirate_ship) return;
-
-
-    int fwd = 0, back = 0, left = 0, right = 0;
- 
-    for (int i = 0; i < MaxPlayer; ++i)
-    {
-        int32_t key = player_keyState[i];
-        if (key & INPUT_W) fwd++;
-        if (key & INPUT_S) back++;
-        if (key & INPUT_A) left++;
-        if (key & INPUT_D) right++;
-    }
-
-
-    if (fwd)
-        pirate_ship->MoveForward(100.0f * fwd);
-    if (back) 
-        pirate_ship->MoveForward(-100.0f * back);
-    if (left) 
-        pirate_ship->Add_Rotate(-100.0f * left);
-    if (right) 
-        pirate_ship->Add_Rotate(100.0f * right);
-
-    pirate_ship->Animate(elapsedTime);
-    pirate_ship->HandleBoundaryReflection(1500);
-
-    // 씬 전환 체크
-    Change_Scene_Trigger = IsAllReadyAndValid();
-}
 
 XMFLOAT3 Board_Scene::Get_PirateShip_Position() const
 {
@@ -296,6 +262,86 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 
 //======================================================
 
+
+const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    return player_list;
+}
+
+std::shared_ptr<Player> Stage_Scene::Get_Player(int id)
+{
+    if (id < 0 || id >= MaxPlayer)
+        return nullptr;
+
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+
+
+    return player_list[id];
+}
+
+void Stage_Scene::Add_Player(int id)
+{
+    if (id < 0 || id >= MaxPlayer)
+        return;
+
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    
+    player_list[id] = make_shared<Player>(player_model_list[id]);
+}
+
+void Stage_Scene::Remove_Player(int id)
+{
+    if (id < 0 || id >= MaxPlayer)
+        return;
+
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    player_list[id].reset();
+}
+
+void Stage_Scene::update_player_keyinput(int id, uint32_t keystate)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (id < 0 || id >= MaxPlayer || !player_list[id])
+        return;
+
+    player_list[id]->key_input(keystate);
+}
+
+
+void Stage_Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (id < 0 || id >= MaxPlayer || !player_list[id])
+        return;
+
+    player_list[id]->SetLook(new_lookV);
+}
+
+void Stage_Scene::updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights)
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (id < 0 || id >= MaxPlayer || !player_list[id])
+        return;
+
+    player_list[id]->SetAnimPositions(positions);
+    player_list[id]->SetAnimWeights(weights);
+}
+
+
+void Stage_Scene::Update_Scene(float elapsedTime)
+{
+
+}
+
+
+
 Scene_Type Stage_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -307,8 +353,3 @@ Scene_Type Stage_Scene::CheckSceneTransition()
 
 }
 
-
-void Stage_Scene::Update_Scene(float elapsedTime)
-{
-
-}

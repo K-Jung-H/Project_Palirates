@@ -66,24 +66,25 @@ private:
     SOCKET listenSocket;
     Logger logger;
 
-    std::unordered_map<int, shared_ptr<ClientSession>> clients;
-    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
-
-    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
-    std::unordered_set<int> activeClientIds;
-
     std::mutex idMutex;
     std::mutex clientsMutex;
     std::mutex activeSceneMutex;
 
+
     std::atomic<int> activeClientCount = 0;
 
+    int nextClientId = 0;
+    std::unordered_set<int> activeClientIds;
+    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
+
+    std::unordered_map<int, shared_ptr<ClientSession>> clients;
 
     CGameTimer m_gameTimer;
+
+    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
     std::shared_ptr<Scene> activeScene;
 
-    int nextClientId = 0;
-    bool allSelectedSent = false;
+
     bool HandleSceneBroadcast(std::string& outPacket);
     std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
     std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
@@ -93,5 +94,4 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
-    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 };
