@@ -1373,6 +1373,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
+		CScene::SetClientNum(ClientNum);
 		HandleClientIdAssignment();
 		return;
 	}
