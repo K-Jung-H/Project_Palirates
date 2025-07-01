@@ -2633,8 +2633,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectTxtTexture, 0, 0);
 	D2D1_RECT_F SlTTscreenRect = MakeNormalizedRect(0.85f, 0.105f, 0.15f, SelectTxtTexture);
 	std::unique_ptr<TextureBlock> SlTTblock = std::make_unique<TextureBlock>(SelectTxtTexture, SlTTscreenRect, mesh, UILayer::Menu);
-	SlTTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	SlTTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	SlTTblock->bActive = false;
 	SlTTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SlTTblock));
