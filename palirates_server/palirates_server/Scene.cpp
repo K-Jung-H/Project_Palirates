@@ -58,22 +58,26 @@ bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
     if (characterId < 0 || characterId >= MaxPlayer) return false;
     if (clientId < 0 || clientId >= MaxPlayer) return false;
 
-    // Ready 하려는 캐릭터가 이미 다른 사람이 Ready 했다면 거부
-    if (isReady && characterReady[characterId] != -1 && characterReady[characterId] != clientId)
-        return false;
-
-    // 모든 캐릭터에서 clientId 선택 해제
     for (int i = 0; i < MaxPlayer; ++i)
         characterSelections[i][clientId] = false;
 
-    // 선택한 캐릭터에 표시
     characterSelections[characterId][clientId] = true;
 
-    // Ready 상태 갱신
     if (isReady)
+    {
+        // 다른 누군가가 이미 Ready 한 상태면 실패
+        if (characterReady[characterId] != -1 && characterReady[characterId] != clientId)
+            return false;
+
+        // Ready 상태 등록
         characterReady[characterId] = clientId;
-    else if (characterReady[characterId] == clientId)
-        characterReady[characterId] = -1;
+    }
+    else
+    {
+        // Ready 해제는 자기 자신인 경우만 해제
+        if (characterReady[characterId] == clientId)
+            characterReady[characterId] = -1;
+    }
 
     return true;
 }

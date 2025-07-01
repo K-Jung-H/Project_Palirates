@@ -3,7 +3,7 @@
 
 //=============================================================================================
 
-
+int CScene::s_ClientNum = -1;
 
 Shadow_Camera::Shadow_Camera() : CCamera()
 {
@@ -2429,48 +2429,54 @@ void Character_Select_Scene::UpdatePlayerSelection()
 
 	if (isRunning)
 	{
-		auto MugList = texture_ui_manager->GetMugBlocks();
-		texture_ui_manager->DeactivateAllMugBlocks();
-		auto readyList = texture_ui_manager->GetReadyCheckBlocks();
-		texture_ui_manager->DeactivateReadyCheckBlocks();
-		for (int charId = 0; charId < MaxPlayer; ++charId)
-		{
-			if (charId >= player_list->size()) continue;
-			auto& player = (*player_list)[charId];
-			if (!player) continue;
+		if (bSelectStart) {
+			auto MugList = texture_ui_manager->GetMugBlocks();
+			auto readyList = texture_ui_manager->GetReadyCheckBlocks();
 
-			int colorId = -1;
+			texture_ui_manager->DeactivateAllMugBlocks();
+			texture_ui_manager->DeactivateReadyCheckBlocks();
 
-
-			if (readyClientIds[charId] != -1)
+			for (int charId = 0; charId < MaxPlayer; ++charId)
 			{
-				colorId = readyClientIds[charId];
-				MugList[colorId]->ui_type = UI_EFFECT_NONE;
-				if (!readyList.empty()) {
-					readyList[colorId]->bActive = true;
+				if (charId >= player_list->size()) continue;
+				auto& player = (*player_list)[charId];
+				if (!player) continue;
+
+				int readyClient = readyClientIds[charId];   
+				if (readyClient != -1)
+				{
+					MugList[readyClient]->bActive = true;
+					MugList[readyClient]->ui_type = UI_EFFECT_NONE;
+					MugList[readyClient]->pTexture = Texture_UI_Manager::s_MugTextures[charId].get();
+
+					if (!readyList.empty()) {
+						readyList[readyClient]->bActive = true;
+						/*if (readyClient == GetClientNum())
+							SetEnableCharactorSelectButton(false, readyList);*/
+					}
+
+					player->SetOutlineColor(readyClient + 1); 
 				}
-			}
-			else
-			{
-				
+				else {
+					/*if (GetClientNum() != -1)
+						if (characterSelections[charId].test(GetClientNum())) {
+							is_Ready = 0;
+							SetEnableCharactorSelectButton(true, readyList);
+						}*/
+				}
+
 				for (int clientId = 0; clientId < MaxPlayer; ++clientId)
 				{
-					if (characterSelections[charId].test(clientId))
-					{
-						colorId = clientId;
-						//break;
-						MugList[colorId]->ui_type = UI_EFFECT_TRANSLUCENT;
-					}
-				}
-			}
+					if (!characterSelections[charId].test(clientId)) continue;  
 
-			if (colorId != -1)
-			{
-				if (bSelectStart) {
-					if (!MugList[colorId]->bActive) MugList[colorId]->bActive = true;
-					MugList[colorId]->pTexture = Texture_UI_Manager::s_MugTextures[charId].get();
+					if (clientId == readyClient) continue;
+
+					MugList[clientId]->bActive = true;
+					MugList[clientId]->ui_type = UI_EFFECT_TRANSLUCENT;
+					MugList[clientId]->pTexture = Texture_UI_Manager::s_MugTextures[charId].get();
+
+					player->SetOutlineColor(clientId + 1);
 				}
-				player->SetOutlineColor(colorId + 1);
 			}
 		}
 	}
@@ -2531,17 +2537,6 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 			if (is_Ready == 0)
 				select_index = (select_index + 1 + 6) % 6;
 			break;
-
-		case VK_RETURN:
-		{
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty())
-			{
-				Set_UI_Layer_Active(blocks, UILayer::Menu, true);
-				Screen_Fade = true;
-			}
-		}
-		break;
 
 		case 'F':		case 'f':
 		{
@@ -2629,21 +2624,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectbutttonTexture, 0, 0);
 	D2D1_RECT_F SlbTscreenRect = MakeNormalizedRect(0.85f, 0.12f, 0.3f, SelectbutttonTexture);
 	std::unique_ptr<TextureBlock> SlbTblock = std::make_unique<TextureBlock>(SelectbutttonTexture, SlbTscreenRect, mesh, UILayer::Menu);
-	SlbTblock->onClick = [this]()
-		{
-			is_Ready = 1;
-			c_signal.change = true;
-			c_signal.scene_name = "Game_Stage_Board";
-			c_signal.type = Scene_Type::Board;
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
-			if (!blocks.empty())
-			{
-				Set_UI_Layer_Active(blocks, UILayer::Interactable | UILayer::Menu | UILayer::Screen_Fade, false);
-				Screen_Fade = false;
-			}
-		};
-	SlbTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	SlbTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	SlbTblock->bActive = false;
 	SlbTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SlbTblock));
@@ -2653,8 +2633,6 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, SelectTxtTexture, 0, 0);
 	D2D1_RECT_F SlTTscreenRect = MakeNormalizedRect(0.85f, 0.105f, 0.15f, SelectTxtTexture);
 	std::unique_ptr<TextureBlock> SlTTblock = std::make_unique<TextureBlock>(SelectTxtTexture, SlTTscreenRect, mesh, UILayer::Menu);
-	SlTTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
-	SlTTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	SlTTblock->bActive = false;
 	SlTTblock->ui_type = UI_EFFECT_FADE_IN;
 	texture_ui_manager->Add_TextureBlock(std::move(SlTTblock));
@@ -2673,17 +2651,13 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	TextureBlock* check_block = new TextureBlock(check, check_Rect, mesh, UILayer::Interactable | UILayer::Menu);
 	check_block->onClick = [this]()
 		{
-			is_Ready = 1;
-			c_signal.change = true;
+			if (readyClientIds[CScene::select_index] == -1) {
+				is_Ready = 1;
+				c_signal.change = true;
+				SetEnableCharactorSelectButton(false);
+			}
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetReadyCheckBlocks();
-			if (!blocks.empty())
-			{
-				blocks[CHARAACTER_SELECT_CHECK_INDEX]->ui_type = UI_EFFECT_TRANSLUCENT;
-				blocks[CHARAACTER_SELECT_CHECK_INDEX]->bHovered = false;
-				blocks[CHARAACTER_SELECT_CANCEL_INDEX]->ui_type = UI_EFFECT_NONE;
-			}
 		};
 	check_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	check_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -2699,13 +2673,7 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 		{
 			is_Ready = 0;
 			c_signal.change = false;
-			std::vector<TextureBlock*> blocks = texture_ui_manager->GetReadyCheckBlocks();
-			if (!blocks.empty())
-			{
-				blocks[CHARAACTER_SELECT_CHECK_INDEX]->ui_type = UI_EFFECT_NONE;
-				blocks[CHARAACTER_SELECT_CANCEL_INDEX]->ui_type = UI_EFFECT_TRANSLUCENT;
-				blocks[CHARAACTER_SELECT_CANCEL_INDEX]->bHovered = false;
-			}
+			SetEnableCharactorSelectButton(true);
 		};
 	RTS_block->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	RTS_block->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
@@ -2748,6 +2716,20 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
 }
 
+void Character_Select_Scene::SetEnableCharactorSelectButton(bool Enable)
+{
+	std::vector<TextureBlock*> blocks = texture_ui_manager->GetReadyCheckBlocks();
+	if (Enable) {
+		blocks[CHARAACTER_SELECT_CHECK_INDEX]->ui_type = UI_EFFECT_NONE;
+		blocks[CHARAACTER_SELECT_CANCEL_INDEX]->ui_type = UI_EFFECT_TRANSLUCENT;
+		blocks[CHARAACTER_SELECT_CANCEL_INDEX]->bHovered = false;
+	}
+	else {
+		blocks[CHARAACTER_SELECT_CHECK_INDEX]->ui_type = UI_EFFECT_TRANSLUCENT;
+		blocks[CHARAACTER_SELECT_CHECK_INDEX]->bHovered = false;
+		blocks[CHARAACTER_SELECT_CANCEL_INDEX]->ui_type = UI_EFFECT_NONE;
+	}
+}
 //==========================================================================================
 
 void Board_Scene::BuildDefaultLightsAndMaterials()
