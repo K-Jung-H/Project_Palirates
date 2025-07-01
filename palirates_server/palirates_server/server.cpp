@@ -123,7 +123,10 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             tokens.push_back(command);
             std::string token;
             while (std::getline(linestream, token, ','))
-                if (line == "PING") continue;
+                if (line == "PING")
+                {
+                    continue;
+                }
                 tokens.push_back(token);
 
             // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
