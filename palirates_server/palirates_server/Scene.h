@@ -109,10 +109,11 @@ public:
 class Stage_Scene : public Scene
 {
 private:
-//.    std::unordered_map<int, std::shared_ptr<Player>> player_map;
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
+
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) {}
+    void Init_Player();
 
     virtual void Update_Scene(float elapsedTime);
     virtual void Remove_Player(int id);

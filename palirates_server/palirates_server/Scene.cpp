@@ -33,7 +33,6 @@ void Scene::Update_Scene(float elapsedTime)
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
 {
-    Change_Scene_Trigger = IsAllReadyAndValid();
 }
 
 void Lobby_Scene::Remove_Player(int id)
@@ -100,6 +99,7 @@ Scene_Type Lobby_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
+    Change_Scene_Trigger = IsAllReadyAndValid();
 
     if (Change_Scene_Trigger)
     {

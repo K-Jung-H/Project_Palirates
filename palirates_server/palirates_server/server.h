@@ -21,6 +21,7 @@ struct ClientSession
     SOCKET socket;
     bool is_connected = true;
     std::chrono::steady_clock::time_point lastActiveTime;
+    Scene_Type client_scene_type;
 
     std::string lastReceivedPacket;
     std::string lastSentPacket;
@@ -86,6 +87,8 @@ private:
 
 
     bool HandleSceneBroadcast(std::string& outPacket);
+    bool Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket);
+
     std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
     std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
     std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
