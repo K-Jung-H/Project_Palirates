@@ -90,7 +90,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
             clients[clientId].lastActiveTime = std::chrono::steady_clock::now();
-            std::cout << buffer << std::endl;
+           // std::cout << buffer << std::endl;
         }
 
         buffer[bytesReceived] = '\0';
@@ -310,7 +310,7 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
     result += "\n";
 
-    std::cout << "[SERVER] Build_LobbyScene_Packet: " << result;
+    //std::cout << "[SERVER] Build_LobbyScene_Packet: " << result;
     return result;
 }
 
@@ -441,6 +441,33 @@ void Server::ReleaseClientId(int clientId)
     std::lock_guard<std::mutex> lock(idMutex);
     if (activeClientIds.erase(clientId))
         availableIds.push(clientId);
+
+    auto it = scenes.find(Scene_Type::Lobby);
+    if (it == scenes.end()) return;              
+
+    std::shared_ptr<Scene> baseScene = it->second;
+
+    auto lobbyScene = std::dynamic_pointer_cast<Lobby_Scene>(baseScene);
+    if (!lobbyScene) return;                    
+    auto SelectArray = lobbyScene->GetCharacterSelections();
+    std::cout << "셀렉 어레이 : " << std::endl;
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+        std::cout << SelectArray[i][clientId] << std::endl;
+        if (SelectArray[i][clientId]) {
+            SelectArray[i][clientId] = false;
+            std::cout << "셀렉 클라 아이디 찾음 : " << SelectArray[i][clientId] << std::endl;
+        }
+    }
+    auto ReadyArray = lobbyScene->GetCharacterReadyStates();
+    if (ReadyArray[clientId]) {
+        ReadyArray[clientId] = -1;
+        std::cout << "레디 어레이 : " << std::endl;
+        for (int i = 0; i < MaxPlayer; ++i) {
+            std::cout <<  ReadyArray[i] << std::endl;
+        }
+        std::cout << "레디 클라 아이디 찾음 : " << ReadyArray[clientId] << std::endl;
+    }
 }
 
 
