@@ -20,16 +20,16 @@ enum class GPU_Stage
 class ServerSyncManager
 {
 public:
-    void AddPlayerSyncData(int playerId, const ServerAnimationSyncData& data)
+    void AddPlayerSyncData(int playerId, const ServerSyncData& data)
     {
         syncDataMap[playerId] = data;
     }
 
-    ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
+    ServerSyncData& GetPlayerSyncData(int clientNum) {
         return syncDataMap.at(clientNum);
     }
 
-    std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
+    std::unordered_map<int, ServerSyncData>& GetAllSyncData()
     {
         return syncDataMap;
     }
@@ -37,7 +37,7 @@ public:
     void ClearAll() { syncDataMap.clear(); }
 
 private:
-    std::unordered_map<int, ServerAnimationSyncData> syncDataMap;
+    std::unordered_map<int, ServerSyncData> syncDataMap;
 };
 
 struct CB_FRAMEWORK_INFO
@@ -225,13 +225,14 @@ public:
     int ClientNum{ 0 };
     ServerSyncManager syncManager;
     ServerSyncManager& GetSyncManager() { return syncManager; }
-    std::unordered_map<int, std::shared_ptr<CPlayer>> m_pRemotePlayers;
+    std::unordered_map<int, std::shared_ptr<CPlayer>> m_pRemotePlayers; // 삭제 대상
     std::queue<std::string> recvQueue;
     std::mutex recvQueueMutex;
     std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
     std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
 
+    std::array<bool, MaxPlayer> Connected_Player_List;
 
     std::array<int, MaxPlayer> readyClientIds;
     std::array<std::bitset<MaxPlayer>, MaxPlayer> characterSelections;

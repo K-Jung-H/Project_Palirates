@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+﻿ //-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -1385,10 +1385,26 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 	pRootGameObject->UpdateTransform(nullptr);
 }
 
-void CAnimationController::ServerAdvanceTime(const ServerAnimationSyncData& syncData)
+void CAnimationController::ServerAdvanceTime(const ServerSyncData& syncData)
 {
 
 }
+
+std::vector<Animation_Sync> CAnimationController::MakeSyncData()
+{
+	std::vector<Animation_Sync> data;
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		if (m_pAnimationTracks[i].m_fWeight > ANIMATION_CALLBACK_EPSILON) {
+			Animation_Sync t;
+			t.track_index = i;
+			t.track_position = m_pAnimationTracks[i].m_fPosition;
+			t.weight = m_pAnimationTracks[i].m_fWeight;
+			data.push_back(t);
+		}
+	}
+	return data;
+}
+
 
 bool IsUpperBodyBone(const std::string& boneName)
 {
@@ -3364,22 +3380,19 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 	m_pMesh->Set_BoundingBox(ptr);
 }
 
-ServerAnimationSyncData CGameObject::MakeSyncData()
+ServerSyncData CGameObject::MakeSyncData()
 {
-	ServerAnimationSyncData data;
+	ServerSyncData data;
 	data.position = GetPosition();
 	data.lookVector = GetLook();
-	data.currentState = State::Idle;
-
+	if (GetSkinnedAnimationController()) {
+		data.track_info_list = GetSkinnedAnimationController()->MakeSyncData();
+	}
 	return data;
 }
 
-void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
+void CGameObject::ApplySyncData(const ServerSyncData& syncData)
 {
-	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
-	{
-		return;
-	}
 	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
 }
