@@ -537,6 +537,7 @@ public:
     void ApplyCurrentAnimationPose(CGameObject* pRootGameObject);
     void ServerAdvanceTime(const ServerSyncData& syncData);
     std::vector<Animation_Sync> MakeSyncData();
+    void ResetWeight();
 
 public:
     std::shared_ptr<CGameObject>            m_pModelRootObject = NULL;

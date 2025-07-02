@@ -1512,7 +1512,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	case Scene_Type::Stage_1:
 	{
-		HandlePlayerUpdate();
+		//HandlePlayerUpdate();
 	}
 	break;
 
