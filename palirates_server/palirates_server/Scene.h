@@ -22,9 +22,9 @@ protected:
 
 public:
     Scene(Scene_Type type = Scene_Type::Test);
+    virtual void Init() {}
 
     std::recursive_mutex& GetSceneMutex() const { return sceneMutex; }
-
     Scene_Type GetSceneType() const;
 
     // --- 상태 업데이트 함수 ---
@@ -48,16 +48,10 @@ private:
 public:
     Lobby_Scene() : Scene(Scene_Type::Lobby)
     {
-        for (int i = 0; i < MaxPlayer; ++i)
-        {
-            characterReady[i] = -1;
-            for (int j = 0; j < MaxPlayer; ++j)
-            {
-                characterSelections[i][j] = false;
-            }
-        }
+        Init();
     }
 
+    virtual void Init();
     virtual void Update_Scene(float elapsedTime);
     virtual void Remove_Player(int id);
     virtual bool IsAllReadyAndValid();
@@ -83,15 +77,10 @@ public:
     Board_Scene() : Scene(Scene_Type::Board)
     {
         pirate_ship = make_shared<Boat_Object>();
-        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
-
-        for (int i = 0; i < MaxPlayer; i++)
-        {
-            player_keyState[i] = 0;
-            stage_select_state[i] = { -1, false };
-        }
-
+        Init();
     }
+
+    virtual void Init();
 
     virtual void Update_Scene(float elapsedTime);
     virtual void Remove_Player(int id);
@@ -112,8 +101,11 @@ private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
 
 public:
-    Stage_Scene() : Scene(Scene_Type::Stage_1) {}
-    void Init_Player();
+    Stage_Scene() : Scene(Scene_Type::Stage_1) 
+    {
+        Init();
+    }
+    virtual void Init();
 
     virtual void Update_Scene(float elapsedTime);
     virtual void Remove_Player(int id);
