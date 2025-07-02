@@ -46,7 +46,10 @@ public:
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
     void Broadcast_Scene_State_All();
+    
     void Server_Update();
+    void Change_Scene_And_Init_Players(Scene_Type new_scene_type);
+    void Check_Connected_Player();
 
     void DisconnectClient(int clientId);
     void ReleaseClientId(int clientId);
@@ -84,6 +87,7 @@ private:
 
     std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
     std::shared_ptr<Scene> activeScene;
+    bool serverResetDone = false;
 
 
     bool HandleSceneBroadcast(std::string& outPacket);
