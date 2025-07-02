@@ -30,6 +30,19 @@ void Scene::Update_Scene(float elapsedTime)
 }
 
 //======================================================
+void Lobby_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+        characterReady[i] = -1;
+        for (int j = 0; j < MaxPlayer; ++j)
+        {
+            characterSelections[i][j] = false;
+        }
+    }
+}
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
 {
@@ -127,6 +140,19 @@ Scene_Type Lobby_Scene::CheckSceneTransition()
 
 
 //======================================================
+void Board_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if(pirate_ship)
+        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+
+    for (int i = 0; i < MaxPlayer; i++)
+    {
+        player_keyState[i] = 0;
+        stage_select_state[i] = { -1, false };
+    }
+}
 
 void Board_Scene::Update_Scene(float elapsedTime)
 {
@@ -265,7 +291,14 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 }
 
 //======================================================
+void Stage_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+    
+}
 
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
 {

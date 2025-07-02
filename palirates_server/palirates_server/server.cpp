@@ -123,7 +123,11 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             tokens.push_back(command);
             std::string token;
             while (std::getline(linestream, token, ','))
-                tokens.push_back(token);
+               // if (line == "PING")
+               // {
+               //     
+               // }
+            tokens.push_back(token);
 
             // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
             if (tokens.size() < 3) continue;
@@ -464,9 +468,10 @@ void Server::Server_Update()
         float elapsedTime = m_gameTimer.GetTimeElapsed();
 
         Scene::active_client_num = activeClientCount;
+        Check_Connected_Player();
 
         std::shared_ptr<Scene> scene = GetActiveScene();
-        if (!scene) return;
+        if (!scene) continue;
 
 
         scene->Update_Scene(elapsedTime); 
@@ -476,20 +481,7 @@ void Server::Server_Update()
         Scene_Type new_scene_type = scene->CheckSceneTransition();
         if (new_scene_type != Scene_Type::None)
         {
-            std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
-            BroadcastPacket(packet);
-            SetActiveScene(new_scene_type);
-
-
-
-            std::shared_ptr<Scene> new_active_scene = GetActiveScene();
-            std::shared_ptr<Stage_Scene> stage_scene = dynamic_pointer_cast<Stage_Scene>(new_active_scene);
-            if (stage_scene)
-            {
-                for (const auto& [id, session] : clients)
-                    stage_scene->Add_Player(id);
-            }
-
+            Change_Scene_And_Init_Players(new_scene_type);
         }
         else
         {
@@ -502,6 +494,80 @@ void Server::Server_Update()
     
 }
 
+
+void Server::Check_Connected_Player()
+{
+    if (activeClientCount == 0 && !serverResetDone)
+    {
+        serverResetDone = true;
+
+        logger.Log("[INFO] No clients connected — resetting server state");
+
+        {
+            std::lock_guard<std::mutex> lock(activeSceneMutex);
+            activeScene = scenes[Scene_Type::Lobby];
+        }
+
+        for (auto& [sceneType, scene] : scenes)
+        {
+            if (scene)
+                scene->Init();
+        }
+    }
+    else if (activeClientCount > 0 && serverResetDone)
+    {
+        serverResetDone = false;
+    }
+}
+
+
+void Server::Change_Scene_And_Init_Players(Scene_Type new_scene_type)
+{
+    std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
+    BroadcastPacket(packet);
+
+    std::shared_ptr<Scene> new_scene;
+    {
+        std::lock_guard<std::mutex> lock(activeSceneMutex);
+        auto it = scenes.find(new_scene_type);
+        if (it != scenes.end())
+        {
+            activeScene = it->second;
+            new_scene = activeScene;
+        }
+    }
+
+    if (!new_scene)
+        return;
+
+    switch (new_scene_type)
+    {
+    case Scene_Type::Stage_1:
+    case Scene_Type::Stage_2:
+    {
+        std::shared_ptr<Stage_Scene> stage_scene = std::dynamic_pointer_cast<Stage_Scene>(new_scene);
+        if (stage_scene)
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex);
+            for (const auto& [id, session] : clients)
+            {
+                if (session->is_connected)
+                    stage_scene->Add_Player(id);
+            }
+        }
+        break;
+    }
+
+    case Scene_Type::Board:
+    case Scene_Type::Lobby:
+        // 필요 시 초기화 로직 추가 가능
+        break;
+
+    default:
+        logger.Log("[ERROR] Unknown scene type during ChangeSceneAndInitPlayers: " + std::to_string(static_cast<int>(new_scene_type)));
+        break;
+    }
+}
 
 void Server::CleanupInactiveClients()
 {

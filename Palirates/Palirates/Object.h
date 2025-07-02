@@ -35,13 +35,19 @@ class CSkyBoxShader;
 #define RESOURCE_BUFFER            0x06
 #define RESOURCE_STRUCTURED_BUFFER 0x07
 
-struct ServerAnimationSyncData
+struct Animation_Sync
+{
+    int track_index;
+    float weight;
+    float track_position;
+};
+
+struct ServerSyncData
 {
     XMFLOAT3 position;
     XMFLOAT3 lookVector;
-    State currentState;
-    std::vector<float> Weights;
-    std::vector<float> trackPositions;
+    std::vector<Animation_Sync> track_info_list;
+    bool bStateChange;
 };
 
 class CTexture
@@ -529,7 +535,8 @@ public:
     void AdvanceTime2(float fElapsedTime, CGameObject* pRootGameObject);
 
     void ApplyCurrentAnimationPose(CGameObject* pRootGameObject);
-    void ServerAdvanceTime(const ServerAnimationSyncData& syncData);
+    void ServerAdvanceTime(const ServerSyncData& syncData);
+    std::vector<Animation_Sync> MakeSyncData();
 
 public:
     std::shared_ptr<CGameObject>            m_pModelRootObject = NULL;
@@ -824,8 +831,8 @@ public:
     virtual void Check_Culling(CCamera* pCamera) {};
 
 public:
-    virtual ServerAnimationSyncData MakeSyncData();
-    virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+    virtual ServerSyncData MakeSyncData();
+    virtual void ApplySyncData(const ServerSyncData& syncData);
 
     virtual std::shared_ptr<CGameObject> DropWeapon(const char* targetName);
     virtual void RestoreWeapon(const char* targetName);

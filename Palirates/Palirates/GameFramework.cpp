@@ -69,6 +69,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
 	ConnectToServer(SERVER_IP, SERVER_PORT);
+	StartPingThread();
 	SendPacket_String("ENTER_SCENE,Character_Select\n");
 
 	Build_Default_Elements();
@@ -1275,8 +1276,6 @@ void CGameFramework::SendPacket()
 
 	if (!active_scene || !bClientIdAssigned || serverSocket == INVALID_SOCKET || !m_pPlayer) return;
 
-	XMFLOAT3 look = m_pPlayer->GetLookVector();
-	int state = m_pPlayer->GetState();
 
 	std::ostringstream oss;
 	oss << "PLAYER_UPDATE," << static_cast<int>(active_scene->scene_type) << "," << ClientNum;
@@ -1316,21 +1315,27 @@ void CGameFramework::SendPacket()
 
 	case Scene_Type::Stage_1:
 	{
-		oss << "," << current_keyboard_inputFlags << ","
-			<< look.x << "," << look.y << "," << look.z << ","
-			<< state;
+		XMFLOAT3 pos = m_pPlayer->GetPosition();
+		XMFLOAT3 look = m_pPlayer->GetLookVector();
+
+		oss << "," << current_keyboard_inputFlags << "," << to_string(pos.x) << "," << to_string(pos.y) << "," << to_string(pos.z) << to_string(look.x) << "," << to_string(look.y) << "," << to_string(look.z) << ",";
 
 		auto controller = m_pPlayer->GetSkinnedAnimationController();
 		if (!controller) return;
 
-		int trackCount = m_pPlayer->n_Animation;
-		oss << "," << trackCount;
+		auto sync_Data = m_pPlayer->MakeSyncData();
+		
+		oss << sync_Data.track_info_list.size();
 
-		for (int i = 0; i < trackCount; ++i)
+		for ( auto track_data : sync_Data.track_info_list)
 		{
-			oss << "," << controller->m_pAnimationTracks[i].m_fPosition
-				<< "," << controller->m_pAnimationTracks[i].m_fWeight;
+			oss << "," << to_string(track_data.track_index)
+				<< "," << to_string(track_data.weight)
+				<< "," << to_string(track_data.track_position);
 		}
+
+		oss << "," << (sync_Data.bStateChange ? "1" : "0");
+
 		break;
 	}
 
@@ -1507,6 +1512,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	case Scene_Type::Stage_1:
 	{
+		HandlePlayerUpdate();
 	}
 	break;
 
@@ -1703,10 +1709,9 @@ void CGameFramework::HandlePlayerUpdate(const std::vector<std::string>& tokens, 
 	XMFLOAT3 pos(px, py, pz);
 	XMFLOAT3 look(lookX, lookY, lookZ);
 
-	ServerAnimationSyncData syncData;
+	ServerSyncData syncData;
 	syncData.position = pos;
 	syncData.lookVector = look;
-	syncData.currentState = static_cast<State>(state);
 
 	if (tokens.size() > 9) {
 		int trackCount = std::stoi(tokens[9]);
@@ -1718,8 +1723,6 @@ void CGameFramework::HandlePlayerUpdate(const std::vector<std::string>& tokens, 
 
 			float animPos = std::stof(tokens[baseIdx]);
 			float animWeight = std::stof(tokens[baseIdx + 1]);
-			syncData.trackPositions.push_back(animPos);
-			syncData.Weights.push_back(animWeight);
 		}
 	}
 
@@ -1936,4 +1939,19 @@ void CGameFramework::PlayerLeave(int playerId)
 	{
 		std::cout << "[SEND] " << packet << std::endl;
 	}
+}
+
+void CGameFramework::StartPingThread()
+{
+	std::thread([this]()
+		{
+			while (isRunning)
+			{
+				if (serverSocket != INVALID_SOCKET)
+				{
+					SendPacket_String("PING\n");
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		}).detach();
 }

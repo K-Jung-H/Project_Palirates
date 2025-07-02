@@ -2651,10 +2651,16 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	TextureBlock* check_block = new TextureBlock(check, check_Rect, mesh, UILayer::Interactable | UILayer::Menu);
 	check_block->onClick = [this]()
 		{
-			if (readyClientIds[CScene::select_index] == -1) {
+			if (isRunning) {
+				if (readyClientIds[CScene::select_index] == -1) {
+					is_Ready = 1;
+					c_signal.change = true;
+					SetEnableCharactorSelectButton(false);
+				}
+			}
+			else {
 				is_Ready = 1;
 				c_signal.change = true;
-				SetEnableCharactorSelectButton(false);
 			}
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;
