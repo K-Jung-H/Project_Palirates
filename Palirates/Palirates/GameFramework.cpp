@@ -69,6 +69,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
 	ConnectToServer(SERVER_IP, SERVER_PORT);
+	StartPingThread();
 	SendPacket_String("ENTER_SCENE,Character_Select\n");
 
 	Build_Default_Elements();
@@ -1936,4 +1937,19 @@ void CGameFramework::PlayerLeave(int playerId)
 	{
 		std::cout << "[SEND] " << packet << std::endl;
 	}
+}
+
+void CGameFramework::StartPingThread()
+{
+	std::thread([this]()
+		{
+			while (isRunning)
+			{
+				if (serverSocket != INVALID_SOCKET)
+				{
+					SendPacket_String("PING\n");
+				}
+				std::this_thread::sleep_for(std::chrono::seconds(3));
+			}
+		}).detach();
 }

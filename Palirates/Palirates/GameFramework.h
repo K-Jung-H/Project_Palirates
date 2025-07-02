@@ -253,6 +253,7 @@ public:
     bool IsServerConnected();
     int GetServerPlayerID();
     void PlayerLeave(int playerId);
+    void StartPingThread();
     void Disconnect();
     void HandleClientIdAssignment();
     void DelayOrQueuePacket(const std::string& packet);
