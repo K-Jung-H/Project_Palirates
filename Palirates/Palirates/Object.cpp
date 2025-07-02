@@ -1405,6 +1405,12 @@ std::vector<Animation_Sync> CAnimationController::MakeSyncData()
 	return data;
 }
 
+void CAnimationController::ResetWeight()
+{
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+}
 
 bool IsUpperBodyBone(const std::string& boneName)
 {
