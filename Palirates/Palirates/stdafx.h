@@ -90,6 +90,7 @@ extern HINSTANCE						ghAppInstance;
 //=============================================
 
 #define MaxPlayer 6
+extern int Client_ID;
 extern bool isRunning;
 
 //#define _WITH_SWAPCHAIN_FULLSCREEN_STATE

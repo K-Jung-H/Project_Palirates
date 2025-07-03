@@ -86,27 +86,37 @@ public:
     XMFLOAT3 Get_Velocity() const { return m_xmf3Velocity; }
 };
 
+struct Animation_Sync
+{
+    int track_index;
+    float weight;
+    float track_position;
+};
+
+struct AnimationTrackData
+{
+    std::vector<Animation_Sync> track_info_list;
+    bool stateChanged = false;
+};
+
 
 class Skinned_GameObject : public GameObject
 {
-protected:
-    vector<float> animPositions;
-    vector<float> animWeights;
-
-    vector<float> trackPositions;
-    vector<float> trackWeights;
+private:
+    AnimationTrackData animation_sync_data;
 
 public:
-    // Getter - 참조 반환 (수정 가능)
-    std::vector<float>& GetAnimPositions() { return animPositions; }
-    std::vector<float>& GetAnimWeights() { return animWeights; }
-    std::vector<float>& GetTrackPositions() { return trackPositions; }
-    std::vector<float>& GetTrackWeights() { return trackWeights; }
+    void SetAnimationSyncData(const AnimationTrackData& data) { animation_sync_data = data; }
+    void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
+    void SetStateChanged(bool changed) { animation_sync_data.stateChanged = changed; }
 
-    // Setter - 통째로 대입
-    void SetAnimPositions(const std::vector<float>& v) { animPositions = v; }
-    void SetAnimWeights(const std::vector<float>& v) { animWeights = v; }
-    void SetTrackPositions(const std::vector<float>& v) { trackPositions = v; }
-    void SetTrackWeights(const std::vector<float>& v) { trackWeights = v; }
+
+    const AnimationTrackData& GetAnimationSyncData() const { return animation_sync_data; }
+    const std::vector<Animation_Sync>& GetTrackInfoList() const { return animation_sync_data.track_info_list; }
+
+    
+    AnimationTrackData& GetAnimationSyncData() { return animation_sync_data; }
+    std::vector<Animation_Sync>& GetTrackInfoList() { return animation_sync_data.track_info_list; }
+    bool GetStateChanged() const { return animation_sync_data.stateChanged; }
 };
 
