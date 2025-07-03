@@ -50,12 +50,12 @@ void Server::Start()
         }
         }).detach();
 
-    std::thread([this]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            PrintClientDebugInfo();
-        }
-        }).detach();
+    //std::thread([this]() {
+    //    while (true) {
+    //        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //        PrintClientDebugInfo();
+    //    }
+    //    }).detach();
 }
 
 
@@ -488,7 +488,7 @@ void Server::Server_Update()
             Broadcast_Scene_State_All();
         }
 
-        PrintClientDebugInfo();
+       // PrintClientDebugInfo();
     }
 
     
