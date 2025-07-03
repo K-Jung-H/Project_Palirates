@@ -255,7 +255,7 @@ void Boat_Object::Animate(float fTimeElapsed)
 	// --- 雀傈 贸府 ---
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
-	m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
 
 	// --- 皑加 贸府 ---
 	float decel = m_fFriction * fTimeElapsed;

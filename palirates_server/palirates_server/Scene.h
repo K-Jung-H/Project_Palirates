@@ -71,8 +71,8 @@ class Board_Scene : public Scene
 {
 private:
     shared_ptr<Boat_Object> pirate_ship;
-    array<int32_t, MaxPlayer> player_keyState;
-    array<pair<int, bool>, MaxPlayer> stage_select_state;
+    std::array<int32_t, MaxPlayer> player_keyState;
+    std::array<pair<int, bool>, MaxPlayer> stage_select_state;
 public:
     Board_Scene() : Scene(Scene_Type::Board)
     {
@@ -99,6 +99,7 @@ class Stage_Scene : public Scene
 {
 private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
+    std::array<int32_t, MaxPlayer> player_keyState;
 
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) 
@@ -119,7 +120,6 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
-    void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
 
-
+    void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged);
 };

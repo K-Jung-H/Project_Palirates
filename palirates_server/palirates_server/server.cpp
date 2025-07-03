@@ -246,7 +246,62 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
 
 void Server::HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
-    // 구현 필요
+    // 최소한 track_count토큰까지 존재해야 함
+    if (tokens.size() < 10)
+        return;
+
+    int trackCount = std::stoi(tokens[10]);
+
+    // 전체 패킷에 필요한 최소 토큰 개수
+    // 기본(11) + 트랙데이터(3개씩) + bStateChange(1)
+    int expectedMinTokens = 11 + (trackCount * 3) + 1; 
+
+    if (tokens.size() < expectedMinTokens)
+        return;
+
+    // 씬 확인 및 캐스팅
+    auto sceneIt = scenes.find(Scene_Type::Stage_1);
+    if (sceneIt == scenes.end())
+        return;
+
+    std::shared_ptr<Stage_Scene> stageScene = std::dynamic_pointer_cast<Stage_Scene>(sceneIt->second);
+    if (!stageScene)
+        return;
+
+    // inputFlags 처리
+    uint32_t inputFlags = static_cast<uint32_t>(std::stoul(tokens[3]));
+
+    // 위치 데이터
+    XMFLOAT3 pos;
+    pos.x = std::stof(tokens[4]);
+    pos.y = std::stof(tokens[5]);
+    pos.z = std::stof(tokens[6]);
+
+    // 방향 데이터
+    XMFLOAT3 look;
+    look.x = std::stof(tokens[7]);
+    look.y = std::stof(tokens[8]);
+    look.z = std::stof(tokens[9]);
+
+    // 애니메이션 트랙 데이터 시작 위치: 11
+    std::vector<Animation_Sync> trackInfoList;
+    for (int i = 0; i < trackCount; i++)
+    {
+        int track_base = 11 + (i * 3);
+
+        Animation_Sync trackData;
+        trackData.track_index = std::stoi(tokens[track_base]);
+        trackData.weight = std::stof(tokens[track_base + 1]);
+        trackData.track_position = std::stof(tokens[track_base + 2]);
+
+        trackInfoList.push_back(trackData);
+    }
+
+    // bStateChange (마지막 토큰)
+    bool bStateChange = (tokens[11 + (trackCount * 3)] == "1" || tokens[11 + (trackCount * 3)] == "true");
+
+    // Scene 업데이트 호출
+    stageScene->update_player_State(clientId, inputFlags, pos, look, trackInfoList, bStateChange);
 }
 
 
@@ -392,7 +447,7 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
     for (int charId = 0; charId < MaxPlayer; ++charId)
     {
-        oss << charId << "," << readyStates[charId] << ",";
+        oss << std::to_string(charId) << "," << std::to_string(readyStates[charId]) << ",";
 
         bool hasSelection = false;
         for (int clientId = 0; clientId < MaxPlayer; ++clientId)
@@ -400,13 +455,14 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
             if (selections[charId][clientId])
             {
                 if (hasSelection) oss << "|";
-                oss << clientId;
+                oss << std::to_string(clientId);
                 hasSelection = true;
             }
         }
 
         if (!hasSelection)
-            oss << "-1";  
+            oss << "-1";
+
         oss << ",";
     }
 
@@ -427,7 +483,10 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
     XMFLOAT3 look = board->Get_PirateShip_Look();
 
     std::ostringstream oss;
-    oss << "BOARD_SCENE," << pos.x << "," << pos.y << "," << pos.z << "," << look.x << "," << look.y << "," << look.z << "\n";
+    oss << "BOARD_SCENE,"
+        << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << "," 
+        << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z)
+        << "\n";
 
     return oss.str();
 }
@@ -436,14 +495,53 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
 
 std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage)
 {
-    std::ostringstream oss;
-    oss << "STAGE_1,";
-    {
+    const std::array<std::shared_ptr<Player>, MaxPlayer> player_list = stage->Get_PlayerList();
 
+    std::ostringstream oss;
+    std::ostringstream players_data;
+
+    int valid_player_count = 0;
+
+    for (int id = 0; id < MaxPlayer; ++id)
+    {
+        const auto& player_ptr = player_list[id];
+        if (!player_ptr)
+            continue;
+
+        ++valid_player_count;
+
+        const XMFLOAT3 pos = player_ptr->GetPosition();
+        const XMFLOAT3 look = player_ptr->GetLook();
+
+        const auto& anim_data = player_ptr->GetAnimationSyncData();
+        const auto& track_list = anim_data.track_info_list;
+        bool state_changed = anim_data.stateChanged;
+
+        players_data << std::to_string(id) << ","
+            << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
+            << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+            << std::to_string(track_list.size());
+
+        for (const auto& track : track_list)
+        {
+            players_data << "," << std::to_string(track.track_index)
+                << "," << std::to_string(track.weight)
+                << "," << std::to_string(track.track_position);
+        }
+
+        players_data << "," << (state_changed ? "1" : "0") << ",";
     }
-    oss << "\n";
+
+    std::string player_data_str = players_data.str();
+
+    if (!player_data_str.empty() && player_data_str.back() == ',')
+        player_data_str.pop_back(); 
+
+    oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
+
     return oss.str();
 }
+
 
 std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage)
 {

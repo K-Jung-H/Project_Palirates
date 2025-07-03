@@ -600,21 +600,22 @@ void Scene_Manager::ReleaseUploadBuffers()
     }
 }
 
-
-
-
 //===============¼­¹ö===============
-CPlayer* Scene_Manager::GetPlayerById(int playerId)
+
+void Scene_Manager::Add_Player(shared_ptr<CPlayer> new_player_ptr)
 {
-    auto it = players.find(playerId);
-    if (it != players.end())
-    {
-        return it->second;
-    }
-    return nullptr;
+    if (activeScene)
+        activeScene->Add_Multi_Player(new_player_ptr);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
 }
 
-void Scene_Manager::RegisterRemotePlayer(int playerId, std::shared_ptr<CTerrainPlayer> player)
+void Scene_Manager::Sync_Player_Data(int player_id, ServerSyncData server_sync)
 {
-    players[playerId] = player.get();
+    if (activeScene)
+        activeScene->Sync_Player_Data(player_id, server_sync);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
 }

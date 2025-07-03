@@ -273,12 +273,9 @@ public:
 	virtual void Bind_Player_UI_Callback();
 
 
-protected:
-	static int s_ClientNum;
-
-public:
-	static void SetClientNum(int clientNum) { s_ClientNum = clientNum; }
-	static int GetClientNum() { return s_ClientNum; }
+	// 서버 동기화 함수
+	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	void Sync_Player_Data(int player_id, ServerSyncData sync_data);
 
 };
 

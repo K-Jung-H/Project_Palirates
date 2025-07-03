@@ -881,8 +881,10 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 	}	break;
 	case Object_Type::player:
 	{
-		if (obj_ptr->m_pSkinnedAnimationController != NULL)
-			player_list.push_back(std::dynamic_pointer_cast<CTerrainPlayer>(obj_ptr));
+		shared_ptr<CPlayer> player_ptr = dynamic_pointer_cast<CPlayer>(obj_ptr);
+
+		if (player_ptr)
+			Add_Player(player_ptr);
 	}
 	break;
 	
@@ -898,6 +900,15 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 		break;
 	default:
 		break;
+	}
+}
+
+void Object_Manager::Add_Player(std::shared_ptr<CPlayer> obj_ptr)
+{
+	if (obj_ptr && obj_ptr->m_pSkinnedAnimationController != NULL)
+	{
+		int player_id = obj_ptr->GetID();
+		player_map[player_id] = obj_ptr;
 	}
 }
 
@@ -985,11 +996,13 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	break;
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
+		for (auto& [id, obj_ptr] : player_map)
+		{
 			if (obj_ptr->Get_Active()) {
 				obj_ptr->Animate(fTimeElapsed);
 
 			}
+		}
 	}
 	break;
 
@@ -1097,7 +1110,7 @@ void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsComma
 
 	case Object_Type::player:
 	{
-		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
+		for (auto& [id, obj_ptr] : player_map)
 		{
 			if (obj_ptr->Get_Active())
 			{
@@ -1186,8 +1199,8 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	break;
 
 	case Object_Type::player:
-	{
-		for (std::shared_ptr<CGameObject>& obj_ptr : player_list)
+	{ 
+		for (auto& [id, obj_ptr] : player_map)
 		{
 			if (obj_ptr->Get_Active())
 			{
@@ -1281,6 +1294,13 @@ void Object_Manager::Post_Update(Object_Type type)
 
 }
 
+void Object_Manager::Sync_Player_Data(int player_id, ServerSyncData sync_data)
+{
+	if (player_map[player_id])
+		player_map[player_id]->ApplySyncData(sync_data);
+
+}
+
 void Object_Manager::Post_Update_All()
 {
 	Post_Update(Object_Type::skinned);
@@ -1300,9 +1320,6 @@ std::vector<std::shared_ptr<CGameObject>>* Object_Manager::Get_Object_List(Objec
 		break;
 
 	case Object_Type::player:
-		return &player_list;
-		break;
-
 	case Object_Type::etc:	
 	default:
 		DebugOutput("Object_Manager::Get_Object_List() - Using_Wrong_Type");
