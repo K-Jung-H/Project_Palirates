@@ -19,14 +19,15 @@ enum class Player_State : int
 class Player : public Skinned_GameObject
 {
 private:
-    int player_id = -1;
+    int model_index = -1;
     Player_State player_state = Player_State::Idle;
 
 public:
-    Player(int playerId);
+    Player(int model_index);
     virtual ~Player() {}
 
-    int GetID() const { return player_id; }
+    int Get_Model_ID() const { return model_index; }
+
     Player_State GetState() const { return player_state; }
     void SetState(Player_State s) { player_state = s; }
 
@@ -35,6 +36,4 @@ public:
     virtual void animate(float Elapsedtime);
     virtual void update();
 
-    XMFLOAT3 inputDirection = { 0.0f, 0.0f, 0.0f };
-    float test_value = 0;
 };

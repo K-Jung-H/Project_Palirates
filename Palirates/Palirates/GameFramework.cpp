@@ -1374,6 +1374,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &ClientNum) == 1)
 	{
+		CScene::SetClientNum(ClientNum);
 		HandleClientIdAssignment();
 		return;
 	}
@@ -1899,28 +1900,6 @@ void CGameFramework::NetworkLoop()
 		{
 			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
 		}
-
-		//else if (bytesReceived == SOCKET_ERROR || bytesReceived == 0)
-		//{
-		//	std::cerr << "[ERROR] Disconnect to server, try reconnect" << std::endl;
-		//	closesocket(serverSocket);
-		//	isRunning = false;
-		//
-		//	
-		//	for (int retry = 0; retry < 5; ++retry)
-		//  {
-		//		if (TryReconnect(SERVER_IP, SERVER_PORT, 1, 3))
-		//  {
-		//			isRunning = true;
-		//			std::thread(&CGameFramework::NetworkLoop, this).detach();
-		//			return;
-		//		}
-		//	}
-		//
-		//	std::cerr << "[ERROR] Fail to reconnect" << std::endl;
-		//	break;
-		//}
-
 		else if (bytesReceived == 0)
 		{
 			std::cerr << "[INFO] Connection with server closed" << std::endl;
@@ -1960,54 +1939,17 @@ void CGameFramework::PlayerLeave(int playerId)
 	}
 }
 
-
 void CGameFramework::StartPingThread()
 {
-	std::thread([this]() 
+	std::thread([this]()
 		{
-		while (isRunning) 
-		{
-			if (serverSocket != INVALID_SOCKET)
+			while (isRunning)
 			{
-				SendPacket_String("PING\n");
+				if (serverSocket != INVALID_SOCKET)
+				{
+					SendPacket_String("PING\n");
+				}
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			}
-			std::this_thread::sleep_for(std::chrono::seconds(3));
-		}
 		}).detach();
 }
-
-//bool CGameFramework::TryReconnect(const std::string& ip, int port, int retryCount = 3, int retryIntervalSec = 3)
-//{
-//	for (int i = 0; i < retryCount; ++i)
-//	{
-//		std::cout << "[INFO] Try Reconnect (" << (i + 1) << "/" << retryCount << ")" << std::endl;
-//		WSADATA wsaData;
-//		if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) continue;
-//
-//		SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-//		if (sock == INVALID_SOCKET) {
-//			WSACleanup();
-//			std::this_thread::sleep_for(std::chrono::seconds(retryIntervalSec));
-//			continue;
-//		}
-//		sockaddr_in addr;
-//		addr.sin_family = AF_INET;
-//		addr.sin_port = htons(port);
-//		if (inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) != 1) {
-//			closesocket(sock); WSACleanup();
-//			std::this_thread::sleep_for(std::chrono::seconds(retryIntervalSec));
-//			continue;
-//		}
-//		if (connect(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
-//			closesocket(sock); WSACleanup();
-//			std::this_thread::sleep_for(std::chrono::seconds(retryIntervalSec));
-//			continue;
-//		}
-//		
-//		serverSocket = sock;
-//		std::cout << "[INFO] Reconnect Success" << std::endl;
-//		return true;
-//	}
-//	std::cout << "[ERROR] Reconnect Fail" << std::endl;
-//	return false;
-//}

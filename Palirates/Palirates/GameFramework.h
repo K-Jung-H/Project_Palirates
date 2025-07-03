@@ -254,7 +254,6 @@ public:
     int GetServerPlayerID();
     void PlayerLeave(int playerId);
     void StartPingThread();
-    //bool TryReconnect(const std::string& ip, int port, int retryCount, int retryIntervalSec);
     void Disconnect();
     void HandleClientIdAssignment();
     void DelayOrQueuePacket(const std::string& packet);

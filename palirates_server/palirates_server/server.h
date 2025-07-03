@@ -21,6 +21,7 @@ struct ClientSession
     SOCKET socket;
     bool is_connected = true;
     std::chrono::steady_clock::time_point lastActiveTime;
+    Scene_Type client_scene_type;
 
     std::string lastReceivedPacket;
     std::string lastSentPacket;
@@ -45,7 +46,10 @@ public:
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
     void Broadcast_Scene_State_All();
+    
     void Server_Update();
+    void Change_Scene_And_Init_Players(Scene_Type new_scene_type);
+    void Check_Connected_Player();
 
     void DisconnectClient(int clientId);
     void ReleaseClientId(int clientId);
@@ -66,25 +70,29 @@ private:
     SOCKET listenSocket;
     Logger logger;
 
-    std::unordered_map<int, shared_ptr<ClientSession>> clients;
-    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
-
-    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
-    std::unordered_set<int> activeClientIds;
-
     std::mutex idMutex;
     std::mutex clientsMutex;
     std::mutex activeSceneMutex;
 
+
     std::atomic<int> activeClientCount = 0;
 
+    int nextClientId = 0;
+    std::unordered_set<int> activeClientIds;
+    std::priority_queue<int, std::vector<int>, std::greater<int>> availableIds;
+
+    std::unordered_map<int, shared_ptr<ClientSession>> clients;
 
     CGameTimer m_gameTimer;
-    std::shared_ptr<Scene> activeScene;
 
-    int nextClientId = 0;
-    bool allSelectedSent = false;
+    std::unordered_map<Scene_Type, std::shared_ptr<Scene>> scenes;
+    std::shared_ptr<Scene> activeScene;
+    bool serverResetDone = false;
+
+
     bool HandleSceneBroadcast(std::string& outPacket);
+    bool Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket);
+
     std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
     std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
     std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
@@ -93,5 +101,4 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
-    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 };

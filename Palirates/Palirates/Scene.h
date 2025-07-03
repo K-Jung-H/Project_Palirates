@@ -272,6 +272,14 @@ public:
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 	virtual void Bind_Player_UI_Callback();
 
+
+protected:
+	static int s_ClientNum;
+
+public:
+	static void SetClientNum(int clientNum) { s_ClientNum = clientNum; }
+	static int GetClientNum() { return s_ClientNum; }
+
 };
 
 class Character_Select_Scene : public CScene
@@ -305,14 +313,13 @@ public:
 	int Get_Character_Select_Status() const { return is_Ready; }
 	void Set_Character_Select_Status(bool new_is_selected) { is_Ready = new_is_selected; }
 
-
+	void SetEnableCharactorSelectButton(bool Enable);
 
 	const std::array<int, MaxPlayer>& GetReadyClientIds() const { return readyClientIds; }
 	const std::array<std::bitset<MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
 
 	void SetReadyClientIds(const std::array<int, MaxPlayer>& readyIds) { readyClientIds = readyIds; }
 	void SetCharacterSelections(const std::array<std::bitset<MaxPlayer>, MaxPlayer>& selections) { characterSelections = selections; }
-
 };
 
 class Board_Scene : public CScene

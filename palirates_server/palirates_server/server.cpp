@@ -123,17 +123,19 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             tokens.push_back(command);
             std::string token;
             while (std::getline(linestream, token, ','))
-                if (line == "PING")
-                {
-                    continue;
-                }
-                tokens.push_back(token);
+               // if (line == "PING")
+               // {
+               //     
+               // }
+            tokens.push_back(token);
 
             // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
             if (tokens.size() < 3) continue;
 
             int sceneTypeInt = std::stoi(tokens[1]);
             Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
+            
+            clients[clientId]->client_scene_type = sceneType;
 
             switch (sceneType)
             {
@@ -195,7 +197,23 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
     {
         std::lock_guard<std::mutex> lock(clientsMutex);
         Send_Custom(clients[clientId], response, true);
+
+
+        Scene_Type active_scene_type = activeScene->GetSceneType();
+        bool diff_scene_player = clients[clientId]->client_scene_type != active_scene_type;  // 늦게 들어온 플레이어인 경우
+
+        if (diff_scene_player)
+        {
+            Scene_Type new_scene_type = lobbyScene->CheckSceneTransition();
+            if (new_scene_type != Scene_Type::None) // 씬 전환 조건이 충족 되면 해당 씬으로 전환하도록 할 것
+            {
+                std::string packet = "CHANGE_SCENE," + std::to_string(active_scene_type) + "\n";
+                Send_Custom(clients[clientId], packet, true);
+            }
+        }
     }
+
+
 
 }
 
@@ -234,20 +252,36 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
 
 void Server::Broadcast_Scene_State_All()
 {
-    if (!activeClientCount)
-        return;
+    if (!activeClientCount) return;
 
-    std::string packet;
-    if (HandleSceneBroadcast(packet))
+    std::unordered_map<Scene_Type, std::vector<std::shared_ptr<ClientSession>>> sceneClients;
+
     {
         std::lock_guard<std::mutex> lock(clientsMutex);
+
+        // 1. 클라이언트를 씬 타입별로 분류
         for (auto& [clientId, session] : clients)
+        {
+            if (!session->is_connected) continue;
+            sceneClients[session->client_scene_type].push_back(session);
+        }
+    }
+
+    // 2. 씬 타입별로 필요한 경우에만 패킷 생성 + 송신
+    for (auto& [sceneType, sessionList] : sceneClients)
+    {
+        if (sessionList.empty()) continue;
+
+        std::string packet;
+        if (!Build_Scene_Packet_By_Type(sceneType, packet))
+            continue;
+
+        for (auto& session : sessionList)
         {
             Send_Custom(session, packet, true);
         }
     }
 }
-
 
 bool Server::HandleSceneBroadcast(std::string& outPacket)
 {
@@ -291,6 +325,57 @@ bool Server::HandleSceneBroadcast(std::string& outPacket)
         outPacket = Build_Stage_2_Scene_Packet(stage_2);
         return true;
     }   break;
+
+    default:
+        return false;
+    }
+}
+
+bool Server::Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket)
+{
+    auto it = scenes.find(type);
+    if (it == scenes.end()) return false;
+
+    std::shared_ptr<Scene> scene = it->second;
+    if (!scene) return false;
+
+    switch (type)
+    {
+    case Scene_Type::Lobby:
+    {
+        auto lobby = std::dynamic_pointer_cast<Lobby_Scene>(scene);
+        if (!lobby) return false;
+
+        outPacket = Build_LobbyScene_Packet(lobby);
+        return true;
+    }
+
+    case Scene_Type::Board:
+    {
+        auto board = std::dynamic_pointer_cast<Board_Scene>(scene);
+        if (!board) return false;
+
+        outPacket = Build_BoardScene_Packet(board);
+        return true;
+    }
+
+    case Scene_Type::Stage_1:
+    {
+        auto stage_1 = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        if (!stage_1) return false;
+
+        outPacket = Build_Stage_1_Scene_Packet(stage_1);
+        return true;
+    }
+
+    case Scene_Type::Stage_2:
+    {
+        auto stage_2 = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        if (!stage_2) return false;
+
+        outPacket = Build_Stage_2_Scene_Packet(stage_2);
+        return true;
+    }
 
     default:
         return false;
@@ -383,9 +468,10 @@ void Server::Server_Update()
         float elapsedTime = m_gameTimer.GetTimeElapsed();
 
         Scene::active_client_num = activeClientCount;
+        Check_Connected_Player();
 
         std::shared_ptr<Scene> scene = GetActiveScene();
-        if (!scene) return;
+        if (!scene) continue;
 
 
         scene->Update_Scene(elapsedTime); 
@@ -395,9 +481,7 @@ void Server::Server_Update()
         Scene_Type new_scene_type = scene->CheckSceneTransition();
         if (new_scene_type != Scene_Type::None)
         {
-            std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
-            BroadcastPacket(packet);
-            SetActiveScene(new_scene_type);
+            Change_Scene_And_Init_Players(new_scene_type);
         }
         else
         {
@@ -410,6 +494,80 @@ void Server::Server_Update()
     
 }
 
+
+void Server::Check_Connected_Player()
+{
+    if (activeClientCount == 0 && !serverResetDone)
+    {
+        serverResetDone = true;
+
+        logger.Log("[INFO] No clients connected — resetting server state");
+
+        {
+            std::lock_guard<std::mutex> lock(activeSceneMutex);
+            activeScene = scenes[Scene_Type::Lobby];
+        }
+
+        for (auto& [sceneType, scene] : scenes)
+        {
+            if (scene)
+                scene->Init();
+        }
+    }
+    else if (activeClientCount > 0 && serverResetDone)
+    {
+        serverResetDone = false;
+    }
+}
+
+
+void Server::Change_Scene_And_Init_Players(Scene_Type new_scene_type)
+{
+    std::string packet = "CHANGE_SCENE," + std::to_string(new_scene_type) + "\n";
+    BroadcastPacket(packet);
+
+    std::shared_ptr<Scene> new_scene;
+    {
+        std::lock_guard<std::mutex> lock(activeSceneMutex);
+        auto it = scenes.find(new_scene_type);
+        if (it != scenes.end())
+        {
+            activeScene = it->second;
+            new_scene = activeScene;
+        }
+    }
+
+    if (!new_scene)
+        return;
+
+    switch (new_scene_type)
+    {
+    case Scene_Type::Stage_1:
+    case Scene_Type::Stage_2:
+    {
+        std::shared_ptr<Stage_Scene> stage_scene = std::dynamic_pointer_cast<Stage_Scene>(new_scene);
+        if (stage_scene)
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex);
+            for (const auto& [id, session] : clients)
+            {
+                if (session->is_connected)
+                    stage_scene->Add_Player(id);
+            }
+        }
+        break;
+    }
+
+    case Scene_Type::Board:
+    case Scene_Type::Lobby:
+        // 필요 시 초기화 로직 추가 가능
+        break;
+
+    default:
+        logger.Log("[ERROR] Unknown scene type during ChangeSceneAndInitPlayers: " + std::to_string(static_cast<int>(new_scene_type)));
+        break;
+    }
+}
 
 void Server::CleanupInactiveClients()
 {
@@ -443,20 +601,23 @@ void Server::CleanupInactiveClients()
 void Server::DisconnectClient(int clientId)
 {
     std::lock_guard<std::mutex> lock(clientsMutex);
+
     removePlayerFromAllScenes(clientId);
+    
     auto it = clients.find(clientId);
     if (it != clients.end())
     {
         closesocket(it->second->socket);
         clients.erase(it);
     }
+
     ReleaseClientId(clientId);
 }
 
 void Server::removePlayerFromAllScenes(int clientId)
 {
     for (auto& [name, scene] : scenes)
-        if (scene) scene->removePlayer(clientId);
+        if (scene) scene->Remove_Player(clientId);
 }
 
 void Server::ReleaseClientId(int clientId)
