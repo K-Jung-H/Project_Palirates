@@ -43,14 +43,14 @@ void Lobby_Scene::Init()
         }
     }
 
-    auto asset = LoadServerAnimationOnly("Model/FishmanLP.bin");
-    if (!asset) { std::cout << "load failed\n"; return; }
+    //auto asset = LoadServerAnimationOnly("Model/FishmanLP.bin");
+    //if (!asset) { std::cout << "load failed\n"; return; }
 
-    std::cout << "#Bones : " << asset->boneNames.size() << '\n';
-    std::cout << "#AnimSets : " << asset->animSets.size() << '\n';
+    //std::cout << "#Bones : " << asset->boneNames.size() << '\n';
+    //std::cout << "#AnimSets : " << asset->animSets.size() << '\n';
 
-    for (auto& s : asset->animSets)
-        std::cout << "  " << s.name << " keys=" << s.keys.size() << '\n';
+    //for (auto& s : asset->animSets)
+    //    std::cout << "  " << s.name << " keys=" << s.keys.size() << '\n';
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)

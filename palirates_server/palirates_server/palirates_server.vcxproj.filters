@@ -51,9 +51,6 @@
     <ClCompile Include="AnimationSetCore.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="ServerSkinnedLoader.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
     <ClCompile Include="ServerAnimLoader.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
@@ -96,12 +93,6 @@
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="AnimationSetCore.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="ServerSkinnedLoader.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="ServerAnimationAsset.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="ServerAnimLoader.h">

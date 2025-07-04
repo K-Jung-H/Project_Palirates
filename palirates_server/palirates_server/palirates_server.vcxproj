@@ -147,7 +147,6 @@
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="server.cpp" />
     <ClCompile Include="ServerAnimLoader.cpp" />
-    <ClCompile Include="ServerSkinnedLoader.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -168,9 +167,7 @@
     <ClInclude Include="Player.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="server.h" />
-    <ClInclude Include="ServerAnimationAsset.h" />
     <ClInclude Include="ServerAnimLoader.h" />
-    <ClInclude Include="ServerSkinnedLoader.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>
