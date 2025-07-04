@@ -275,6 +275,7 @@ public:
 
 	// 서버 동기화 함수
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, ServerSyncData sync_data);
 
 };

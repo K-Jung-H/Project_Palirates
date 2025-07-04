@@ -912,6 +912,16 @@ void Object_Manager::Add_Player(std::shared_ptr<CPlayer> obj_ptr)
 	}
 }
 
+void Object_Manager::Remove_Player(int player_id)
+{
+	if (player_map[player_id] != NULL)
+	{
+		player_map[player_id].reset();
+	}
+}
+
+
+
 void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> obj_ptr, std::unordered_map<std::string, Fixed_Object_Info>& container)
 {
 	string name = obj_ptr->Get_Mesh_Name();
@@ -998,10 +1008,11 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 		for (auto& [id, obj_ptr] : player_map)
 		{
-			if (obj_ptr->Get_Active()) {
-				obj_ptr->Animate(fTimeElapsed);
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+					obj_ptr->Animate(fTimeElapsed);
 
-			}
+			
 		}
 	}
 	break;
@@ -1112,11 +1123,12 @@ void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsComma
 	{
 		for (auto& [id, obj_ptr] : player_map)
 		{
-			if (obj_ptr->Get_Active())
-			{
-				obj_ptr->UpdateTransform(NULL);
-				obj_ptr->Render_Shadow(pd3dCommandList, pCamera);
-			}
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+				{
+					obj_ptr->UpdateTransform(NULL);
+					obj_ptr->Render_Shadow(pd3dCommandList, pCamera);
+				}
 		}
 	}
 	break;
@@ -1202,11 +1214,12 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	{ 
 		for (auto& [id, obj_ptr] : player_map)
 		{
-			if (obj_ptr->Get_Active())
-			{
-				obj_ptr->UpdateTransform(NULL);
-				obj_ptr->Render(pd3dCommandList, pCamera);
-			}
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+				{
+					obj_ptr->UpdateTransform(NULL);
+					obj_ptr->Render(pd3dCommandList, pCamera);
+				}
 		}
 	}
 	break;

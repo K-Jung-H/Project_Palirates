@@ -611,6 +611,15 @@ void Scene_Manager::Add_Player(shared_ptr<CPlayer> new_player_ptr)
 
 }
 
+void Scene_Manager::Remove_Player(int player_id)
+{
+    if (activeScene)
+        activeScene->Remove_Multi_Player(player_id);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+}
+
 void Scene_Manager::Sync_Player_Data(int player_id, ServerSyncData server_sync)
 {
     if (activeScene)

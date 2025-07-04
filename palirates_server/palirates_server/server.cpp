@@ -698,18 +698,22 @@ void Server::CleanupInactiveClients()
 
 void Server::DisconnectClient(int clientId)
 {
-    std::lock_guard<std::mutex> lock(clientsMutex);
-
-    removePlayerFromAllScenes(clientId);
-    
-    auto it = clients.find(clientId);
-    if (it != clients.end())
     {
-        closesocket(it->second->socket);
-        clients.erase(it);
-    }
+        std::lock_guard<std::mutex> lock(clientsMutex);
 
-    ReleaseClientId(clientId);
+        removePlayerFromAllScenes(clientId);
+
+        auto it = clients.find(clientId);
+        if (it != clients.end())
+        {
+            closesocket(it->second->socket);
+            clients.erase(it);
+        }
+
+        ReleaseClientId(clientId);
+    }
+    std::string disconnectPacket = "PLAYER_LEFT_GAME ," + std::to_string(clientId) + "\n";
+    BroadcastPacket(disconnectPacket);
 }
 
 void Server::removePlayerFromAllScenes(int clientId)
