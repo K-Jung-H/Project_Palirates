@@ -1508,18 +1508,19 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 	{
 		int base = startIndex;
 
-		if (base + 8 >= tokens.size()) break;
+		if (base + 9 >= tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
-		float px = std::stof(tokens[base + 1]);
-		float py = std::stof(tokens[base + 2]);
-		float pz = std::stof(tokens[base + 3]);
-		float lx = std::stof(tokens[base + 4]);
-		float ly = std::stof(tokens[base + 5]);
-		float lz = std::stof(tokens[base + 6]);
-		int trackCount = std::stoi(tokens[base + 7]);
+		int modelId = std::stoi(tokens[base + 1]); 
+		float px = std::stof(tokens[base + 2]);
+		float py = std::stof(tokens[base + 3]);
+		float pz = std::stof(tokens[base + 4]);
+		float lx = std::stof(tokens[base + 5]);
+		float ly = std::stof(tokens[base + 6]);
+		float lz = std::stof(tokens[base + 7]);
+		int trackCount = std::stoi(tokens[base + 8]);
 
-		int trackStart = base + 8;
+		int trackStart = base + 9;
 
 		int expectedTrackTokenCount = trackCount * 3;
 
@@ -1548,7 +1549,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
-		HandlePlayerSync(playerId, syncData);
+		HandlePlayerSync(playerId, modelId, syncData);
 
 		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
@@ -1634,7 +1635,7 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 
 }
 
-void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncData)
+void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, const ServerSyncData& syncData)
 {
 	std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
@@ -1648,7 +1649,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncD
 		}
 		else // 플레이어 데이터 없음, 추가 필요
 		{
-			auto newPlayer = Create_Player(player_ID, 0);
+			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 
@@ -1686,11 +1687,12 @@ void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncD
 
  void CGameFramework::Multi_PlayerLeave(int leaveId)
  {
-	 std::cout << "[DEBUG] PLAYER_LEAVE detected: " << leaveId << std::endl;
 	 if (Connected_Player_List[leaveId] == true)
 	 {
 		 Connected_Player_List[leaveId] = false;
 		 scene_manager->Remove_Player(leaveId);
+		 std::cout << "[DEBUG] PLAYER_LEAVE detected: " << leaveId << std::endl;
+
 	 }
  }
 

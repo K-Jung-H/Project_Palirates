@@ -257,7 +257,7 @@ public:
     void HandleClientIdAssignment();
     void HandleChangeScene(const std::vector<std::string>& tokens);
     void Multi_PlayerLeave(int leaveId);
-    void HandlePlayerSync(int player_ID, const ServerSyncData& sync_data);
+    void HandlePlayerSync(int player_ID, int character_model_ID, const ServerSyncData& sync_data);
 
     shared_ptr<CPlayer> Create_Player(int playerId, int characterId);
 
