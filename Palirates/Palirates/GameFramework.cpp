@@ -758,18 +758,6 @@ void CGameFramework::Animate_Scene()
 
 	scene_manager->Animate_Active_Objects(m_pd3dDevice, Active_CommandList, fTimeElapsed);
 
-	// Server logic EX
-	//ServerAnimationSyncData data = m_pPlayer->MakeSyncData();
-	//data.position.x += 10.0f;
-
-	//GetSyncManager().AddPlayerSyncData(ClientNum, data);
-	////m_pPlayer->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
-
-	//auto* obj_list = scene_manager->Get_Active_Scene()->obj_manager->Get_Player_List();
-	//auto player = std::dynamic_pointer_cast<CPlayer>((*obj_list)[ClientNum]);
-
-	//player->ApplySyncData(GetSyncManager().GetPlayerSyncData(ClientNum));
-
 	//===============================================================
 
 
@@ -1351,13 +1339,13 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
 	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &Client_ID) == 1) // Client_ID로 저장
 	{
+		Connected_Player_List[Client_ID] = true;
 		HandleClientIdAssignment();
 		return;
 	}
 
 	if (!bClientIdAssigned)
 	{
-		DelayOrQueuePacket(receivedData);
 		return;
 	}
 
@@ -1372,16 +1360,10 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	const std::string& cmd = tokens[0];
 
 	// 공통 처리
-	if (cmd == "PLAYER_LEAVE" && tokens.size() >= 2)
+	if (cmd == "PLAYER_LEFT_GAME " && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
-		HandlePlayerLeave(leaveId);
-		return;
-	}
-	else if (cmd == "PLAYER_CREATE" && tokens.size() >= 2)
-	{
-		int id = std::stoi(tokens[1]);
-		HandlePlayerCreate(id);
+		Multi_PlayerLeave(leaveId);
 		return;
 	}
 	else if (cmd == "CHANGE_SCENE" && tokens.size() >= 2)
@@ -1526,18 +1508,19 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 	{
 		int base = startIndex;
 
-		if (base + 8 >= tokens.size()) break;
+		if (base + 9 >= tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
-		float px = std::stof(tokens[base + 1]);
-		float py = std::stof(tokens[base + 2]);
-		float pz = std::stof(tokens[base + 3]);
-		float lx = std::stof(tokens[base + 4]);
-		float ly = std::stof(tokens[base + 5]);
-		float lz = std::stof(tokens[base + 6]);
-		int trackCount = std::stoi(tokens[base + 7]);
+		int modelId = std::stoi(tokens[base + 1]); 
+		float px = std::stof(tokens[base + 2]);
+		float py = std::stof(tokens[base + 3]);
+		float pz = std::stof(tokens[base + 4]);
+		float lx = std::stof(tokens[base + 5]);
+		float ly = std::stof(tokens[base + 6]);
+		float lz = std::stof(tokens[base + 7]);
+		int trackCount = std::stoi(tokens[base + 8]);
 
-		int trackStart = base + 8;
+		int trackStart = base + 9;
 
 		int expectedTrackTokenCount = trackCount * 3;
 
@@ -1566,7 +1549,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
-		HandlePlayerSync(playerId, syncData);
+		HandlePlayerSync(playerId, modelId, syncData);
 
 		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
@@ -1596,51 +1579,6 @@ void CGameFramework::HandleClientIdAssignment()
 	if (m_pCamera && m_pPlayer)
 		m_pCamera->SetPlayer(m_pPlayer.get());
 }
-
-void CGameFramework::DelayOrQueuePacket(const std::string& packet)
-{
-	std::cout << "[WARNING] CLIENT_ID not assigned yet, delaying packet: " << packet << std::endl;
-	int playerId;
-	if (sscanf_s(packet.c_str(), "PLAYER_UPDATE,%d", &playerId) == 1)
-	{
-		std::lock_guard<std::mutex> lock(pendingUpdateMutex);
-		pendingUpdateMap[playerId] = packet;
-	}
-}
-
-void CGameFramework::HandlePlayerLeave(int leaveId)
-{
-	std::cout << "[DEBUG] PLAYER_LEAVE detected: " << leaveId << std::endl;
-
-	std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
-
-
-}
-
-void CGameFramework::HandlePlayerCreate(int id)
-{
-	if (id != Client_ID)
-	{
-		std::queue<int> tempQueue = pendingPlayerCreates;
-		bool alreadyQueued = false;
-		while (!tempQueue.empty())
-		{
-			if (tempQueue.front() == id) {
-				alreadyQueued = true;
-				break;
-			}
-			tempQueue.pop();
-		}
-
-		if (!alreadyQueued)
-		{
-			std::lock_guard<std::mutex> lock(pendingCreateMutex);
-			pendingPlayerCreates.push(id);
-			std::cout << "[DEBUG] PLAYER_CREATE received, remote player " << id << " added to queue" << std::endl;
-		}
-	}
-}
-
 
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
@@ -1697,19 +1635,12 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 
 }
 
-void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncData)
+void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, const ServerSyncData& syncData)
 {
 	std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
 	if (player_ID == Client_ID)
-	{
 		return;
-		if (!m_pPlayer) return;
-
-		m_pPlayer->SetPosition(syncData.position);
-		m_pPlayer->SetLookDirection(syncData.lookVector);
-		m_pPlayer->ApplySyncData(syncData);
-	}
 	else
 	{
 		if (Connected_Player_List[player_ID]) // 이미 플레이어 데이터 존재
@@ -1718,7 +1649,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncD
 		}
 		else // 플레이어 데이터 없음, 추가 필요
 		{
-			auto newPlayer = Create_Player(player_ID, 0);
+			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 
@@ -1727,7 +1658,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncD
 
 	}
 }
-
 
  shared_ptr<CPlayer> CGameFramework::Create_Player(int playerId, int characterId)
 {
@@ -1755,8 +1685,32 @@ void CGameFramework::HandlePlayerSync(int player_ID, const ServerSyncData& syncD
 	return new_Player; 
 }
 
+ void CGameFramework::Multi_PlayerLeave(int leaveId)
+ {
+	 if (Connected_Player_List[leaveId] == true)
+	 {
+		 Connected_Player_List[leaveId] = false;
+		 scene_manager->Remove_Player(leaveId);
+		 std::cout << "[DEBUG] PLAYER_LEAVE detected: " << leaveId << std::endl;
+
+	 }
+ }
 
 
+
+void CGameFramework::PlayerLeave(int playerId)
+{
+	std::string packet = "PLAYER_LEAVE," + std::to_string(playerId) + "\n";
+	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
+	if (result == SOCKET_ERROR)
+	{
+		std::cout << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
+	}
+	else
+	{
+		std::cout << "[SEND] " << packet << std::endl;
+	}
+}
 
 void CGameFramework::Disconnect()
 {
@@ -1769,11 +1723,10 @@ void CGameFramework::Disconnect()
 	closesocket(serverSocket);
 	WSACleanup();
 
-
-
 	std::cout << "[INFO] Disconnected from server" << std::endl;
 
 }
+
 
 void CGameFramework::NetworkLoop()
 {
@@ -1782,7 +1735,7 @@ void CGameFramework::NetworkLoop()
 	{
 		char buffer[1024 + 1];
 		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+		//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
 
 		if (bytesReceived > 0)
 		{
@@ -1792,7 +1745,7 @@ void CGameFramework::NetworkLoop()
 			{
 				std::lock_guard<std::mutex> lock(recvQueueMutex);
 				recvQueue.push(receivedData);
-	//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+				//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
 			}
 		}
 
@@ -1818,20 +1771,6 @@ bool CGameFramework::IsServerConnected()
 int CGameFramework::GetServerPlayerID()
 {
 	return Client_ID;
-}
-
-void CGameFramework::PlayerLeave(int playerId)
-{
-	std::string packet = "PLAYER_LEAVE," + std::to_string(playerId) + "\n";
-	int result = send(serverSocket, packet.c_str(), (int)packet.size(), 0);
-	if (result == SOCKET_ERROR)
-	{
-		std::cout << "[ERROR] Failed to send PLAYER_LEAVE: " << WSAGetLastError() << std::endl;
-	}
-	else
-	{
-		std::cout << "[SEND] " << packet << std::endl;
-	}
 }
 
 void CGameFramework::StartPingThread()

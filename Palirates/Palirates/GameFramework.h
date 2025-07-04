@@ -253,13 +253,11 @@ public:
     void PlayerLeave(int playerId);
     void StartPingThread();
     void Disconnect();
-    void DelayOrQueuePacket(const std::string& packet);
 
     void HandleClientIdAssignment();
     void HandleChangeScene(const std::vector<std::string>& tokens);
-    void HandlePlayerLeave(int leaveId);
-    void HandlePlayerCreate(int id);
-    void HandlePlayerSync(int player_ID, const ServerSyncData& sync_data);
+    void Multi_PlayerLeave(int leaveId);
+    void HandlePlayerSync(int player_ID, int character_model_ID, const ServerSyncData& sync_data);
 
     shared_ptr<CPlayer> Create_Player(int playerId, int characterId);
 
@@ -269,12 +267,6 @@ public:
     void ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene> lobby_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Board(shared_ptr<Board_Scene> board_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
-
-    std::queue<int> pendingPlayerCreates;
-    std::mutex pendingCreateMutex;
-    std::unordered_map<int, std::string> pendingUpdateMap;
-    std::mutex pendingUpdateMutex;
-
 
     bool bClientIdAssigned = false;
 

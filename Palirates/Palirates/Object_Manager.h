@@ -255,8 +255,10 @@ public:
 	//Player Map
 	std::map<int, std::shared_ptr<CPlayer>> player_map;
 	std::map<int, std::shared_ptr<CPlayer>> Get_Player_Map() { return player_map; }
+
 	//Sync Server
 	void Add_Player(std::shared_ptr<CPlayer> player_ptr);
+	void Remove_Player(int player_id);
 	void Sync_Player_Data(int player_id, ServerSyncData sync_data);
 
 

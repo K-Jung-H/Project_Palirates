@@ -23,16 +23,7 @@
 
 # 현재 진행 내용:
 
-* Scene\_Manager
-* OBB\_Drawer
-* Text\_UI\_Render
-* Text\_UI\_Manager
-* Tile\_Map
-* Particle\_Manager
-* Light\_Material\_Manager
-* OBB\_Render
-* OBB\_CollisionManager
-* OBB\_Manager
+## 
 
 ## 작업 목표:
 
@@ -60,4 +51,14 @@
 
 
 서버에 충돌 검사 추가하기
+
+
+
+-----------
+
+
+
+* 현재 서버에서 패킷 송신 시, 일부 패킷이 연결되어 읽히는 현상 발생. 메시지별 명확한 분리가 필요함.
+
+&nbsp;	-->  연결된 클라이언트마다 메시지를 큐에 저장하고 전송하는 방식 고려할 것 +  각 큐를 읽어 송신을 담당하는 개별 스레드 사용
 

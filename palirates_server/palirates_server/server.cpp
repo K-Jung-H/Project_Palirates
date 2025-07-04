@@ -517,7 +517,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         const auto& track_list = anim_data.track_info_list;
         bool state_changed = anim_data.stateChanged;
 
-        players_data << std::to_string(id) << ","
+        players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
             << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
             << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
             << std::to_string(track_list.size());
@@ -698,18 +698,22 @@ void Server::CleanupInactiveClients()
 
 void Server::DisconnectClient(int clientId)
 {
-    std::lock_guard<std::mutex> lock(clientsMutex);
-
-    removePlayerFromAllScenes(clientId);
-    
-    auto it = clients.find(clientId);
-    if (it != clients.end())
     {
-        closesocket(it->second->socket);
-        clients.erase(it);
-    }
+        std::lock_guard<std::mutex> lock(clientsMutex);
 
-    ReleaseClientId(clientId);
+        removePlayerFromAllScenes(clientId);
+
+        auto it = clients.find(clientId);
+        if (it != clients.end())
+        {
+            closesocket(it->second->socket);
+            clients.erase(it);
+        }
+
+        ReleaseClientId(clientId);
+    }
+    std::string disconnectPacket = "PLAYER_LEFT_GAME ," + std::to_string(clientId) + "\n";
+    BroadcastPacket(disconnectPacket);
 }
 
 void Server::removePlayerFromAllScenes(int clientId)

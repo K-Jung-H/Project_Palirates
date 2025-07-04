@@ -2196,8 +2196,13 @@ Change_Signal CScene::Get_Change_Signal()
 void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
 	obj_manager->Add_Player(new_player_ptr);
-
 }
+
+void CScene::Remove_Multi_Player(int player_id)
+{
+	obj_manager->Remove_Player(player_id);
+}
+
 
 void CScene::Sync_Player_Data(int player_id, ServerSyncData sync_data)
 {
