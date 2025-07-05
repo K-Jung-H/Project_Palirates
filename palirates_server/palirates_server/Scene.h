@@ -5,6 +5,7 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "Monster.h"
+#include "GameObject.h"
 #include "ServerAnimLoader.h"
 
 #define MaxPlayer 6

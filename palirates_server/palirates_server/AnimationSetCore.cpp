@@ -1,56 +1,69 @@
 #include "stdafx.h"
 #include "AnimationSetCore.h"
-#include <cmath>            
 
 using std::shared_ptr;
 using std::string;
 
-CAnimationSet::CAnimationSet(float len, int f, int k, int b, const string& n)
-    : name(n), length(len), fps(f), nKeyFrames(k), nBones(b)
+std::unordered_map<std::string, std::shared_ptr<CAnimationSet>> CAnimationSets::s_GlobalAnimationSetCache;
+
+CAnimationSet::CAnimationSet(float fLength, int nFramesPerSecond, int nKeyFrames, int nAnimatedBones, char* pstrName)
 {
-    keyTimes.resize(k);
-    keys.resize(k, std::vector<XMFLOAT4X4>(b));
+	m_fLength = fLength;
+	m_nFramesPerSecond = nFramesPerSecond;
+	m_nKeyFrames = nKeyFrames;
+
+	strcpy_s(m_pstrAnimationSetName, 64, pstrName);
+
+	m_pfKeyFrameTimes = new float[nKeyFrames];
+	m_ppxmf4x4KeyFrameTransforms = new XMFLOAT4X4 * [nKeyFrames];
+	for (int i = 0; i < nKeyFrames; i++) m_ppxmf4x4KeyFrameTransforms[i] = new XMFLOAT4X4[nAnimatedBones];
 }
 
-XMFLOAT4X4 CAnimationSet::GetMatrix(int boneIdx, float t) const
+CAnimationSet::~CAnimationSet()
 {
-    if (nKeyFrames == 1) return keys[0][boneIdx];
+	if (m_pfKeyFrameTimes)
+		delete[] m_pfKeyFrameTimes;
 
-    if (t < 0.f) t = 0.f;
-    t = std::fmod(t, length);
+	for (int j = 0; j < m_nKeyFrames; j++)
+		if (m_ppxmf4x4KeyFrameTransforms[j])
+			delete[] m_ppxmf4x4KeyFrameTransforms[j];
 
-    int k1 = 0;
-    while (k1 < nKeyFrames - 1 && keyTimes[k1 + 1] < t) ++k1;
-    int k2 = (k1 + 1) % nKeyFrames;
+	if (m_ppxmf4x4KeyFrameTransforms)
+		delete[] m_ppxmf4x4KeyFrameTransforms;
 
-    float dt = keyTimes[k2] - keyTimes[k1];
-    if (dt <= 0.f) return keys[k1][boneIdx];
-    float alpha = (t - keyTimes[k1]) / dt;
-
-    XMFLOAT4X4 a = keys[k1][boneIdx];
-    XMFLOAT4X4 b = keys[k2][boneIdx];
-    XMFLOAT4X4 out{};
-
-    for (int i = 0; i < 16; ++i)
-        reinterpret_cast<float*>(&out)[i] =
-        reinterpret_cast<float*>(&a)[i] * (1 - alpha) +
-        reinterpret_cast<float*>(&b)[i] * alpha;
-
-    return out;
+	//DebugOutput("\nDelete AnimationSet: ", m_pstrAnimationSetName);
 }
 
-std::unordered_map<std::string,
-    shared_ptr<CAnimationSet>> CAnimationSets::s_globalCache;
-
-shared_ptr<CAnimationSet>
-CAnimationSets::AddOrGetSharedAnimationSet(shared_ptr<CAnimationSet> a,
-    const string& file)
+XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 {
-    string key = file + "::" + a->name;
-    auto it = s_globalCache.find(key);
-    if (it != s_globalCache.end()) return it->second;
-    s_globalCache[key] = a;
-    return a;
+	XMFLOAT4X4 xmf4x4Transform = Matrix4x4::Identity();
+
+	if (fPosition >= m_pfKeyFrameTimes[m_nKeyFrames - 1])
+		return m_ppxmf4x4KeyFrameTransforms[m_nKeyFrames - 1][nBone];
+
+	for (int i = 0; i < (m_nKeyFrames - 1); i++)
+	{
+		if ((m_pfKeyFrameTimes[i] <= fPosition) && (fPosition < m_pfKeyFrameTimes[i + 1]))
+		{
+			float t = (fPosition - m_pfKeyFrameTimes[i]) / (m_pfKeyFrameTimes[i + 1] - m_pfKeyFrameTimes[i]);
+			//xmf4x4Transform = Matrix4x4::Interpolate(m_ppxmf4x4KeyFrameTransforms[i][nBone], m_ppxmf4x4KeyFrameTransforms[i + 1][nBone], t);
+			break;
+		}
+	}
+
+	return(xmf4x4Transform);
 }
 
-void CAnimationSets::PrepareSkinning() {}
+std::unordered_map<std::string, shared_ptr<CAnimationSet>> CAnimationSets::s_globalCache;
+
+std::shared_ptr<CAnimationSet> CAnimationSets::AddOrGetSharedAnimationSet(std::shared_ptr<CAnimationSet> animSet, const std::string& fileName)
+{
+	std::string key = fileName + "::" + animSet->m_pstrAnimationSetName;
+
+	auto it = s_GlobalAnimationSetCache.find(key);
+	if (it != s_GlobalAnimationSetCache.end())
+		return it->second;
+
+	s_GlobalAnimationSetCache[key] = animSet;
+	return animSet;
+}

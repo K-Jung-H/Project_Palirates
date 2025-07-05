@@ -1,9 +1,12 @@
 #pragma once
-#include "DX_Setter.h"
-#include <vector>
-#include <sstream>
+#include "stdafx.h"
+#include "ServerAnimLoader.h"
 
 using namespace std;
+
+class CSkinnedMesh;
+class CLoadedModelInfo;
+class CAnimationSets;
 
 enum class Object_Type
 {
@@ -25,7 +28,9 @@ protected:
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
+    char                     m_pstrFrameName[64];
 
+    std::shared_ptr<CSkinnedMesh> m_pMesh = NULL;
 
 public:
     GameObject() = default;
@@ -63,6 +68,11 @@ public:
     void SetUp(XMFLOAT3 xmf3Up);
     void SetRight(XMFLOAT3 xmf3Right);
 
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
+    static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
+    void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
 };
 
 
@@ -109,4 +119,3 @@ public:
     void SetTrackPositions(const std::vector<float>& v) { trackPositions = v; }
     void SetTrackWeights(const std::vector<float>& v) { trackWeights = v; }
 };
-
