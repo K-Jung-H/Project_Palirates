@@ -3,9 +3,9 @@
 #include <array>
 #include <memory>
 #include "stdafx.h"
+#include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
-#include "GameObject.h"
 #include "ServerAnimLoader.h"
 
 #define MaxPlayer 6

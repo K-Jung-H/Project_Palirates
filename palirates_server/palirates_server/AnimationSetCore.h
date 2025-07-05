@@ -2,6 +2,8 @@
 
 using namespace DirectX;
 
+class GameObject;
+
 class CAnimationSet
 {
 public:
@@ -30,7 +32,7 @@ public:
     int                                         m_nBoneFrames = 0;
     // 클라에선 게임 오브젝트인데, 이 캐시가 가져야하는건 이름이랑 부모 행렬 뿐임
     // + 자식 본, 형제 본, 그 모든 정보를 찾아주는 Obj_Info 함수 정도
-    std::vector<void*>                          m_ppBoneFrameCaches;
+    std::vector<GameObject*>                          m_ppBoneFrameCaches;
 
 private:
     static std::unordered_map<std::string, std::shared_ptr<CAnimationSet>> s_GlobalAnimationSetCache;

@@ -216,7 +216,7 @@ CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileNam
 
 	for (; ; )
 	{
-		if (::ReadStringFromFile(pInFile, pstrToken))
+		if (::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken)))
 		{
 			if (!strcmp(pstrToken, "<Hierarchy>:"))
 			{
@@ -225,7 +225,7 @@ CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileNam
 				std::shared_ptr<GameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
 				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
 
-				::ReadStringFromFile(pInFile, pstrToken); //"</Hierarchy>"
+				::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 			}
 			else if (!strcmp(pstrToken, "<Animation>:"))
 			{
@@ -246,6 +246,13 @@ CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileNam
 	return(pLoadedModel);
 }
 
+static void SkipUntil(FILE* fp, const char* endToken)
+{
+	char tok[64]{};
+	while (ReadStringSafeFromFile(fp, tok, sizeof tok))
+		if (!strcmp(tok, endToken)) break;
+}
+
 std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile( std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes)
 {
 	char pstrToken[64] = { '\0' };
@@ -257,13 +264,16 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile( std::shared_
 
 	for (; ; )
 	{
-		::ReadStringFromFile(pInFile, pstrToken);
+		BYTE len = ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
+		
+		if (len == 0) { break; }
+
 		if (!strcmp(pstrToken, "<Frame>:"))
 		{
 			nFrame = ::ReadIntegerFromFile(pInFile);
 			nTextures = ::ReadIntegerFromFile(pInFile);
 
-			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+			::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
@@ -280,6 +290,11 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile( std::shared_
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
+			int vtx = ReadIntegerFromFile(pInFile);
+			char dummy[64];  ReadStringSafeFromFile(pInFile, dummy, sizeof dummy);
+
+			SkipUntil(pInFile, "</Mesh>");
+
 			//shared_ptr<CStandardMesh> pMesh = make_shared<CStandardMesh>(pd3dDevice, pd3dCommandList);
 			//pMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			//pGameObject->SetMesh(pMesh);
@@ -291,7 +306,7 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile( std::shared_
 			shared_ptr<CSkinnedMesh> pSkinnedMesh = make_shared<CSkinnedMesh>();
 			pSkinnedMesh->LoadSkinInfoFromFile(pInFile);
 
-			::ReadStringFromFile(pInFile, pstrToken); //<Mesh>:
+			::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 			if (!strcmp(pstrToken, "<Mesh>:")) {
 				//pSkinnedMesh->LoadMeshFromFile(pd3dDevice, pd3dCommandList, pInFile);
 			}
@@ -334,7 +349,10 @@ void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedM
 
 	for (; ; )
 	{
-		::ReadStringFromFile(pInFile, pstrToken);
+		BYTE len = ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
+		
+		if (len == 0) { break; }
+
 		if (!strcmp(pstrToken, "<AnimationSets>:"))
 		{
 			nAnimationSets = ::ReadIntegerFromFile(pInFile);
@@ -347,7 +365,7 @@ void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedM
 
 			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
 			{
-				::ReadStringFromFile(pInFile, pstrToken);
+				::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 				shared_ptr<GameObject> frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
 				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr.get();
 			}
@@ -356,7 +374,7 @@ void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedM
 		{
 			int nAnimationSet = ::ReadIntegerFromFile(pInFile);
 
-			::ReadStringFromFile(pInFile, pstrToken); //Animation Set Name
+			::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 
 			float fLength = ::ReadFloatFromFile(pInFile);
 			int nFramesPerSecond = ::ReadIntegerFromFile(pInFile);
@@ -374,7 +392,7 @@ void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedM
 			{
 				for (int i = 0; i < nKeyFrames; i++)
 				{
-					::ReadStringFromFile(pInFile, pstrToken);
+					::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 					if (!strcmp(pstrToken, "<Transforms>:"))
 					{
 						CAnimationSet* pAnimationSet = sharedAnimSet.get();
@@ -394,7 +412,7 @@ void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedM
 			{
 				for (int i = 0; i < nKeyFrames; i++)
 				{
-					::ReadStringFromFile(pInFile, pstrToken); // "<Transforms>"
+					::ReadStringSafeFromFile(pInFile, pstrToken, sizeof(pstrToken));
 					int nKey = ::ReadIntegerFromFile(pInFile); // i
 					float fKeyTime = ::ReadFloatFromFile(pInFile); // skip
 					fseek(pInFile, sizeof(XMFLOAT4X4) * pLoadedModel->m_pAnimationSets->m_nBoneFrames, SEEK_CUR); // skip fread

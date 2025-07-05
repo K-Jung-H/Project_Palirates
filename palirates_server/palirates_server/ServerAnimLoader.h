@@ -1,7 +1,7 @@
 #pragma once
 #include "AnimationSetCore.h"
 
-BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
+BYTE ReadStringSafeFromFile(FILE* pInFile, char* pstrToken, size_t bufferSize);
 int  ReadIntegerFromFile(FILE* pInFile);
 float ReadFloatFromFile(FILE* pInFile);
 
@@ -10,32 +10,20 @@ class GameObject;
 class CSkinnedMesh
 {
 public:
-	CSkinnedMesh() = default;
-	virtual ~CSkinnedMesh() = default;
+    CSkinnedMesh() = default;
+    ~CSkinnedMesh() = default;
 
-protected:
-	int								m_nBonesPerVertex = 4;
+    int                                m_nSkinningBones = 0;        
+    std::vector<std::string>           m_boneNames;                 
+    std::vector<GameObject*>           m_boneFrameCaches;            
+    std::vector<DirectX::XMFLOAT4X4>   m_bindPoseOffsets;           
 
-public:
-	int								m_nSkinningBones = 0;
+    void AddRef() {}
+    void Release() {}
 
-	char							(*m_ppstrSkinningBoneNames)[64]; 
-	std::vector<GameObject*> m_ppSkinningBoneFrameCaches; //[m_nSkinningBones]
+    void PrepareSkinning(const std::shared_ptr<GameObject>& root) {  }
 
-	XMFLOAT4X4* m_pxmf4x4BindPoseBoneOffsets = NULL; //[m_nSkinningBones], Transposed
-
-private:
-	int								m_nReferences = 0;
-
-public:
-	void AddRef() { m_nReferences++; }
-	void Release() { if (--m_nReferences <= 0) delete this; }
-
-	void PrepareSkinning(std::shared_ptr<GameObject> pModelRootObject) {};
-	void LoadSkinInfoFromFile(FILE* pInFile) {};
-
-	BoundingOrientedBox Get_WorldOBB() {};
-	BoundingOrientedBox Get_WorldOBB_FromSkinnedVertices() {};
+    void LoadSkinInfoFromFile(FILE* fp);
 };
 
 class CLoadedModelInfo
