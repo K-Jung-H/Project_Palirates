@@ -16,6 +16,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <mutex>
+#include "crc32.h"
 
 using namespace std;
 

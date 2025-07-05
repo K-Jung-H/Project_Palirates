@@ -115,6 +115,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
         while (std::getline(iss, line))
         {
+            // 1. 토큰 분리
             std::istringstream linestream(line);
             std::string command;
             std::getline(linestream, command, ',');
@@ -123,18 +124,44 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             tokens.push_back(command);
             std::string token;
             while (std::getline(linestream, token, ','))
-               // if (line == "PING")
-               // {
-               //     
-               // }
-            tokens.push_back(token);
+                tokens.push_back(token);
+
+            // --- CRC32/시퀀스 검증 추가 시작 ---
+            if (tokens.size() < 3)
+            {
+                continue;
+            }
+
+            uint32_t recv_seq = 0, recv_crc = 0;
+            try {
+                recv_seq = std::stoul(tokens[tokens.size() - 2]);
+                recv_crc = std::stoul(tokens[tokens.size() - 1]);
+            }
+            catch (...) {
+                std::cerr << "[CRC32] 패킷 시퀀스/CRC 파싱 실패" << std::endl;
+                continue;
+            }
+
+
+            std::string body;
+            for (size_t i = 0; i < tokens.size() - 2; ++i) {
+                if (i > 0) body += ",";
+                body += tokens[i];
+            }
+            if (CalcCRC32(body.c_str(), body.length()) != recv_crc) {
+                std::cerr << "[CRC32] 무결성 오류! body=" << body << " recv_crc=" << recv_crc << std::endl;
+                continue;
+            }
 
             // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
-            if (tokens.size() < 3) continue;
+            if (tokens.size() < 5)
+            {
+                continue;
+            }
 
             int sceneTypeInt = std::stoi(tokens[1]);
             Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
-            
+
             clients[clientId]->client_scene_type = sceneType;
 
             switch (sceneType)
@@ -155,10 +182,8 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 break;
             }
         }
+        activeClientCount--; // 현재 활성화된 클라 스레드 개수
     }
-
-    activeClientCount--; // 현재 활성화된 클라 스레드 개수
-
 }
 
 
@@ -667,14 +692,25 @@ void Server::BroadcastPacket(const std::string& packet)
 
 void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog)
 {
+    static uint32_t server_seq = 0;
     if (!session->is_connected) return;
 
-    send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+    std::string body = packet;
+    if (!body.empty() && body.back() == '\n') body.pop_back();
+
+    uint32_t crc = CalcCRC32(body.c_str(), body.length());
+    std::ostringstream oss;
+    oss << body << "," << server_seq << "," << crc << "\n";
+    ++server_seq;
+
+    std::string sendStr = oss.str();
+
+    send(session->socket, sendStr.c_str(), static_cast<int>(sendStr.length()), 0);
 
     if (saveLog)
     {
         std::lock_guard<std::mutex> logLock(session->packetLogMutex);
-        session->lastSentPacket = packet;
+        session->lastSentPacket = sendStr;
     }
 }
 
