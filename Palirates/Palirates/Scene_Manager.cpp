@@ -620,10 +620,10 @@ void Scene_Manager::Remove_Player(int player_id)
 
 }
 
-void Scene_Manager::Sync_Player_Data(int player_id, ServerSyncData server_sync)
+void Scene_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
     if (activeScene)
-        activeScene->Sync_Player_Data(player_id, server_sync);
+        activeScene->Sync_Player_Data(player_id, syncData);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 

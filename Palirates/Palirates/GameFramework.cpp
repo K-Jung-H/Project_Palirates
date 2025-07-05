@@ -960,7 +960,7 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-		//std::lock_guard<std::mutex> lock(recvQueueMutex);
+//		std::lock_guard<std::mutex> lock(recvQueueMutex);
 		while (!recvQueue.empty())
 		{
 			std::string receivedData = recvQueue.front();
@@ -1640,7 +1640,10 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	std::lock_guard<std::mutex> lock(remotePlayerUpdateMutex);
 
 	if (player_ID == Client_ID)
-		return;
+	{
+		m_pPlayer->ApplySyncData(syncData);
+//		return;
+	}
 	else
 	{
 		if (Connected_Player_List[player_ID]) // 이미 플레이어 데이터 존재

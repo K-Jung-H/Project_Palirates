@@ -3400,7 +3400,7 @@ ServerSyncData CGameObject::MakeSyncData()
 void CGameObject::ApplySyncData(const ServerSyncData& syncData)
 {
 	SetLookDirection(syncData.lookVector);
-//	SetPosition(syncData.position);
+	SetPosition(syncData.position);
 }
 
 void CGameObject::Launch(const XMVECTOR& target_dir)
