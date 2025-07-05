@@ -960,7 +960,7 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-		std::lock_guard<std::mutex> lock(recvQueueMutex);
+		//std::lock_guard<std::mutex> lock(recvQueueMutex);
 		while (!recvQueue.empty())
 		{
 			std::string receivedData = recvQueue.front();
@@ -1651,7 +1651,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
-			scene_manager->Sync_Player_Data(player_ID, syncData);
 
 			Connected_Player_List[player_ID] = true;
 		}
@@ -1675,6 +1674,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->type = EObjectType::Player;
 	new_Player->SetRotationSpeed(1.0f);
 	new_Player->Set_Active(true);
+	new_Player->SetScale(XMFLOAT3(100.0f, 100.0f, 100.0f));
 	new_Player->Set_Child(new_Player->m_pRootModel);
 	new_Player->SetupWeaponCollider();
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);

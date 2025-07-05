@@ -905,7 +905,7 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 
 void Object_Manager::Add_Player(std::shared_ptr<CPlayer> obj_ptr)
 {
-	if (obj_ptr && obj_ptr->m_pSkinnedAnimationController != NULL)
+	if (obj_ptr/* && obj_ptr->m_pSkinnedAnimationController != NULL*/)
 	{
 		int player_id = obj_ptr->GetID();
 		player_map[player_id] = obj_ptr;

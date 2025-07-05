@@ -635,8 +635,11 @@ ServerSyncData CTerrainPlayer::MakeSyncData()
 
 void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 {
-	CGameObject::ApplySyncData(syncData);
+//	CGameObject::ApplySyncData(syncData);
 
+	shared_ptr<CGameObject>root_obj = Get_Root_Object();
+	root_obj->SetPosition(syncData.position);
+//	root_obj->SetLookDirection(syncData.lookVector);
 	auto controller = GetSkinnedAnimationController();
 	if (!controller) return;
 	controller->ResetWeight();
