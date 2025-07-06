@@ -1679,7 +1679,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->type = EObjectType::Player;
 	new_Player->SetRotationSpeed(1.0f);
 	new_Player->Set_Active(true);
-	new_Player->SetScale(XMFLOAT3(100.0f, 100.0f, 100.0f));
+	new_Player->SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 	new_Player->Set_Child(new_Player->m_pRootModel);
 	new_Player->SetupWeaponCollider();
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);

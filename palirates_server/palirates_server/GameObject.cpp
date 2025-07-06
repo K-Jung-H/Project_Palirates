@@ -172,25 +172,6 @@ void GameObject::SetLook(const XMFLOAT3& xmf3LookInput)
 	m_xmf4x4Parent = xmf4x4New;
 	UpdateTransform(nullptr);
 
-	//// 기본 방향 보정
-	//if (Vector3::Length(xmf3Look) < 1e-6f)
-	//	xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f); // Z+ 고정
-
-	//XMFLOAT3 look = Vector3::Normalize(xmf3Look);
-	//XMFLOAT3 up = XMFLOAT3(0.0f, 1.0f, 0.0f);
-
-	//// 예외 처리: look과 up이 거의 평행할 경우
-	//if (fabs(Vector3::DotProduct(look, up)) > 0.999f)
-	//	up = XMFLOAT3(1.0f, 0.0f, 0.0f); // X+ 로 보정
-
-	//XMFLOAT3 right = Vector3::Normalize(Vector3::CrossProduct(up, look));
-	//up = Vector3::Normalize(Vector3::CrossProduct(look, right));
-
-	//m_xmf4x4Parent._11 = right.x;  m_xmf4x4Parent._12 = right.y;  m_xmf4x4Parent._13 = right.z;
-	//m_xmf4x4Parent._21 = up.x;     m_xmf4x4Parent._22 = up.y;     m_xmf4x4Parent._23 = up.z;
-	//m_xmf4x4Parent._31 = look.x;   m_xmf4x4Parent._32 = look.y;   m_xmf4x4Parent._33 = look.z;
-
-	//UpdateTransform(nullptr);
 }
 
 void GameObject::SetUp(XMFLOAT3 xmf3Up)
