@@ -141,27 +141,56 @@ XMFLOAT3 GameObject::GetRight()
 	return(Vector3::Normalize(XMFLOAT3(m_xmf4x4World._11, m_xmf4x4World._12, m_xmf4x4World._13)));
 }
 
-void GameObject::SetLook(XMFLOAT3 xmf3Look)
+void GameObject::SetLook(const XMFLOAT3& xmf3LookInput)
 {
-	// 기본 방향 보정
+	XMFLOAT3 xmf3Look = xmf3LookInput;
 	if (Vector3::Length(xmf3Look) < 1e-6f)
-		xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f); // Z+ 고정
+		xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
 	XMFLOAT3 look = Vector3::Normalize(xmf3Look);
 	XMFLOAT3 up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 
-	// 예외 처리: look과 up이 거의 평행할 경우
 	if (fabs(Vector3::DotProduct(look, up)) > 0.999f)
-		up = XMFLOAT3(1.0f, 0.0f, 0.0f); // X+ 로 보정
+		up = XMFLOAT3(1.0f, 0.0f, 0.0f);
 
 	XMFLOAT3 right = Vector3::Normalize(Vector3::CrossProduct(up, look));
 	up = Vector3::Normalize(Vector3::CrossProduct(look, right));
 
-	m_xmf4x4Parent._11 = right.x;  m_xmf4x4Parent._12 = right.y;  m_xmf4x4Parent._13 = right.z;
-	m_xmf4x4Parent._21 = up.x;     m_xmf4x4Parent._22 = up.y;     m_xmf4x4Parent._23 = up.z;
-	m_xmf4x4Parent._31 = look.x;   m_xmf4x4Parent._32 = look.y;   m_xmf4x4Parent._33 = look.z;
+	XMFLOAT3 scale = XMFLOAT3(100, 100, 100); //GetScale(m_xmf4x4Parent);
+	XMFLOAT3 position = GetPosition();
 
+	XMVECTOR vRight = XMVectorScale(XMLoadFloat3(&right), scale.x);
+	XMVECTOR vUp = XMVectorScale(XMLoadFloat3(&up), scale.y);
+	XMVECTOR vLook = XMVectorScale(XMLoadFloat3(&look), scale.z);
+
+	XMFLOAT4X4 xmf4x4New;
+	xmf4x4New._11 = XMVectorGetX(vRight); xmf4x4New._12 = XMVectorGetY(vRight); xmf4x4New._13 = XMVectorGetZ(vRight); xmf4x4New._14 = 0.0f;
+	xmf4x4New._21 = XMVectorGetX(vUp);    xmf4x4New._22 = XMVectorGetY(vUp);    xmf4x4New._23 = XMVectorGetZ(vUp);    xmf4x4New._24 = 0.0f;
+	xmf4x4New._31 = XMVectorGetX(vLook);  xmf4x4New._32 = XMVectorGetY(vLook);  xmf4x4New._33 = XMVectorGetZ(vLook);  xmf4x4New._34 = 0.0f;
+	xmf4x4New._41 = position.x;           xmf4x4New._42 = position.y;           xmf4x4New._43 = position.z;           xmf4x4New._44 = 1.0f;
+
+	m_xmf4x4Parent = xmf4x4New;
 	UpdateTransform(nullptr);
+
+	//// 기본 방향 보정
+	//if (Vector3::Length(xmf3Look) < 1e-6f)
+	//	xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f); // Z+ 고정
+
+	//XMFLOAT3 look = Vector3::Normalize(xmf3Look);
+	//XMFLOAT3 up = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	//// 예외 처리: look과 up이 거의 평행할 경우
+	//if (fabs(Vector3::DotProduct(look, up)) > 0.999f)
+	//	up = XMFLOAT3(1.0f, 0.0f, 0.0f); // X+ 로 보정
+
+	//XMFLOAT3 right = Vector3::Normalize(Vector3::CrossProduct(up, look));
+	//up = Vector3::Normalize(Vector3::CrossProduct(look, right));
+
+	//m_xmf4x4Parent._11 = right.x;  m_xmf4x4Parent._12 = right.y;  m_xmf4x4Parent._13 = right.z;
+	//m_xmf4x4Parent._21 = up.x;     m_xmf4x4Parent._22 = up.y;     m_xmf4x4Parent._23 = up.z;
+	//m_xmf4x4Parent._31 = look.x;   m_xmf4x4Parent._32 = look.y;   m_xmf4x4Parent._33 = look.z;
+
+	//UpdateTransform(nullptr);
 }
 
 void GameObject::SetUp(XMFLOAT3 xmf3Up)

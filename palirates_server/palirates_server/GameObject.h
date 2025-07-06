@@ -59,7 +59,7 @@ public:
     XMFLOAT3 GetRight();
 
 
-    void SetLook(XMFLOAT3 xmf3Look);
+    void SetLook(const XMFLOAT3& xmf3Look);
     void SetUp(XMFLOAT3 xmf3Up);
     void SetRight(XMFLOAT3 xmf3Right);
 

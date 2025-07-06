@@ -1546,6 +1546,8 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
+//		syncData.lookVector = XMFLOAT3(1.0f, 0, 0);
+
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
@@ -1641,8 +1643,8 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		m_pPlayer->ApplySyncData(syncData);
-//		return;
+//		m_pPlayer->ApplySyncData(syncData);
+		return;
 	}
 	else
 	{
