@@ -42,6 +42,7 @@
 #include <sstream>
 #include <iomanip>
 #include<bitset>
+#include "crc32.h"
 
 #pragma comment(lib, "ws2_32.lib")
 

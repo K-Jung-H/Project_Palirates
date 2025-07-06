@@ -1353,20 +1353,32 @@ void CGameFramework::SendPacket()
 
 int CGameFramework::SendPacket_String(const std::string& packet)
 {
+	static uint32_t client_seq = 0;
 	if (serverSocket == INVALID_SOCKET)
 	{
 		std::cerr << "[ERROR] SendPacket failed: invalid socket" << std::endl;
 		return serverSocket;
 	}
 
-	int result = send(serverSocket, packet.c_str(), static_cast<int>(packet.size()), 0);
+	std::string body = packet;
+	if (!body.empty() && body.back() == '\n') body.pop_back();
 
-//	std::cout << "[SEND] " << packet;
+	uint32_t crc = CalcCRC32(body.c_str(), body.length());
+	std::ostringstream oss;
+	oss << body << "," << client_seq << "," << crc << "\n";
+	++client_seq;
+
+	std::string sendStr = oss.str();
+	int result = send(serverSocket, sendStr.c_str(), static_cast<int>(sendStr.length()), 0);
+
+	// std::cout << "[SEND] " << sendStr;
 
 	if (result == SOCKET_ERROR)
 	{
 		std::cerr << "[ERROR] Failed to send packet: " << WSAGetLastError() << std::endl;
 	}
+
+	return result;
 }
 
 
@@ -1389,7 +1401,39 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	std::stringstream ss(receivedData);
 	std::string item;
 	while (std::getline(ss, item, ','))
+	{
 		tokens.push_back(item);
+	}
+
+	if (tokens.size() < 3)
+	{
+		return;
+	}
+
+	uint32_t recv_seq = 0, recv_crc = 0;
+	try 
+	{
+		recv_seq = std::stoul(tokens[tokens.size() - 2]);
+		recv_crc = std::stoul(tokens[tokens.size() - 1]);
+	}
+	catch (...)
+	{
+		std::cerr << "[CRC32][Client] 패킷 시퀀스/CRC 파싱 실패" << std::endl;
+		return;
+	}
+	
+
+	std::string body;
+	for (size_t i = 0; i < tokens.size() - 2; ++i)
+	{
+		if (i > 0) body += ",";
+		body += tokens[i];
+	}
+	if (CalcCRC32(body.c_str(), body.length()) != recv_crc) 
+	{
+		std::cerr << "[CRC32][Client] 무결성 오류 body=" << body << " recv_crc=" << recv_crc << std::endl;
+		return;
+	}
 
 	if (tokens.empty()) return;
 
