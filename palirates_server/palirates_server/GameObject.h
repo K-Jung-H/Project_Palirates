@@ -28,7 +28,17 @@ public:
 
 
 public:
-    GameObject() = default;
+    GameObject()
+        : obj_type(Object_Type::etc)
+        , Obj_Name("")
+        , child_obj(nullptr)
+        , sibling_obj(nullptr)
+        , m_pParent(nullptr)
+    {
+        XMStoreFloat4x4(&m_xmf4x4Parent, XMMatrixIdentity());
+        XMStoreFloat4x4(&m_xmf4x4World, XMMatrixIdentity());
+    }
+
     ~GameObject() = default;
     void Set_Child(shared_ptr<GameObject> pChild);
 

@@ -2,6 +2,64 @@
 #include "GameObject.h"
 #include "DX_Setter.h"
 
+
+XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
+	return XMFLOAT3(
+		a.x + (b.x - a.x) * t,
+		a.y + (b.y - a.y) * t,
+		a.z + (b.z - a.z) * t
+	);
+}
+
+XMFLOAT4 Slerp(XMFLOAT4 q1, XMFLOAT4 q2, float t) {
+	XMVECTOR v1 = XMLoadFloat4(&q1);
+	XMVECTOR v2 = XMLoadFloat4(&q2);
+	XMVECTOR result = XMQuaternionSlerp(v1, v2, t);
+
+	XMFLOAT4 out;
+	XMStoreFloat4(&out, result);
+	return out;
+}
+
+XMFLOAT3 GetTranslation(const XMFLOAT4X4& matrix) {
+	return XMFLOAT3(matrix._41, matrix._42, matrix._43);
+}
+
+XMFLOAT4 GetRotation(const XMFLOAT4X4& matrix) {
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX mat = XMLoadFloat4x4(&matrix);
+	XMMatrixDecompose(&scale, &rotation, &translation, mat);
+
+	XMFLOAT4 rot;
+	XMStoreFloat4(&rot, rotation);
+	return rot;
+}
+
+XMFLOAT3 GetScale(const XMFLOAT4X4& matrix) {
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX mat = XMLoadFloat4x4(&matrix);
+	XMMatrixDecompose(&scale, &rotation, &translation, mat);
+
+	XMFLOAT3 scl;
+	XMStoreFloat3(&scl, scale);
+	return scl;
+}
+
+XMFLOAT4X4 ComposeTransform(XMFLOAT3 pos, XMFLOAT4 rot, XMFLOAT3 scale) {
+	XMMATRIX S = XMMatrixScaling(scale.x, scale.y, scale.z);
+	XMMATRIX R = XMMatrixRotationQuaternion(XMLoadFloat4(&rot));
+	XMMATRIX T = XMMatrixTranslation(pos.x, pos.y, pos.z);
+
+	XMMATRIX finalMatrix = S * R * T;
+	XMFLOAT4X4 result;
+	XMStoreFloat4x4(&result, finalMatrix);
+	return result;
+}
+
+
+//================================================================
+
+
 void GameObject::Set_Name(std::string_view name)
 {
 	Obj_Name = name;
@@ -156,7 +214,7 @@ void GameObject::SetLook(const XMFLOAT3& xmf3LookInput)
 	XMFLOAT3 right = Vector3::Normalize(Vector3::CrossProduct(up, look));
 	up = Vector3::Normalize(Vector3::CrossProduct(look, right));
 
-	XMFLOAT3 scale = XMFLOAT3(100, 100, 100); //GetScale(m_xmf4x4Parent);
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
 	XMFLOAT3 position = GetPosition();
 
 	XMVECTOR vRight = XMVectorScale(XMLoadFloat3(&right), scale.x);
@@ -265,7 +323,7 @@ void Boat_Object::Animate(float fTimeElapsed)
 	// --- 雀傈 贸府 ---
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
-	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
+	m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
 
 	// --- 皑加 贸府 ---
 	float decel = m_fFriction * fTimeElapsed;

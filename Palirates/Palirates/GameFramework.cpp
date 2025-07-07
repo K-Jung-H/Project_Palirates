@@ -1546,7 +1546,6 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-//		syncData.lookVector = XMFLOAT3(1.0f, 0, 0);
 
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
@@ -1643,7 +1642,9 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-//		m_pPlayer->ApplySyncData(syncData);
+	//		강제로 애니메이션을 전환해야 하는 경우 필요함
+	//		ex: 서버에서 맞는 모션으로 전환 신호가 오는 경우
+	//		m_pPlayer->ApplySyncData(syncData);
 		return;
 	}
 	else
@@ -1656,7 +1657,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
-
 			Connected_Player_List[player_ID] = true;
 		}
 

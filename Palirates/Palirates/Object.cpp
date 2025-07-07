@@ -2664,33 +2664,6 @@ void CGameObject::SetLookDirection(float x, float y, float z)
 	SetLookDirection(XMFLOAT3(x, y, z));
 }
 
-//void CGameObject::SetLookDirection(const XMFLOAT3& look)
-//{
-//	XMVECTOR vLook = XMVector3Normalize(XMLoadFloat3(&look));
-//	XMVECTOR vUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-//	XMVECTOR vRight = XMVector3Normalize(XMVector3Cross(vUp, vLook));
-//	vUp = XMVector3Normalize(XMVector3Cross(vLook, vRight));
-//
-//	// 기존 스케일, 위치 정보 추출
-//	XMFLOAT3 scale = GetScale(m_xmf4x4Parent); // 따로 함수가 없으면 m_xmf4x4Parent에서 직접 계산
-//	XMFLOAT3 position = GetPosition();
-//
-//	// 스케일 반영된 회전 벡터
-//	XMVECTOR vScaledRight = XMVectorScale(vRight, scale.x);
-//	XMVECTOR vScaledUp = XMVectorScale(vUp, scale.y);
-//	XMVECTOR vScaledLook = XMVectorScale(vLook, scale.z);
-//
-//	// 회전만 적용한 새 행렬 만들기
-//	XMFLOAT4X4 xmf4x4New;
-//	xmf4x4New._11 = XMVectorGetX(vScaledRight); xmf4x4New._12 = XMVectorGetY(vScaledRight); xmf4x4New._13 = XMVectorGetZ(vScaledRight); xmf4x4New._14 = 0.0f;
-//	xmf4x4New._21 = XMVectorGetX(vScaledUp);    xmf4x4New._22 = XMVectorGetY(vScaledUp);    xmf4x4New._23 = XMVectorGetZ(vScaledUp);    xmf4x4New._24 = 0.0f;
-//	xmf4x4New._31 = XMVectorGetX(vScaledLook);  xmf4x4New._32 = XMVectorGetY(vScaledLook);  xmf4x4New._33 = XMVectorGetZ(vScaledLook);  xmf4x4New._34 = 0.0f;
-//	xmf4x4New._41 = position.x;                 xmf4x4New._42 = position.y;                 xmf4x4New._43 = position.z;                 xmf4x4New._44 = 1.0f;
-//
-//	m_xmf4x4Parent = xmf4x4New;
-//	UpdateTransform(NULL);
-//}
-
 void CGameObject::SetLookDirection(const XMFLOAT3& xmf3LookInput)
 {
 	XMFLOAT3 xmf3Look = xmf3LookInput;
