@@ -126,8 +126,9 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 tokens.push_back(token);
 
 
-            if (line == "PING")
+            if (command == "PING")
             {
+                HandlePingPacket(clientId, command, tokens); // 핑 메시지 처리
             }
 
 
@@ -163,7 +164,10 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
 }
 
+void Server::HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
+{
 
+}
 
 void Server::HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
