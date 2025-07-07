@@ -37,12 +37,17 @@ Fishman::Fishman(int id) : Monster(id)
         TRACK_FISHMAN_DEAD
     };
 
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+
     Monster_Type::Fishman;
     n_Animation = 9;
-   // RootIndex = 0;
+    RootIndex = 0;
     trackPositions.resize(n_Animation, 0.0f);
     trackWeights.resize(n_Animation, 0.0f);
     trackWeights[0] = 1.0f;
+
+    prevWeights.resize(n_Animation, 0.0f);
+    targetWeights.resize(n_Animation, 0.0f);
 
     auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/FishmanLP.bin");
     if (!asset || !asset->m_pAnimationSets) {
@@ -72,6 +77,18 @@ Fishman::Fishman(int id) : Monster(id)
             << set->m_pstrAnimationSetName
             << "   (keyFrames=" << set->m_nKeyFrames
             << ", length=" << set->m_fLength << "s)\n";
+    }
+
+    m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
+    m_pSkinnedAnimationController->RootIndex = RootIndex;
+    for (int i = 0; i < n_Animation; ++i) {
+        m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+        m_pSkinnedAnimationController->SetTrackEnable(i, true);
+    }
+    for (int i = 0; i < n_Animation; ++i) {
+        if (OnceType.find(i) != OnceType.end()) {
+            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+        }
     }
 }
 

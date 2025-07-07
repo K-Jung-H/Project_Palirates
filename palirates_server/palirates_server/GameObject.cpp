@@ -41,22 +41,22 @@ std::shared_ptr<GameObject> GameObject::Get_Sibling()
 }
 
 
-std::shared_ptr<GameObject> GameObject::FindFrame(std::string_view name)
+std::shared_ptr<GameObject> GameObject::FindFrame(const char* pstrFrameName)
 {
-	if (Obj_Name.size() && Obj_Name == name)
+	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
 		return shared_from_this();
 
 	std::shared_ptr<GameObject> found;
 
 	if (sibling_obj)
 	{
-		found = sibling_obj->FindFrame(name);
+		found = sibling_obj->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
 	if (child_obj)
 	{
-		found = child_obj->FindFrame(name);
+		found = child_obj->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 

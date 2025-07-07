@@ -25,6 +25,8 @@ protected:
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
@@ -33,7 +35,10 @@ public:
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
 
 public:
-    GameObject() = default;
+    GameObject() {
+        m_xmf4x4Parent = Matrix4x4::Identity();
+        m_xmf4x4World = Matrix4x4::Identity();
+    };
     ~GameObject() = default;
     void Set_Child(shared_ptr<GameObject> pChild);
 
@@ -43,7 +48,7 @@ public:
     shared_ptr<GameObject> Get_Child();
     shared_ptr<GameObject> Get_Sibling();
     shared_ptr<GameObject> GetParent() { return(m_pParent); }
-    shared_ptr<GameObject> FindFrame(std::string_view name);
+    shared_ptr<GameObject> FindFrame(const char* pstrFrameName);
 
     void UpdateTransform(XMFLOAT4X4* pxmf4x4Parent = NULL);
 
@@ -79,6 +84,9 @@ public:
     Object_Type GetType() { return obj_type; }
 
     std::unordered_set<int> RootMotionTrackSet;
+
+    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
 };
 
 
@@ -112,7 +120,6 @@ protected:
     vector<float> trackPositions;
     vector<float> trackWeights;
 
-    int n_Animation = 0;
 
 public:
     // Getter - 참조 반환 (수정 가능)
@@ -126,4 +133,10 @@ public:
     void SetAnimWeights(const std::vector<float>& v) { animWeights = v; }
     void SetTrackPositions(const std::vector<float>& v) { trackPositions = v; }
     void SetTrackWeights(const std::vector<float>& v) { trackWeights = v; }
+
+    int n_Animation = 0;
+    int RootIndex{ 0 };
+
+    std::vector<float> prevWeights;
+    std::vector<float> targetWeights;
 };

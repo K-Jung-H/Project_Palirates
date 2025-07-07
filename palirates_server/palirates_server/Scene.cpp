@@ -42,10 +42,29 @@ void Lobby_Scene::Init()
             characterSelections[i][j] = false;
         }
     }
+
+    // test
+    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    Monster_List.push_back(m);
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
 {
+    for (auto m : Monster_List) {
+        auto con = m->GetSkinnedAnimationController();
+        if (con) {
+            if (m->GetStateMachine())
+                m->GetStateMachine()->update(elapsedTime);
+            con->AdvanceTime(elapsedTime, m.get());
+            for (int i = 0; i < con->m_nAnimationTracks; i++) {
+                std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
+            }
+            std::cout << "\n";
+        }
+        else {
+            std::cout << "con 없음" << std::endl;
+        }
+    }
 }
 
 void Lobby_Scene::Remove_Player(int id)
@@ -298,8 +317,8 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
-    Monster_List.push_back(m);
+ /*   std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    Monster_List.push_back(m);*/
 }
 
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
@@ -376,7 +395,19 @@ void Stage_Scene::updatePlayerAnimation(int id, std::vector<float>& positions, s
 
 void Stage_Scene::Update_Scene(float elapsedTime)
 {
-
+    for (auto m : Monster_List) {
+        auto con = m->GetSkinnedAnimationController();
+        if (con) {
+            con->AdvanceTime(elapsedTime, m.get());
+            for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
+                std::cout << con->m_pAnimationTracks[i].m_fWeight;
+            }
+            std::cout << "\n";
+        }
+        else {
+            std::cout << "con 없음" << std::endl;
+        }
+    }
 }
 
 

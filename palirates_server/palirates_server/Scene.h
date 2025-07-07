@@ -65,6 +65,9 @@ public:
     
     const std::array<std::array<bool, MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
     const std::array<int, MaxPlayer>& GetCharacterReadyStates() const { return characterReady; }
+
+    // test
+    std::vector<std::shared_ptr<Monster>> Monster_List;
 };
 
 

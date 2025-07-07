@@ -1,4 +1,8 @@
 #pragma once
+#include "Monster.h"
+
+class Monster;
+
 enum class State
 {
     Idle,
@@ -72,4 +76,48 @@ enum AnimationTrack
     TRACK_DRAGON_FLY_BREATHE = 10,
     TRACK_DRAGON_FLY_DIVE = 11,
     TRACK_DRAGON_DEAD = 12
+};
+
+class StateMachine
+{
+protected:
+    State currentState = State::Idle;
+
+public:
+    StateMachine() = default;
+    virtual ~StateMachine() {
+        animController.reset();
+    }
+
+    StateMachine(State initialState = State::Idle)
+        : currentState(initialState) {
+    }
+
+    std::shared_ptr<CAnimationController> animController;
+
+    virtual void update(float Elapsed_time) {};
+};
+
+class MonsterStateMachine : public StateMachine
+{
+protected:
+    Monster* m_pOwner;
+public:
+    MonsterStateMachine(Monster* owner)
+        : StateMachine(State::Idle), m_pOwner(owner) {
+
+    }
+
+    void update(float Elapsed_time) override;
+};
+
+class FishManStateMachine : public MonsterStateMachine
+{
+public:
+    FishManStateMachine(Monster* owner)
+        : MonsterStateMachine(owner) {
+    }
+    ~FishManStateMachine() override = default;
+
+    void update(float Elapsed_time) override;
 };
