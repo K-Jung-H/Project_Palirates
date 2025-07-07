@@ -478,8 +478,6 @@ public:
 
     std::shared_ptr<CGameObject>                  m_pModelRootObject = NULL;
 
-    //int                      m_nSkinnedMeshes = 0;
-    //CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
 
     int                      m_nSkinnedMeshes = 0;
     std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
@@ -505,8 +503,7 @@ public:
 
     CAnimationSets* m_pAnimationSets = NULL;
 
-    //int                      m_nSkinnedMeshes = 0;
-    //CSkinnedMesh** m_ppSkinnedMeshes = NULL; //[SkinnedMeshes], Skinned Mesh Cache
+
     int                      m_nSkinnedMeshes = 0;
     std::vector<std::shared_ptr<CSkinnedMesh>> m_ppSkinnedMeshes; //[SkinnedMeshes], Skinned Mesh Cache
 
