@@ -508,11 +508,12 @@ void Server::Check_Connected_Player()
             activeScene = scenes[Scene_Type::Lobby];
         }
 
-        for (auto& [sceneType, scene] : scenes)
+        // Why is Init called again?
+        /*for (auto& [sceneType, scene] : scenes)
         {
             if (scene)
                 scene->Init();
-        }
+        }*/
     }
     else if (activeClientCount > 0 && serverResetDone)
     {

@@ -42,8 +42,6 @@ void Lobby_Scene::Init()
             characterSelections[i][j] = false;
         }
     }
-
-    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
@@ -299,7 +297,8 @@ void Stage_Scene::Init()
 
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
-    
+
+    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
 }
 
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
