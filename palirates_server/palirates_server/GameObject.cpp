@@ -487,6 +487,35 @@ void GameObject::SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh)
 	if (m_pMesh) m_pMesh->AddRef();
 }
 
+void GameObject::Obj_Info(int depth)
+{
+	if (strcmp(m_pstrFrameName, "Mesh") == 0)
+		return;
+
+	TCHAR indent[128] = _T("");
+	for (int i = 0; i < depth; ++i)
+		_tcscat_s(indent, _T("  "));
+
+	TCHAR tFrameName[64];
+	MultiByteToWideChar(CP_ACP, 0, m_pstrFrameName, -1, tFrameName, 64);
+
+	TCHAR pstrDebug[256] = { 0 };
+	_stprintf_s(pstrDebug, 256, _T("%s%s\n"), indent, tFrameName);
+
+	OutputDebugString(pstrDebug);
+
+
+	if (child_obj)
+	{
+		child_obj->Obj_Info(depth + 1);
+	}
+
+	if (sibling_obj)
+	{
+		sibling_obj->Obj_Info(depth);
+	}
+}
+
 //===================================================================
 
 Boat_Object::Boat_Object()

@@ -74,6 +74,11 @@ public:
     void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
     void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
+
+    void Obj_Info(int depth = 0);
+    Object_Type GetType() { return obj_type; }
+
+    std::unordered_set<int> RootMotionTrackSet;
 };
 
 

@@ -299,6 +299,7 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    Monster_List.push_back(m);
 }
 
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const

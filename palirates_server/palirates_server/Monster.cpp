@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Monster.h"
+#include "Object_StateMachine.h"
 
 
 Monster::Monster(int id) : monster_id(id)
@@ -20,6 +21,22 @@ Monster::Monster()
 
 Fishman::Fishman(int id) : Monster(id)
 {
+    RootMotionTrackSet = {
+    TRACK_FISHMAN_WALK,
+    TRACK_FISHMAN_WALK_BACK,
+    TRACK_FISHMAN_ATTACK1,
+    TRACK_FISHMAN_ATTACK2,
+    TRACK_FISHMAN_GET_HIT,
+    TRACK_FISHMAN_DEAD
+    };
+
+    std::unordered_set<int> OnceType = {
+        TRACK_FISHMAN_ATTACK1,
+        TRACK_FISHMAN_ATTACK2,
+        TRACK_FISHMAN_GET_HIT,
+        TRACK_FISHMAN_DEAD
+    };
+
     Monster_Type::Fishman;
     n_Animation = 9;
    // RootIndex = 0;
