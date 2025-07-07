@@ -56,6 +56,17 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 
 std::unordered_map<std::string, shared_ptr<CAnimationSet>> CAnimationSets::s_globalCache;
 
+CAnimationSets::CAnimationSets(int nAnimationSets)
+{
+	m_nAnimationSets = nAnimationSets;
+	m_pAnimationSet_list.resize(nAnimationSets);
+}
+
+CAnimationSets::~CAnimationSets()
+{
+	m_pAnimationSet_list.clear();
+}
+
 std::shared_ptr<CAnimationSet> CAnimationSets::AddOrGetSharedAnimationSet(std::shared_ptr<CAnimationSet> animSet, const std::string& fileName)
 {
 	std::string key = fileName + "::" + animSet->m_pstrAnimationSetName;

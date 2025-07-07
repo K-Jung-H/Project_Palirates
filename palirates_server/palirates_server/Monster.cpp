@@ -21,9 +21,41 @@ Monster::Monster()
 Fishman::Fishman(int id) : Monster(id)
 {
     Monster_Type::Fishman;
-    trackPositions.resize(8, 1.0f);
-    trackWeights.resize(8, 1.0f);
+    n_Animation = 9;
+   // RootIndex = 0;
+    trackPositions.resize(n_Animation, 0.0f);
+    trackWeights.resize(n_Animation, 0.0f);
     trackWeights[0] = 1.0f;
+
+    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/FishmanLP.bin");
+    if (!asset || !asset->m_pAnimationSets) {
+        std::cout << "[Init]  FishmanLP.bin 로드 실패\n";
+        return;
+    }
+
+    auto* animSets = asset->m_pAnimationSets;
+
+    std::cout << "\n[Init]  Model loaded\n";
+    std::cout << "  Bone Count : " << animSets->m_nBoneFrames << "\n";
+
+    for (int i = 0; i < animSets->m_nBoneFrames; ++i) {
+        const auto* boneFrame = animSets->m_ppBoneFrameCaches[i];
+        if (boneFrame)
+            std::cout << "     [" << i << "] " << boneFrame->m_pstrFrameName << "\n";
+    }
+
+    std::cout << "  Animation Sets : "
+        << animSets->m_pAnimationSet_list.size() << "\n";
+
+    for (size_t i = 0; i < animSets->m_pAnimationSet_list.size(); ++i) {
+        const auto& set = animSets->m_pAnimationSet_list[i];
+        if (!set) continue;
+
+        std::cout << "     [" << i << "] "
+            << set->m_pstrAnimationSetName
+            << "   (keyFrames=" << set->m_nKeyFrames
+            << ", length=" << set->m_fLength << "s)\n";
+    }
 }
 
 Anubis::Anubis(int id) : Monster(id)

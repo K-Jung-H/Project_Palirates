@@ -5,22 +5,6 @@
 using namespace DirectX;
 
 
-BYTE ReadStringSafeFromFile(FILE* pInFile, char* pstrToken, size_t bufferSize)
-{
-	BYTE nStrLength = 0;
-	fread(&nStrLength, sizeof(BYTE), 1, pInFile);
-
-	size_t readLen = (nStrLength >= bufferSize) ? bufferSize - 1 : nStrLength;
-	fread(pstrToken, sizeof(char), readLen, pInFile);
-	pstrToken[readLen] = '\0';
-
-	if (nStrLength > readLen) {
-		fseek(pInFile, nStrLength - readLen, SEEK_CUR);
-	}
-
-	return nStrLength;
-}
-
 int ReadIntegerFromFile(FILE* pInFile)
 {
 	int nValue = 0;
@@ -35,83 +19,183 @@ float ReadFloatFromFile(FILE* pInFile)
 	return(fValue);
 }
 
-void CSkinnedMesh::LoadSkinInfoFromFile(FILE* fp)
+BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken)
 {
-    char token[64]{};
+	BYTE nStrLength = 0;
+	UINT nReads = 0;
+	nReads = (UINT)::fread(&nStrLength, sizeof(BYTE), 1, pInFile);
+	nReads = (UINT)::fread(pstrToken, sizeof(char), nStrLength, pInFile);
+	pstrToken[nStrLength] = '\0';
 
-    while (true)
-    {
-        /* --- 토큰 읽기 --------------------------------------- */
-        if (ReadStringSafeFromFile(fp, token, sizeof token) == 0)
-            break;                                      // EOF → 종료
+	return(nStrLength);
+}
 
-        /* BonesPerVertex : 서버에서는 사용 X ------------------- */
-        if (!strcmp(token, "<BonesPerVertex>:"))
-        {
-            int dummy = ReadIntegerFromFile(fp);
-            (void)dummy;                                // 경고 억제
-        }
+void CStandardMesh::LoadMeshFromFile(FILE* pInFile)
+{
+	char  pstrToken[64]{};
+	int   count = 0;
 
-        /* BoneNames ------------------------------------------ */
-        else if (!strcmp(token, "<BoneNames>:"))
-        {
-            m_nSkinningBones = ReadIntegerFromFile(fp);
+	/* ── 헤더 ─────────────────────────────── */
+	fread(&m_nVertices, sizeof(int), 1, pInFile);
+	ReadStringFromFile(pInFile, m_pstrMeshName);
 
-            m_boneNames.resize(m_nSkinningBones);
-            m_boneFrameCaches.resize(m_nSkinningBones, nullptr);
+	/* ── 토큰 파싱 루프 ───────────────────── */
+	while (true)
+	{
+		ReadStringFromFile(pInFile, pstrToken);
 
-            for (int i = 0; i < m_nSkinningBones; ++i)
-            {
-                char boneName[64]{};
-                ReadStringSafeFromFile(fp, boneName, sizeof boneName);
-                m_boneNames[i] = boneName;
-            }
-        }
+		/* 1. AABB Bounds ---------------------------------------------------- */
+		if (!strcmp(pstrToken, "<Bounds>:"))
+		{
+			fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
+			fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
+		}
 
-        /* Bind-Pose 오프셋 행렬 -------------------------------- */
-        else if (!strcmp(token, "<BoneOffsets>:"))
-        {
-            int count = ReadIntegerFromFile(fp);
-            m_bindPoseOffsets.resize(count);
+		/* 2. Positions (필수) ---------------------------------------------- */
+		else if (!strcmp(pstrToken, "<Positions>:"))
+		{
+			fread(&count, sizeof(int), 1, pInFile);
+			if (count > 0)
+			{
+				m_pxmf3Positions = new XMFLOAT3[count];
+				fread(m_pxmf3Positions, sizeof(XMFLOAT3), count, pInFile);
+			}
+		}
 
-            fread(m_bindPoseOffsets.data(),
-                sizeof(DirectX::XMFLOAT4X4),
-                count, fp);
-        }
+		/* 3. 불필요 블록 : Colors / UV / Normals / Tangents / BiTangents ---- */
+		else if (!strcmp(pstrToken, "<Colors>:") ||
+			!strcmp(pstrToken, "<TextureCoords0>:") ||
+			!strcmp(pstrToken, "<TextureCoords1>:") ||
+			!strcmp(pstrToken, "<Normals>:") ||
+			!strcmp(pstrToken, "<Tangents>:") ||
+			!strcmp(pstrToken, "<BiTangents>:"))
+		{
+			fread(&count, sizeof(int), 1, pInFile);
 
-        /* Bounds : 6-float (min/max) 건너뛰기 ------------------ */
-        else if (!strcmp(token, "<Bounds>:"))
-        {
-            fseek(fp, sizeof(float) * 6, SEEK_CUR);
-        }
+			size_t elemSize = (!strcmp(pstrToken, "<Colors>:")) ? sizeof(XMFLOAT4) :
+				(!strcmp(pstrToken, "<TextureCoords0>:")) ||
+				(!strcmp(pstrToken, "<TextureCoords1>:")) ? sizeof(XMFLOAT2) :
+				sizeof(XMFLOAT3);
 
-        /* BoneIndices : (XMINT4 * vertex) 스킵 ---------------- */
-        else if (!strcmp(token, "<BoneIndices>:"))
-        {
-            int verts = ReadIntegerFromFile(fp);
-            fseek(fp, sizeof(DirectX::XMINT4) * verts, SEEK_CUR);
-        }
+			if (count > 0) fseek(pInFile, elemSize * count, SEEK_CUR);
+		}
 
-        /* BoneWeights : (XMFLOAT4 * vertex) 스킵 -------------- */
-        else if (!strcmp(token, "<BoneWeights>:"))
-        {
-            int verts = ReadIntegerFromFile(fp);
-            fseek(fp, sizeof(DirectX::XMFLOAT4) * verts, SEEK_CUR);
-        }
+		/* 4. 인덱스(전체 삼각형 인덱스) ------------------------------------- */
+		else if (!strcmp(pstrToken, "<Indices>:"))
+		{
+			fread(&count, sizeof(int), 1, pInFile);
+			if (count > 0) fseek(pInFile, sizeof(UINT) * count, SEEK_CUR);
+		}
 
-        /* 스키닝 블록 종료 ------------------------------------ */
-        else if (!strcmp(token, "</SkinningInfo>"))
-        {
-            break;
-        }
+		/* 5. SubMesh별 인덱스 ---------------------------------------------- */
+		else if (!strcmp(pstrToken, "<SubMeshes>:"))
+		{
+			fread(&m_nSubMeshes, sizeof(int), 1, pInFile);
+			if (m_nSubMeshes > 0)
+			{
+				m_pnSubSetIndices = new int[m_nSubMeshes];
+				m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
 
-        /* 예기치 않은 토큰 → 포맷 오류 방지 ------------------- */
-        else
-        {
-            std::cout << "[SkinLoader] Unknown token : " << token << '\n';
-            break;
-        }
-    }
+				for (int i = 0; i < m_nSubMeshes; ++i)
+				{
+					ReadStringFromFile(pInFile, pstrToken);   // "<SubMesh>:"
+					fread(&count, sizeof(int), 1, pInFile);   // (unused) sub-mesh ID
+					fread(&m_pnSubSetIndices[i], sizeof(int), 1, pInFile);
+
+					int idxCnt = m_pnSubSetIndices[i];
+					if (idxCnt > 0)
+					{
+						m_ppnSubSetIndices[i] = new UINT[idxCnt];
+						fread(m_ppnSubSetIndices[i], sizeof(UINT), idxCnt, pInFile);
+					}
+				}
+			}
+		}
+
+		/* 6. 종료 ----------------------------------------------------------- */
+		else if (!strcmp(pstrToken, "</Mesh>"))
+		{
+			break;
+		}
+	}
+}
+
+void CSkinnedMesh::LoadSkinInfoFromFile(FILE* pInFile)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	::ReadStringFromFile(pInFile, m_pstrMeshName);
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<BonesPerVertex>:"))
+		{
+			m_nBonesPerVertex = ::ReadIntegerFromFile(pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Bounds>:"))
+		{
+			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
+			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
+
+			//bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0.0f, 0.0f, 0.0f, 1.0f });
+		}
+		else if (!strcmp(pstrToken, "<BoneNames>:"))
+		{
+			m_nSkinningBones = ::ReadIntegerFromFile(pInFile);
+			if (m_nSkinningBones > 0)
+			{
+				m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
+				//				m_ppSkinningBoneFrameCaches = new CGameObject*[m_nSkinningBones];
+				m_ppSkinningBoneFrameCaches.resize(m_nSkinningBones);
+				for (int i = 0; i < m_nSkinningBones; i++)
+				{
+					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);
+					m_ppSkinningBoneFrameCaches[i] = nullptr;
+					//m_nSkinningBoneIndex[i] = i;
+					//m_ppSkinningBoneFrameCaches[i].reset();
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "<BoneOffsets>:"))
+		{
+			m_nSkinningBones = ::ReadIntegerFromFile(pInFile);
+			if (m_nSkinningBones > 0)
+			{
+				m_pxmf4x4BindPoseBoneOffsets = new XMFLOAT4X4[m_nSkinningBones];
+				nReads = (UINT)::fread(m_pxmf4x4BindPoseBoneOffsets, sizeof(XMFLOAT4X4), m_nSkinningBones, pInFile);
+			}
+		}
+		else if (!strcmp(pstrToken, "<BoneIndices>:"))
+		{
+			m_nType |= VERTEXT_BONE_INDEX_WEIGHT;
+
+			m_nVertices = ::ReadIntegerFromFile(pInFile);
+			if (m_nVertices > 0)
+			{
+				m_pxmn4BoneIndices = new XMINT4[m_nVertices];
+
+				nReads = (UINT)::fread(m_pxmn4BoneIndices, sizeof(XMINT4), m_nVertices, pInFile);
+			}
+		}
+		else if (!strcmp(pstrToken, "<BoneWeights>:"))
+		{
+			m_nType |= VERTEXT_BONE_INDEX_WEIGHT;
+
+			m_nVertices = ::ReadIntegerFromFile(pInFile);
+			if (m_nVertices > 0)
+			{
+				m_pxmf4BoneWeights = new XMFLOAT4[m_nVertices];
+
+				nReads = (UINT)::fread(m_pxmf4BoneWeights, sizeof(XMFLOAT4), m_nVertices, pInFile);
+			}
+		}
+		else if (!strcmp(pstrToken, "</SkinningInfo>"))
+		{
+			break;
+		}
+	}
 }
 
 void CLoadedModelInfo::PrepareSkinning()

@@ -23,9 +23,8 @@ public:
 class CAnimationSets
 {
 public:
-    explicit CAnimationSets(int nSets) : m_nAnimationSets(nSets) {}
-
-    CAnimationSets() = default;              
+    CAnimationSets(int nAnimationSets);
+    ~CAnimationSets();
 
     int                        m_nAnimationSets = 0;
     std::vector<std::shared_ptr<CAnimationSet>> m_pAnimationSet_list;

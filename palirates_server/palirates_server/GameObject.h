@@ -30,7 +30,7 @@ public:
     XMFLOAT4X4            m_xmf4x4World{};
     char                     m_pstrFrameName[64];
 
-    std::shared_ptr<CSkinnedMesh> m_pMesh = NULL;
+    std::shared_ptr<CStandardMesh> m_pMesh = NULL;
 
 public:
     GameObject() = default;
@@ -73,6 +73,7 @@ public:
     static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
     void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
+    void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
 };
 
 
@@ -105,6 +106,8 @@ protected:
 
     vector<float> trackPositions;
     vector<float> trackWeights;
+
+    int n_Animation = 0;
 
 public:
     // Getter - 참조 반환 (수정 가능)

@@ -43,37 +43,7 @@ void Lobby_Scene::Init()
         }
     }
 
-    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/FishmanLP.bin");
-    if (!asset || !asset->m_pAnimationSets) {
-        std::cout << "[Init]  FishmanLP.bin 로드 실패\n";
-        return;
-    }
-
-    auto* animSets = asset->m_pAnimationSets;
-
-    /* ─── 본(Bone) 정보 출력 ──────────────────── */
-    std::cout << "\n[Init]  Model loaded\n";
-    std::cout << "  Bone Count : " << animSets->m_nBoneFrames << "\n";
-
-    for (int i = 0; i < animSets->m_nBoneFrames; ++i) {
-        const auto* boneFrame = animSets->m_ppBoneFrameCaches[i];
-        if (boneFrame)
-            std::cout << "     [" << i << "] " << boneFrame->m_pstrFrameName << "\n";
-    }
-
-    /* ─── 애니메이션 세트 정보 출력 ────────────── */
-    std::cout << "  Animation Sets : "
-        << animSets->m_pAnimationSet_list.size() << "\n";
-
-    for (size_t i = 0; i < animSets->m_pAnimationSet_list.size(); ++i) {
-        const auto& set = animSets->m_pAnimationSet_list[i];
-        if (!set) continue;
-
-        std::cout << "     [" << i << "] "
-            << set->m_pstrAnimationSetName
-            << "   (keyFrames=" << set->m_nKeyFrames
-            << ", length=" << set->m_fLength << "s)\n";
-    }
+    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)

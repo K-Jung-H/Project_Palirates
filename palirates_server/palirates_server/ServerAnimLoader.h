@@ -1,29 +1,63 @@
 #pragma once
 #include "AnimationSetCore.h"
 
-BYTE ReadStringSafeFromFile(FILE* pInFile, char* pstrToken, size_t bufferSize);
-int  ReadIntegerFromFile(FILE* pInFile);
-float ReadFloatFromFile(FILE* pInFile);
+#define VERTEXT_POSITION				0x0001
+#define VERTEXT_BONE_INDEX_WEIGHT		0x1000
 
 class GameObject;
 
-class CSkinnedMesh
+class CStandardMesh
+{
+public:
+    CStandardMesh() = default;
+    virtual ~CStandardMesh() = default;
+
+    void LoadMeshFromFile(FILE* pInFile);
+
+    void AddRef() { m_nReferences++; }
+    void Release() { if (--m_nReferences <= 0) delete this; }
+
+    char							m_pstrMeshName[64] = { 0 };
+
+private:
+    int								m_nReferences = 0;
+
+protected:
+    UINT							m_nType = 0x00;
+
+    XMFLOAT3						m_xmf3AABBCenter = XMFLOAT3(0.0f, 0.0f, 0.0f);
+    XMFLOAT3						m_xmf3AABBExtents = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+    int								m_nVertices = 0;
+    XMFLOAT3* m_pxmf3Positions = NULL;
+
+    int								m_nSubMeshes = 0;
+    int* m_pnSubSetIndices = NULL;
+    UINT** m_ppnSubSetIndices = NULL;
+};
+
+class CSkinnedMesh : public CStandardMesh
 {
 public:
     CSkinnedMesh() = default;
-    ~CSkinnedMesh() = default;
+    virtual ~CSkinnedMesh() = default;
 
     int                                m_nSkinningBones = 0;        
-    std::vector<std::string>           m_boneNames;                 
-    std::vector<GameObject*>           m_boneFrameCaches;            
-    std::vector<DirectX::XMFLOAT4X4>   m_bindPoseOffsets;           
+    char							(*m_ppstrSkinningBoneNames)[64];
+    std::vector<GameObject*> m_ppSkinningBoneFrameCaches;
+    XMFLOAT4X4* m_pxmf4x4BindPoseBoneOffsets = NULL;
 
     void AddRef() {}
     void Release() {}
 
     void PrepareSkinning(const std::shared_ptr<GameObject>& root) {  }
 
-    void LoadSkinInfoFromFile(FILE* fp);
+    void LoadSkinInfoFromFile(FILE* pInFile);
+
+protected:
+    int								m_nBonesPerVertex = 4;
+    XMINT4* m_pxmn4BoneIndices = NULL;
+    XMFLOAT4* m_pxmf4BoneWeights = NULL;
 };
 
 class CLoadedModelInfo
