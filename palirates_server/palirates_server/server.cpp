@@ -123,11 +123,13 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
             tokens.push_back(command);
             std::string token;
             while (std::getline(linestream, token, ','))
-               // if (line == "PING")
-               // {
-               //     
-               // }
-            tokens.push_back(token);
+                tokens.push_back(token);
+
+
+            if (line == "PING")
+            {
+            }
+
 
             // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
             if (tokens.size() < 3) continue;
@@ -189,15 +191,15 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
 
     bool success = lobbyScene->SelectCharacter(clientId, selected_character_index, isReady);
 
-    std::string response = success
-        ? ("CHARACTER_SELECT_SUCCESS," + std::to_string(selected_character_index) + "," + (isReady ? "true" : "false") + "\n")
-        : ("CHARACTER_SELECT_FAIL," + std::to_string(selected_character_index) + "\n");
+    //std::string response = success
+    //    ? ("CHARACTER_SELECT_SUCCESS," + std::to_string(selected_character_index) + "," + (isReady ? "true" : "false") + "\n")
+    //    : ("CHARACTER_SELECT_FAIL," + std::to_string(selected_character_index) + "\n");
 
 
-    {
-        std::lock_guard<std::mutex> lock(clientsMutex);
-        Send_Custom(clients[clientId], response, true);
-    }
+    //{
+    //    std::lock_guard<std::mutex> lock(clientsMutex);
+    //    Send_Custom(clients[clientId], response, true);
+    //}
 
     //====================================
 
