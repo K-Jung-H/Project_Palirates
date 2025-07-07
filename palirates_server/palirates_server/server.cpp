@@ -197,21 +197,41 @@ void Server::HandleLobbyPacket(int clientId, const std::string& command, const s
     {
         std::lock_guard<std::mutex> lock(clientsMutex);
         Send_Custom(clients[clientId], response, true);
+    }
+
+    //====================================
 
 
-        Scene_Type active_scene_type = activeScene->GetSceneType();
-        bool diff_scene_player = clients[clientId]->client_scene_type != active_scene_type;  // 늦게 들어온 플레이어인 경우
 
-        if (diff_scene_player)
+    Scene_Type active_scene_type = activeScene->GetSceneType();
+    bool diff_scene_player = clients[clientId]->client_scene_type != active_scene_type;  // 늦게 들어온 플레이어인 경우
+
+    if (diff_scene_player)
+    {
+        Scene_Type new_scene_type = lobbyScene->CheckSceneTransition();
+        if (new_scene_type != Scene_Type::None) // 씬 전환 조건이 충족 되면 해당 씬으로 전환하도록 할 것
         {
-            Scene_Type new_scene_type = lobbyScene->CheckSceneTransition();
-            if (new_scene_type != Scene_Type::None) // 씬 전환 조건이 충족 되면 해당 씬으로 전환하도록 할 것
+            std::lock_guard<std::mutex> lock(clientsMutex);
+
+            std::string packet = "CHANGE_SCENE," + std::to_string(active_scene_type) + "\n";
+            Send_Custom(clients[clientId], packet, true);
+
+            if (active_scene_type == Scene_Type::Stage_1 || active_scene_type == Scene_Type::Stage_2)
             {
-                std::string packet = "CHANGE_SCENE," + std::to_string(active_scene_type) + "\n";
-                Send_Custom(clients[clientId], packet, true);
+                std::shared_ptr<Stage_Scene> stage_scene = std::dynamic_pointer_cast<Stage_Scene>(activeScene);
+                if (stage_scene)
+                {
+                    for (const auto& [id, session] : clients)
+                    {
+                        if (session->is_connected)
+                            stage_scene->Add_Player(id);
+                    }
+                }
             }
+
         }
     }
+
 
 
 

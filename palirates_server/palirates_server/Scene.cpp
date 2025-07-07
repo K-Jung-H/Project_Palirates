@@ -145,7 +145,7 @@ void Board_Scene::Init()
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
     if(pirate_ship)
-        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+        pirate_ship->SetPosition(0.0f, 0.0f, 1000.0f);
 
     for (int i = 0; i < MaxPlayer; i++)
     {

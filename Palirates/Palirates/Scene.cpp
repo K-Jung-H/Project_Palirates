@@ -2204,9 +2204,9 @@ void CScene::Remove_Multi_Player(int player_id)
 }
 
 
-void CScene::Sync_Player_Data(int player_id, ServerSyncData sync_data)
+void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
-	obj_manager->Sync_Player_Data(player_id, sync_data);
+	obj_manager->Sync_Player_Data(player_id, syncData);
 }
 
 //==========================================================================================

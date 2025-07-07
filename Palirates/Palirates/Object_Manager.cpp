@@ -905,7 +905,7 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 
 void Object_Manager::Add_Player(std::shared_ptr<CPlayer> obj_ptr)
 {
-	if (obj_ptr && obj_ptr->m_pSkinnedAnimationController != NULL)
+	if (obj_ptr/* && obj_ptr->m_pSkinnedAnimationController != NULL*/)
 	{
 		int player_id = obj_ptr->GetID();
 		player_map[player_id] = obj_ptr;
@@ -1004,14 +1004,18 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 			}
 	}
 	break;
+
 	case Object_Type::player:
 	{
 		for (auto& [id, obj_ptr] : player_map)
 		{
 			if (obj_ptr != NULL)
 				if (obj_ptr->Get_Active())
+				{
 					obj_ptr->Animate(fTimeElapsed);
+//					obj_ptr->UpdateTransform(NULL);
 
+				}
 			
 		}
 	}
@@ -1126,7 +1130,7 @@ void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsComma
 			if (obj_ptr != NULL)
 				if (obj_ptr->Get_Active())
 				{
-					obj_ptr->UpdateTransform(NULL);
+//					obj_ptr->UpdateTransform(NULL);
 					obj_ptr->Render_Shadow(pd3dCommandList, pCamera);
 				}
 		}
@@ -1217,7 +1221,7 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 			if (obj_ptr != NULL)
 				if (obj_ptr->Get_Active())
 				{
-					obj_ptr->UpdateTransform(NULL);
+//					obj_ptr->UpdateTransform(NULL);
 					obj_ptr->Render(pd3dCommandList, pCamera);
 				}
 		}
@@ -1307,10 +1311,10 @@ void Object_Manager::Post_Update(Object_Type type)
 
 }
 
-void Object_Manager::Sync_Player_Data(int player_id, ServerSyncData sync_data)
+void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	if (player_map[player_id])
-		player_map[player_id]->ApplySyncData(sync_data);
+		player_map[player_id]->ApplySyncData(syncData);
 
 }
 
