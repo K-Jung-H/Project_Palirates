@@ -36,8 +36,8 @@ using namespace DirectX::PackedVector;
 
 
 
-extern XMFLOAT4 Get_Random_Color(float w);
-extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area);
+//extern XMFLOAT4 Get_Random_Color(float w);
+//extern std::pair<XMFLOAT3, XMFLOAT3> GetAABB(const XMFLOAT3& center, const XMFLOAT3& area);
 
 #define RANDOM_COLOR			XMFLOAT3(rand() / float(RAND_MAX), rand() / float(RAND_MAX), rand() / float(RAND_MAX))
 

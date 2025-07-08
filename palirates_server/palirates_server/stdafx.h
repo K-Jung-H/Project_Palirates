@@ -16,8 +16,19 @@
 #include <unordered_map>
 #include <iostream>
 #include <mutex>
+#include <random>
+#include <tchar.h>
+#include <unordered_set>
+//#include <DirectXMath.h>
+#include "DX_Setter.h"
 
 using namespace std;
+
+#define ANIMATION_TYPE_ONCE				0
+#define ANIMATION_TYPE_LOOP				1
+#define ANIMATION_TYPE_PINGPONG			2
+
+#define ANIMATION_CALLBACK_EPSILON		0.00165f
 
 enum Scene_Type
 {
@@ -56,3 +67,6 @@ enum InputFlags : uint32_t
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };
 
+extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
+extern int ReadIntegerFromFile(FILE* pInFile);
+extern float ReadFloatFromFile(FILE* pInFile);

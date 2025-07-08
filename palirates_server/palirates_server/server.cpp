@@ -50,12 +50,12 @@ void Server::Start()
         }
         }).detach();
 
-    std::thread([this]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            PrintClientDebugInfo();
-        }
-        }).detach();
+    //std::thread([this]() {
+    //    while (true) {
+    //        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    //        PrintClientDebugInfo();
+    //    }
+    //    }).detach();
 }
 
 
@@ -632,11 +632,12 @@ void Server::Check_Connected_Player()
             activeScene = scenes[Scene_Type::Lobby];
         }
 
-        for (auto& [sceneType, scene] : scenes)
+        // Why is Init called again?
+        /*for (auto& [sceneType, scene] : scenes)
         {
             if (scene)
                 scene->Init();
-        }
+        }*/
     }
     else if (activeClientCount > 0 && serverResetDone)
     {
