@@ -42,10 +42,29 @@ void Lobby_Scene::Init()
             characterSelections[i][j] = false;
         }
     }
+
+    // test
+    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    Monster_List.push_back(m);
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
 {
+    for (auto m : Monster_List) {
+        auto con = m->GetSkinnedAnimationController();
+        if (con) {
+            if (m->GetStateMachine())
+                m->GetStateMachine()->update(elapsedTime);
+            con->AdvanceTime(elapsedTime, m.get());
+           /* for (int i = 0; i < con->m_nAnimationTracks; i++) {
+                std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
+            }
+            std::cout << "\n";*/
+        }
+        else {
+            //std::cout << "con ÏóÜÏùå" << std::endl;
+        }
+    }
 }
 
 void Lobby_Scene::Remove_Player(int id)
@@ -78,16 +97,16 @@ bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
 
     if (isReady)
     {
-        // ¥Ÿ∏• ¥©±∫∞°∞° ¿ÃπÃ Ready «— ªÛ≈¬∏È Ω«∆–
+        // Îã§Î•∏ ÎàÑÍµ∞Í∞ÄÍ∞Ä Ïù¥ÎØ∏ Ready Ìïú ÏÉÅÌÉúÎ©¥ Ïã§Ìå®
         if (characterReady[characterId] != -1 && characterReady[characterId] != clientId)
             return false;
 
-        // Ready ªÛ≈¬ µÓ∑œ
+        // Ready ÏÉÅÌÉú Îì±Î°ù
         characterReady[characterId] = clientId;
     }
     else
     {
-        // Ready «ÿ¡¶¥¬ ¿⁄±‚ ¿⁄Ω≈¿Œ ∞ÊøÏ∏∏ «ÿ¡¶
+        // Ready Ìï¥Ï†úÎäî ÏûêÍ∏∞ ÏûêÏã†Ïù∏ Í≤ΩÏö∞Îßå Ìï¥Ï†ú
         if (characterReady[characterId] == clientId)
             characterReady[characterId] = -1;
     }
@@ -168,7 +187,7 @@ void Board_Scene::Update_Scene(float elapsedTime)
         int modelId = Scene::player_model_list[i];
         if (modelId == -1) continue; 
 
-        int weight = (modelId == 0) ? 2 : 1;  // ∏µ® 0π¯¿Ã∏È øµ«‚∑¬ 2πË
+        int weight = (modelId == 0) ? 2 : 1;  // Î™®Îç∏ 0Î≤àÏù¥Î©¥ ÏòÅÌñ•Î†• 2Î∞∞
 
         int32_t key = player_keyState[i];
         if (key & INPUT_W) fwd += weight;
@@ -189,7 +208,7 @@ void Board_Scene::Update_Scene(float elapsedTime)
     pirate_ship->Animate(elapsedTime);
     pirate_ship->HandleBoundaryReflection(1500);
 
-    // æ¿ ¿¸»Ø √º≈©
+    // Ïî¨ Ï†ÑÌôò Ï≤¥ÌÅ¨
     Change_Scene_Trigger = IsAllReadyAndValid();
 }
 
@@ -223,11 +242,11 @@ bool Board_Scene::IsAllReadyAndValid()
 
         if (readyCount == 0)
         {
-            selectedStage = stage; // ±‚¡ÿ stage º≥¡§
+            selectedStage = stage; // Í∏∞Ï§Ä stage ÏÑ§Ï†ï
         }
         else if (stage != selectedStage)
         {
-            return false; // º≠∑Œ ¥Ÿ∏• stage º±≈√
+            return false; // ÏÑúÎ°ú Îã§Î•∏ stage ÏÑ†ÌÉù
         }
 
         ++readyCount;
@@ -297,7 +316,9 @@ void Stage_Scene::Init()
 
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
-    
+
+ /*   std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    Monster_List.push_back(m);*/
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -385,12 +406,11 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
     if (clientId < 0 || clientId >= MaxPlayer || !player_list[clientId])
         return;
-
-    // ≈¨∂Û¿Ãæ∆Æø°º≠ ø¬ µ•¿Ã≈Õ∏¶ Player ∞¥√ºø° ¿˙¿Â
+  
+    // ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏ÏóêÏÑú Ïò® Îç∞Ïù¥ÌÑ∞Î•º Player Í∞ùÏ≤¥Ïóê Ï†ÄÏû•
     player_list[clientId]->SetPosition(position);
     player_list[clientId]->SetLook(lookDirection);
     player_list[clientId]->key_input(inputFlags);
-
 
     if (!tracks.empty())
     {
@@ -399,3 +419,20 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     }
 }
 
+
+void Stage_Scene::Update_Scene(float elapsedTime)
+{
+    for (auto m : Monster_List) {
+        auto con = m->GetSkinnedAnimationController();
+        if (con) {
+            con->AdvanceTime(elapsedTime, m.get());
+            /*for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
+                std::cout << con->m_pAnimationTracks[i].m_fWeight;
+            }
+            std::cout << "\n";*/
+        }
+        else {
+            //std::cout << "con ÏóÜÏùå" << std::endl;
+        }
+    }
+}

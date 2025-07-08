@@ -3,8 +3,10 @@
 #include <array>
 #include <memory>
 #include "stdafx.h"
+#include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
+#include "ServerAnimLoader.h"
 
 #define MaxPlayer 6
 
@@ -27,7 +29,7 @@ public:
     std::recursive_mutex& GetSceneMutex() const { return sceneMutex; }
     Scene_Type GetSceneType() const;
 
-    // --- »óÅÂ ¾÷µ¥ÀÌÆ® ÇÔ¼ö ---
+    // --- ìƒíƒœ ì—…ë°ì´íŠ¸ í•¨ìˆ˜ ---
     virtual void Update_Scene(float elapsedTime);
     virtual void Remove_Player(int id) {}
 
@@ -39,10 +41,10 @@ public:
 class Lobby_Scene : public Scene
 {
 private:
-    // characterSelections[Ä³¸¯ÅÍ ID][Å¬¶óÀÌ¾ğÆ® ID] = ¼±ÅÃ ¿©ºÎ
+    // characterSelections[ìºë¦­í„° ID][í´ë¼ì´ì–¸íŠ¸ ID] = ì„ íƒ ì—¬ë¶€
     std::array<std::array<bool, MaxPlayer>, MaxPlayer> characterSelections;
 
-    // characterReady[Ä³¸¯ÅÍ ID] = ReadyÇÑ Å¬¶óÀÌ¾ğÆ® ID (¶Ç´Â -1)
+    // characterReady[ìºë¦­í„° ID] = Readyí•œ í´ë¼ì´ì–¸íŠ¸ ID (ë˜ëŠ” -1)
     std::array<int, MaxPlayer> characterReady;
 
 public:
@@ -63,6 +65,9 @@ public:
     
     const std::array<std::array<bool, MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
     const std::array<int, MaxPlayer>& GetCharacterReadyStates() const { return characterReady; }
+
+    // test
+    std::vector<std::shared_ptr<Monster>> Monster_List;
 };
 
 
@@ -120,6 +125,9 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
+    void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
+
+    std::vector<std::shared_ptr<Monster>> Monster_List;
 
     void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged);
 };

@@ -1,9 +1,12 @@
 #pragma once
-#include "DX_Setter.h"
-#include <vector>
-#include <sstream>
+#include "stdafx.h"
+#include "ServerAnimLoader.h"
 
 using namespace std;
+
+class CSkinnedMesh;
+class CLoadedModelInfo;
+class CAnimationSets;
 
 enum class Object_Type
 {
@@ -22,10 +25,14 @@ protected:
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
+    char                     m_pstrFrameName[64];
 
+    std::shared_ptr<CStandardMesh> m_pMesh = NULL;
 
 public:
     GameObject()
@@ -38,7 +45,6 @@ public:
         XMStoreFloat4x4(&m_xmf4x4Parent, XMMatrixIdentity());
         XMStoreFloat4x4(&m_xmf4x4World, XMMatrixIdentity());
     }
-
     ~GameObject() = default;
     void Set_Child(shared_ptr<GameObject> pChild);
 
@@ -48,7 +54,7 @@ public:
     shared_ptr<GameObject> Get_Child();
     shared_ptr<GameObject> Get_Sibling();
     shared_ptr<GameObject> GetParent() { return(m_pParent); }
-    shared_ptr<GameObject> FindFrame(std::string_view name);
+    shared_ptr<GameObject> FindFrame(const char* pstrFrameName);
 
     void UpdateTransform(XMFLOAT4X4* pxmf4x4Parent = NULL);
 
@@ -73,6 +79,20 @@ public:
     void SetUp(XMFLOAT3 xmf3Up);
     void SetRight(XMFLOAT3 xmf3Right);
 
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
+    static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
+    void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
+    void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
+
+    void Obj_Info(int depth = 0);
+    Object_Type GetType() { return obj_type; }
+
+    std::unordered_set<int> RootMotionTrackSet;
+
+    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
 };
 
 
@@ -115,6 +135,7 @@ class Skinned_GameObject : public GameObject
 private:
     AnimationTrackData animation_sync_data;
 
+
 public:
     void SetAnimationSyncData(const AnimationTrackData& data) { animation_sync_data = data; }
     void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
@@ -128,5 +149,10 @@ public:
     AnimationTrackData& GetAnimationSyncData() { return animation_sync_data; }
     std::vector<Animation_Sync>& GetTrackInfoList() { return animation_sync_data.track_info_list; }
     bool GetStateChanged() const { return animation_sync_data.stateChanged; }
-};
 
+    int n_Animation = 0;
+    int RootIndex{ 0 };
+
+    std::vector<float> prevWeights;
+    std::vector<float> targetWeights;
+};

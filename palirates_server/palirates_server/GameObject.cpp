@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "GameObject.h"
-#include "DX_Setter.h"
+#include "ServerAnimLoader.h"
 
 
 XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {
@@ -99,22 +99,22 @@ std::shared_ptr<GameObject> GameObject::Get_Sibling()
 }
 
 
-std::shared_ptr<GameObject> GameObject::FindFrame(std::string_view name)
+std::shared_ptr<GameObject> GameObject::FindFrame(const char* pstrFrameName)
 {
-	if (Obj_Name.size() && Obj_Name == name)
+	if (m_pstrFrameName && strcmp(m_pstrFrameName, pstrFrameName) == 0)
 		return shared_from_this();
 
 	std::shared_ptr<GameObject> found;
 
 	if (sibling_obj)
 	{
-		found = sibling_obj->FindFrame(name);
+		found = sibling_obj->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
 	if (child_obj)
 	{
-		found = child_obj->FindFrame(name);
+		found = child_obj->FindFrame(pstrFrameName);
 		if (found) return found;
 	}
 
@@ -272,6 +272,318 @@ void GameObject::SetRight(XMFLOAT3 xmf3Right)
 	UpdateTransform(nullptr);
 }
 
+void GameObject::SetMesh(std::shared_ptr<CStandardMesh> pMesh)
+{
+	if (m_pMesh) m_pMesh->Release();
+	m_pMesh = pMesh;
+	if (m_pMesh) m_pMesh->AddRef();
+}
+
+static void SkipMaterialsBlock(FILE* fp)
+{
+	char tok[64]{};
+	int  dummyInt = 0;
+	float dummyFloat[4]{};
+
+	while (true)
+	{
+		ReadStringFromFile(fp, tok);
+
+		if (!strcmp(tok, "<Material>:"))
+		{
+			ReadIntegerFromFile(fp);                 // material index
+		}
+		else if (!strcmp(tok, "<AlbedoColor>:") ||
+			!strcmp(tok, "<EmissiveColor>:") ||
+			!strcmp(tok, "<SpecularColor>:"))
+		{
+			fread(dummyFloat, sizeof(float), 4, fp); // skip vec4
+		}
+		else if (!strcmp(tok, "<SpecularHighlight>:") ||
+			!strcmp(tok, "<Smoothness>:") ||
+			!strcmp(tok, "<Metallic>:") ||
+			!strcmp(tok, "<Glossiness>:") ||
+			!strcmp(tok, "<GlossyReflection>:"))
+		{
+			fread(dummyFloat, sizeof(float), 1, fp); // skip scalar
+		}
+		else if (!strcmp(tok, "<AlbedoMap>:") ||
+			!strcmp(tok, "<SpecularMap>:") ||
+			!strcmp(tok, "<NormalMap>:") ||
+			!strcmp(tok, "<MetallicMap>:") ||
+			!strcmp(tok, "<EmissionMap>:"))
+		{
+			char texPath[260];
+			ReadStringFromFile(fp, texPath);   
+		}
+		else if (!strcmp(tok, "</Materials>"))
+		{
+			return;                          
+		}
+		else
+		{
+			char junk[260];
+			ReadStringFromFile(fp, junk);
+		}
+	}
+}
+
+CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileName)
+{
+	FILE* pInFile = NULL;
+	::fopen_s(&pInFile, pstrFileName, "rb");
+	::rewind(pInFile);
+
+	CLoadedModelInfo* pLoadedModel = new CLoadedModelInfo();
+
+	char pstrToken[64] = { '\0' };
+
+	for (; ; )
+	{
+		if (::ReadStringFromFile(pInFile, pstrToken))
+		{
+			if (!strcmp(pstrToken, "<Hierarchy>:"))
+			{
+				std::shared_ptr<GameObject> ModelRootObject_raw_ptr = GameObject::LoadFrameHierarchyFromFile( NULL, pInFile, &pLoadedModel->m_nSkinnedMeshes);
+
+				std::shared_ptr<GameObject> ModelRootObject_shared_ptr(ModelRootObject_raw_ptr);
+				pLoadedModel->m_pModelRootObject = ModelRootObject_shared_ptr;
+
+				::ReadStringFromFile(pInFile, pstrToken);
+			}
+			else if (!strcmp(pstrToken, "<Animation>:"))
+			{
+				GameObject::LoadAnimationFromFile(pInFile, pLoadedModel, pstrFileName);
+				pLoadedModel->PrepareSkinning();
+			}
+			else if (!strcmp(pstrToken, "</Animation>:"))
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	return(pLoadedModel);
+}
+
+std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile( std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	int nFrame = 0, nTextures = 0;
+
+	std::shared_ptr<GameObject> pGameObject = std::make_shared<GameObject>();
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<Frame>:"))
+		{
+			nFrame = ::ReadIntegerFromFile(pInFile);
+			nTextures = ::ReadIntegerFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+		}
+		else if (!strcmp(pstrToken, "<Transform>:"))
+		{
+			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
+			XMFLOAT4 xmf4Rotation;
+			nReads = (UINT)::fread(&xmf3Position, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf3Rotation, sizeof(float), 3, pInFile); //Euler Angle
+			nReads = (UINT)::fread(&xmf3Scale, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf4Rotation, sizeof(float), 4, pInFile); //Quaternion
+		}
+		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
+		{
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Mesh>:"))
+		{
+			shared_ptr<CStandardMesh> pMesh = make_shared<CStandardMesh>();
+			pMesh->LoadMeshFromFile(pInFile);
+			pGameObject->SetMesh(pMesh);
+		}
+		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
+		{
+			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
+
+			shared_ptr<CSkinnedMesh> pSkinnedMesh = make_shared<CSkinnedMesh>();
+			pSkinnedMesh->LoadSkinInfoFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pstrToken);
+			if (!strcmp(pstrToken, "<Mesh>:")) {
+				pSkinnedMesh->LoadMeshFromFile(pInFile);
+			}
+
+			pGameObject->SetSkinnedMesh(pSkinnedMesh);
+		}
+		else if (!strcmp(pstrToken, "<Materials>:"))
+		{
+			SkipMaterialsBlock(pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Children>:"))
+		{
+			int nChilds = ::ReadIntegerFromFile(pInFile);
+			if (nChilds > 0)
+			{
+				for (int i = 0; i < nChilds; i++)
+				{
+					std::shared_ptr<GameObject> pChild_raw_ptr = GameObject::LoadFrameHierarchyFromFile(pGameObject, pInFile, pnSkinnedMeshes);
+
+					std::shared_ptr<GameObject> pChild(pChild_raw_ptr);
+					if (pChild)
+						pGameObject->Set_Child(pChild);
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</Frame>"))
+		{
+			break;
+		}
+	}
+	return(pGameObject);
+}
+
+void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	int nAnimationSets = 0;
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<AnimationSets>:"))
+		{
+			nAnimationSets = ::ReadIntegerFromFile(pInFile);
+			pLoadedModel->m_pAnimationSets = new CAnimationSets(nAnimationSets);
+		}
+		else if (!strcmp(pstrToken, "<FrameNames>:"))
+		{
+			pLoadedModel->m_pAnimationSets->m_nBoneFrames = ::ReadIntegerFromFile(pInFile);
+			pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches.resize(pLoadedModel->m_pAnimationSets->m_nBoneFrames, nullptr);
+
+			for (int j = 0; j < pLoadedModel->m_pAnimationSets->m_nBoneFrames; j++)
+			{
+				::ReadStringFromFile(pInFile, pstrToken);
+				shared_ptr<GameObject> frame_ptr = pLoadedModel->m_pModelRootObject->FindFrame(pstrToken);
+				pLoadedModel->m_pAnimationSets->m_ppBoneFrameCaches[j] = frame_ptr.get();
+			}
+		}
+		else if (!strcmp(pstrToken, "<AnimationSet>:"))
+		{
+			int nAnimationSet = ::ReadIntegerFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pstrToken);
+
+			float fLength = ::ReadFloatFromFile(pInFile);
+			int nFramesPerSecond = ::ReadIntegerFromFile(pInFile);
+			int nKeyFrames = ::ReadIntegerFromFile(pInFile);
+
+			auto animSet = std::make_shared<CAnimationSet>(fLength, nFramesPerSecond, nKeyFrames, pLoadedModel->m_pAnimationSets->m_nBoneFrames, pstrToken);
+			std::string filename_key(pstrFileName);
+			auto sharedAnimSet = CAnimationSets::AddOrGetSharedAnimationSet(animSet, filename_key);
+
+			pLoadedModel->m_pAnimationSets->m_pAnimationSet_list[nAnimationSet] = sharedAnimSet;
+
+			bool bIsNew = (sharedAnimSet == animSet);
+
+			if (bIsNew)
+			{
+				for (int i = 0; i < nKeyFrames; i++)
+				{
+					::ReadStringFromFile(pInFile, pstrToken); 
+					if (!strcmp(pstrToken, "<Transforms>:"))
+					{
+						CAnimationSet* pAnimationSet = sharedAnimSet.get();
+
+						int nKey = ::ReadIntegerFromFile(pInFile);
+						float fKeyTime = ::ReadFloatFromFile(pInFile);
+
+						pAnimationSet->m_pfKeyFrameTimes[i] = fKeyTime;
+						nReads = (UINT)::fread(pAnimationSet->m_ppxmf4x4KeyFrameTransforms[i],
+							sizeof(XMFLOAT4X4),
+							pLoadedModel->m_pAnimationSets->m_nBoneFrames,
+							pInFile);
+					}
+				}
+			}
+			else
+			{
+				for (int i = 0; i < nKeyFrames; i++)
+				{
+					::ReadStringFromFile(pInFile, pstrToken); 
+					int nKey = ::ReadIntegerFromFile(pInFile); // i
+					float fKeyTime = ::ReadFloatFromFile(pInFile); // skip
+					fseek(pInFile, sizeof(XMFLOAT4X4) * pLoadedModel->m_pAnimationSets->m_nBoneFrames, SEEK_CUR); // skip fread
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</AnimationSets>"))
+		{
+			break;
+		}
+	}
+}
+
+void GameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes)
+{
+	if (m_pMesh) {
+		auto pSkinned = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
+		if (pSkinned) {
+			outSkinnedMeshes.push_back(pSkinned);
+		}
+	}
+
+	if (sibling_obj)
+		sibling_obj->FindAndSetSkinnedMesh(outSkinnedMeshes);
+
+	if (child_obj)
+		child_obj->FindAndSetSkinnedMesh(outSkinnedMeshes);
+}
+
+void GameObject::SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh)
+{
+	if (m_pMesh) m_pMesh->Release();
+	m_pMesh = pMesh;
+	if (m_pMesh) m_pMesh->AddRef();
+}
+
+void GameObject::Obj_Info(int depth)
+{
+	if (strcmp(m_pstrFrameName, "Mesh") == 0)
+		return;
+
+	TCHAR indent[128] = _T("");
+	for (int i = 0; i < depth; ++i)
+		_tcscat_s(indent, _T("  "));
+
+	TCHAR tFrameName[64];
+	MultiByteToWideChar(CP_ACP, 0, m_pstrFrameName, -1, tFrameName, 64);
+
+	TCHAR pstrDebug[256] = { 0 };
+	_stprintf_s(pstrDebug, 256, _T("%s%s\n"), indent, tFrameName);
+
+	OutputDebugString(pstrDebug);
+
+
+	if (child_obj)
+	{
+		child_obj->Obj_Info(depth + 1);
+	}
+
+	if (sibling_obj)
+	{
+		sibling_obj->Obj_Info(depth);
+	}
+}
+
 //===================================================================
 
 Boat_Object::Boat_Object()
@@ -323,7 +635,8 @@ void Boat_Object::Animate(float fTimeElapsed)
 	// --- 雀傈 贸府 ---
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
-	m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+	//m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
 
 	// --- 皑加 贸府 ---
 	float decel = m_fFriction * fTimeElapsed;
