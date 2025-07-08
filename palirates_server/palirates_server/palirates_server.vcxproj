@@ -145,8 +145,6 @@
     <ClCompile Include="LobbyManager.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Monster.cpp" />
-    <ClCompile Include="MonsterManager.cpp" />
-    <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="Object_StateMachine.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -167,8 +165,6 @@
     <ClInclude Include="LobbyManager.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Monster.h" />
-    <ClInclude Include="MonsterManager.h" />
-    <ClInclude Include="ObjectManager.h" />
     <ClInclude Include="Object_StateMachine.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Scene.h" />
