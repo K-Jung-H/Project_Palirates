@@ -13,7 +13,7 @@ public:
     virtual ~CStandardMesh() = default;
 
     void LoadMeshFromFile(FILE* pInFile);
-
+    void LoadMeshFrom_OtherFile(const char* pstrFileName);
     void AddRef() { m_nReferences++; }
     void Release() { if (--m_nReferences <= 0) delete this; }
 
@@ -59,6 +59,37 @@ protected:
     XMINT4* m_pxmn4BoneIndices = NULL;
     XMFLOAT4* m_pxmf4BoneWeights = NULL;
 };
+
+
+
+class MeshManager
+{
+public:
+    static std::unordered_map<std::string, std::shared_ptr<CStandardMesh>> mesh_cache;
+    static std::mutex cache_mutex;  
+
+    static std::shared_ptr<CStandardMesh> GetMesh(const std::string& name)
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        auto it = mesh_cache.find(name);
+        if (it != mesh_cache.end()) return it->second;
+        return nullptr;
+    }
+
+    static void AddMesh(const std::string& name, std::shared_ptr<CStandardMesh> mesh)
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        mesh_cache[name] = mesh;
+    }
+
+    static bool Contains(const std::string& name)
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        return mesh_cache.find(name) != mesh_cache.end();
+    }
+};
+
+
 
 class CLoadedModelInfo
 {

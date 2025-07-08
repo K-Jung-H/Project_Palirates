@@ -3,6 +3,7 @@
 #include <array>
 #include <memory>
 #include "stdafx.h"
+#include "GameWorld.h"
 #include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
@@ -105,7 +106,7 @@ class Stage_Scene : public Scene
 private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
-
+    GameWorld game_world;
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) 
     {
