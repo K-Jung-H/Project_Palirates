@@ -3,7 +3,6 @@
 
 //=============================================================================================
 
-int CScene::s_ClientNum = -1;
 
 Shadow_Camera::Shadow_Camera() : CCamera()
 {
@@ -2194,6 +2193,22 @@ Change_Signal CScene::Get_Change_Signal()
 	return c_signal;
 }
 
+void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
+{
+	obj_manager->Add_Player(new_player_ptr);
+}
+
+void CScene::Remove_Multi_Player(int player_id)
+{
+	obj_manager->Remove_Player(player_id);
+}
+
+
+void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+{
+	obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
 //==========================================================================================
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
@@ -2297,7 +2312,7 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 		player->SetPosition(XMFLOAT3(rotatedX, y, rotatedZ));
 		player->type = EObjectType::SelectPlayer;
 		player->GetStateMachine()->changeState(State::Select_Idle, Key_Value::None);
-		obj_manager->Add_Object(player, Object_Type::player);
+		obj_manager->Add_Object(player, Object_Type::skinned);
 	}
 
 	CLoadedModelInfo* Test_Island_Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Model/Island_0.bin", NULL);
@@ -2329,7 +2344,9 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 	XMFLOAT3 targetPos = m_pPlayer->GetPosition();
 	targetPos.y = 0.0f;
 
-	auto playerList = obj_manager->Get_Object_List(Object_Type::player);
+
+
+	auto playerList = obj_manager->Get_Object_List(Object_Type::skinned);
 	for (const auto& obj : *playerList)
 	{
 		XMFLOAT3 objPos = obj->GetPosition();
@@ -2417,7 +2434,7 @@ void Character_Select_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 void Character_Select_Scene::UpdatePlayerSelection()
 {
-	auto player_list = obj_manager->Get_Object_List(Object_Type::player);
+	auto player_list = obj_manager->Get_Object_List(Object_Type::skinned);
 	if (!player_list) return;
 
 
@@ -2651,10 +2668,16 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	TextureBlock* check_block = new TextureBlock(check, check_Rect, mesh, UILayer::Interactable | UILayer::Menu);
 	check_block->onClick = [this]()
 		{
-			if (readyClientIds[CScene::select_index] == -1) {
+			if (isRunning) {
+				if (readyClientIds[CScene::select_index] == -1) {
+					is_Ready = 1;
+					c_signal.change = true;
+					SetEnableCharactorSelectButton(false);
+				}
+			}
+			else {
 				is_Ready = 1;
 				c_signal.change = true;
-				SetEnableCharactorSelectButton(false);
 			}
 			c_signal.scene_name = "Game_Stage_Board";
 			c_signal.type = Scene_Type::Board;

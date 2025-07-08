@@ -20,16 +20,16 @@ enum class GPU_Stage
 class ServerSyncManager
 {
 public:
-    void AddPlayerSyncData(int playerId, const ServerAnimationSyncData& data)
+    void AddPlayerSyncData(int playerId, const ServerSyncData& data)
     {
         syncDataMap[playerId] = data;
     }
 
-    ServerAnimationSyncData& GetPlayerSyncData(int clientNum) {
+    ServerSyncData& GetPlayerSyncData(int clientNum) {
         return syncDataMap.at(clientNum);
     }
 
-    std::unordered_map<int, ServerAnimationSyncData>& GetAllSyncData()
+    std::unordered_map<int, ServerSyncData>& GetAllSyncData()
     {
         return syncDataMap;
     }
@@ -37,7 +37,7 @@ public:
     void ClearAll() { syncDataMap.clear(); }
 
 private:
-    std::unordered_map<int, ServerAnimationSyncData> syncDataMap;
+    std::unordered_map<int, ServerSyncData> syncDataMap;
 };
 
 struct CB_FRAMEWORK_INFO
@@ -222,16 +222,14 @@ public:
     Scene_Manager& GetSceneManager() { return *scene_manager; }
     CPlayer* GetPlayer() { return m_pPlayer.get(); }
     int nPlayer{ 0 };
-    int ClientNum{ 0 };
-    ServerSyncManager syncManager;
-    ServerSyncManager& GetSyncManager() { return syncManager; }
-    std::unordered_map<int, std::shared_ptr<CPlayer>> m_pRemotePlayers;
+
+
+
     std::queue<std::string> recvQueue;
     std::mutex recvQueueMutex;
-    std::unordered_map<int, std::shared_ptr<CMonsterObject>> remoteMonsters;
-    std::mutex monsterDataMutex;
     std::mutex remotePlayerUpdateMutex;
 
+    std::array<bool, MaxPlayer> Connected_Player_List; // 플레이어 생성 제거 파악 용도
 
     std::array<int, MaxPlayer> readyClientIds;
     std::array<std::bitset<MaxPlayer>, MaxPlayer> characterSelections;
@@ -255,29 +253,26 @@ public:
     void PlayerLeave(int playerId);
     void StartPingThread();
     void Disconnect();
+
     void HandleClientIdAssignment();
-    void DelayOrQueuePacket(const std::string& packet);
-
-    void HandlePlayerLeave(int leaveId);
-    void HandlePlayerCreate(int id);
-
-
     void HandleChangeScene(const std::vector<std::string>& tokens);
+    void Multi_PlayerLeave(int leaveId);
+    void HandlePlayerSync(int player_ID, int character_model_ID, const ServerSyncData& sync_data);
 
-    void HandlePlayerUpdate(const std::vector<std::string>& tokens, const std::string& receivedData);
-    void HandlePositionUpdate(const std::vector<std::string>& tokens);
-    void CreateRemotePlayer(int playerId, int characterId);
+    shared_ptr<CPlayer> Create_Player(int playerId, int characterId);
+
+
     void ProcessReceivedData(const std::string& receivedData);
-    std::queue<int> pendingPlayerCreates;
-    std::mutex pendingCreateMutex;
-    std::unordered_map<int, std::string> pendingUpdateMap;
-    std::mutex pendingUpdateMutex;
 
+    void ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene> lobby_scene, const std::string& command, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_Board(shared_ptr<Board_Scene> board_scene, const std::string& command, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
 
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;
-
+    const size_t MAX_RECV_QUEUE_SIZE = 10000;
+    int64_t lastReceivedServerTimeMs = 0;
     //=================SERVER=================
 
 };

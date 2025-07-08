@@ -9,14 +9,13 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 
-
+#include <cmath>
 #include <Mmsystem.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include <iostream>
 #include <mutex>
-#include "crc32.h"
 
 using namespace std;
 

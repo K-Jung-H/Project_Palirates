@@ -626,31 +626,38 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
 	m_xmf3Look = Vector3::Normalize(Vector3::CrossProduct(m_xmf3Right, m_xmf3Up, true));
 }
 
-ServerAnimationSyncData CTerrainPlayer::MakeSyncData()
+ServerSyncData CTerrainPlayer::MakeSyncData()
 {
-	ServerAnimationSyncData data = CGameObject::MakeSyncData();
-	data.currentState = GetStateMachine()->Get_State();
-	for (int i = 0; i < n_Animation; i++) {
-		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
-		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
-	}
-
+	ServerSyncData data = CGameObject::MakeSyncData();
+	
 	return data;
 }
 
-void CTerrainPlayer::ApplySyncData(const ServerAnimationSyncData& syncData)
+void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
-	SetPosition(syncData.position);
-	GetStateMachine()->SetState(syncData.currentState);
-	//GetStateMachine()->changeState(syncData.currentState, Key_Value::None);
-	for (int i = 0; i < n_Animation; i++) {
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
+
+
+	auto controller = GetSkinnedAnimationController();
+	
+	if (!controller) 
+		return;
+
+	controller->ResetWeight();
+	
+	auto track = controller->m_pAnimationTracks;
+
+	vector<Animation_Sync> track_list = syncData.track_info_list;
+	for(Animation_Sync animation_track_info : track_list)
+	{
+		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
+		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
-	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
+
+	controller->ApplyCurrentAnimationPose(this);
+
 }
-//º¸·ù
+
 
 //==================================================================
 
@@ -745,28 +752,17 @@ void Observer::Update(float fTimeElapsed)
 }
 
 
-ServerAnimationSyncData Observer::MakeSyncData()
+ServerSyncData Observer::MakeSyncData()
 {
-	ServerAnimationSyncData data = CGameObject::MakeSyncData();
-	data.currentState = GetStateMachine()->Get_State();
-	for (int i = 0; i < n_Animation; i++) 
-	{
-		data.trackPositions.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition);
-		data.Weights.push_back(GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight);
-	}
+	ServerSyncData data = CGameObject::MakeSyncData();
 
 	return data;
 }
 
-void Observer::ApplySyncData(const ServerAnimationSyncData& syncData)
+void Observer::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
 	SetPosition(syncData.position);
-	GetStateMachine()->SetState(syncData.currentState);
-	for (int i = 0; i < n_Animation; i++) 
-	{
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fPosition = syncData.trackPositions[i];
-		GetSkinnedAnimationController()->m_pAnimationTracks[i].m_fWeight = syncData.Weights[i];
-	}
+
 	GetSkinnedAnimationController()->ApplyCurrentAnimationPose(this);
 }

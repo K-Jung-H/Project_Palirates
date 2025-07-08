@@ -7,6 +7,7 @@
 #include "DDSTextureLoader12.h"
 #include "WICTextureLoader12.h"
 
+int Client_ID = -1;
 bool isRunning = false;
 
 UINT gnCbvSrvUavDescriptorIncrementSize = 0;

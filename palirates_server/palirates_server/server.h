@@ -45,6 +45,8 @@ public:
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
+    void ProcessPacketQueue();
+    void ParseAndHandlePacket(int clientId, const std::string& line);
     void Broadcast_Scene_State_All();
     
     void Server_Update();
@@ -66,9 +68,17 @@ public:
     void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
     void PrintClientDebugInfo();
 
+    void BroadcastServerTime();
+
 private:
     SOCKET listenSocket;
     Logger logger;
+
+    struct PacketInfo
+    {
+        int clientId;
+        std::string packet;
+    };
 
     std::mutex idMutex;
     std::mutex clientsMutex;
@@ -101,4 +111,12 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+
+
+    std::queue<PacketInfo> packetQueue;
+    std::mutex packetQueueMutex;
+    const size_t MAX_PACKET_QUEUE_SIZE = 10000;
+
+
+
 };

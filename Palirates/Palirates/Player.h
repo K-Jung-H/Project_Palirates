@@ -158,7 +158,7 @@ public:
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
 	
-	virtual void ApplySyncData(const ServerAnimationSyncData& syncData) {};
+	virtual void ApplySyncData(const ServerSyncData& syncData) {};
 
 	virtual void FallingTimer_Reset() { m_fFallingTimer = 0.0f; }
 
@@ -237,8 +237,8 @@ public:
 	virtual void AlignWithNormal(XMFLOAT3& normal);
 	virtual CHeightMapTerrain*& Get_Last_Tile() { return last_tile_ptr; }
 
-	virtual ServerAnimationSyncData MakeSyncData();
-	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+	virtual ServerSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerSyncData& syncData);
 };
 
 class Observer : public CPlayer
@@ -258,6 +258,6 @@ public:
 	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);
 
-	virtual ServerAnimationSyncData MakeSyncData();
-	virtual void ApplySyncData(const ServerAnimationSyncData& syncData);
+	virtual ServerSyncData MakeSyncData();
+	virtual void ApplySyncData(const ServerSyncData& syncData);
 };

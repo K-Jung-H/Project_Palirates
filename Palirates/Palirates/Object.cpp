@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------------
+﻿ //-----------------------------------------------------------------------------
 // File: CGameObject.cpp
 //-----------------------------------------------------------------------------
 
@@ -1385,9 +1385,31 @@ void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObjec
 	pRootGameObject->UpdateTransform(nullptr);
 }
 
-void CAnimationController::ServerAdvanceTime(const ServerAnimationSyncData& syncData)
+void CAnimationController::ServerAdvanceTime(const ServerSyncData& syncData)
 {
 
+}
+
+std::vector<Animation_Sync> CAnimationController::MakeSyncData()
+{
+	std::vector<Animation_Sync> data;
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		if (m_pAnimationTracks[i].m_fWeight > ANIMATION_CALLBACK_EPSILON) {
+			Animation_Sync t;
+			t.track_index = i;
+			t.track_position = m_pAnimationTracks[i].m_fPosition;
+			t.weight = m_pAnimationTracks[i].m_fWeight;
+			data.push_back(t);
+		}
+	}
+	return data;
+}
+
+void CAnimationController::ResetWeight()
+{
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
 }
 
 bool IsUpperBodyBone(const std::string& boneName)
@@ -2642,32 +2664,38 @@ void CGameObject::SetLookDirection(float x, float y, float z)
 	SetLookDirection(XMFLOAT3(x, y, z));
 }
 
-void CGameObject::SetLookDirection(const XMFLOAT3& look)
+void CGameObject::SetLookDirection(const XMFLOAT3& xmf3LookInput)
 {
-	XMVECTOR vLook = XMVector3Normalize(XMLoadFloat3(&look));
-	XMVECTOR vUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMVECTOR vRight = XMVector3Normalize(XMVector3Cross(vUp, vLook));
-	vUp = XMVector3Normalize(XMVector3Cross(vLook, vRight));
+	XMFLOAT3 xmf3Look = xmf3LookInput;
+	if (Vector3::Length(xmf3Look) < 1e-6f)
+		xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
-	// 기존 스케일, 위치 정보 추출
-	XMFLOAT3 scale = GetScale(m_xmf4x4Parent); // 따로 함수가 없으면 m_xmf4x4Parent에서 직접 계산
+	XMFLOAT3 look = Vector3::Normalize(xmf3Look);
+	XMFLOAT3 up = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	if (fabs(Vector3::DotProduct(look, up)) > 0.999f)
+		up = XMFLOAT3(1.0f, 0.0f, 0.0f);
+
+	XMFLOAT3 right = Vector3::Normalize(Vector3::CrossProduct(up, look));
+	up = Vector3::Normalize(Vector3::CrossProduct(look, right));
+
+	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
 	XMFLOAT3 position = GetPosition();
 
-	// 스케일 반영된 회전 벡터
-	XMVECTOR vScaledRight = XMVectorScale(vRight, scale.x);
-	XMVECTOR vScaledUp = XMVectorScale(vUp, scale.y);
-	XMVECTOR vScaledLook = XMVectorScale(vLook, scale.z);
+	XMVECTOR vRight = XMVectorScale(XMLoadFloat3(&right), scale.x);
+	XMVECTOR vUp = XMVectorScale(XMLoadFloat3(&up), scale.y);
+	XMVECTOR vLook = XMVectorScale(XMLoadFloat3(&look), scale.z);
 
-	// 회전만 적용한 새 행렬 만들기
 	XMFLOAT4X4 xmf4x4New;
-	xmf4x4New._11 = XMVectorGetX(vScaledRight); xmf4x4New._12 = XMVectorGetY(vScaledRight); xmf4x4New._13 = XMVectorGetZ(vScaledRight); xmf4x4New._14 = 0.0f;
-	xmf4x4New._21 = XMVectorGetX(vScaledUp);    xmf4x4New._22 = XMVectorGetY(vScaledUp);    xmf4x4New._23 = XMVectorGetZ(vScaledUp);    xmf4x4New._24 = 0.0f;
-	xmf4x4New._31 = XMVectorGetX(vScaledLook);  xmf4x4New._32 = XMVectorGetY(vScaledLook);  xmf4x4New._33 = XMVectorGetZ(vScaledLook);  xmf4x4New._34 = 0.0f;
-	xmf4x4New._41 = position.x;                 xmf4x4New._42 = position.y;                 xmf4x4New._43 = position.z;                 xmf4x4New._44 = 1.0f;
+	xmf4x4New._11 = XMVectorGetX(vRight); xmf4x4New._12 = XMVectorGetY(vRight); xmf4x4New._13 = XMVectorGetZ(vRight); xmf4x4New._14 = 0.0f;
+	xmf4x4New._21 = XMVectorGetX(vUp);    xmf4x4New._22 = XMVectorGetY(vUp);    xmf4x4New._23 = XMVectorGetZ(vUp);    xmf4x4New._24 = 0.0f;
+	xmf4x4New._31 = XMVectorGetX(vLook);  xmf4x4New._32 = XMVectorGetY(vLook);  xmf4x4New._33 = XMVectorGetZ(vLook);  xmf4x4New._34 = 0.0f;
+	xmf4x4New._41 = position.x;           xmf4x4New._42 = position.y;           xmf4x4New._43 = position.z;           xmf4x4New._44 = 1.0f;
 
 	m_xmf4x4Parent = xmf4x4New;
 	UpdateTransform(NULL);
 }
+
 
 void CGameObject::Set_LookDirection_LookAt(float x, float y, float z)
 {
@@ -3364,22 +3392,19 @@ void CGameObject::Set_Collider(BoundingOrientedBox* ptr)
 	m_pMesh->Set_BoundingBox(ptr);
 }
 
-ServerAnimationSyncData CGameObject::MakeSyncData()
+ServerSyncData CGameObject::MakeSyncData()
 {
-	ServerAnimationSyncData data;
+	ServerSyncData data;
 	data.position = GetPosition();
 	data.lookVector = GetLook();
-	data.currentState = State::Idle;
-
+	if (GetSkinnedAnimationController()) {
+		data.track_info_list = GetSkinnedAnimationController()->MakeSyncData();
+	}
 	return data;
 }
 
-void CGameObject::ApplySyncData(const ServerAnimationSyncData& syncData)
+void CGameObject::ApplySyncData(const ServerSyncData& syncData)
 {
-	if (syncData.trackPositions.size() != n_Animation || syncData.Weights.size() != n_Animation)
-	{
-		return;
-	}
 	SetLookDirection(syncData.lookVector);
 	SetPosition(syncData.position);
 }
