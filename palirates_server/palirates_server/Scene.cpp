@@ -42,29 +42,10 @@ void Lobby_Scene::Init()
             characterSelections[i][j] = false;
         }
     }
-
-    // test
-    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
-    Monster_List.push_back(m);
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
 {
-    for (auto m : Monster_List) {
-        auto con = m->GetSkinnedAnimationController();
-        if (con) {
-            if (m->GetStateMachine())
-                m->GetStateMachine()->update(elapsedTime);
-            con->AdvanceTime(elapsedTime, m.get());
-           /* for (int i = 0; i < con->m_nAnimationTracks; i++) {
-                std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
-            }
-            std::cout << "\n";*/
-        }
-        else {
-            //std::cout << "con 없음" << std::endl;
-        }
-    }
 }
 
 void Lobby_Scene::Remove_Player(int id)
@@ -318,9 +299,12 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     // test
-    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
-    m->SetPosition(XMFLOAT3(1500, 0, 700));
-    Monster_List.push_back(m);
+    for (int i = 0; i < 10; ++i) {
+        std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+        m->SetID(i);
+        m->SetPosition(XMFLOAT3(1500 + i * 10, 0, 700));
+        Monster_List.push_back(m);
+    }
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -331,10 +315,6 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (m->GetStateMachine())
                 m->GetStateMachine()->update(elapsedTime);
             con->AdvanceTime(elapsedTime, m.get());
-            /* for (int i = 0; i < con->m_nAnimationTracks; i++) {
-                 std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
-             }
-             std::cout << "\n";*/
         }
         else {
             //std::cout << "con 없음" << std::endl;

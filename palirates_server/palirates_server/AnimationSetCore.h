@@ -6,6 +6,21 @@ class GameObject;
 class CLoadedModelInfo;
 class CSkinnedMesh;
 
+struct Animation_Sync
+{
+    int track_index;
+    float weight;
+    float track_position;
+};
+
+struct ServerSyncData
+{
+    XMFLOAT3 position;
+    XMFLOAT3 lookVector;
+    std::vector<Animation_Sync> track_info_list;
+    bool stateChanged = false;
+};
+
 class CAnimationSet
 {
 public:
@@ -114,7 +129,7 @@ public:
     void AdvanceTime(float fElapsedTime, GameObject* pRootGameObject);
 
     //void ServerAdvanceTime(const ServerSyncData& syncData);
-    //std::vector<Animation_Sync> MakeSyncData();
+    std::vector<Animation_Sync> MakeSyncData();
     void ResetWeight();
 
 public:

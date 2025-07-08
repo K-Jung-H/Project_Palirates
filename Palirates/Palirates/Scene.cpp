@@ -1096,9 +1096,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 1; i++)
+		for (int i = 0; i < 10; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			m->SetID(i);
 			m->Set_Child(m->m_pRootModel);
 			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 			m->SetupWeaponCollider();
@@ -2214,28 +2215,19 @@ void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 	obj_manager->Sync_Player_Data(player_id, syncData);
 }
 
-void CScene::Sync_Monster_Data(const XMFLOAT3& pos, const XMFLOAT3& look, const float trackindex, const float trackpos, const float trackweight)
+void CScene::Sync_Monster_Data(int monsterID, const ServerSyncData& syncData)
 {
-	auto v = obj_manager->Get_Object_List(Object_Type::skinned); // vector* 반환
+	auto v = obj_manager->Get_Object_List(Object_Type::skinned); 
 	if (!v || v->empty()) return;
 
-	/* 1) 0번째 객체 가져오기 */
-	std::shared_ptr<CGameObject> obj = (*v)[0];  // 벡터 역참조 후 [0]
-
-	/* 2) 몬스터 타입인지 확인하고 캐스팅 */
-	auto monster = std::dynamic_pointer_cast<CMonsterObject>(obj);
-	if (!monster) return;
-
-	/* 3) 동기 데이터 구성 */
-	ServerSyncData syncData;
-	syncData.position = pos;
-	syncData.lookVector = look;
-	syncData.track_info_list = { { int(trackindex), trackweight, trackpos } };
-	syncData.bStateChange = false;
-
-	/* 4) 적용 */
-	monster->ApplySyncData(syncData);
-	std::cout << "몬스터 데이터 어플라이" << std::endl;
+	// map으로 바꿔야 될 듯?
+	for (auto& obj : *v)
+	{
+		if (obj->GetID() == monsterID) {
+			obj->ApplySyncData(syncData);
+			std::cout << "몬스터 ID : " << monsterID << " 데이터 어플라이" << std::endl;
+		}
+	}
 }
 
 //==========================================================================================

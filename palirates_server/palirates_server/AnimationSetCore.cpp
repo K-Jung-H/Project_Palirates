@@ -288,3 +288,18 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 		OnAnimationIK(pRootGameObject);
 	}
 }
+
+std::vector<Animation_Sync> CAnimationController::MakeSyncData()
+{
+	std::vector<Animation_Sync> data;
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		if (m_pAnimationTracks[i].m_fWeight > ANIMATION_CALLBACK_EPSILON) {
+			Animation_Sync t;
+			t.track_index = i;
+			t.track_position = m_pAnimationTracks[i].m_fPosition;
+			t.weight = m_pAnimationTracks[i].m_fWeight;
+			data.push_back(t);
+		}
+	}
+	return data;
+}

@@ -569,30 +569,27 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     if (!monster_list.empty())
     {
-        const auto& monster = monster_list[0];
+        float list_size = monster_list.size();
+        oss << "MONSTER_SNAPSHOT," << list_size;
 
-        XMFLOAT3 mpos = monster->GetPosition();
-        XMFLOAT3 mlook = monster->GetLook();
-        //int monster_id = monster->GetID();
-        //int monster_type = static_cast<int>(monster->GetType());
-        //int monster_hp = monster->hp;
-        auto con = monster->GetSkinnedAnimationController();
-        float trackindex = 0;
-        for (int i = 0; i < con->m_nAnimationTracks; ++i) {
-            if (con->m_pAnimationTracks[i].m_fWeight > ANIMATION_CALLBACK_EPSILON) {
-                trackindex = i;
-                break;
+        for (const auto& monster : monster_list) {
+            float mID = monster->GetID();
+            oss << "," << mID;
+
+            auto sync_Data = monster->MakeSyncData();
+            oss << "," << sync_Data.position.x << "," << sync_Data.position.y << "," << sync_Data.position.z
+                << "," << sync_Data.lookVector.x << "," << sync_Data.lookVector.y << "," << sync_Data.lookVector.z
+                << "," << sync_Data.track_info_list.size();
+
+            for (auto track_data : sync_Data.track_info_list)
+            {
+                oss << "," << to_string(track_data.track_index)
+                    << "," << to_string(track_data.weight)
+                    << "," << to_string(track_data.track_position);
             }
+            oss << "," << sync_Data.stateChanged;
         }
-        float trackpos = con->m_pAnimationTracks[int(trackindex)].m_fPosition;
-        float trackweight = con->m_pAnimationTracks[int(trackindex)].m_fWeight;
-
-        oss << "MONSTER_SNAPSHOT,"/* << monster_id << "," << monster_type << ","*/
-            << mpos.x << "," << mpos.y << "," << mpos.z << ","
-            << mlook.x << "," << mlook.y << "," << mlook.z << "," << trackindex << "," << trackpos << "," << trackweight /*<< ","
-            << monster_hp <<*/ << "\n";
-
-        std::cout << "몬스터데이터 생성 성공" << std::endl;
+        oss << "\n";
     }
 
     return oss.str();

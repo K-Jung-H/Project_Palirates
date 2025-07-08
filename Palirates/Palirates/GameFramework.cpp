@@ -1564,26 +1564,54 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 {
 	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
 	std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
-	if (tokens.size() < 10) return;
+	if (tokens.size() < 3) return;
+	float list_size = std::stof(tokens[1]);
+	std::cout << "리스트 사이즈 : " << list_size << std::endl;
+	int startIndex = 2;
+	for (int i = 0; i<int(list_size); ++i) 
+	{
+		int base = startIndex;
 
-	//int   monsterId = std::stoi(tokens[1]);
-	//int   monsterType = std::stoi(tokens[2]);
-	float mx = std::stof(tokens[1]);
-	float my = std::stof(tokens[2]);
-	float mz = std::stof(tokens[3]);
-	float lx = std::stof(tokens[4]);
-	float ly = std::stof(tokens[5]);
-	float lz = std::stof(tokens[6]);
-	float index = std::stof(tokens[7]);
-	float trackpos = std::stof(tokens[8]);
-	float weight = std::stof(tokens[9]);
-	//int   hp = std::stoi(tokens[6]);
-	//int   state = std::stoi(tokens[7]);
+		int monsterId = std::stoi(tokens[base + 0]);
+		float px = std::stof(tokens[base + 1]);
+		float py = std::stof(tokens[base + 2]);
+		float pz = std::stof(tokens[base + 3]);
+		float lx = std::stof(tokens[base + 4]);
+		float ly = std::stof(tokens[base + 5]);
+		float lz = std::stof(tokens[base + 6]);
+		int trackCount = std::stoi(tokens[base + 7]);
 
-	// look 벡터까지 보내면 index가 한 칸씩 뒤로 밀립니다.
-	// float lx = std::stof(tokens[6]); ... hp = std::stoi(tokens[9]) 처럼 맞춰 주세요.
-	std::cout << "몬스터 데이터 리시브" << std::endl;
-	stage_scene->Sync_Monster_Data(XMFLOAT3(mx, my, mz), XMFLOAT3(mx, my, mz), index, trackpos, weight);
+		int trackStart = base + 8;
+
+		int expectedTrackTokenCount = trackCount * 3;
+
+		std::cout << "몬스터 ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
+
+		std::vector<Animation_Sync> track_list;
+
+		for (int t = 0; t < trackCount; ++t)
+		{
+			int idx = trackStart + t * 3;
+			int trackIdx = std::stoi(tokens[idx]);
+			float weight = std::stof(tokens[idx + 1]);
+			float position = std::stof(tokens[idx + 2]);
+			track_list.push_back({ trackIdx, weight, position });
+		}
+
+		int stateFlagIndex = trackStart + expectedTrackTokenCount;
+
+		ServerSyncData syncData;
+		syncData.position = XMFLOAT3(px, py, pz);
+		syncData.lookVector = XMFLOAT3(lx, ly, lz);
+
+		syncData.track_info_list = track_list;
+		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
+
+
+		stage_scene->Sync_Monster_Data(monsterId, syncData);
+		// 다음 플레이어를 위해 시작 위치 조정
+		startIndex = stateFlagIndex + 1;
+	}
 }
 
 void CGameFramework::HandleClientIdAssignment()

@@ -584,6 +584,17 @@ void GameObject::Obj_Info(int depth)
 	}
 }
 
+ServerSyncData GameObject::MakeSyncData()
+{
+	ServerSyncData data;
+	data.position = GetPosition();
+	data.lookVector = GetLook();
+	if (GetSkinnedAnimationController()) {
+		data.track_info_list = GetSkinnedAnimationController()->MakeSyncData();
+	}
+	return data;
+}
+
 //===================================================================
 
 Boat_Object::Boat_Object()
