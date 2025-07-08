@@ -592,6 +592,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         oss << "\n";
     }
 
+	std::cout << "oss size : " << oss.str().size() << std::endl;
     return oss.str();
 }
 

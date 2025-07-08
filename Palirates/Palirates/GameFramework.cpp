@@ -1563,10 +1563,10 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
 	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
-	std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
+	//std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
 	if (tokens.size() < 3) return;
 	float list_size = std::stof(tokens[1]);
-	std::cout << "리스트 사이즈 : " << list_size << std::endl;
+	//std::cout << "리스트 사이즈 : " << list_size << std::endl;
 	int startIndex = 2;
 	for (int i = 0; i<int(list_size); ++i) 
 	{
@@ -1585,7 +1585,7 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 
 		int expectedTrackTokenCount = trackCount * 3;
 
-		std::cout << "몬스터 ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
+		//std::cout << "몬스터 ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
 
 		std::vector<Animation_Sync> track_list;
 

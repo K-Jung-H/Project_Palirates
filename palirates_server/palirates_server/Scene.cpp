@@ -299,7 +299,7 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     // test
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 30; ++i) {
         std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
         m->SetID(i);
         m->SetPosition(XMFLOAT3(1500 + i * 10, 0, 700));
@@ -312,9 +312,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     for (auto m : Monster_List) {
         auto con = m->GetSkinnedAnimationController();
         if (con) {
+            con->AdvanceTime(elapsedTime, m.get());
             if (m->GetStateMachine())
                 m->GetStateMachine()->update(elapsedTime);
-            con->AdvanceTime(elapsedTime, m.get());
         }
         else {
             //std::cout << "con 없음" << std::endl;

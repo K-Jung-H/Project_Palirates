@@ -7,27 +7,70 @@ void MonsterStateMachine::update(float Elapsed_time)
 
 }
 
+void MonsterStateMachine::SetWeight(float Elapsed_time)
+{
+    //animController = m_pOwner->GetSkinnedAnimationController();
+    int n_Ani = m_pOwner->n_Animation;
+
+    for (int i = 0; i < n_Ani; i++)
+    {
+        float prev = m_pOwner->prevWeights[i];
+        float target = m_pOwner->targetWeights[i];
+
+        if (fabs(prev - target) == 0.0f)
+            continue;
+
+        float newWeight = prev + (target - prev) * 5.0f * Elapsed_time;
+        animController->SetTrackWeight(i, newWeight);
+    }
+}
+
 void FishManStateMachine::update(float Elapsed_time)
 {
-    static float switchInterval = 2.0f;   // 몇 초마다 바꿀지
+
+    static float switchInterval = 10.0f;   // 몇 초마다 바꿀지
     static float accumTime = 0.0f;   // 누적 시간
-    static int   currentTrack = 0;      // 0 또는 1
+    static int   currentTrack = int(m_pOwner->GetID()) % 2; ;    // 0 또는 1
 
-    accumTime += Elapsed_time;                 // elapsed == 프레임당 경과 시간
+    //accumTime += Elapsed_time;                 // elapsed == 프레임당 경과 시간
 
-    if (accumTime >= switchInterval)
-    {
-        accumTime = 0.0f;
-        currentTrack = (currentTrack == 0) ? 1 : 0;  // 토글
-    }
+    //if (accumTime >= switchInterval)
+    //{
+    //    accumTime = 0.0f;
+    //    currentTrack = (currentTrack == 0) ? 1 : 0;  // 토글
+    //}
 
     animController = m_pOwner->GetSkinnedAnimationController();
     int n_Ani = m_pOwner->n_Animation;
+
+    for (int i = 0; i < n_Ani; i++) {
+        m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
+    }
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
     for (int i = 0; i < n_Ani; i++) {
         m_pOwner->prevWeights[i] = 0.0f;
         animController->SetTrackWeight(i, 0.0f);
     }
     animController->SetTrackWeight(currentTrack, 1.0f);
+    if (int(m_pOwner->GetID()) % 2 == TRACK_FISHMAN_IDLE) {
+        m_pOwner->targetWeights[TRACK_FISHMAN_IDLE] = 1.0f;
+    }
+    else if (int(m_pOwner->GetID()) % 2 == TRACK_FISHMAN_IDLE_BREAK) {
+        m_pOwner->targetWeights[TRACK_FISHMAN_IDLE_BREAK] = 1.0f;
+    }
+
+    for (int i = 0; i< n_Ani; i++)
+    {
+        animController->SetTrackWeight(i, 0.0f);
+	}
+
+    if (int(m_pOwner->GetID()) % 2 == TRACK_FISHMAN_IDLE) {
+        animController->SetTrackWeight(TRACK_FISHMAN_IDLE, 1.0f);
+    }
+    else if (int(m_pOwner->GetID()) % 2 == TRACK_FISHMAN_IDLE_BREAK) {
+        animController->SetTrackWeight(TRACK_FISHMAN_IDLE_BREAK, 1.0f);
+    }
+	//SetWeight(Elapsed_time);
 
     {
         static const float centerX = 1500.0f; // ← 1500 부근
@@ -61,8 +104,8 @@ void FishManStateMachine::update(float Elapsed_time)
 
         /* --- 디버그 출력 ------------------------ */
         auto look = m_pOwner->GetLook();
-        std::cout << pos.x << ", " << pos.y << ", " << pos.z
+      /*  std::cout << pos.x << ", " << pos.y << ", " << pos.z
             << "   |   " << look.x << ", " << look.y << ", " << look.z
-            << std::endl;
+            << std::endl;*/
     }
 }

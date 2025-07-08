@@ -301,5 +301,8 @@ std::vector<Animation_Sync> CAnimationController::MakeSyncData()
 			data.push_back(t);
 		}
 	}
+	if (data.size() >= 2) {
+		std::cout << "블랜딩 중" << std::endl;
+	}
 	return data;
 }

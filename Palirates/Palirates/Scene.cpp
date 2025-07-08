@@ -1096,7 +1096,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < 30; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->SetID(i);
@@ -2225,7 +2225,7 @@ void CScene::Sync_Monster_Data(int monsterID, const ServerSyncData& syncData)
 	{
 		if (obj->GetID() == monsterID) {
 			obj->ApplySyncData(syncData);
-			std::cout << "몬스터 ID : " << monsterID << " 데이터 어플라이" << std::endl;
+			//std::cout << "몬스터 ID : " << monsterID << " 데이터 어플라이" << std::endl;
 		}
 	}
 }

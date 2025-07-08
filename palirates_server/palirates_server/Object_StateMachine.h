@@ -94,8 +94,10 @@ public:
     }
 
     std::shared_ptr<CAnimationController> animController;
+    int n_Ani{ 0 };
 
     virtual void update(float Elapsed_time) {};
+    virtual void SetWeight() {};
 };
 
 class MonsterStateMachine : public StateMachine
@@ -109,6 +111,7 @@ public:
     }
 
     void update(float Elapsed_time) override;
+    virtual void SetWeight(float Elapsed_time);
 };
 
 class FishManStateMachine : public MonsterStateMachine
