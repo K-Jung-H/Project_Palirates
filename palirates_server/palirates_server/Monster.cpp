@@ -57,7 +57,7 @@ Fishman::Fishman(int id) : Monster(id)
 
     auto* animSets = asset->m_pAnimationSets;
 
-    std::cout << "\n[Init]  Model loaded\n";
+   /* std::cout << "\n[Init]  Model loaded\n";
     std::cout << "  Bone Count : " << animSets->m_nBoneFrames << "\n";
 
     for (int i = 0; i < animSets->m_nBoneFrames; ++i) {
@@ -77,7 +77,7 @@ Fishman::Fishman(int id) : Monster(id)
             << set->m_pstrAnimationSetName
             << "   (keyFrames=" << set->m_nKeyFrames
             << ", length=" << set->m_fLength << "s)\n";
-    }
+    }*/
 
     m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
     m_pSkinnedAnimationController->RootIndex = RootIndex;

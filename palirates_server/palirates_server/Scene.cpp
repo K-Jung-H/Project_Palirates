@@ -56,13 +56,13 @@ void Lobby_Scene::Update_Scene(float elapsedTime)
             if (m->GetStateMachine())
                 m->GetStateMachine()->update(elapsedTime);
             con->AdvanceTime(elapsedTime, m.get());
-            for (int i = 0; i < con->m_nAnimationTracks; i++) {
+           /* for (int i = 0; i < con->m_nAnimationTracks; i++) {
                 std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
             }
-            std::cout << "\n";
+            std::cout << "\n";*/
         }
         else {
-            std::cout << "con 없음" << std::endl;
+            //std::cout << "con 없음" << std::endl;
         }
     }
 }
@@ -399,13 +399,13 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         auto con = m->GetSkinnedAnimationController();
         if (con) {
             con->AdvanceTime(elapsedTime, m.get());
-            for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
+            /*for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
                 std::cout << con->m_pAnimationTracks[i].m_fWeight;
             }
-            std::cout << "\n";
+            std::cout << "\n";*/
         }
         else {
-            std::cout << "con 없음" << std::endl;
+            //std::cout << "con 없음" << std::endl;
         }
     }
 }

@@ -488,7 +488,7 @@ void Server::Server_Update()
             Broadcast_Scene_State_All();
         }
 
-       // PrintClientDebugInfo();
+        PrintClientDebugInfo();
     }
 
     
