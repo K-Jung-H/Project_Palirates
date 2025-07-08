@@ -201,13 +201,14 @@ XMFLOAT3 GameObject::GetRight()
 
 void GameObject::SetLook(const XMFLOAT3& xmf3LookInput)
 {
-	XMFLOAT3 xmf3Look = xmf3LookInput;
-	if (Vector3::Length(xmf3Look) < 1e-6f)
-		xmf3Look = XMFLOAT3(0.0f, 0.0f, 1.0f);
+	XMFLOAT3 look = xmf3LookInput;
+	if (Vector3::Length(look) < 1e-6f)
+		look = XMFLOAT3(0.0f, 0.0f, 1.0f);
 
-	XMFLOAT3 look = Vector3::Normalize(xmf3Look);
+	look = Vector3::Normalize(look);
 	XMFLOAT3 up = XMFLOAT3(0.0f, 1.0f, 0.0f);
 
+	// Avoid singularity
 	if (fabs(Vector3::DotProduct(look, up)) > 0.999f)
 		up = XMFLOAT3(1.0f, 0.0f, 0.0f);
 
@@ -215,21 +216,24 @@ void GameObject::SetLook(const XMFLOAT3& xmf3LookInput)
 	up = Vector3::Normalize(Vector3::CrossProduct(look, right));
 
 	XMFLOAT3 scale = GetScale(m_xmf4x4Parent);
-	XMFLOAT3 position = GetPosition();
+	XMFLOAT3 position = GetTranslation(m_xmf4x4Parent);
 
-	XMVECTOR vRight = XMVectorScale(XMLoadFloat3(&right), scale.x);
-	XMVECTOR vUp = XMVectorScale(XMLoadFloat3(&up), scale.y);
-	XMVECTOR vLook = XMVectorScale(XMLoadFloat3(&look), scale.z);
+	// Apply scale
+	right = Vector3::ScalarProduct(right, scale.x);
+	up = Vector3::ScalarProduct(up, scale.y);
+	look = Vector3::ScalarProduct(look, scale.z);
 
-	XMFLOAT4X4 xmf4x4New;
-	xmf4x4New._11 = XMVectorGetX(vRight); xmf4x4New._12 = XMVectorGetY(vRight); xmf4x4New._13 = XMVectorGetZ(vRight); xmf4x4New._14 = 0.0f;
-	xmf4x4New._21 = XMVectorGetX(vUp);    xmf4x4New._22 = XMVectorGetY(vUp);    xmf4x4New._23 = XMVectorGetZ(vUp);    xmf4x4New._24 = 0.0f;
-	xmf4x4New._31 = XMVectorGetX(vLook);  xmf4x4New._32 = XMVectorGetY(vLook);  xmf4x4New._33 = XMVectorGetZ(vLook);  xmf4x4New._34 = 0.0f;
-	xmf4x4New._41 = position.x;           xmf4x4New._42 = position.y;           xmf4x4New._43 = position.z;           xmf4x4New._44 = 1.0f;
+	// Write back to parent matrix
+	m_xmf4x4Parent._11 = right.x;  m_xmf4x4Parent._12 = right.y;  m_xmf4x4Parent._13 = right.z;
+	m_xmf4x4Parent._21 = up.x;     m_xmf4x4Parent._22 = up.y;     m_xmf4x4Parent._23 = up.z;
+	m_xmf4x4Parent._31 = look.x;   m_xmf4x4Parent._32 = look.y;   m_xmf4x4Parent._33 = look.z;
 
-	m_xmf4x4Parent = xmf4x4New;
+	// Preserve position
+	m_xmf4x4Parent._41 = position.x;
+	m_xmf4x4Parent._42 = position.y;
+	m_xmf4x4Parent._43 = position.z;
+
 	UpdateTransform(nullptr);
-
 }
 
 void GameObject::SetUp(XMFLOAT3 xmf3Up)
@@ -647,6 +651,7 @@ void Boat_Object::Animate(float fTimeElapsed)
 	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
 	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
 }
+
 void Boat_Object::HandleBoundaryReflection(float boundary)
 {
 	XMFLOAT3 pos = GetPosition();
