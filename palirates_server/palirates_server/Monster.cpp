@@ -5,17 +5,13 @@
 
 Monster::Monster(int id) : monster_id(id)
 {
-    trackPositions.resize(4, 1.0f);
-    trackWeights.resize(4, 1.0f);
-    trackWeights[0] = 1.0f;
+
 }
 
 Monster::Monster()
 {
     type = Monster_Type::ETC;
-    trackPositions.resize(4, 1.0f);
-    trackWeights.resize(4, 1.0f);
-    trackWeights[0] = 1.0f;
+
 }
 
 
@@ -51,7 +47,7 @@ Fishman::Fishman(int id) : Monster(id)
 
     auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/FishmanLP.bin");
     if (!asset || !asset->m_pAnimationSets) {
-        std::cout << "[Init]  FishmanLP.bin ·Îµå ½ÇÆÐ\n";
+        std::cout << "[Init]  FishmanLP.bin ï¿½Îµï¿½ ï¿½ï¿½ï¿½ï¿½\n";
         return;
     }
 
@@ -95,15 +91,11 @@ Fishman::Fishman(int id) : Monster(id)
 Anubis::Anubis(int id) : Monster(id)
 {
     Monster_Type::Anubis;
-    trackPositions.resize(9, 1.0f);
-    trackWeights.resize(9, 1.0f);
-    trackWeights[0] = 1.0f;
+
 }
 
 Dragon::Dragon(int id) : Monster(id)
 {
     Monster_Type::Dragon;
-    trackPositions.resize(12, 1.0f);
-    trackWeights.resize(12, 1.0f);
-    trackWeights[0] = 1.0f;
+
 }

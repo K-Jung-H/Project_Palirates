@@ -637,12 +637,17 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
 
-	auto controller = GetSkinnedAnimationController();
-	if (!controller) return;
-	controller->ResetWeight();
-	auto track = controller->m_pAnimationTracks;
-	vector<Animation_Sync> track_list = syncData.track_info_list;
 
+	auto controller = GetSkinnedAnimationController();
+	
+	if (!controller) 
+		return;
+
+	controller->ResetWeight();
+	
+	auto track = controller->m_pAnimationTracks;
+
+	vector<Animation_Sync> track_list = syncData.track_info_list;
 	for(Animation_Sync animation_track_info : track_list)
 	{
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
@@ -650,8 +655,9 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 	}
 
 	controller->ApplyCurrentAnimationPose(this);
+
 }
-//º¸·ù
+
 
 //==================================================================
 

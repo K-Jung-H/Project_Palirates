@@ -29,7 +29,7 @@ public:
     std::recursive_mutex& GetSceneMutex() const { return sceneMutex; }
     Scene_Type GetSceneType() const;
 
-    // --- »óÅÂ ¾÷µ¥ÀÌÆ® ÇÔ¼ö ---
+    // --- ìƒíƒœ ì—…ë°ì´íŠ¸ í•¨ìˆ˜ ---
     virtual void Update_Scene(float elapsedTime);
     virtual void Remove_Player(int id) {}
 
@@ -41,10 +41,10 @@ public:
 class Lobby_Scene : public Scene
 {
 private:
-    // characterSelections[Ä³¸¯ÅÍ ID][Å¬¶óÀÌ¾ğÆ® ID] = ¼±ÅÃ ¿©ºÎ
+    // characterSelections[ìºë¦­í„° ID][í´ë¼ì´ì–¸íŠ¸ ID] = ì„ íƒ ì—¬ë¶€
     std::array<std::array<bool, MaxPlayer>, MaxPlayer> characterSelections;
 
-    // characterReady[Ä³¸¯ÅÍ ID] = ReadyÇÑ Å¬¶óÀÌ¾ğÆ® ID (¶Ç´Â -1)
+    // characterReady[ìºë¦­í„° ID] = Readyí•œ í´ë¼ì´ì–¸íŠ¸ ID (ë˜ëŠ” -1)
     std::array<int, MaxPlayer> characterReady;
 
 public:
@@ -76,8 +76,8 @@ class Board_Scene : public Scene
 {
 private:
     shared_ptr<Boat_Object> pirate_ship;
-    array<int32_t, MaxPlayer> player_keyState;
-    array<pair<int, bool>, MaxPlayer> stage_select_state;
+    std::array<int32_t, MaxPlayer> player_keyState;
+    std::array<pair<int, bool>, MaxPlayer> stage_select_state;
 public:
     Board_Scene() : Scene(Scene_Type::Board)
     {
@@ -104,6 +104,7 @@ class Stage_Scene : public Scene
 {
 private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
+    std::array<int32_t, MaxPlayer> player_keyState;
 
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) 
@@ -127,4 +128,6 @@ public:
     void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
 
     std::vector<std::shared_ptr<Monster>> Monster_List;
+
+    void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged);
 };

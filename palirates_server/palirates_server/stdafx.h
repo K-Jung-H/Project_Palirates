@@ -9,7 +9,7 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 
-
+#include <cmath>
 #include <Mmsystem.h>
 #include <vector>
 #include <string>

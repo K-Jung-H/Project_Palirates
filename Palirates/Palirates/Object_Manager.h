@@ -209,9 +209,7 @@ private:
 	// Dynamic object lists
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
-	std::vector<std::shared_ptr<CGameObject>> player_list;
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
-
 
 	// Static object map
 	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
@@ -254,6 +252,16 @@ public:
 	void Post_Update(Object_Type type);
 	void Post_Update_All();
 
+	//Player Map
+	std::map<int, std::shared_ptr<CPlayer>> player_map;
+	std::map<int, std::shared_ptr<CPlayer>> Get_Player_Map() { return player_map; }
+
+	//Sync Server
+	void Add_Player(std::shared_ptr<CPlayer> player_ptr);
+	void Remove_Player(int player_id);
+	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+
+
 	// Visibility / culling
 	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
 	void Check_Culling_All(CCamera* pCamera);
@@ -268,6 +276,8 @@ public:
 	void Render_Objects(Object_Type type, ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+
+
 
 
 	// Instancing update flag

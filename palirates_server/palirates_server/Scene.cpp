@@ -62,7 +62,7 @@ void Lobby_Scene::Update_Scene(float elapsedTime)
             std::cout << "\n";*/
         }
         else {
-            //std::cout << "con æ¯¿Ω" << std::endl;
+            //std::cout << "con ÏóÜÏùå" << std::endl;
         }
     }
 }
@@ -97,16 +97,16 @@ bool Lobby_Scene::SelectCharacter(int clientId, int characterId, bool isReady)
 
     if (isReady)
     {
-        // ¥Ÿ∏• ¥©±∫∞°∞° ¿ÃπÃ Ready «— ªÛ≈¬∏È Ω«∆–
+        // Îã§Î•∏ ÎàÑÍµ∞Í∞ÄÍ∞Ä Ïù¥ÎØ∏ Ready Ìïú ÏÉÅÌÉúÎ©¥ Ïã§Ìå®
         if (characterReady[characterId] != -1 && characterReady[characterId] != clientId)
             return false;
 
-        // Ready ªÛ≈¬ µÓ∑œ
+        // Ready ÏÉÅÌÉú Îì±Î°ù
         characterReady[characterId] = clientId;
     }
     else
     {
-        // Ready «ÿ¡¶¥¬ ¿⁄±‚ ¿⁄Ω≈¿Œ ∞ÊøÏ∏∏ «ÿ¡¶
+        // Ready Ìï¥Ï†úÎäî ÏûêÍ∏∞ ÏûêÏã†Ïù∏ Í≤ΩÏö∞Îßå Ìï¥Ï†ú
         if (characterReady[characterId] == clientId)
             characterReady[characterId] = -1;
     }
@@ -164,7 +164,7 @@ void Board_Scene::Init()
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
     if(pirate_ship)
-        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+        pirate_ship->SetPosition(0.0f, 0.0f, 1000.0f);
 
     for (int i = 0; i < MaxPlayer; i++)
     {
@@ -187,7 +187,7 @@ void Board_Scene::Update_Scene(float elapsedTime)
         int modelId = Scene::player_model_list[i];
         if (modelId == -1) continue; 
 
-        int weight = (modelId == 0) ? 2 : 1;  // ∏µ® 0π¯¿Ã∏È øµ«‚∑¬ 2πË
+        int weight = (modelId == 0) ? 2 : 1;  // Î™®Îç∏ 0Î≤àÏù¥Î©¥ ÏòÅÌñ•Î†• 2Î∞∞
 
         int32_t key = player_keyState[i];
         if (key & INPUT_W) fwd += weight;
@@ -208,7 +208,7 @@ void Board_Scene::Update_Scene(float elapsedTime)
     pirate_ship->Animate(elapsedTime);
     pirate_ship->HandleBoundaryReflection(1500);
 
-    // æ¿ ¿¸»Ø √º≈©
+    // Ïî¨ Ï†ÑÌôò Ï≤¥ÌÅ¨
     Change_Scene_Trigger = IsAllReadyAndValid();
 }
 
@@ -242,11 +242,11 @@ bool Board_Scene::IsAllReadyAndValid()
 
         if (readyCount == 0)
         {
-            selectedStage = stage; // ±‚¡ÿ stage º≥¡§
+            selectedStage = stage; // Í∏∞Ï§Ä stage ÏÑ§Ï†ï
         }
         else if (stage != selectedStage)
         {
-            return false; // º≠∑Œ ¥Ÿ∏• stage º±≈√
+            return false; // ÏÑúÎ°ú Îã§Î•∏ stage ÏÑ†ÌÉù
         }
 
         ++readyCount;
@@ -287,7 +287,7 @@ void Board_Scene::Select_State(int Client_ID, pair<int, bool> select_state)
         stage_select_state[Client_ID] = select_state; 
     }
     else
-        cout << "Error - [Update_KeyState]: Wrong_Index \n";
+        cout << "Error - [Select_State]: Wrong_Index \n";
 
 }
 
@@ -320,6 +320,25 @@ void Stage_Scene::Init()
  /*   std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
     Monster_List.push_back(m);*/
 }
+
+void Stage_Scene::Update_Scene(float elapsedTime)
+{
+
+}
+
+
+
+Scene_Type Stage_Scene::CheckSceneTransition()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (Change_Scene_Trigger)
+        return Scene_Type::Stage_1;
+    else
+        return Scene_Type::None;
+
+}
+
 
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
 {
@@ -381,15 +400,23 @@ void Stage_Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
     player_list[id]->SetLook(new_lookV);
 }
 
-void Stage_Scene::updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights)
+void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (id < 0 || id >= MaxPlayer || !player_list[id])
+    if (clientId < 0 || clientId >= MaxPlayer || !player_list[clientId])
         return;
+  
+    // ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏ÏóêÏÑú Ïò® Îç∞Ïù¥ÌÑ∞Î•º Player Í∞ùÏ≤¥Ïóê Ï†ÄÏû•
+    player_list[clientId]->SetPosition(position);
+    player_list[clientId]->SetLook(lookDirection);
+    player_list[clientId]->key_input(inputFlags);
 
-    player_list[id]->SetAnimPositions(positions);
-    player_list[id]->SetAnimWeights(weights);
+    if (!tracks.empty())
+    {
+        player_list[clientId]->SetTrackInfoList(tracks);
+        player_list[clientId]->SetStateChanged(stateChanged);
+    }
 }
 
 
@@ -405,21 +432,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             std::cout << "\n";*/
         }
         else {
-            //std::cout << "con æ¯¿Ω" << std::endl;
+            //std::cout << "con ÏóÜÏùå" << std::endl;
         }
     }
 }
-
-
-
-Scene_Type Stage_Scene::CheckSceneTransition()
-{
-    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
-
-    if (Change_Scene_Trigger)
-        return Scene_Type::Stage_1;
-    else
-        return Scene_Type::None;
-
-}
-
