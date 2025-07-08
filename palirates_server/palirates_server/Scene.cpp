@@ -319,6 +319,7 @@ void Stage_Scene::Init()
 
     // test
     std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    m->SetPosition(XMFLOAT3(1500, 0, 700));
     Monster_List.push_back(m);
 }
 

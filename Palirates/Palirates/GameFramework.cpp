@@ -1405,7 +1405,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 
-		std::cout << "cmd = " << cmd << std::endl;
 		if (cmd == "STAGE_1")
 			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
 		else if (cmd == "MONSTER_SNAPSHOT")
@@ -1564,7 +1563,8 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
 	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
-	if (tokens.size() < 7) return;
+	std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
+	if (tokens.size() < 10) return;
 
 	//int   monsterId = std::stoi(tokens[1]);
 	//int   monsterType = std::stoi(tokens[2]);
@@ -1574,13 +1574,16 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 	float lx = std::stof(tokens[4]);
 	float ly = std::stof(tokens[5]);
 	float lz = std::stof(tokens[6]);
+	float index = std::stof(tokens[7]);
+	float trackpos = std::stof(tokens[8]);
+	float weight = std::stof(tokens[9]);
 	//int   hp = std::stoi(tokens[6]);
 	//int   state = std::stoi(tokens[7]);
 
 	// look 벡터까지 보내면 index가 한 칸씩 뒤로 밀립니다.
 	// float lx = std::stof(tokens[6]); ... hp = std::stoi(tokens[9]) 처럼 맞춰 주세요.
-
-	stage_scene->Sync_Monster_Data(XMFLOAT3(mx, my, mz), XMFLOAT3(mx, my, mz));
+	std::cout << "몬스터 데이터 리시브" << std::endl;
+	stage_scene->Sync_Monster_Data(XMFLOAT3(mx, my, mz), XMFLOAT3(mx, my, mz), index, trackpos, weight);
 }
 
 void CGameFramework::HandleClientIdAssignment()

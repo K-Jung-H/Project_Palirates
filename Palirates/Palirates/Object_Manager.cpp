@@ -991,6 +991,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 				if (obj_ptr->Get_Active()) {
 					if (!obj_ptr->HasType(EObjectType::MainPlayer | EObjectType::Monster))
 						obj_ptr->Animate(fTimeElapsed);
+					else obj_ptr->OnPrepareAnimate();
 				}
 		}
 		else {

@@ -2214,17 +2214,28 @@ void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 	obj_manager->Sync_Player_Data(player_id, syncData);
 }
 
-void CScene::Sync_Monster_Data(const XMFLOAT3& pos, const XMFLOAT3& look)
+void CScene::Sync_Monster_Data(const XMFLOAT3& pos, const XMFLOAT3& look, const float trackindex, const float trackpos, const float trackweight)
 {
-	auto v = obj_manager->Get_Object_List(Object_Type::skinned); 
-	if (!v || v->empty()) return;                                
+	auto v = obj_manager->Get_Object_List(Object_Type::skinned); // vector* 반환
+	if (!v || v->empty()) return;
 
-	auto monster = (*v)[0];   
-	monster->SetPosition(pos);
-	monster->SetLookDirection(look);
-	auto tpos = monster->GetPosition();
-	auto tlook = monster->GetLook();
-	std::cout << "몬스터 데이터 입히기 : " << tpos.x << tpos.y << tpos.z << tlook.x << tlook.y << tlook.z << std::endl;
+	/* 1) 0번째 객체 가져오기 */
+	std::shared_ptr<CGameObject> obj = (*v)[0];  // 벡터 역참조 후 [0]
+
+	/* 2) 몬스터 타입인지 확인하고 캐스팅 */
+	auto monster = std::dynamic_pointer_cast<CMonsterObject>(obj);
+	if (!monster) return;
+
+	/* 3) 동기 데이터 구성 */
+	ServerSyncData syncData;
+	syncData.position = pos;
+	syncData.lookVector = look;
+	syncData.track_info_list = { { int(trackindex), trackweight, trackpos } };
+	syncData.bStateChange = false;
+
+	/* 4) 적용 */
+	monster->ApplySyncData(syncData);
+	std::cout << "몬스터 데이터 어플라이" << std::endl;
 }
 
 //==========================================================================================

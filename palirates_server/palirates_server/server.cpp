@@ -576,10 +576,20 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         //int monster_id = monster->GetID();
         //int monster_type = static_cast<int>(monster->GetType());
         //int monster_hp = monster->hp;
+        auto con = monster->GetSkinnedAnimationController();
+        float trackindex = 0;
+        for (int i = 0; i < con->m_nAnimationTracks; ++i) {
+            if (con->m_pAnimationTracks[i].m_fWeight > ANIMATION_CALLBACK_EPSILON) {
+                trackindex = i;
+                break;
+            }
+        }
+        float trackpos = con->m_pAnimationTracks[int(trackindex)].m_fPosition;
+        float trackweight = con->m_pAnimationTracks[int(trackindex)].m_fWeight;
 
         oss << "MONSTER_SNAPSHOT,"/* << monster_id << "," << monster_type << ","*/
             << mpos.x << "," << mpos.y << "," << mpos.z << ","
-            << mlook.x << "," << mlook.y << "," << mlook.z /*<< ","
+            << mlook.x << "," << mlook.y << "," << mlook.z << "," << trackindex << "," << trackpos << "," << trackweight /*<< ","
             << monster_hp <<*/ << "\n";
 
         std::cout << "몬스터데이터 생성 성공" << std::endl;
