@@ -81,8 +81,12 @@ public:
     void SetRight(XMFLOAT3 xmf3Right);
 
     static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
-    static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
     static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
+
+    static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);
+    static std::shared_ptr<GameObject> Load_Scene_FrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile);
+
     void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
     void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
@@ -91,6 +95,7 @@ public:
     Object_Type GetType() { return obj_type; }
 
     std::unordered_set<int> RootMotionTrackSet;
+
 
     std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
     void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }

@@ -374,85 +374,6 @@ CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileNam
 	return(pLoadedModel);
 }
 
-std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile( std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes)
-{
-	char pstrToken[64] = { '\0' };
-	UINT nReads = 0;
-
-	int nFrame = 0, nTextures = 0;
-
-	std::shared_ptr<GameObject> pGameObject = std::make_shared<GameObject>();
-
-	for (; ; )
-	{
-		::ReadStringFromFile(pInFile, pstrToken);
-		if (!strcmp(pstrToken, "<Frame>:"))
-		{
-			nFrame = ::ReadIntegerFromFile(pInFile);
-			nTextures = ::ReadIntegerFromFile(pInFile);
-
-			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
-		}
-		else if (!strcmp(pstrToken, "<Transform>:"))
-		{
-			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
-			XMFLOAT4 xmf4Rotation;
-			nReads = (UINT)::fread(&xmf3Position, sizeof(float), 3, pInFile);
-			nReads = (UINT)::fread(&xmf3Rotation, sizeof(float), 3, pInFile); //Euler Angle
-			nReads = (UINT)::fread(&xmf3Scale, sizeof(float), 3, pInFile);
-			nReads = (UINT)::fread(&xmf4Rotation, sizeof(float), 4, pInFile); //Quaternion
-		}
-		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
-		{
-			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
-		}
-		else if (!strcmp(pstrToken, "<Mesh>:"))
-		{
-			shared_ptr<CStandardMesh> pMesh = make_shared<CStandardMesh>();
-			pMesh->LoadMeshFromFile(pInFile);
-			pGameObject->SetMesh(pMesh);
-		}
-		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
-		{
-			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
-
-			shared_ptr<CSkinnedMesh> pSkinnedMesh = make_shared<CSkinnedMesh>();
-			pSkinnedMesh->LoadSkinInfoFromFile(pInFile);
-
-			::ReadStringFromFile(pInFile, pstrToken);
-			if (!strcmp(pstrToken, "<Mesh>:")) {
-				pSkinnedMesh->LoadMeshFromFile(pInFile);
-			}
-
-			pGameObject->SetSkinnedMesh(pSkinnedMesh);
-		}
-		else if (!strcmp(pstrToken, "<Materials>:"))
-		{
-			SkipMaterialsBlock(pInFile);
-		}
-		else if (!strcmp(pstrToken, "<Children>:"))
-		{
-			int nChilds = ::ReadIntegerFromFile(pInFile);
-			if (nChilds > 0)
-			{
-				for (int i = 0; i < nChilds; i++)
-				{
-					std::shared_ptr<GameObject> pChild_raw_ptr = GameObject::LoadFrameHierarchyFromFile(pGameObject, pInFile, pnSkinnedMeshes);
-
-					std::shared_ptr<GameObject> pChild(pChild_raw_ptr);
-					if (pChild)
-						pGameObject->Set_Child(pChild);
-				}
-			}
-		}
-		else if (!strcmp(pstrToken, "</Frame>"))
-		{
-			break;
-		}
-	}
-	return(pGameObject);
-}
-
 void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName)
 {
 	char pstrToken[64] = { '\0' };
@@ -535,6 +456,199 @@ void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedM
 		}
 	}
 }
+
+std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes)
+{
+	char pstrToken[64] = { '\0' };
+	UINT nReads = 0;
+
+	int nFrame = 0, nTextures = 0;
+
+	std::shared_ptr<GameObject> pGameObject = std::make_shared<GameObject>();
+
+	for (; ; )
+	{
+		::ReadStringFromFile(pInFile, pstrToken);
+		if (!strcmp(pstrToken, "<Frame>:"))
+		{
+			nFrame = ::ReadIntegerFromFile(pInFile);
+			nTextures = ::ReadIntegerFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+		}
+		else if (!strcmp(pstrToken, "<Transform>:"))
+		{
+			XMFLOAT3 xmf3Position, xmf3Rotation, xmf3Scale;
+			XMFLOAT4 xmf4Rotation;
+			nReads = (UINT)::fread(&xmf3Position, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf3Rotation, sizeof(float), 3, pInFile); //Euler Angle
+			nReads = (UINT)::fread(&xmf3Scale, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&xmf4Rotation, sizeof(float), 4, pInFile); //Quaternion
+		}
+		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
+		{
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Mesh>:"))
+		{
+			char meshName[64];
+			ReadStringFromFile(pInFile, meshName);
+
+			auto mesh = MeshManager::GetMesh(meshName);
+			if (!mesh)
+			{
+				mesh = std::make_shared<CStandardMesh>();
+				mesh->LoadMeshFromFile(pInFile);
+				MeshManager::AddMesh(meshName, mesh);
+			}
+
+			pGameObject->SetMesh(mesh);
+		}
+		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
+		{
+			if (pnSkinnedMeshes) (*pnSkinnedMeshes)++;
+
+			shared_ptr<CSkinnedMesh> pSkinnedMesh = make_shared<CSkinnedMesh>();
+			pSkinnedMesh->LoadSkinInfoFromFile(pInFile);
+
+			::ReadStringFromFile(pInFile, pstrToken);
+			if (!strcmp(pstrToken, "<Mesh>:")) {
+				pSkinnedMesh->LoadMeshFromFile(pInFile);
+			}
+
+			pGameObject->SetSkinnedMesh(pSkinnedMesh); // 메시 이름이 없어서, Cache로 저장하기 어려움
+		}
+		else if (!strcmp(pstrToken, "<Materials>:"))
+		{
+			SkipMaterialsBlock(pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Children>:"))
+		{
+			int nChilds = ::ReadIntegerFromFile(pInFile);
+			if (nChilds > 0)
+			{
+				for (int i = 0; i < nChilds; i++)
+				{
+					std::shared_ptr<GameObject> pChild_raw_ptr = GameObject::LoadFrameHierarchyFromFile(pGameObject, pInFile, pnSkinnedMeshes);
+
+					std::shared_ptr<GameObject> pChild(pChild_raw_ptr);
+					if (pChild)
+						pGameObject->Set_Child(pChild);
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</Frame>"))
+		{
+			break;
+		}
+	}
+	return(pGameObject);
+}
+
+std::shared_ptr<GameObject> GameObject::Load_Scene(char* pstrFileName)
+{
+	FILE* pInFile = nullptr;
+	fopen_s(&pInFile, pstrFileName, "rb");
+	if (!pInFile)
+	{
+		std::cout << "Failed to open scene file: " << pstrFileName << std::endl;
+		return nullptr;
+	}
+
+	char pstrToken[64] = {};
+	std::shared_ptr<GameObject> pRoot = nullptr;
+
+	while (::ReadStringFromFile(pInFile, pstrToken))
+	{
+		if (!strcmp(pstrToken, "<Hierarchy>:"))
+		{
+			pRoot = GameObject::Load_Scene_FrameHierarchyFromFile(nullptr, pInFile);
+			break;
+		}
+	}
+
+	fclose(pInFile);
+
+	if (!pRoot)
+	{
+		std::cout << "No <Hierarchy> block found in scene file: " << pstrFileName << std::endl;
+	}
+
+	return pRoot;
+}
+
+std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile)
+{
+	char pstrToken[64] = {};
+	UINT nReads = 0;
+
+	int nFrame = 0, nTextures = 0;
+
+	std::shared_ptr<GameObject> pGameObject = std::make_shared<GameObject>();
+
+	while (::ReadStringFromFile(pInFile, pstrToken))
+	{
+		if (!strcmp(pstrToken, "<Frame>:"))
+		{
+			nFrame = ::ReadIntegerFromFile(pInFile);
+			nTextures = ::ReadIntegerFromFile(pInFile);
+			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+		}
+		else if (!strcmp(pstrToken, "<Transform>:"))
+		{
+			XMFLOAT3 pos, rot, scale;
+			XMFLOAT4 quat;
+			nReads = (UINT)::fread(&pos, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&rot, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&scale, sizeof(float), 3, pInFile);
+			nReads = (UINT)::fread(&quat, sizeof(float), 4, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<TransformMatrix>:"))
+		{
+			nReads = (UINT)::fread(&pGameObject->m_xmf4x4Parent, sizeof(float), 16, pInFile);
+		}
+		else if (!strcmp(pstrToken, "<Mesh>:"))
+		{
+			::ReadStringFromFile(pInFile, pstrToken);
+			if (!strcmp(pstrToken, "<Mesh_Name>:"))
+			{
+				::ReadStringFromFile(pInFile, pstrToken);
+				std::string fileName = "Scene/Meshes/" + std::string(pstrToken);
+
+				auto mesh = MeshManager::GetMesh(fileName);
+				if (!mesh)
+				{
+					mesh = std::make_shared<CStandardMesh>();
+					mesh->LoadMeshFrom_OtherFile(fileName.c_str());
+					MeshManager::AddMesh(fileName, mesh);
+				}
+
+				if (mesh)
+					pGameObject->SetMesh(mesh);
+			}
+		}
+		else if (!strcmp(pstrToken, "<Materials>:"))
+		{
+			SkipMaterialsBlock(pInFile); // 서버는 텍스처 무시
+		}
+		else if (!strcmp(pstrToken, "<Children>:"))
+		{
+			int nChildren = ::ReadIntegerFromFile(pInFile);
+			for (int i = 0; i < nChildren; ++i)
+			{
+				auto pChild = GameObject::Load_Scene_FrameHierarchyFromFile(pGameObject, pInFile);
+				if (pChild) pGameObject->Set_Child(pChild);
+			}
+		}
+		else if (!strcmp(pstrToken, "</Frame>"))
+		{
+			break;
+		}
+	}
+
+	return pGameObject;
+}
+
 
 void GameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes)
 {

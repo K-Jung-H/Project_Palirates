@@ -2,6 +2,9 @@
 #include "ServerAnimLoader.h"
 #include "GameObject.h" 
 
+std::unordered_map<std::string, std::shared_ptr<CStandardMesh>> MeshManager::mesh_cache;
+std::mutex MeshManager::cache_mutex;
+
 using namespace DirectX;
 
 
@@ -206,4 +209,125 @@ void CLoadedModelInfo::PrepareSkinning()
 
 	for (int i = 0; i < m_nSkinnedMeshes; i++)
 		m_ppSkinnedMeshes[i]->PrepareSkinning(m_pModelRootObject);
+}
+
+void CStandardMesh::LoadMeshFrom_OtherFile(const char* pstrFileName)
+{
+	FILE* pInFile = nullptr;
+	errno_t err = ::fopen_s(&pInFile, pstrFileName, "rb");
+
+	if (err != 0 || pInFile == nullptr) {
+		std::cout << "Error: Cannot open mesh file: " << pstrFileName << std::endl;
+		return;
+	}
+
+	::rewind(pInFile);
+
+	char pstrToken[64] = {};
+	int nPositions = 0, nColors = 0, nNormals = 0, nTangents = 0;
+	int nBiTangents = 0, nTextureCoords = 0, nIndices = 0, nSubMeshes = 0;
+
+	if (::ReadStringFromFile(pInFile, pstrToken)) {
+		if (strcmp(pstrToken, "<Mesh>:")) {
+			fclose(pInFile);
+			return;
+		}
+	}
+
+	UINT nReads = (UINT)::fread(&m_nVertices, sizeof(int), 1, pInFile);
+	::ReadStringFromFile(pInFile, m_pstrMeshName);
+
+	for (;;)
+	{
+		if (!ReadStringFromFile(pInFile, pstrToken)) break;
+
+		if (!strcmp(pstrToken, "<Bounds>:"))
+		{
+			nReads = (UINT)::fread(&m_xmf3AABBCenter, sizeof(XMFLOAT3), 1, pInFile);
+			nReads = (UINT)::fread(&m_xmf3AABBExtents, sizeof(XMFLOAT3), 1, pInFile);
+	//		bounding_box = new BoundingOrientedBox(m_xmf3AABBCenter, m_xmf3AABBExtents, XMFLOAT4{ 0, 0, 0, 1 });
+		}
+		else if (!strcmp(pstrToken, "<Positions>:"))
+		{
+			nReads = (UINT)::fread(&nPositions, sizeof(int), 1, pInFile);
+			if (nPositions > 0)
+			{
+				m_pxmf3Positions = new XMFLOAT3[nPositions];
+				nReads = (UINT)::fread(m_pxmf3Positions, sizeof(XMFLOAT3), nPositions, pInFile);
+			}
+		}
+		else if (!strcmp(pstrToken, "<Colors>:"))
+		{
+			nReads = (UINT)::fread(&nColors, sizeof(int), 1, pInFile);
+			if (nColors > 0)
+			{
+				XMFLOAT4* dummy = new XMFLOAT4[nColors];
+				nReads = (UINT)::fread(dummy, sizeof(XMFLOAT4), nColors, pInFile);
+				delete[] dummy;
+			}
+		}
+		else if (!strcmp(pstrToken, "<TextureCoords0>:") || !strcmp(pstrToken, "<TextureCoords1>:"))
+		{
+			nReads = (UINT)::fread(&nTextureCoords, sizeof(int), 1, pInFile);
+			if (nTextureCoords > 0)
+			{
+				XMFLOAT2* dummy = new XMFLOAT2[nTextureCoords];
+				nReads = (UINT)::fread(dummy, sizeof(XMFLOAT2), nTextureCoords, pInFile);
+				delete[] dummy;
+			}
+		}
+		else if (!strcmp(pstrToken, "<Normals>:"))
+		{
+			nReads = (UINT)::fread(&nNormals, sizeof(int), 1, pInFile);
+			if (nNormals > 0)
+			{
+				XMFLOAT3* m_pxmf3Normals = new XMFLOAT3[nNormals];
+				nReads = (UINT)::fread(m_pxmf3Normals, sizeof(XMFLOAT3), nNormals, pInFile);
+				delete[] m_pxmf3Normals;
+			}
+		}
+		else if (!strcmp(pstrToken, "<Tangents>:") || !strcmp(pstrToken, "<BiTangents>:"))
+		{
+			int count = 0;
+			nReads = (UINT)::fread(&count, sizeof(int), 1, pInFile);
+			if (count > 0)
+			{
+				XMFLOAT3* dummy = new XMFLOAT3[count];
+				nReads = (UINT)::fread(dummy, sizeof(XMFLOAT3), count, pInFile);
+				delete[] dummy;
+			}
+		}
+		else if (!strcmp(pstrToken, "<SubMeshes>:"))
+		{
+			nReads = (UINT)::fread(&m_nSubMeshes, sizeof(int), 1, pInFile);
+			if (m_nSubMeshes > 0)
+			{
+				m_pnSubSetIndices = new int[m_nSubMeshes];
+				m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+				for (int i = 0; i < m_nSubMeshes; ++i)
+				{
+					::ReadStringFromFile(pInFile, pstrToken); // "<SubMesh>:"
+					int subIdx = 0;
+					nReads = (UINT)::fread(&subIdx, sizeof(int), 1, pInFile);
+					nReads = (UINT)::fread(&m_pnSubSetIndices[i], sizeof(int), 1, pInFile);
+					if (m_pnSubSetIndices[i] > 0)
+					{
+						m_ppnSubSetIndices[i] = new UINT[m_pnSubSetIndices[i]];
+						nReads = (UINT)::fread(m_ppnSubSetIndices[i], sizeof(UINT), m_pnSubSetIndices[i], pInFile);
+					}
+				}
+			}
+		}
+		else if (!strcmp(pstrToken, "</Mesh>"))
+		{
+			break;
+		}
+		else
+		{
+			std::cout << "Warning: Unknown token in mesh file: " << pstrToken << std::endl;
+		}
+	}
+
+	fclose(pInFile);
 }

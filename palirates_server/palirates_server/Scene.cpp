@@ -46,6 +46,10 @@ void Lobby_Scene::Init()
     // test
     std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
     Monster_List.push_back(m);
+
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+    scene = GameObject::Load_Scene("Scene/Scene_Name.bin");
+    MeshManager::GetMesh("asd");
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
