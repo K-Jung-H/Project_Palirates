@@ -38,9 +38,9 @@ Fishman::Fishman(int id) : Monster(id)
     Monster_Type::Fishman;
     n_Animation = 9;
     RootIndex = 0;
-    trackPositions.resize(n_Animation, 0.0f);
-    trackWeights.resize(n_Animation, 0.0f);
-    trackWeights[0] = 1.0f;
+    //trackPositions.resize(n_Animation, 0.0f);
+    //trackWeights.resize(n_Animation, 0.0f);
+    //trackWeights[0] = 1.0f;
 
     prevWeights.resize(n_Animation, 0.0f);
     targetWeights.resize(n_Animation, 0.0f);

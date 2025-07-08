@@ -323,10 +323,20 @@ void Stage_Scene::Init()
 
 void Stage_Scene::Update_Scene(float elapsedTime)
 {
-
+    for (auto m : Monster_List) {
+        auto con = m->GetSkinnedAnimationController();
+        if (con) {
+            con->AdvanceTime(elapsedTime, m.get());
+            /*for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
+                std::cout << con->m_pAnimationTracks[i].m_fWeight;
+            }
+            std::cout << "\n";*/
+        }
+        else {
+            //std::cout << "con 없음" << std::endl;
+        }
+    }
 }
-
-
 
 Scene_Type Stage_Scene::CheckSceneTransition()
 {
@@ -408,31 +418,13 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         return;
   
     // 클라이언트에서 온 데이터를 Player 객체에 저장
-    player_list[clientId]->SetPosition(position);
     player_list[clientId]->SetLook(lookDirection);
+    player_list[clientId]->SetPosition(position);
     player_list[clientId]->key_input(inputFlags);
 
     if (!tracks.empty())
     {
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
-    }
-}
-
-
-void Stage_Scene::Update_Scene(float elapsedTime)
-{
-    for (auto m : Monster_List) {
-        auto con = m->GetSkinnedAnimationController();
-        if (con) {
-            con->AdvanceTime(elapsedTime, m.get());
-            /*for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
-                std::cout << con->m_pAnimationTracks[i].m_fWeight;
-            }
-            std::cout << "\n";*/
-        }
-        else {
-            //std::cout << "con 없음" << std::endl;
-        }
     }
 }
