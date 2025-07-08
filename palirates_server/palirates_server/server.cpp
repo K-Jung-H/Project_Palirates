@@ -565,6 +565,26 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
 
+    const auto& monster_list = stage->Monster_List; 
+
+    if (!monster_list.empty())
+    {
+        const auto& monster = monster_list[0];
+
+        XMFLOAT3 mpos = monster->GetPosition();
+        XMFLOAT3 mlook = monster->GetLook();
+        //int monster_id = monster->GetID();
+        //int monster_type = static_cast<int>(monster->GetType());
+        //int monster_hp = monster->hp;
+
+        oss << "MONSTER_SNAPSHOT,"/* << monster_id << "," << monster_type << ","*/
+            << mpos.x << "," << mpos.y << "," << mpos.z << ","
+            << mlook.x << "," << mlook.y << "," << mlook.z /*<< ","
+            << monster_hp <<*/ << "\n";
+
+        std::cout << "몬스터데이터 생성 성공" << std::endl;
+    }
+
     return oss.str();
 }
 

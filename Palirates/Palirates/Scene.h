@@ -277,7 +277,7 @@ public:
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
-
+	virtual void Sync_Monster_Data(const XMFLOAT3& pos, const XMFLOAT3& look);
 };
 
 class Character_Select_Scene : public CScene

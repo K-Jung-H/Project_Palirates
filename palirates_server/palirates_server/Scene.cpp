@@ -317,8 +317,9 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
- /*   std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
-    Monster_List.push_back(m);*/
+    // test
+    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    Monster_List.push_back(m);
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -326,11 +327,13 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     for (auto m : Monster_List) {
         auto con = m->GetSkinnedAnimationController();
         if (con) {
+            if (m->GetStateMachine())
+                m->GetStateMachine()->update(elapsedTime);
             con->AdvanceTime(elapsedTime, m.get());
-            /*for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
-                std::cout << con->m_pAnimationTracks[i].m_fWeight;
-            }
-            std::cout << "\n";*/
+            /* for (int i = 0; i < con->m_nAnimationTracks; i++) {
+                 std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
+             }
+             std::cout << "\n";*/
         }
         else {
             //std::cout << "con 없음" << std::endl;

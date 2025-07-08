@@ -1083,7 +1083,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 	*/
 
-		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		/*std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
 		Dragon->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 
@@ -1093,10 +1093,10 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
 		Dragon->Rotate(&tt2, 180.0f);
 		Dragon->test_num = 5;
-		obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 1; i++)
 		{
 			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->Set_Child(m->m_pRootModel);
@@ -1857,12 +1857,17 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
 
-	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
-	if (list) {
-		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
-			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
-			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
-				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+	if (isRunning) {
+
+	}
+	else {
+		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (list) {
+			for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+				if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+				if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+					monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+				}
 			}
 		}
 	}
@@ -2207,6 +2212,19 @@ void CScene::Remove_Multi_Player(int player_id)
 void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+void CScene::Sync_Monster_Data(const XMFLOAT3& pos, const XMFLOAT3& look)
+{
+	auto v = obj_manager->Get_Object_List(Object_Type::skinned); 
+	if (!v || v->empty()) return;                                
+
+	auto monster = (*v)[0];   
+	monster->SetPosition(pos);
+	monster->SetLookDirection(look);
+	auto tpos = monster->GetPosition();
+	auto tlook = monster->GetLook();
+	std::cout << "몬스터 데이터 입히기 : " << tpos.x << tpos.y << tpos.z << tlook.x << tlook.y << tlook.z << std::endl;
 }
 
 //==========================================================================================

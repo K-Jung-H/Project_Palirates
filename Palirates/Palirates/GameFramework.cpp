@@ -1405,8 +1405,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 
-
-		ProcessReceivedData_Stage(stage_scene, cmd, tokens);
+		std::cout << "cmd = " << cmd << std::endl;
+		if (cmd == "STAGE_1")
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
+		else if (cmd == "MONSTER_SNAPSHOT")
+			ProcessReceivedData_Monster(stage_scene, tokens);
+		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
 	break;
 
@@ -1555,6 +1559,28 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
 	}
+}
+
+void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
+{
+	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
+	if (tokens.size() < 7) return;
+
+	//int   monsterId = std::stoi(tokens[1]);
+	//int   monsterType = std::stoi(tokens[2]);
+	float mx = std::stof(tokens[1]);
+	float my = std::stof(tokens[2]);
+	float mz = std::stof(tokens[3]);
+	float lx = std::stof(tokens[4]);
+	float ly = std::stof(tokens[5]);
+	float lz = std::stof(tokens[6]);
+	//int   hp = std::stoi(tokens[6]);
+	//int   state = std::stoi(tokens[7]);
+
+	// look 벡터까지 보내면 index가 한 칸씩 뒤로 밀립니다.
+	// float lx = std::stof(tokens[6]); ... hp = std::stoi(tokens[9]) 처럼 맞춰 주세요.
+
+	stage_scene->Sync_Monster_Data(XMFLOAT3(mx, my, mz), XMFLOAT3(mx, my, mz));
 }
 
 void CGameFramework::HandleClientIdAssignment()
@@ -1735,37 +1761,59 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
+	char buf[2048];
+	std::string pending;                
 
 	while (isRunning)
 	{
-		char buffer[1024 + 1];
-		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-		//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+		int n = recv(serverSocket, buf, sizeof(buf), 0);
+		if (n <= 0) { break; }
 
-		if (bytesReceived > 0)
+		pending.append(buf, n);
+
+		size_t pos;
+		while ((pos = pending.find('\n')) != std::string::npos)
 		{
-			buffer[bytesReceived] = '\0';
-			std::string receivedData(buffer);
+			std::string line = pending.substr(0, pos);   
+			pending.erase(0, pos + 1);                   
 
 			{
-				std::lock_guard<std::mutex> lock(recvQueueMutex);
-				recvQueue.push(receivedData);
-				//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+				std::lock_guard<std::mutex> lk(recvQueueMutex);
+				recvQueue.push(std::move(line));         
 			}
 		}
-
-		else if (bytesReceived == SOCKET_ERROR)
-		{
-			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
-		}
-		else if (bytesReceived == 0)
-		{
-			std::cerr << "[INFO] Connection with server closed" << std::endl;
-			isRunning = false;
-			break;
-		}
-
 	}
+
+	//while (isRunning)
+	//{
+	//	char buffer[1024 + 1];
+	//	int bytesReceived = recv(serverSocket, buffer, 1024, 0);
+	//	//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+
+	//	if (bytesReceived > 0)
+	//	{
+	//		buffer[bytesReceived] = '\0';
+	//		std::string receivedData(buffer);
+
+	//		{
+	//			std::lock_guard<std::mutex> lock(recvQueueMutex);
+	//			recvQueue.push(receivedData);
+	//			//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+	//		}
+	//	}
+
+	//	else if (bytesReceived == SOCKET_ERROR)
+	//	{
+	//		std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
+	//	}
+	//	else if (bytesReceived == 0)
+	//	{
+	//		std::cerr << "[INFO] Connection with server closed" << std::endl;
+	//		isRunning = false;
+	//		break;
+	//	}
+
+	//}
 }
 
 bool CGameFramework::IsServerConnected()
