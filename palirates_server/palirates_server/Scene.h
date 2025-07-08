@@ -125,7 +125,7 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
-    void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
+
 
     std::vector<std::shared_ptr<Monster>> Monster_List;
 

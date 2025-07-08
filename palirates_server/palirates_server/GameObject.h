@@ -45,6 +45,7 @@ public:
         XMStoreFloat4x4(&m_xmf4x4Parent, XMMatrixIdentity());
         XMStoreFloat4x4(&m_xmf4x4World, XMMatrixIdentity());
     }
+
     ~GameObject() = default;
     void Set_Child(shared_ptr<GameObject> pChild);
 

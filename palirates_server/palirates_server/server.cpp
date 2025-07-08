@@ -463,13 +463,20 @@ bool Server::Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket)
     }
 }
 
-std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby)
+std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby) 
 {
-    std::ostringstream oss;
-    oss << "CHARACTER_SELECT_SCENE,";
+    std::array<std::array<bool, MaxPlayer>, MaxPlayer> selections;
+    std::array<int, MaxPlayer> readyStates;
 
-    const auto& selections = lobby->GetCharacterSelections();
-    const auto& readyStates = lobby->GetCharacterReadyStates();
+    std::ostringstream oss;
+    
+    {
+        std::lock_guard<std::recursive_mutex> lock(lobby->GetSceneMutex());
+        selections = lobby->GetCharacterSelections(); 
+        readyStates = lobby->GetCharacterReadyStates(); 
+    }
+
+    oss << "CHARACTER_SELECT_SCENE,";
 
     for (int charId = 0; charId < MaxPlayer; ++charId)
     {
@@ -505,8 +512,14 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
 std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board)
 {
-    XMFLOAT3 pos = board->Get_PirateShip_Position();
-    XMFLOAT3 look = board->Get_PirateShip_Look();
+    XMFLOAT3 pos;
+    XMFLOAT3 look;
+
+    std::lock_guard<std::recursive_mutex> lock(board->GetSceneMutex());
+    {
+        pos = board->Get_PirateShip_Position();
+        look = board->Get_PirateShip_Look();
+    }
 
     std::ostringstream oss;
     oss << "BOARD_SCENE,"
@@ -521,41 +534,44 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
 
 std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage)
 {
-    const std::array<std::shared_ptr<Player>, MaxPlayer> player_list = stage->Get_PlayerList();
-
     std::ostringstream oss;
     std::ostringstream players_data;
 
     int valid_player_count = 0;
 
-    for (int id = 0; id < MaxPlayer; ++id)
     {
-        const auto& player_ptr = player_list[id];
-        if (!player_ptr)
-            continue;
+        std::lock_guard<std::recursive_mutex> lock(stage->GetSceneMutex());  
 
-        ++valid_player_count;
+        const auto& player_list = stage->Get_PlayerList();  
 
-        const XMFLOAT3 pos = player_ptr->GetPosition();
-        const XMFLOAT3 look = player_ptr->GetLook();
-
-        const auto& anim_data = player_ptr->GetAnimationSyncData();
-        const auto& track_list = anim_data.track_info_list;
-        bool state_changed = anim_data.stateChanged;
-
-        players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
-            << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
-            << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
-            << std::to_string(track_list.size());
-
-        for (const auto& track : track_list)
+        for (int id = 0; id < MaxPlayer; ++id)
         {
-            players_data << "," << std::to_string(track.track_index)
-                << "," << std::to_string(track.weight)
-                << "," << std::to_string(track.track_position);
-        }
+            const auto& player_ptr = player_list[id];
+            if (!player_ptr)
+                continue;
 
-        players_data << "," << (state_changed ? "1" : "0") << ",";
+            ++valid_player_count;
+            const XMFLOAT3 pos = player_ptr->GetPosition();
+            const XMFLOAT3 look = player_ptr->GetLook();
+
+            const auto& anim_data = player_ptr->GetAnimationSyncData();
+            const auto& track_list = anim_data.track_info_list;
+            bool state_changed = anim_data.stateChanged;
+
+            players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
+                << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(track_list.size());
+
+            for (const auto& track : track_list)
+            {
+                players_data << "," << std::to_string(track.track_index)
+                    << "," << std::to_string(track.weight)
+                    << "," << std::to_string(track.track_position);
+            }
+
+            players_data << "," << (state_changed ? "1" : "0") << ",";
+        }
     }
 
     std::string player_data_str = players_data.str();
