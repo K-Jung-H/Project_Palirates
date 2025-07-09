@@ -1083,7 +1083,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 	*/
 
-		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		/*std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
 		Dragon->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 
@@ -1093,12 +1093,19 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
 		Dragon->Rotate(&tt2, 180.0f);
 		Dragon->test_num = 5;
-		obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 5; i++)
+		for (int i = 0; i < 12; i++)
 		{
-			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			std::shared_ptr<CMonsterObject> m;
+			if (i % 3 == 0)
+				m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			else if(i % 3 == 1)
+				m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			else if (i % 3 == 2)
+				m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			m->SetID(i);
 			m->Set_Child(m->m_pRootModel);
 			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 			m->SetupWeaponCollider();
@@ -1857,12 +1864,17 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
 
-	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
-	if (list) {
-		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
-			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
-			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
-				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+	if (isRunning) {
+
+	}
+	else {
+		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (list) {
+			for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+				if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+				if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+					monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+				}
 			}
 		}
 	}
@@ -2207,6 +2219,21 @@ void CScene::Remove_Multi_Player(int player_id)
 void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+void CScene::Sync_Monster_Data(int monsterID, const ServerSyncData& syncData)
+{
+	auto v = obj_manager->Get_Object_List(Object_Type::skinned); 
+	if (!v || v->empty()) return;
+
+	// map으로 바꿔야 될 듯?
+	for (auto& obj : *v)
+	{
+		if (obj->GetID() == monsterID) {
+			obj->ApplySyncData(syncData);
+			//std::cout << "몬스터 ID : " << monsterID << " 데이터 어플라이" << std::endl;
+		}
+	}
 }
 
 //==========================================================================================

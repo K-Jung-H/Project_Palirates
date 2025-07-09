@@ -4719,6 +4719,25 @@ void CMonsterObject::SetupWeaponCollider()
 
 }
 
+void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
+{
+	CGameObject::ApplySyncData(syncData);
+
+	auto controller = GetSkinnedAnimationController();
+	if (!controller) return;
+	controller->ResetWeight();
+	auto track = controller->m_pAnimationTracks;
+	vector<Animation_Sync> track_list = syncData.track_info_list;
+
+	for (Animation_Sync animation_track_info : track_list)
+	{
+		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
+		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
+	}
+
+	controller->ApplyCurrentAnimationPose(this);
+}
+
 ///////////////////////////////////////////////////////////////////
 
 CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)

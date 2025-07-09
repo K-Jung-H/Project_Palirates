@@ -581,6 +581,34 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
 
+    const auto& monster_list = stage->Monster_List; 
+
+    if (!monster_list.empty())
+    {
+        float list_size = monster_list.size();
+        oss << "MONSTER_SNAPSHOT," << list_size;
+
+        for (const auto& monster : monster_list) {
+            float mID = monster->GetID();
+            oss << "," << mID;
+
+            auto sync_Data = monster->MakeSyncData();
+            oss << "," << sync_Data.position.x << "," << sync_Data.position.y << "," << sync_Data.position.z
+                << "," << sync_Data.lookVector.x << "," << sync_Data.lookVector.y << "," << sync_Data.lookVector.z
+                << "," << sync_Data.track_info_list.size();
+
+            for (auto track_data : sync_Data.track_info_list)
+            {
+                oss << "," << to_string(track_data.track_index)
+                    << "," << to_string(track_data.weight)
+                    << "," << to_string(track_data.track_position);
+            }
+            oss << "," << sync_Data.stateChanged;
+        }
+        oss << "\n";
+    }
+
+	std::cout << "oss size : " << oss.str().size() << std::endl;
     return oss.str();
 }
 
