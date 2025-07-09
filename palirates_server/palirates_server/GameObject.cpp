@@ -492,7 +492,7 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_p
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
 			char meshName[64];
-			ReadStringFromFile(pInFile, meshName);
+			::ReadStringFromFile(pInFile, meshName);
 
 			auto mesh = MeshManager::GetMesh(meshName);
 			if (!mesh)

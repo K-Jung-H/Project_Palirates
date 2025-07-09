@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "server.h"
 
-
+static Server* g_pServer = nullptr;
 
 Server::Server(int port)
 {
@@ -26,6 +26,8 @@ Server::Server(int port)
     scenes[Scene_Type::Stage_2] = std::make_shared<Stage_Scene>();
 
     activeScene = scenes[Scene_Type::Lobby];
+
+    g_pServer = this;
 }
 
 
@@ -581,7 +583,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
 
-    const auto& monster_list = stage->Monster_List; 
+    const auto& monster_list = stage->GetMonsterList(); 
 
     if (!monster_list.empty())
     {
@@ -886,6 +888,44 @@ void Server::PrintClientDebugInfo()
     std::cout << "===============================================\n\n";
 }
 
+Server* Server::Get() { return g_pServer; }
+
+void Server::SendToSceneClients(Scene_Type scene,
+    const std::string& packet,
+    bool saveLog /*=false*/)
+{
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    for (auto& [id, session] : clients)
+    {
+        if (!session->is_connected)                  continue;
+        if (session->client_scene_type != scene)     continue;
+        Send_Custom(session, packet, saveLog);
+    }
+}
+
+void Server::BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type,
+    const XMFLOAT3& pos, int hp)
+{
+    std::ostringstream oss;
+    oss << "MON_SPAWN," << static_cast<int>(scene) << ','
+        << id << ',' << static_cast<int>(type) << ','
+        << pos.x << ',' << pos.y << ',' << pos.z << ','
+        << hp << '\n';
+
+    SendToSceneClients(scene, oss.str(), true);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  몬스터 디스폰 브로드캐스트
+// ─────────────────────────────────────────────────────────────
+void Server::BroadcastMonsterDespawn(Scene_Type scene, int id)
+{
+    std::ostringstream oss;
+    oss << "MON_DESPAWN," << static_cast<int>(scene) << ','
+        << id << '\n';
+
+    SendToSceneClients(scene, oss.str(), /*saveLog=*/true);
+}
 
 //========================================================================================
 

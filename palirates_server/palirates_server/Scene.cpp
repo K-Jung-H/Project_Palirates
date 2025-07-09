@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Scene.h"
+#include "server.h"
 
 int Scene::active_client_num;
 std::array<int, MaxPlayer> Scene::player_model_list = { -1, -1, -1, -1, -1, -1 };
@@ -419,4 +420,44 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
     }
+}
+
+void Stage_Scene::SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp)
+{
+    if (id2idx.find(id) != id2idx.end())
+        return;                            
+
+    //auto m = MonsterFactory::Create(type);
+    auto m = std::make_shared<Fishman>(1);
+    m->SetID(id);
+    m->SetPosition(pos);
+
+    id2idx[id] = Monster_List.size();       
+    Monster_List.emplace_back(std::move(m));
+
+    Server::Get()->BroadcastMonsterSpawn(GetSceneType(), id, type, pos, hp);
+}
+
+void Stage_Scene::DespawnMonster(int id)
+{
+    auto it = id2idx.find(id);
+    if (it == id2idx.end()) return;
+
+    size_t idx = it->second;              
+    size_t last = Monster_List.size() - 1;  
+
+    if (idx != last) {
+        std::swap(Monster_List[idx], Monster_List[last]);
+        id2idx[Monster_List[idx]->GetID()] = idx; 
+    }
+    Monster_List.pop_back();
+    id2idx.erase(it);
+
+    Server::Get()->BroadcastMonsterDespawn(GetSceneType(), id);
+}
+
+std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
+{
+    auto it = id2idx.find(id);
+    return (it == id2idx.end()) ? nullptr : Monster_List[it->second];
 }

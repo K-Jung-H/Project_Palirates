@@ -123,9 +123,16 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
-
-
-    std::vector<std::shared_ptr<Monster>> Monster_List;
-
     void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged);
+
+private:
+    std::vector<std::shared_ptr<Monster>> Monster_List;
+    std::unordered_map<int, size_t> id2idx;
+
+public:
+    void SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp);
+    void DespawnMonster(int id);
+    std::shared_ptr<Monster> GetMonster(int id);
+
+    const std::vector<std::shared_ptr<Monster>>& GetMonsterList() const { return Monster_List; }
 };
