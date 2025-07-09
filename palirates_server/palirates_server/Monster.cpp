@@ -104,7 +104,7 @@ Anubis::Anubis(int id) : Monster(id)
     prevWeights[0] = 1.0f;
     targetWeights.resize(n_Animation, 0.0f);
 
-    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/Anubis_LP.bin");
+    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/Anubis_lp.bin");
     if (!asset || !asset->m_pAnimationSets) {
         return;
     }

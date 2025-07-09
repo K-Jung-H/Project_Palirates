@@ -304,7 +304,7 @@ void Stage_Scene::Init()
         if (i % 3 == 0)
             m = std::make_shared<Fishman>(1);
         else if (i % 3 == 1)
-            m = std::make_shared<Anubis>(1);
+            m = std::make_shared<Fishman>(1);
         else if (i % 3 == 2)
             m = std::make_shared<Dragon>(1);
         m->SetID(i);
