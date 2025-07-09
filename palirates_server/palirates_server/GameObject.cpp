@@ -702,6 +702,23 @@ void GameObject::Obj_Info(int depth)
 	}
 }
 
+void GameObject::UpdateWorldOBB()
+{
+	if (!m_pMesh) return;
+
+	XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;
+	XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
+
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+	auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
+
+	obb->Transform(*obb, worldMatrix);
+
+	m_OBB = obb;
+}
+
+
 //===================================================================
 
 Boat_Object::Boat_Object()

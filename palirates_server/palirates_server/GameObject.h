@@ -25,7 +25,7 @@ protected:
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
-    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -33,6 +33,7 @@ public:
     char                     m_pstrFrameName[64];
 
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
+    std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
 public:
     GameObject()
@@ -93,6 +94,11 @@ public:
 
     void Obj_Info(int depth = 0);
     Object_Type GetType() { return obj_type; }
+
+    void UpdateWorldOBB();
+
+
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
     std::unordered_set<int> RootMotionTrackSet;
 
