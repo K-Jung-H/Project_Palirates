@@ -655,7 +655,7 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 void Server::Server_Update()
 {
     m_gameTimer.Reset();
-    float FPS = 0.0f;
+    float FPS = 150.0f;
     float time_acc = 0.0f; // 누적 타임
     while (true)
     {
@@ -687,7 +687,7 @@ void Server::Server_Update()
         time_acc += elapsedTime;
         if (time_acc > 0.2f) // 0.2초 마다 한 번
         {
-            BroadcastServerTime();
+            //BroadcastServerTime();
             time_acc = 0.0f;
         }
 
@@ -910,24 +910,24 @@ void Server::FlushSendQueues()
     }
 }
 
-void Server::BroadcastServerTime()
-{
-    auto now = std::chrono::system_clock::now();
-    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-
-    std::string packet = "SERVER_TIME," + std::to_string(millis) + "\n";
-
-    std::lock_guard<std::mutex> lock(clientsMutex);
-    for (auto& [id, session] : clients)
-    {
-        if (!session->is_connected) continue;
-        Send_Custom(session, packet, false);
-    }
-}
+//void Server::BroadcastServerTime()
+//{
+//    auto now = std::chrono::system_clock::now();
+//    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+//
+//    std::string packet = "SERVER_TIME," + std::to_string(millis) + "\n";
+//
+//    std::lock_guard<std::mutex> lock(clientsMutex);
+//    for (auto& [id, session] : clients)
+//    {
+//        if (!session->is_connected) continue;
+//        Send_Custom(session, packet, false);
+//    }
+//}
 
 void Server::PrintClientDebugInfo()
 {
-    system("cls");
+    //system("cls");
     std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
 
 
