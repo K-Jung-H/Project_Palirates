@@ -26,8 +26,6 @@ protected:
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
-    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
-
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
@@ -95,10 +93,7 @@ public:
 
     std::unordered_set<int> RootMotionTrackSet;
 
-    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
-    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
-
-    virtual ServerSyncData MakeSyncData();
+    virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
 };
 
 
@@ -122,25 +117,13 @@ public:
     XMFLOAT3 Get_Velocity() const { return m_xmf3Velocity; }
 };
 
-//struct Animation_Sync
-//{
-//    int track_index;
-//    float weight;
-//    float track_position;
-//};
-//
-//struct AnimationTrackData
-//{
-//    std::vector<Animation_Sync> track_info_list;
-//    bool stateChanged = false;
-//};
-
-
 class Skinned_GameObject : public GameObject
 {
 private:
     ServerSyncData animation_sync_data;
 
+protected:
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
 public:
     void SetAnimationSyncData(const ServerSyncData& data) { animation_sync_data = data; }
@@ -155,6 +138,9 @@ public:
     ServerSyncData& GetAnimationSyncData() { return animation_sync_data; }
     std::vector<Animation_Sync>& GetTrackInfoList() { return animation_sync_data.track_info_list; }
     bool GetStateChanged() const { return animation_sync_data.stateChanged; }
+
+    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
 
     int n_Animation = 0;
     int RootIndex{ 0 };

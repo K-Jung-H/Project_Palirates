@@ -299,8 +299,14 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     // test
-    for (int i = 0; i < 30; ++i) {
-        std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
+    for (int i = 0; i < 12; ++i) {
+        std::shared_ptr<Monster> m;             
+        if (i % 3 == 0)
+            m = std::make_shared<Fishman>(1);
+        else if (i % 3 == 1)
+            m = std::make_shared<Anubis>(1);
+        else if (i % 3 == 2)
+            m = std::make_shared<Dragon>(1);
         m->SetID(i);
         m->SetPosition(XMFLOAT3(1500 + i * 10, 0, 700));
         Monster_List.push_back(m);

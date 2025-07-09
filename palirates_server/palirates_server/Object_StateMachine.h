@@ -124,3 +124,25 @@ public:
 
     void update(float Elapsed_time) override;
 };
+
+class AnubisStateMachine : public MonsterStateMachine
+{
+public:
+    AnubisStateMachine(Monster* owner)
+        : MonsterStateMachine(owner) {
+    }
+    ~AnubisStateMachine() override = default;
+
+    //void update(float Elapsed_time) override;
+};
+
+class DragonStateMachine : public MonsterStateMachine
+{
+public:
+    DragonStateMachine(Monster* owner)
+        : MonsterStateMachine(owner) {
+    }
+    ~DragonStateMachine() override = default;
+
+    //void update(float Elapsed_time) override;
+};

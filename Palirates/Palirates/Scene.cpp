@@ -1096,9 +1096,15 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 30; i++)
+		for (int i = 0; i < 12; i++)
 		{
-			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			std::shared_ptr<CMonsterObject> m;
+			if (i % 3 == 0)
+				m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			else if(i % 3 == 1)
+				m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			else if (i % 3 == 2)
+				m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 			m->SetID(i);
 			m->Set_Child(m->m_pRootModel);
 			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
