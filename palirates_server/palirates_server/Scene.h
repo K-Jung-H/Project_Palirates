@@ -3,6 +3,7 @@
 #include <array>
 #include <memory>
 #include "stdafx.h"
+#include "GameWorld.h"
 #include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
@@ -102,7 +103,7 @@ class Stage_Scene : public Scene
 private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
-
+    GameWorld game_world;
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) 
     {
@@ -122,7 +123,7 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
-    void updatePlayerAnimation(int id, std::vector<float>& positions, std::vector<float>& weights);
+
 
     std::vector<std::shared_ptr<Monster>> Monster_List;
 

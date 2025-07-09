@@ -148,7 +148,7 @@ extern bool isRunning;
 #define LOAD_SCENE
 #define USING_OBB
 #define RENDER_PARTICLE
-//#define RENDER_WAVE
+#define RENDER_WAVE
 
 //#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO

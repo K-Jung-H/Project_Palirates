@@ -315,6 +315,8 @@ void Stage_Scene::Init()
 
 void Stage_Scene::Update_Scene(float elapsedTime)
 {
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
     for (auto m : Monster_List) {
         auto con = m->GetSkinnedAnimationController();
         if (con) {
@@ -406,11 +408,11 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
     if (clientId < 0 || clientId >= MaxPlayer || !player_list[clientId])
         return;
-  
-    // 클라이언트에서 온 데이터를 Player 객체에 저장
-    player_list[clientId]->SetLook(lookDirection);
+
     player_list[clientId]->SetPosition(position);
-    player_list[clientId]->key_input(inputFlags);
+    player_list[clientId]->SetLook(lookDirection);
+    
+    //    player_list[clientId]->key_input(inputFlags);
 
     if (!tracks.empty())
     {

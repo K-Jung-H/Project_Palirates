@@ -44,6 +44,7 @@ public:
         XMStoreFloat4x4(&m_xmf4x4Parent, XMMatrixIdentity());
         XMStoreFloat4x4(&m_xmf4x4World, XMMatrixIdentity());
     }
+
     ~GameObject() = default;
     void Set_Child(shared_ptr<GameObject> pChild);
 
@@ -79,8 +80,12 @@ public:
     void SetRight(XMFLOAT3 xmf3Right);
 
     static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
-    static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
     static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
+
+    static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);
+    static std::shared_ptr<GameObject> Load_Scene_FrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile);
+
     void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
     void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
@@ -92,7 +97,7 @@ public:
     float GetID() { return Obj_ID; }
 
     std::unordered_set<int> RootMotionTrackSet;
-
+    
     virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
 };
 
