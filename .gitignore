@@ -46,6 +46,7 @@
 /Palirates/Palirates/Scene/**/*.txt
 /Palirates/Palirates/CONERR$
 
+/palirates_server/palirates_server/.vs
 /palirates_server/.vs
 /palirates_server/palirates_server/x64
 /palirates_server/x64
