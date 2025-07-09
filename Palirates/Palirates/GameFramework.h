@@ -271,8 +271,8 @@ public:
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;
-    const size_t MAX_RECV_QUEUE_SIZE = 10000;
-    int64_t lastReceivedServerTimeMs = 0;
+    long long lastServerTime = 0;
+
     //=================SERVER=================
 
 };

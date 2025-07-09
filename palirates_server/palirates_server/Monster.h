@@ -1,8 +1,11 @@
 #pragma once
 #include "GameObject.h"
+#include "Object_StateMachine.h"
 #include <string>
 #include <vector>
 #include <sstream>
+
+class MonsterStateMachine;
 
 enum class Monster_Type : int
 {
@@ -27,6 +30,7 @@ protected:
     Monster_Type type;
     Monster_State monster_state; 
     int monster_id;
+    std::unique_ptr<MonsterStateMachine> m_StateMachine;
 
 public:
     int hp;
@@ -44,19 +48,7 @@ public:
     Monster_State GetState() { return monster_state; }
     void SetState(Monster_State new_state) { monster_state = new_state; }
 
-    //std::string Serialize()
-    //{
-    //    std::ostringstream oss;
-    //    oss << "MONSTER_UPDATE," << monster_id << "," << x << "," << y << "," << z << ","
-    //        << lookX << "," << lookY << "," << lookZ << "," << hp << "," << state << "," << (int)type;
-
-    //    int trackCount = (int)trackPositions.size();
-    //    oss << "," << trackCount;
-    //    for (int i = 0; i < trackCount; ++i)
-    //        oss << "," << trackPositions[i] << "," << trackWeights[i];
-
-    //    return oss.str();
-    //}
+    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 };
 
 
@@ -68,6 +60,8 @@ public:
 
     virtual void animate(float Elapsedtime) {}
     virtual void update() {}
+
+    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 };
 
 class Anubis : public Monster

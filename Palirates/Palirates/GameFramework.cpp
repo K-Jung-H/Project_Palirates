@@ -1372,14 +1372,23 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		HandleChangeScene(tokens);
 		return;
 	}
-	if (cmd == "SERVER_TIME" && tokens.size() >= 2)
+	if (receivedData.rfind("SERVER_TIME,", 0) == 0)
 	{
-		int64_t serverTimeMs = std::stoll(tokens[1]);
-		lastReceivedServerTimeMs = serverTimeMs; 
-		// std::cout << "서버 시간: " << serverTimeMs << std::endl;
+		std::vector<std::string> tokens;
+		std::stringstream ss(receivedData);
+		std::string item;
+		while (std::getline(ss, item, ',')) tokens.push_back(item);
+
+		if (tokens.size() >= 2)
+		{
+			try 
+			{
+				lastServerTime = std::stoll(tokens[1]);
+			}
+			catch (...) {}
+		}
 		return;
 	}
-
 
 	// 씬 별 처리
 	auto active_scene = scene_manager->Get_Active_Scene();
@@ -1743,32 +1752,36 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
-	char buffer[1024];
+
 	while (isRunning)
 	{
-		int bytesReceived = recv(serverSocket, buffer, sizeof(buffer) - 1, 0);
-		if (bytesReceived <= 0)
+		char buffer[1024 + 1];
+		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
+		//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+
+		if (bytesReceived > 0)
 		{
-			std::cerr << "[ERROR] 서버와 연결이 끊어졌습니다." << std::endl;
+			buffer[bytesReceived] = '\0';
+			std::string receivedData(buffer);
+
+			{
+				std::lock_guard<std::mutex> lock(recvQueueMutex);
+				recvQueue.push(receivedData);
+				//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+			}
+		}
+
+		else if (bytesReceived == SOCKET_ERROR)
+		{
+			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
+		}
+		else if (bytesReceived == 0)
+		{
+			std::cerr << "[INFO] Connection with server closed" << std::endl;
 			isRunning = false;
 			break;
 		}
 
-		buffer[bytesReceived] = '\0';
-
-		std::istringstream iss(buffer);
-		std::string line;
-		while (std::getline(iss, line))
-		{
-			std::lock_guard<std::mutex> lock(recvQueueMutex);
-
-			if (recvQueue.size() >= MAX_RECV_QUEUE_SIZE)
-			{
-				std::cerr << "[WARN] Packet queue overflow, Drop packet." << std::endl;
-				continue;
-			}
-			recvQueue.push(line);
-		}
 	}
 }
 
