@@ -49,6 +49,7 @@ public:
     void SetState(Monster_State new_state) { monster_state = new_state; }
 
     virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+    virtual ServerSyncData MakeSyncData();
 };
 
 
@@ -60,8 +61,6 @@ public:
 
     virtual void animate(float Elapsedtime) {}
     virtual void update() {}
-
-    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 };
 
 class Anubis : public Monster

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Scene.h"
+#include "server.h"
 
 int Scene::active_client_num;
 std::array<int, MaxPlayer> Scene::player_model_list = { -1, -1, -1, -1, -1, -1 };
@@ -43,28 +44,10 @@ void Lobby_Scene::Init()
         }
     }
 
-    // test
-    std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
-    Monster_List.push_back(m);
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
 {
-    for (auto m : Monster_List) {
-        auto con = m->GetSkinnedAnimationController();
-        if (con) {
-            if (m->GetStateMachine())
-                m->GetStateMachine()->update(elapsedTime);
-            con->AdvanceTime(elapsedTime, m.get());
-           /* for (int i = 0; i < con->m_nAnimationTracks; i++) {
-                std::cout << con->m_pAnimationTracks[i].m_fWeight << " " << con->m_pAnimationTracks[i].m_fPosition;
-            }
-            std::cout << "\n";*/
-        }
-        else {
-            //std::cout << "con 없음" << std::endl;
-        }
-    }
 }
 
 void Lobby_Scene::Remove_Player(int id)
@@ -329,8 +312,19 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    
-
+    // test
+    for (int i = 0; i < 12; ++i) {
+        std::shared_ptr<Monster> m;             
+        if (i % 3 == 0)
+            m = std::make_shared<Fishman>(1);
+        else if (i % 3 == 1)
+            m = std::make_shared<Fishman>(1);
+        else if (i % 3 == 2)
+            m = std::make_shared<Dragon>(1);
+        m->SetID(i);
+        m->SetPosition(XMFLOAT3(1500 + i * 10, 0, 700));
+        Monster_List.push_back(m);
+    }
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -347,6 +341,12 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         auto con = m->GetSkinnedAnimationController();
         if (con) {
             con->AdvanceTime(elapsedTime, m.get());
+
+            if (m->GetStateMachine())
+                m->GetStateMachine()->update(elapsedTime);
+        }
+        else {
+            //std::cout << "con 없음" << std::endl;
 
         }
     }
@@ -431,11 +431,8 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     if (clientId < 0 || clientId >= MaxPlayer || !player_list[clientId])
         return;
 
-
-
     player_list[clientId]->SetPosition(position);
     player_list[clientId]->SetLook(lookDirection);
-
     
     //    player_list[clientId]->key_input(inputFlags);
 
@@ -444,4 +441,44 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
     }
+}
+
+void Stage_Scene::SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp)
+{
+    if (id2idx.find(id) != id2idx.end())
+        return;                            
+
+    //auto m = MonsterFactory::Create(type);
+    auto m = std::make_shared<Fishman>(1);
+    m->SetID(id);
+    m->SetPosition(pos);
+
+    id2idx[id] = Monster_List.size();       
+    Monster_List.emplace_back(std::move(m));
+
+    Server::Get()->BroadcastMonsterSpawn(GetSceneType(), id, type, pos, hp);
+}
+
+void Stage_Scene::DespawnMonster(int id)
+{
+    auto it = id2idx.find(id);
+    if (it == id2idx.end()) return;
+
+    size_t idx = it->second;              
+    size_t last = Monster_List.size() - 1;  
+
+    if (idx != last) {
+        std::swap(Monster_List[idx], Monster_List[last]);
+        id2idx[Monster_List[idx]->GetID()] = idx; 
+    }
+    Monster_List.pop_back();
+    id2idx.erase(it);
+
+    Server::Get()->BroadcastMonsterDespawn(GetSceneType(), id);
+}
+
+std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
+{
+    auto it = id2idx.find(id);
+    return (it == id2idx.end()) ? nullptr : Monster_List[it->second];
 }

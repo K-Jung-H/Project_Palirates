@@ -1405,8 +1405,11 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 
-
-		ProcessReceivedData_Stage(stage_scene, cmd, tokens);
+		if (cmd == "STAGE_1")
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
+		else if (cmd == "MONSTER_SNAPSHOT")
+			ProcessReceivedData_Monster(stage_scene, tokens);
+		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
 	break;
 
@@ -1552,6 +1555,60 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
+		// 다음 플레이어를 위해 시작 위치 조정
+		startIndex = stateFlagIndex + 1;
+	}
+}
+
+void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
+{
+	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
+	//std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
+	if (tokens.size() < 3) return;
+	float list_size = std::stof(tokens[1]);
+	//std::cout << "리스트 사이즈 : " << list_size << std::endl;
+	int startIndex = 2;
+	for (int i = 0; i<int(list_size); ++i) 
+	{
+		int base = startIndex;
+
+		int monsterId = std::stoi(tokens[base + 0]);
+		float px = std::stof(tokens[base + 1]);
+		float py = std::stof(tokens[base + 2]);
+		float pz = std::stof(tokens[base + 3]);
+		float lx = std::stof(tokens[base + 4]);
+		float ly = std::stof(tokens[base + 5]);
+		float lz = std::stof(tokens[base + 6]);
+		int trackCount = std::stoi(tokens[base + 7]);
+
+		int trackStart = base + 8;
+
+		int expectedTrackTokenCount = trackCount * 3;
+
+		//std::cout << "몬스터 ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
+
+		std::vector<Animation_Sync> track_list;
+
+		for (int t = 0; t < trackCount; ++t)
+		{
+			int idx = trackStart + t * 3;
+			int trackIdx = std::stoi(tokens[idx]);
+			float weight = std::stof(tokens[idx + 1]);
+			float position = std::stof(tokens[idx + 2]);
+			track_list.push_back({ trackIdx, weight, position });
+		}
+
+		int stateFlagIndex = trackStart + expectedTrackTokenCount;
+
+		ServerSyncData syncData;
+		syncData.position = XMFLOAT3(px, py, pz);
+		syncData.lookVector = XMFLOAT3(lx, ly, lz);
+
+		syncData.track_info_list = track_list;
+		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
+
+
+		stage_scene->Sync_Monster_Data(monsterId, syncData);
 		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
 	}
@@ -1735,37 +1792,59 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
+	char buf[2048];
+	std::string pending;                
 
 	while (isRunning)
 	{
-		char buffer[1024 + 1];
-		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-		//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+		int n = recv(serverSocket, buf, sizeof(buf), 0);
+		if (n <= 0) { break; }
 
-		if (bytesReceived > 0)
+		pending.append(buf, n);
+
+		size_t pos;
+		while ((pos = pending.find('\n')) != std::string::npos)
 		{
-			buffer[bytesReceived] = '\0';
-			std::string receivedData(buffer);
+			std::string line = pending.substr(0, pos);   
+			pending.erase(0, pos + 1);                   
 
 			{
-				std::lock_guard<std::mutex> lock(recvQueueMutex);
-				recvQueue.push(receivedData);
-				//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+				std::lock_guard<std::mutex> lk(recvQueueMutex);
+				recvQueue.push(std::move(line));         
 			}
 		}
-
-		else if (bytesReceived == SOCKET_ERROR)
-		{
-			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
-		}
-		else if (bytesReceived == 0)
-		{
-			std::cerr << "[INFO] Connection with server closed" << std::endl;
-			isRunning = false;
-			break;
-		}
-
 	}
+
+	//while (isRunning)
+	//{
+	//	char buffer[1024 + 1];
+	//	int bytesReceived = recv(serverSocket, buffer, 1024, 0);
+	//	//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+
+	//	if (bytesReceived > 0)
+	//	{
+	//		buffer[bytesReceived] = '\0';
+	//		std::string receivedData(buffer);
+
+	//		{
+	//			std::lock_guard<std::mutex> lock(recvQueueMutex);
+	//			recvQueue.push(receivedData);
+	//			//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+	//		}
+	//	}
+
+	//	else if (bytesReceived == SOCKET_ERROR)
+	//	{
+	//		std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
+	//	}
+	//	else if (bytesReceived == 0)
+	//	{
+	//		std::cerr << "[INFO] Connection with server closed" << std::endl;
+	//		isRunning = false;
+	//		break;
+	//	}
+
+	//}
 }
 
 bool CGameFramework::IsServerConnected()

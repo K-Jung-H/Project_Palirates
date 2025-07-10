@@ -66,6 +66,11 @@ public:
     void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
     void PrintClientDebugInfo();
 
+    static Server* Get();
+    void BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type, const XMFLOAT3& pos, int hp);
+    void BroadcastMonsterDespawn(Scene_Type scene, int id);
+    void SendToSceneClients(Scene_Type scene, const std::string& packet, bool saveLog = false);
+
 private:
     SOCKET listenSocket;
     Logger logger;

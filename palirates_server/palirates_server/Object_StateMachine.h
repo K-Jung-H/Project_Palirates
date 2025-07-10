@@ -94,8 +94,10 @@ public:
     }
 
     std::shared_ptr<CAnimationController> animController;
+    int n_Ani{ 0 };
 
     virtual void update(float Elapsed_time) {};
+    virtual void SetWeight() {};
 };
 
 class MonsterStateMachine : public StateMachine
@@ -109,6 +111,7 @@ public:
     }
 
     void update(float Elapsed_time) override;
+    virtual void SetWeight(float Elapsed_time);
 };
 
 class FishManStateMachine : public MonsterStateMachine
@@ -120,4 +123,26 @@ public:
     ~FishManStateMachine() override = default;
 
     void update(float Elapsed_time) override;
+};
+
+class AnubisStateMachine : public MonsterStateMachine
+{
+public:
+    AnubisStateMachine(Monster* owner)
+        : MonsterStateMachine(owner) {
+    }
+    ~AnubisStateMachine() override = default;
+
+    //void update(float Elapsed_time) override;
+};
+
+class DragonStateMachine : public MonsterStateMachine
+{
+public:
+    DragonStateMachine(Monster* owner)
+        : MonsterStateMachine(owner) {
+    }
+    ~DragonStateMachine() override = default;
+
+    //void update(float Elapsed_time) override;
 };

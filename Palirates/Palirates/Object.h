@@ -1113,6 +1113,7 @@ public:
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     virtual void SetupWeaponCollider();
+    virtual void ApplySyncData(const ServerSyncData& syncData);
 };
 
 class CFishManObject : public CMonsterObject
