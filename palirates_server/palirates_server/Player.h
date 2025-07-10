@@ -36,4 +36,6 @@ public:
     virtual void animate(float Elapsedtime);
     virtual void update();
 
+    virtual void UpdateWorldOBB();
+
 };

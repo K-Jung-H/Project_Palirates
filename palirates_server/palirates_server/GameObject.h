@@ -98,7 +98,7 @@ public:
     Object_Type GetType() { return obj_type; }
 
 
-    void UpdateWorldOBB();
+    virtual void UpdateWorldOBB();
 
 
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
