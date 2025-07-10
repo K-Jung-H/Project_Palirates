@@ -440,6 +440,8 @@ void Stage_Scene::SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, i
 
 void Stage_Scene::DespawnMonster(int id)
 {
+    std::lock_guard<std::recursive_mutex> lock(GetSceneMutex());
+
     auto it = id2idx.find(id);
     if (it == id2idx.end()) return;
 

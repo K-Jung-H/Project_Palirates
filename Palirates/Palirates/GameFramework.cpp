@@ -1404,11 +1404,18 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		shared_ptr<CScene>stage_scene = std::dynamic_pointer_cast<CScene>(active_scene);
 		if (!stage_scene)
 			break;
-
 		if (cmd == "STAGE_1")
 			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
+		else if (cmd == "MON_SPAWN") {
+			ProcessReceivedData_MonsterSpawn(stage_scene, tokens);
+			std::cout << "몬스터 스폰" << std::endl;
+		}
+		else if (cmd == "MON_DESPAWN") {
+			ProcessReceivedData_MonsterDespawn(stage_scene, tokens);
+			std::cout << "몬스터 삭제" << std::endl;
+		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
 	break;
@@ -1612,6 +1619,42 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
 	}
+}
+
+void CGameFramework::ProcessReceivedData_MonsterSpawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
+{
+	// 형식: MON_SPAWN,scene,id,type,x,y,z,hp
+	if (tokens.size() < 2) return;
+
+	int id = std::stoi(tokens[1]);
+	XMFLOAT3 pos{ 0,0,0 };
+	/*Scene_Type sceneType = Scene_Type(std::stoi(tokens[1]));
+	if (sceneType != stage_scene->scene_type) return;      
+
+	int id = std::stoi(tokens[2]);
+	int typeInt = std::stoi(tokens[3]);
+	XMFLOAT3 pos{ std::stof(tokens[4]), std::stof(tokens[5]), std::stof(tokens[6]) };
+	int hp = std::stoi(tokens[7]);*/
+
+	auto stage = std::dynamic_pointer_cast<CScene>(stage_scene);
+	if (!stage) return;
+
+	stage->SpawnMonster(m_pd3dDevice, Active_CommandList, id, pos);
+}
+
+void CGameFramework::ProcessReceivedData_MonsterDespawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
+{
+	// 형식: MON_DESPAWN,scene,id
+	if (tokens.size() < 2) return;
+	//Scene_Type sceneType = Scene_Type(std::stoi(tokens[1]));
+	//if (sceneType != stage_scene->scene_type) return;
+
+	int id = std::stoi(tokens[1]);
+
+	auto stage = std::dynamic_pointer_cast<CScene>(stage_scene);
+	if (!stage) return;
+
+	stage->DespawnMonster(id);
 }
 
 void CGameFramework::HandleClientIdAssignment()

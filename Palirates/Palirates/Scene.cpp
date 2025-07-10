@@ -2236,6 +2236,36 @@ void CScene::Sync_Monster_Data(int monsterID, const ServerSyncData& syncData)
 	}
 }
 
+void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
+{
+	std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	m->SetID(id);
+	m->Set_Child(m->m_pRootModel);
+	m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+	m->SetupWeaponCollider();
+	m->SetPosition(0, 0, 0);
+	obj_manager->Add_Object(m, Object_Type::skinned);
+}
+
+void CScene::DespawnMonster(int id)
+{
+	auto* plist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!plist) return;                     
+
+	for (auto it = plist->begin(); it != plist->end();)
+	{
+		const auto& obj = *it;
+		if (obj && obj->GetID() == id)              
+		{
+			it = plist->erase(it);                 
+		}
+		else
+		{
+			++it;                                   
+		}
+	}
+}
+
 //==========================================================================================
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()

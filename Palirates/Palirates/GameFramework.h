@@ -268,6 +268,8 @@ public:
     void ProcessReceivedData_Board(shared_ptr<Board_Scene> board_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_MonsterSpawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_MonsterDespawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
 
     bool bClientIdAssigned = false;
 

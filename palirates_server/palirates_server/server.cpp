@@ -587,10 +587,13 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     if (!monster_list.empty())
     {
+        std::lock_guard<std::recursive_mutex> lock(stage->GetSceneMutex());
+
         float list_size = monster_list.size();
         oss << "MONSTER_SNAPSHOT," << list_size;
 
         for (const auto& monster : monster_list) {
+            if (!monster) continue;
             float mID = monster->GetID();
             oss << "," << mID;
 
@@ -632,6 +635,9 @@ void Server::Server_Update()
 {
     m_gameTimer.Reset();
     float FPS = 0.0f;
+    double spawnTimer = 0.0;
+    double lifeTime = 8.0;     
+    int    nextId = 12;
     while (true)
     {
         m_gameTimer.Tick(FPS);
@@ -645,6 +651,29 @@ void Server::Server_Update()
 
 
         scene->Update_Scene(elapsedTime); 
+
+        if (scene->GetSceneType() == Scene_Type::Stage_1)
+        {
+            auto stage = std::dynamic_pointer_cast<Stage_Scene>(scene);
+
+            spawnTimer += elapsedTime;
+            // 3초 주기로 Fishman 생성
+            if (spawnTimer >= 3.0)
+            {
+                int id = nextId++;
+                stage->SpawnMonster(id, Monster_Type::Fishman,
+                    { 1450.f,0.f,747.f }, 120);
+                // 디스폰 예약: 람다 캡처
+                std::thread([stage, id, lifeTime]() {
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(
+                            static_cast<int>(lifeTime * 1000)));
+                    stage->DespawnMonster(id);
+                    }).detach();
+
+                spawnTimer = 0.0;
+            }
+        }
 
         //==============================================
         // Handle Scene Chnage
@@ -907,10 +936,11 @@ void Server::BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type,
     const XMFLOAT3& pos, int hp)
 {
     std::ostringstream oss;
-    oss << "MON_SPAWN," << static_cast<int>(scene) << ','
+   /* oss << "MON_SPAWN," << static_cast<int>(scene) << ','
         << id << ',' << static_cast<int>(type) << ','
         << pos.x << ',' << pos.y << ',' << pos.z << ','
-        << hp << '\n';
+        << hp << '\n';*/
+    oss << "MON_SPAWN," << id << '\n';
 
     SendToSceneClients(scene, oss.str(), true);
 }
@@ -921,8 +951,7 @@ void Server::BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type,
 void Server::BroadcastMonsterDespawn(Scene_Type scene, int id)
 {
     std::ostringstream oss;
-    oss << "MON_DESPAWN," << static_cast<int>(scene) << ','
-        << id << '\n';
+    oss << "MON_DESPAWN," << id << '\n';
 
     SendToSceneClients(scene, oss.str(), /*saveLog=*/true);
 }
