@@ -1701,7 +1701,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	{
 	//		강제로 애니메이션을 전환해야 하는 경우 필요함
 	//		ex: 서버에서 맞는 모션으로 전환 신호가 오는 경우
-	//		m_pPlayer->ApplySyncData(syncData);
+		m_pPlayer->SetPosition(syncData.position);
 		return;
 	}
 	else
