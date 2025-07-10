@@ -107,11 +107,9 @@ private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
     GameWorld game_world;
+
 public:
-    Stage_Scene() : Scene(Scene_Type::Stage_1) 
-    {
-        Init();
-    }
+    Stage_Scene();
     virtual void Init();
 
     virtual void Update_Scene(float elapsedTime);

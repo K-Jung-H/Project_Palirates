@@ -46,10 +46,6 @@ void Lobby_Scene::Init()
     // test
     std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
     Monster_List.push_back(m);
-
-    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
-    scene = GameObject::Load_Scene("Scene/Scene_Name.bin");
-    MeshManager::GetMesh("asd");
 }
 
 void Lobby_Scene::Update_Scene(float elapsedTime)
@@ -314,6 +310,18 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 }
 
 //======================================================
+
+Stage_Scene::Stage_Scene() : Scene (Scene_Type::Stage_1)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+    scene = GameObject::Load_Scene("Scene/Scene_Name.bin");
+
+
+    game_world.Init();
+    game_world.Load_Scene_Data(scene);
+    Init();
+}
+
 void Stage_Scene::Init()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -321,25 +329,25 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
- /*   std::shared_ptr<Monster> m = std::make_shared<Fishman>(1);
-    Monster_List.push_back(m);*/
+    
+
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
+    for (shared_ptr<Player> player_ptr : player_list)
+    {
+        if (player_ptr)
+            game_world.Update_Collision(player_ptr);
+    }
+
     for (auto m : Monster_List) {
         auto con = m->GetSkinnedAnimationController();
         if (con) {
             con->AdvanceTime(elapsedTime, m.get());
-            /*for (int i = 0; i < con->m_pAnimationTracks->m_nAnimationSet; i++) {
-                std::cout << con->m_pAnimationTracks[i].m_fWeight;
-            }
-            std::cout << "\n";*/
-        }
-        else {
-            //std::cout << "con 없음" << std::endl;
+
         }
     }
 }

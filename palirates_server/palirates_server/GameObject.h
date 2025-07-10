@@ -68,6 +68,8 @@ public:
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
 
+    void SetScale(float x, float y, float z, bool keepPosition);
+
     void Move(XMFLOAT3 xmf3Offset);
 
 
