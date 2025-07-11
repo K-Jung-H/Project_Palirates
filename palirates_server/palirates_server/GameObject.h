@@ -26,6 +26,7 @@ protected:
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
+    std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -33,7 +34,6 @@ public:
     char                     m_pstrFrameName[64];
 
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
-    std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
 public:
     GameObject()
@@ -98,8 +98,8 @@ public:
     Object_Type GetType() { return obj_type; }
 
 
-    void UpdateWorldOBB();
-
+    virtual void UpdateWorldOBB();
+    virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
 
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
