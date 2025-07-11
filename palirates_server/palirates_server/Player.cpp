@@ -6,7 +6,13 @@ Player::Player(int playerId) : Skinned_GameObject()
     model_index = playerId;
     player_state = Player_State::Idle;
 
-    m_OBB = std::make_shared<BoundingOrientedBox>(XMFLOAT3(0.0f, 0.8f * 10.0f, 0.0f), XMFLOAT3(0.4f * 10.0f, 0.8f * 10.0f, 0.4f * 10.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f));
+    m_localOBB = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 8.0f, 0.0f),
+        XMFLOAT3(4.0f, 8.0f, 4.0f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+
+    m_worldOBB = std::make_shared<BoundingOrientedBox>();
 }
 
 void Player::key_input(uint32_t keyState)
@@ -26,9 +32,8 @@ void Player::update()
 
 void Player::UpdateWorldOBB()
 {
-	if (!m_OBB) return;
-	XMFLOAT3 player_pos = GetPosition();
-	const float y_offset = m_OBB->Center.y;
+    if (!m_localOBB || !m_worldOBB) return;
 
-	m_OBB->Center = XMFLOAT3(player_pos.x, player_pos.y + y_offset, player_pos.z);
+    XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+    m_localOBB->Transform(*m_worldOBB, worldMatrix);
 }
