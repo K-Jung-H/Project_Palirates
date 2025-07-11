@@ -48,6 +48,7 @@ public:
 
 	void Update_Monster(float elapsed_time);
 	void Update_Particle(float elapsed_time);
+	FrameParticleChanges Get_Particle_Sync_Data();
 
 private:
 	void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);

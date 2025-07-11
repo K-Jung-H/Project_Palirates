@@ -677,6 +677,8 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
 
+    //===================================================================
+
     const auto& monster_list = stage->GetMonsterList(); 
 
     if (!monster_list.empty())
@@ -704,7 +706,38 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         oss << "\n";
     }
 
-	std::cout << "oss size : " << oss.str().size() << std::endl;
+    //===================================================================
+    // 파티클 추가 중
+    const auto& particle_sync_data = stage->Get_Particle_Sync_Data();
+
+    if (particle_sync_data.created.size())
+    {
+        for (shared_ptr<Particle_Object> new_particle_obj : particle_sync_data.created)
+        {
+
+        }
+    }
+
+    //-----------------------------------------
+
+    if (particle_sync_data.pos_updated.size())
+    {
+        for (shared_ptr<Particle_Object> update_particle_obj : particle_sync_data.pos_updated)
+        {
+
+        }
+    }
+
+    //-----------------------------------------
+
+    if (particle_sync_data.removed.size())
+    {
+        for (UINT remove_id : particle_sync_data.removed)
+        {
+
+        }
+    }
+
     return oss.str();
 }
 

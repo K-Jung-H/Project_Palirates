@@ -1,4 +1,4 @@
-#include "stdafx.h"
+Ôªø#include "stdafx.h"
 #include "GameWorld.h"
 
 
@@ -112,7 +112,7 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
     constexpr float pushStrength = 2.0f;
     constexpr int maxIterations = 10;
 
-    player_obj->UpdateWorldOBB(); // ∞ªΩ≈µ» ø˘µÂ OBB
+    player_obj->UpdateWorldOBB(); // Í∞±Ïã†Îêú ÏõîÎìú OBB
     auto& player_worldOBB = *player_obj->Get_Collider_OBB();
 
     for (int iteration = 0; iteration < maxIterations; ++iteration)
@@ -167,7 +167,7 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
         if (!collided || hitCount == 0)
             break;
 
-        // ∆Ú±’ «™Ω√ πÊ«‚ ∞ËªÍ
+        // ÌèâÍ∑† Ìë∏Ïãú Î∞©Ìñ• Í≥ÑÏÇ∞
         XMVECTOR avgPushDir = XMVector3Normalize(totalPushDir);
         XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorScale(avgPushDir, pushStrength);
         XMStoreFloat3(&player_worldOBB.Center, newCenter);
@@ -184,4 +184,9 @@ void GameWorld::Update_Monster(float elapsed_time)
 void GameWorld::Update_Particle(float elapsed_time)
 {
     particle_manager.Update_Particle(elapsed_time);
+}
+
+FrameParticleChanges GameWorld::Get_Particle_Sync_Data()
+{
+    return particle_manager.FlushFrameChanges();
 }

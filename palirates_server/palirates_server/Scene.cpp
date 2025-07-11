@@ -482,3 +482,10 @@ std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
     auto it = id2idx.find(id);
     return (it == id2idx.end()) ? nullptr : Monster_List[it->second];
 }
+
+const FrameParticleChanges Stage_Scene::Get_Particle_Sync_Data()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    return game_world.Get_Particle_Sync_Data();
+}
