@@ -1426,6 +1426,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					stage_scene->DespawnMonster(id);
 				}
 			}
+			std::cout << "몬스터 삭제됨: " << stage_scene->obj_manager->Get_Object_List(Object_Type::skinned)->size() << std::endl;
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}

@@ -132,7 +132,7 @@ private:
     std::vector<int> monster_despawn_queue;
 
 public:
-    void SpawnMonster(int id, const XMFLOAT3& pos, int hp, bool bIsRun = false);
+    void SpawnMonster(int id, const XMFLOAT3& pos, int hp);
     void DespawnMonster(int id);
     std::shared_ptr<Monster> GetMonster(int id);
 

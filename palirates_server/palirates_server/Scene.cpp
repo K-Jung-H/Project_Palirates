@@ -309,7 +309,7 @@ void Stage_Scene::Init()
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
         else continue;
         SpawnMonster(id, XMFLOAT3(1500 + i * 10, 0, 700), 100);
-        std::cout << "몬스터 스폰 " << id << std::endl;
+        std::cout << "몬스터 생성 : " << id << std::endl;
     }
 }
 
@@ -328,18 +328,16 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             //std::cout << "con 없음" << std::endl;
         }
     }
-
-    // === 테스트용 스폰/디스폰 타이머 ===
+    // test
     static float spawnTimer = 0.0f;
     static float despawnTimer = 0.0f;
     static float spawnInterval = 1.0f;
     static float despawnInterval = 1.0f;
-    static int nextIndex = 12;
+    static int nextIndex = 6;
 
     spawnTimer += elapsedTime;
     despawnTimer += elapsedTime;
 
-    // === 랜덤 스폰 (50% 확률) ===
     if (spawnTimer >= spawnInterval) {
         spawnTimer = 0.0f;
 
@@ -349,28 +347,32 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (chance < 0.2f)
                 newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
             else if (chance < 0.4f)
-                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), nextIndex++);
             else if (chance < 0.5f)
                 newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), nextIndex++);
             float randX = 1400.f + static_cast<float>(rand() % 100);
             float randZ = 700.f + static_cast<float>(rand() % 100);
             SpawnMonster(newID, { randX, 0.f, randZ }, 100);
-            std::cout << "[테스트] 몬스터 스폰됨: " << newID << std::endl;
+            std::cout << "몬스터 생성: " << newID << std::endl;
         }
     }
 
-    // === 랜덤 디스폰 (30% 확률) ===
     if (despawnTimer >= despawnInterval) {
         despawnTimer = 0.0f;
 
         float chance = static_cast<float>(rand()) / RAND_MAX;
         if (!Monster_List.empty() && chance < 0.5f) {
+            std::cout << "m list size : " << Monster_List.size() << " m idx - ";
+            for (int i = 0; i < Monster_List.size(); ++i) {
+                std::cout << Monster_List[i]->GetID() << ", ";
+            }
             int idx = rand() % Monster_List.size();
             int id = Monster_List[idx]->GetID();
             DespawnMonster(id);
-            std::cout << "[테스트] 몬스터 삭제됨: " << id << std::endl;
+           
         }
     }
+    //std::cout << "몬스터 리스트: " << Monster_List.size() << std::endl;
 }
 
 Scene_Type Stage_Scene::CheckSceneTransition()
@@ -464,7 +466,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     }
 }
 
-void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp, bool bIsRun)
+void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 {
     if (id2idx.find(id) != id2idx.end())
         return;                            
@@ -489,9 +491,6 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp, bool bIsRun)
 
     id2idx[id] = Monster_List.size();       
     Monster_List.emplace_back(std::move(m));
-
-    if (bIsRun)
-        Server::Get()->BroadcastMonsterSpawn(GetSceneType(), id, pos, hp);
 }
 
 void Stage_Scene::DespawnMonster(int id)
@@ -499,7 +498,10 @@ void Stage_Scene::DespawnMonster(int id)
     std::lock_guard<std::recursive_mutex> lock(GetSceneMutex());
 
     auto it = id2idx.find(id);
-    if (it == id2idx.end()) return;
+    if (it == id2idx.end()) {
+        std::cout << "map find fail : " << id << std::endl;
+        return;
+    }
 
     size_t idx = it->second;              
     size_t last = Monster_List.size() - 1;  
@@ -512,7 +514,6 @@ void Stage_Scene::DespawnMonster(int id)
     id2idx.erase(it);
 
     QueueDespawnCommand(id);
-    //Server::Get()->BroadcastMonsterDespawn(GetSceneType(), id);
 }
 
 std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
