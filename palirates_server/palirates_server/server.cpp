@@ -613,6 +613,15 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         oss << "\n";
     }
 
+    const auto despawn_list = stage->FlushDespawnQueue();
+    if (!despawn_list.empty()) {
+        oss << "MONSTER_COMMAND," << despawn_list.size();
+        for (int id : despawn_list) {
+            oss << ",DESPAWN," << id;
+        }
+        oss << "\n";
+    }
+
 	std::cout << "oss size : " << oss.str().size() << std::endl;
     return oss.str();
 }
@@ -652,27 +661,27 @@ void Server::Server_Update()
 
         scene->Update_Scene(elapsedTime); 
 
-        if (scene->GetSceneType() == Scene_Type::Stage_1)
-        {
-            auto stage = std::dynamic_pointer_cast<Stage_Scene>(scene);
+        //if (scene->GetSceneType() == Scene_Type::Stage_1)
+        //{
+        //    auto stage = std::dynamic_pointer_cast<Stage_Scene>(scene);
 
-            spawnTimer += elapsedTime;
-            // 3초 주기로 Fishman 생성
-            if (spawnTimer >= 3.0)
-            {
-                int id = nextId++;
-                stage->SpawnMonster(id, { 1450.f,0.f,747.f }, 120, true);
-                // 디스폰 예약: 람다 캡처
-                std::thread([stage, id, lifeTime]() {
-                    std::this_thread::sleep_for(
-                        std::chrono::milliseconds(
-                            static_cast<int>(lifeTime * 1000)));
-                    stage->DespawnMonster(id);
-                    }).detach();
+        //    spawnTimer += elapsedTime;
+        //    // 3초 주기로 Fishman 생성
+        //    if (spawnTimer >= 3.0)
+        //    {
+        //        int id = nextId++;
+        //        stage->SpawnMonster(id, { 1450.f,0.f,747.f }, 120, true);
+        //        // 디스폰 예약: 람다 캡처
+        //        std::thread([stage, id, lifeTime]() {
+        //            std::this_thread::sleep_for(
+        //                std::chrono::milliseconds(
+        //                    static_cast<int>(lifeTime * 1000)));
+        //            stage->DespawnMonster(id);
+        //            }).detach();
 
-                spawnTimer = 0.0;
-            }
-        }
+        //        spawnTimer = 0.0;
+        //    }
+        //}
 
         //==============================================
         // Handle Scene Chnage

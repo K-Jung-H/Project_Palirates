@@ -300,7 +300,7 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     int id;
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 3; ++i) {
         if (i % 3 == 0)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 3 == 1)
@@ -326,6 +326,49 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         }
         else {
             //std::cout << "con 없음" << std::endl;
+        }
+    }
+
+    // === 테스트용 스폰/디스폰 타이머 ===
+    static float spawnTimer = 0.0f;
+    static float despawnTimer = 0.0f;
+    static float spawnInterval = 1.0f;
+    static float despawnInterval = 1.0f;
+    static int nextIndex = 12;
+
+    spawnTimer += elapsedTime;
+    despawnTimer += elapsedTime;
+
+    // === 랜덤 스폰 (50% 확률) ===
+    if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0.0f;
+
+        float chance = static_cast<float>(rand()) / RAND_MAX;
+        if (chance < 0.5f) {
+            int newID = 0;
+            if (chance < 0.2f)
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
+            else if (chance < 0.4f)
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
+            else if (chance < 0.5f)
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), nextIndex++);
+            float randX = 1400.f + static_cast<float>(rand() % 100);
+            float randZ = 700.f + static_cast<float>(rand() % 100);
+            SpawnMonster(newID, { randX, 0.f, randZ }, 100);
+            std::cout << "[테스트] 몬스터 스폰됨: " << newID << std::endl;
+        }
+    }
+
+    // === 랜덤 디스폰 (30% 확률) ===
+    if (despawnTimer >= despawnInterval) {
+        despawnTimer = 0.0f;
+
+        float chance = static_cast<float>(rand()) / RAND_MAX;
+        if (!Monster_List.empty() && chance < 0.5f) {
+            int idx = rand() % Monster_List.size();
+            int id = Monster_List[idx]->GetID();
+            DespawnMonster(id);
+            std::cout << "[테스트] 몬스터 삭제됨: " << id << std::endl;
         }
     }
 }
@@ -468,11 +511,19 @@ void Stage_Scene::DespawnMonster(int id)
     Monster_List.pop_back();
     id2idx.erase(it);
 
-    Server::Get()->BroadcastMonsterDespawn(GetSceneType(), id);
+    QueueDespawnCommand(id);
+    //Server::Get()->BroadcastMonsterDespawn(GetSceneType(), id);
 }
 
 std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
 {
     auto it = id2idx.find(id);
     return (it == id2idx.end()) ? nullptr : Monster_List[it->second];
+}
+
+std::vector<int> Stage_Scene::FlushDespawnQueue()
+{
+    std::vector<int> temp = monster_despawn_queue;
+    monster_despawn_queue.clear();
+    return temp;
 }

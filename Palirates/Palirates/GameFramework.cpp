@@ -1416,6 +1416,17 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			ProcessReceivedData_MonsterDespawn(stage_scene, tokens);
 			std::cout << "몬스터 삭제" << std::endl;
 		}
+		else if (cmd == "MONSTER_COMMAND") {
+			int cmdCount = std::stoi(tokens[1]);
+			int idx = 2;
+			for (int i = 0; i < cmdCount; ++i) {
+				std::string cmdType = tokens[idx++];
+				if (cmdType == "DESPAWN") {
+					int id = std::stoi(tokens[idx++]);
+					stage_scene->DespawnMonster(id);
+				}
+			}
+		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
 	break;

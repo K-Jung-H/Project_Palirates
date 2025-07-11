@@ -104,6 +104,7 @@ private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
     GameWorld game_world;
+
 public:
     Stage_Scene() : Scene(Scene_Type::Stage_1) 
     {
@@ -128,6 +129,7 @@ public:
 private:
     std::vector<std::shared_ptr<Monster>> Monster_List;
     std::unordered_map<int, size_t> id2idx;
+    std::vector<int> monster_despawn_queue;
 
 public:
     void SpawnMonster(int id, const XMFLOAT3& pos, int hp, bool bIsRun = false);
@@ -135,4 +137,6 @@ public:
     std::shared_ptr<Monster> GetMonster(int id);
 
     const std::vector<std::shared_ptr<Monster>>& GetMonsterList() const { return Monster_List; }
+    void QueueDespawnCommand(int id) { monster_despawn_queue.emplace_back(id); }
+    std::vector<int> FlushDespawnQueue();
 };

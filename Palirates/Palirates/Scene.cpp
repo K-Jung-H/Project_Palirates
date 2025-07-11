@@ -2282,9 +2282,9 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 void CScene::DespawnMonster(int id)
 {
 	auto* plist = obj_manager->Get_Object_List(Object_Type::skinned);
-	if (!plist) return;            
+	if (!plist) return;
 
-	auto mMap = obj_manager->Get_Monster_Map();
+	auto& mMap = obj_manager->Get_Monster_Map();
 
 	auto it = mMap.find(id);
 	if (it == mMap.end()) return;
@@ -2292,10 +2292,17 @@ void CScene::DespawnMonster(int id)
 	size_t idx = it->second;
 	size_t last = plist->size() - 1;
 
-	if (idx != last) {
-		std::swap(plist[idx], plist[last]);
-		mMap[(*plist)[idx]->GetID()] = idx;
+	if (idx != last)
+	{
+		std::swap((*plist)[idx], (*plist)[last]);
+
+		if ((*plist)[idx])
+		{
+			int newId = (*plist)[idx]->GetID();
+			mMap[newId] = idx;
+		}
 	}
+
 	plist->pop_back();
 	mMap.erase(it);
 }
