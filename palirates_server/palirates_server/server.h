@@ -67,7 +67,7 @@ public:
     void PrintClientDebugInfo();
 
     static Server* Get();
-    void BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type, const XMFLOAT3& pos, int hp);
+    void BroadcastMonsterSpawn(Scene_Type scene, int id, const XMFLOAT3& pos, int hp);
     void BroadcastMonsterDespawn(Scene_Type scene, int id);
     void SendToSceneClients(Scene_Type scene, const std::string& packet, bool saveLog = false);
 

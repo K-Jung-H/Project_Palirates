@@ -130,7 +130,7 @@ private:
     std::unordered_map<int, size_t> id2idx;
 
 public:
-    void SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp);
+    void SpawnMonster(int id, const XMFLOAT3& pos, int hp, bool bIsRun = false);
     void DespawnMonster(int id);
     std::shared_ptr<Monster> GetMonster(int id);
 

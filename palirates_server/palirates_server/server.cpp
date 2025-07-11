@@ -594,7 +594,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
         for (const auto& monster : monster_list) {
             if (!monster) continue;
-            float mID = monster->GetID();
+            int mID = monster->GetID();
             oss << "," << mID;
 
             auto sync_Data = monster->MakeSyncData();
@@ -637,7 +637,7 @@ void Server::Server_Update()
     float FPS = 0.0f;
     double spawnTimer = 0.0;
     double lifeTime = 8.0;     
-    int    nextId = 12;
+    int    nextId = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), 12);
     while (true)
     {
         m_gameTimer.Tick(FPS);
@@ -661,8 +661,7 @@ void Server::Server_Update()
             if (spawnTimer >= 3.0)
             {
                 int id = nextId++;
-                stage->SpawnMonster(id, Monster_Type::Fishman,
-                    { 1450.f,0.f,747.f }, 120);
+                stage->SpawnMonster(id, { 1450.f,0.f,747.f }, 120, true);
                 // 디스폰 예약: 람다 캡처
                 std::thread([stage, id, lifeTime]() {
                     std::this_thread::sleep_for(
@@ -932,8 +931,7 @@ void Server::SendToSceneClients(Scene_Type scene,
     }
 }
 
-void Server::BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type,
-    const XMFLOAT3& pos, int hp)
+void Server::BroadcastMonsterSpawn(Scene_Type scene, int id, const XMFLOAT3& pos, int hp)
 {
     std::ostringstream oss;
    /* oss << "MON_SPAWN," << static_cast<int>(scene) << ','

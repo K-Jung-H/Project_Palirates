@@ -73,7 +73,8 @@ void MonsterStateMachine::update(float Elapsed_time)
         pos.x += dir * moveSpeed * Elapsed_time;
         pos.z = centerZ;                       // Z 고정
         //m_pOwner->SetPosition(pos);
-        m_pOwner->SetPosition(XMFLOAT3(1500.0f + 10 * m_pOwner->GetID(), 0, 700));
+        int offset = GET_MONSTER_INDEX(m_pOwner->GetID());
+        m_pOwner->SetPosition(XMFLOAT3(1500.0f + 10 * offset, 0, 700));
 
         /* --- 자전 ------------------------------- */
         float deltaYaw = dir * XMConvertToRadians(spinSpeedDeg) * Elapsed_time;
@@ -176,7 +177,8 @@ void FishManStateMachine::update(float Elapsed_time)
         pos.x += dir * moveSpeed * Elapsed_time;
         pos.z = centerZ;                       // Z 고정
         //m_pOwner->SetPosition(pos);
-        m_pOwner->SetPosition(XMFLOAT3(1500.0f + 10 * m_pOwner->GetID(), 0, 700));
+        int offset = GET_MONSTER_INDEX(m_pOwner->GetID());
+        m_pOwner->SetPosition(XMFLOAT3(1500.0f + 10 * offset, 0, 700));
 
         /* --- 자전 ------------------------------- */
         float deltaYaw = dir * XMConvertToRadians(spinSpeedDeg) * Elapsed_time;

@@ -299,18 +299,17 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    // test
+    int id;
     for (int i = 0; i < 12; ++i) {
-        std::shared_ptr<Monster> m;             
         if (i % 3 == 0)
-            m = std::make_shared<Fishman>(1);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 3 == 1)
-            m = std::make_shared<Fishman>(1);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 3 == 2)
-            m = std::make_shared<Dragon>(1);
-        m->SetID(i);
-        m->SetPosition(XMFLOAT3(1500 + i * 10, 0, 700));
-        Monster_List.push_back(m);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(1500 + i * 10, 0, 700), 100);
+        std::cout << "몬스터 스폰 " << id << std::endl;
     }
 }
 
@@ -422,20 +421,34 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     }
 }
 
-void Stage_Scene::SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp)
+void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp, bool bIsRun)
 {
     if (id2idx.find(id) != id2idx.end())
         return;                            
 
-    //auto m = MonsterFactory::Create(type);
-    auto m = std::make_shared<Fishman>(1);
+    int mType = GET_MONSTER_TYPE(id);
+    std::shared_ptr<Monster> m;
+
+    if (mType == static_cast<int>(Monster_Type::Fishman)) {
+        m = std::make_shared<Fishman>(1);
+    }
+    else if (mType == static_cast<int>(Monster_Type::Anubis)) {
+        m = std::make_shared<Anubis>(1);
+    }
+    else if (mType == static_cast<int>(Monster_Type::Dragon)) {
+        m = std::make_shared<Dragon>(1);
+    }
+    else {
+        return;
+    }
     m->SetID(id);
     m->SetPosition(pos);
 
     id2idx[id] = Monster_List.size();       
     Monster_List.emplace_back(std::move(m));
 
-    Server::Get()->BroadcastMonsterSpawn(GetSceneType(), id, type, pos, hp);
+    if (bIsRun)
+        Server::Get()->BroadcastMonsterSpawn(GetSceneType(), id, pos, hp);
 }
 
 void Stage_Scene::DespawnMonster(int id)

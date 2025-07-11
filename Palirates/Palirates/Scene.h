@@ -277,9 +277,9 @@ public:
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
-	virtual void Sync_Monster_Data(int monsterID, const ServerSyncData& syncData);
+	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 
-	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos);
+	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
 	virtual void DespawnMonster(int id);
 };
 

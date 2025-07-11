@@ -1562,18 +1562,15 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
 	}
 }
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
-	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
-	//std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
 	if (tokens.size() < 3) return;
 	float list_size = std::stof(tokens[1]);
-	//std::cout << "리스트 사이즈 : " << list_size << std::endl;
+
 	int startIndex = 2;
 	for (int i = 0; i<int(list_size); ++i) 
 	{
@@ -1591,8 +1588,6 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		int trackStart = base + 8;
 
 		int expectedTrackTokenCount = trackCount * 3;
-
-		//std::cout << "몬스터 ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
 
 		std::vector<Animation_Sync> track_list;
 
@@ -1615,26 +1610,18 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
 
 
-		stage_scene->Sync_Monster_Data(monsterId, syncData);
-		// 다음 플레이어를 위해 시작 위치 조정
+		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+
 		startIndex = stateFlagIndex + 1;
 	}
 }
 
 void CGameFramework::ProcessReceivedData_MonsterSpawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
-	// 형식: MON_SPAWN,scene,id,type,x,y,z,hp
 	if (tokens.size() < 2) return;
 
 	int id = std::stoi(tokens[1]);
 	XMFLOAT3 pos{ 0,0,0 };
-	/*Scene_Type sceneType = Scene_Type(std::stoi(tokens[1]));
-	if (sceneType != stage_scene->scene_type) return;      
-
-	int id = std::stoi(tokens[2]);
-	int typeInt = std::stoi(tokens[3]);
-	XMFLOAT3 pos{ std::stof(tokens[4]), std::stof(tokens[5]), std::stof(tokens[6]) };
-	int hp = std::stoi(tokens[7]);*/
 
 	auto stage = std::dynamic_pointer_cast<CScene>(stage_scene);
 	if (!stage) return;
@@ -1644,10 +1631,7 @@ void CGameFramework::ProcessReceivedData_MonsterSpawn(std::shared_ptr<CScene> st
 
 void CGameFramework::ProcessReceivedData_MonsterDespawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
-	// 형식: MON_DESPAWN,scene,id
 	if (tokens.size() < 2) return;
-	//Scene_Type sceneType = Scene_Type(std::stoi(tokens[1]));
-	//if (sceneType != stage_scene->scene_type) return;
 
 	int id = std::stoi(tokens[1]);
 
