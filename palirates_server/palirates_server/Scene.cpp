@@ -312,18 +312,17 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    // test
-    for (int i = 0; i < 12; ++i) {
-        std::shared_ptr<Monster> m;             
+    int id;
+    for (int i = 0; i < 3; ++i) {
         if (i % 3 == 0)
-            m = std::make_shared<Fishman>(1);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 3 == 1)
-            m = std::make_shared<Fishman>(1);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 3 == 2)
-            m = std::make_shared<Dragon>(1);
-        m->SetID(i);
-        m->SetPosition(XMFLOAT3(1500 + i * 10, 0, 700));
-        Monster_List.push_back(m);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(1500 + i * 10, 0, 700), 100);
+        std::cout << "몬스터 생성 : " << id << std::endl;
     }
 }
 
@@ -350,6 +349,51 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
         }
     }
+    // test
+    static float spawnTimer = 0.0f;
+    static float despawnTimer = 0.0f;
+    static float spawnInterval = 1.0f;
+    static float despawnInterval = 1.0f;
+    static int nextIndex = 6;
+
+    spawnTimer += elapsedTime;
+    despawnTimer += elapsedTime;
+
+    if (spawnTimer >= spawnInterval) {
+        spawnTimer = 0.0f;
+
+        float chance = static_cast<float>(rand()) / RAND_MAX;
+        if (chance < 0.5f) {
+            int newID = 0;
+            if (chance < 0.2f)
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
+            else if (chance < 0.4f)
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), nextIndex++);
+            else if (chance < 0.5f)
+                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), nextIndex++);
+            float randX = 1400.f + static_cast<float>(rand() % 100);
+            float randZ = 700.f + static_cast<float>(rand() % 100);
+            SpawnMonster(newID, { randX, 0.f, randZ }, 100);
+            std::cout << "몬스터 생성: " << newID << std::endl;
+        }
+    }
+
+    if (despawnTimer >= despawnInterval) {
+        despawnTimer = 0.0f;
+
+        float chance = static_cast<float>(rand()) / RAND_MAX;
+        if (!Monster_List.empty() && chance < 0.5f) {
+            std::cout << "m list size : " << Monster_List.size() << " m idx - ";
+            for (int i = 0; i < Monster_List.size(); ++i) {
+                std::cout << Monster_List[i]->GetID() << ", ";
+            }
+            int idx = rand() % Monster_List.size();
+            int id = Monster_List[idx]->GetID();
+            DespawnMonster(id);
+           
+        }
+    }
+    //std::cout << "몬스터 리스트: " << Monster_List.size() << std::endl;
 }
 
 Scene_Type Stage_Scene::CheckSceneTransition()
@@ -443,26 +487,42 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     }
 }
 
-void Stage_Scene::SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp)
+void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 {
     if (id2idx.find(id) != id2idx.end())
         return;                            
 
-    //auto m = MonsterFactory::Create(type);
-    auto m = std::make_shared<Fishman>(1);
+    int mType = GET_MONSTER_TYPE(id);
+    std::shared_ptr<Monster> m;
+
+    if (mType == static_cast<int>(Monster_Type::Fishman)) {
+        m = std::make_shared<Fishman>(1);
+    }
+    else if (mType == static_cast<int>(Monster_Type::Anubis)) {
+        m = std::make_shared<Anubis>(1);
+    }
+    else if (mType == static_cast<int>(Monster_Type::Dragon)) {
+        m = std::make_shared<Dragon>(1);
+    }
+    else {
+        return;
+    }
     m->SetID(id);
     m->SetPosition(pos);
 
     id2idx[id] = Monster_List.size();       
     Monster_List.emplace_back(std::move(m));
-
-    Server::Get()->BroadcastMonsterSpawn(GetSceneType(), id, type, pos, hp);
 }
 
 void Stage_Scene::DespawnMonster(int id)
 {
+    std::lock_guard<std::recursive_mutex> lock(GetSceneMutex());
+
     auto it = id2idx.find(id);
-    if (it == id2idx.end()) return;
+    if (it == id2idx.end()) {
+        std::cout << "map find fail : " << id << std::endl;
+        return;
+    }
 
     size_t idx = it->second;              
     size_t last = Monster_List.size() - 1;  
@@ -474,11 +534,18 @@ void Stage_Scene::DespawnMonster(int id)
     Monster_List.pop_back();
     id2idx.erase(it);
 
-    Server::Get()->BroadcastMonsterDespawn(GetSceneType(), id);
+    QueueDespawnCommand(id);
 }
 
 std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
 {
     auto it = id2idx.find(id);
     return (it == id2idx.end()) ? nullptr : Monster_List[it->second];
+}
+
+std::vector<int> Stage_Scene::FlushDespawnQueue()
+{
+    std::vector<int> temp = monster_despawn_queue;
+    monster_despawn_queue.clear();
+    return temp;
 }

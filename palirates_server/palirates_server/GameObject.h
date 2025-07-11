@@ -20,7 +20,7 @@ class GameObject : public std::enable_shared_from_this<GameObject>
 protected:
     Object_Type obj_type;
     string Obj_Name;
-    float Obj_ID;
+    int Obj_ID;
 
     shared_ptr<GameObject> child_obj = NULL;
     shared_ptr<GameObject> sibling_obj = NULL;
@@ -97,15 +97,14 @@ public:
     void Obj_Info(int depth = 0);
     Object_Type GetType() { return obj_type; }
 
-
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
 
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
 
-    void SetID(float ID) { Obj_ID = ID; }
-    float GetID() { return Obj_ID; }
+    void SetID(int ID) { Obj_ID = ID; }
+    int GetID() { return Obj_ID; }
 
     std::unordered_set<int> RootMotionTrackSet;
     

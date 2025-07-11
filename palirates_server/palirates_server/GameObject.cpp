@@ -533,7 +533,10 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_p
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
-			char meshName[64];
+			shared_ptr<CStandardMesh> mesh = std::make_shared<CStandardMesh>();
+			mesh->LoadMeshFromFile(pInFile);
+			pGameObject->SetMesh(mesh);
+			/*char meshName[64];
 			::ReadStringFromFile(pInFile, meshName);
 
 			auto mesh = MeshManager::GetMesh(meshName);
@@ -544,7 +547,7 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_p
 				MeshManager::AddMesh(meshName, mesh);
 			}
 
-			pGameObject->SetMesh(mesh);
+			pGameObject->SetMesh(mesh);*/
 		}
 		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
 		{

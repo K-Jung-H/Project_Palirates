@@ -1404,11 +1404,22 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		shared_ptr<CScene>stage_scene = std::dynamic_pointer_cast<CScene>(active_scene);
 		if (!stage_scene)
 			break;
-
 		if (cmd == "STAGE_1")
-			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
+		else if (cmd == "MONSTER_COMMAND") {
+			// need func
+			int cmdCount = std::stoi(tokens[1]);
+			int idx = 2;
+			for (int i = 0; i < cmdCount; ++i) {
+				std::string cmdType = tokens[idx++];
+				if (cmdType == "DESPAWN") {
+					int id = std::stoi(tokens[idx++]);
+					stage_scene->DespawnMonster(id);
+				}
+			}
+		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
 	break;
@@ -1555,18 +1566,15 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-		// 다음 플레이어를 위해 시작 위치 조정
 		startIndex = stateFlagIndex + 1;
 	}
 }
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
-	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
-	//std::cout << "토큰 크기 체크 : " << tokens.size() << std::endl;
 	if (tokens.size() < 3) return;
 	float list_size = std::stof(tokens[1]);
-	//std::cout << "리스트 사이즈 : " << list_size << std::endl;
+
 	int startIndex = 2;
 	for (int i = 0; i<int(list_size); ++i) 
 	{
@@ -1584,8 +1592,6 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		int trackStart = base + 8;
 
 		int expectedTrackTokenCount = trackCount * 3;
-
-		//std::cout << "몬스터 ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
 
 		std::vector<Animation_Sync> track_list;
 
@@ -1608,8 +1614,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
 
 
-		stage_scene->Sync_Monster_Data(monsterId, syncData);
-		// 다음 플레이어를 위해 시작 위치 조정
+		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+
 		startIndex = stateFlagIndex + 1;
 	}
 }

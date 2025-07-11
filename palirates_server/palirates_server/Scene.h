@@ -126,11 +126,14 @@ public:
 private:
     std::vector<std::shared_ptr<Monster>> Monster_List;
     std::unordered_map<int, size_t> id2idx;
+    std::vector<int> monster_despawn_queue;
 
 public:
-    void SpawnMonster(int id, Monster_Type type, const XMFLOAT3& pos, int hp);
+    void SpawnMonster(int id, const XMFLOAT3& pos, int hp);
     void DespawnMonster(int id);
     std::shared_ptr<Monster> GetMonster(int id);
 
     const std::vector<std::shared_ptr<Monster>>& GetMonsterList() const { return Monster_List; }
+    void QueueDespawnCommand(int id) { monster_despawn_queue.emplace_back(id); }
+    std::vector<int> FlushDespawnQueue();
 };
