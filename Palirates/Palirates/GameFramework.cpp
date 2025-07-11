@@ -1405,18 +1405,11 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 		if (cmd == "STAGE_1")
-			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
-		else if (cmd == "MON_SPAWN") {
-			ProcessReceivedData_MonsterSpawn(stage_scene, tokens);
-			std::cout << "몬스터 스폰" << std::endl;
-		}
-		else if (cmd == "MON_DESPAWN") {
-			ProcessReceivedData_MonsterDespawn(stage_scene, tokens);
-			std::cout << "몬스터 삭제" << std::endl;
-		}
 		else if (cmd == "MONSTER_COMMAND") {
+			// need func
 			int cmdCount = std::stoi(tokens[1]);
 			int idx = 2;
 			for (int i = 0; i < cmdCount; ++i) {
@@ -1426,7 +1419,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					stage_scene->DespawnMonster(id);
 				}
 			}
-			std::cout << "몬스터 삭제됨: " << stage_scene->obj_manager->Get_Object_List(Object_Type::skinned)->size() << std::endl;
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
@@ -1626,31 +1618,6 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 
 		startIndex = stateFlagIndex + 1;
 	}
-}
-
-void CGameFramework::ProcessReceivedData_MonsterSpawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
-{
-	if (tokens.size() < 2) return;
-
-	int id = std::stoi(tokens[1]);
-	XMFLOAT3 pos{ 0,0,0 };
-
-	auto stage = std::dynamic_pointer_cast<CScene>(stage_scene);
-	if (!stage) return;
-
-	stage->SpawnMonster(m_pd3dDevice, Active_CommandList, id, pos);
-}
-
-void CGameFramework::ProcessReceivedData_MonsterDespawn(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
-{
-	if (tokens.size() < 2) return;
-
-	int id = std::stoi(tokens[1]);
-
-	auto stage = std::dynamic_pointer_cast<CScene>(stage_scene);
-	if (!stage) return;
-
-	stage->DespawnMonster(id);
 }
 
 void CGameFramework::HandleClientIdAssignment()
