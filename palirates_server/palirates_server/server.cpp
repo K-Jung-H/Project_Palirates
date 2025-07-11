@@ -162,6 +162,100 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
 }
 
+void Server::HandlePacket(int clientId, const std::string& packet)
+{
+    // 패킷 파싱
+    std::istringstream linestream(packet);
+    std::string command;
+    std::getline(linestream, command, ',');
+
+    std::vector<std::string> tokens;
+    tokens.push_back(command);
+    std::string token;
+    while (std::getline(linestream, token, ',')) tokens.push_back(token);
+
+    if (command == "PING")
+    {
+        HandlePingPacket(clientId, command, tokens);
+        return;
+    }
+
+    // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
+    if (tokens.size() < 2)
+    {
+        return;
+    }
+
+    // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
+    int sceneTypeInt = 0;
+    try
+    {
+        sceneTypeInt = std::stoi(tokens[1]);
+    }
+    catch (...)
+    {
+        std::cerr << "[ERROR] Invalid sceneType token: " << tokens[1] << std::endl;
+        return;
+    }
+
+    if (tokens.size() < 3)
+    {
+        return;
+    }
+
+    Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
+
+    clients[clientId]->client_scene_type = sceneType;
+
+
+    switch (sceneType)
+    {
+    case Scene_Type::Lobby:
+        HandleLobbyPacket(clientId, command, tokens);
+        break;
+    case Scene_Type::Board:
+        HandleBoardPacket(clientId, command, tokens);
+        break;
+    case Scene_Type::Stage_1:
+        HandleStage1Packet(clientId, command, tokens);
+        break;
+    case Scene_Type::Stage_2:
+        // 필요시 추가
+        break;
+    default:
+        std::cerr << "[ERROR] Unknown scene type received: " << sceneTypeInt << std::endl;
+        break;
+    }
+}
+
+void Server::ProcessQueuedPackets()
+{
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    for (auto it = clients.begin(); it != clients.end(); ++it)
+    {
+        int clientId = it->first;
+        auto session = it->second;
+
+        if (!session->is_connected)
+            continue;
+
+        std::lock_guard<std::mutex> recvLock(session->recvQueueMutex);
+        while (!session->recvQueue.empty())
+        {
+            std::string packet = session->recvQueue.front();
+            session->recvQueue.pop();
+            try
+            {
+                HandlePacket(clientId, packet);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "[EXCEPTION][client " << clientId << "] " << e.what() << std::endl;
+            }
+        }
+    }
+}
+
 void Server::HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
 
@@ -639,8 +733,7 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 void Server::Server_Update()
 {
     m_gameTimer.Reset();
-    float FPS = 0.0f;   
-
+    float FPS = 150.0f;
     while (true)
     {
         m_gameTimer.Tick(FPS);
@@ -665,6 +758,8 @@ void Server::Server_Update()
         else
         {
             Broadcast_Scene_State_All();
+
+            FlushSendQueues();
         }
 
         PrintClientDebugInfo();
@@ -848,12 +943,14 @@ void Server::BroadcastPacket(const std::string& packet)
     }
 }
 
-
 void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog)
 {
     if (!session->is_connected) return;
 
-    send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+    {
+        std::lock_guard<std::mutex> lock(session->sendQueueMutex);
+        session->sendQueue.push(packet);
+    }
 
     if (saveLog)
     {
@@ -862,9 +959,10 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
     }
 }
 
+
 void Server::PrintClientDebugInfo()
 {
-    system("cls");
+    //system("cls");
     std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
 
 

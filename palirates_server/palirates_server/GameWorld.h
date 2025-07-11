@@ -27,6 +27,8 @@ class GameWorld
 private:
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
 	std::unordered_map<XMINT3, std::vector<UINT>, XMINT3Hasher> uniform_cell_map;
+
+
 	float grid_cell_size = 100.0f;
 	//=======================
 
@@ -46,5 +48,8 @@ public:
 private:
 	void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
 	void AssignToUniformCells();
+
+	XMINT3 Get_CellIndexFromPosition(const XMFLOAT3& pos) const;
+	void Compute_CellBounds_From_OBB(const std::shared_ptr<BoundingOrientedBox>& obb, XMINT3& out_min_cell, XMINT3& out_max_cell) const;
 };
 

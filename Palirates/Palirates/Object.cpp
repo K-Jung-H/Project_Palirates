@@ -2499,30 +2499,48 @@ void CGameObject::SetScale(XMFLOAT3 scale, bool keepPosition)
 
 void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 {
-	XMFLOAT3 originalPosition;
+	XMVECTOR worldPosBefore = XMVectorZero();
+	if (keepPosition)
+	{
+		XMMATRIX worldMatrixBefore = XMLoadFloat4x4(&m_xmf4x4World);
+		worldPosBefore = XMVector3TransformCoord(XMVectorZero(), worldMatrixBefore);
+	}
+
+	XMVECTOR scale, rotation, translation;
+	XMMATRIX parentMat = XMLoadFloat4x4(&m_xmf4x4Parent);
+	XMMatrixDecompose(&scale, &rotation, &translation, parentMat);
+
+	scale = XMVectorSet(x, y, z, 0.0f);
+	XMMATRIX newParent = XMMatrixScalingFromVector(scale) *
+		XMMatrixRotationQuaternion(rotation) *
+		XMMatrixTranslationFromVector(translation);
+	XMStoreFloat4x4(&m_xmf4x4Parent, newParent);
+
+	UpdateTransform(m_pParent ? &m_pParent->m_xmf4x4World : nullptr);
 
 	if (keepPosition)
 	{
-		originalPosition = { m_xmf4x4Parent._41, m_xmf4x4Parent._42, m_xmf4x4Parent._43 };
-		m_xmf4x4Parent._41 = m_xmf4x4Parent._42 = m_xmf4x4Parent._43 = 0.0f;
+		XMMATRIX worldMatrixAfter = XMLoadFloat4x4(&m_xmf4x4World);
+		XMVECTOR worldPosAfter = XMVector3TransformCoord(XMVectorZero(), worldMatrixAfter);
+
+		XMVECTOR offset = worldPosBefore - worldPosAfter;
+
+		XMMATRIX correction = XMMatrixTranslationFromVector(offset);
+		worldMatrixAfter = correction * worldMatrixAfter;
+
+		XMMATRIX parentInv = XMMatrixIdentity();
+		if (m_pParent)
+		{
+			parentInv = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
+		}
+
+		XMMATRIX correctedLocal = worldMatrixAfter * parentInv;
+		XMStoreFloat4x4(&m_xmf4x4Parent, correctedLocal);
+
+		UpdateTransform(m_pParent ? &m_pParent->m_xmf4x4World : nullptr);
 	}
-
-	XMMATRIX scaleMatrix = XMMatrixScaling(x, y, z);
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4Parent);
-
-	worldMatrix = worldMatrix * scaleMatrix;
-
-	XMStoreFloat4x4(&m_xmf4x4Parent, worldMatrix);
-
-	if (keepPosition)
-	{
-		m_xmf4x4Parent._41 = originalPosition.x;
-		m_xmf4x4Parent._42 = originalPosition.y;
-		m_xmf4x4Parent._43 = originalPosition.z;
-	}
-
-	UpdateTransform(NULL);
 }
+
 
 XMFLOAT3 CGameObject::GetPosition()
 {

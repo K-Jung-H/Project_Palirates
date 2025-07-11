@@ -26,6 +26,8 @@ protected:
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
+    std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
+
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
@@ -66,6 +68,8 @@ public:
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
 
+    void SetScale(float x, float y, float z, bool keepPosition);
+
     void Move(XMFLOAT3 xmf3Offset);
 
 
@@ -92,6 +96,12 @@ public:
 
     void Obj_Info(int depth = 0);
     Object_Type GetType() { return obj_type; }
+
+    virtual void UpdateWorldOBB();
+    virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
+
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+
 
     void SetID(int ID) { Obj_ID = ID; }
     int GetID() { return Obj_ID; }

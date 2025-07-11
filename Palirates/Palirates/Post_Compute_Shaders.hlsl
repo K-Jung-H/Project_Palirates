@@ -6,15 +6,21 @@ Texture2D<float2> gtxtVelocity : register(t2);
 float3 GetObjectColorById(float objId)
 {
     if (objId == 0.0f)
-        return float3(0.0, 0.0, 0.0);
+        return float3(0.0, 0.0, 0.0); // Black
     else if (objId == 1.0f)
-        return float3(1.0, 0.0, 0.0);
+        return float3(1.0, 0.0, 0.0); // Red
     else if (objId == 2.0f)
-        return float3(0.0, 1.0, 0.0);
+        return float3(1.0, 0.5, 0.0); // Orange
     else if (objId == 3.0f)
-        return float3(0.0, 1.0, 1.0);
+        return float3(1.0, 1.0, 0.0); // Yellow
+    else if (objId == 4.0f)
+        return float3(0.0, 1.0, 0.0); // Green
+    else if (objId == 5.0f)
+        return float3(0.0, 0.0, 1.0); // Blue
+    else if (objId == 6.0f)
+        return float3(0.5, 0.0, 1.0); // Violet
     else
-        return float3(1.0, 1.0, 1.0);
+        return float3(1.0, 1.0, 1.0); // White
 }
 
 #define _WITH_GROUPSHARED_MEMORY

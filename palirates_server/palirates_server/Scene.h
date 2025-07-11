@@ -106,10 +106,7 @@ private:
     GameWorld game_world;
 
 public:
-    Stage_Scene() : Scene(Scene_Type::Stage_1) 
-    {
-        Init();
-    }
+    Stage_Scene();
     virtual void Init();
 
     virtual void Update_Scene(float elapsedTime);

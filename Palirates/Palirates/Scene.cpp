@@ -1954,8 +1954,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 #ifdef USING_OBB
-	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
-	obj_manager->Check_Player_Collision(m_pPlayer);
+//	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
+//	obj_manager->Check_Player_Collision(m_pPlayer);
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 #endif
