@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "GameObject.h"
 
 
@@ -22,8 +22,8 @@ private:
     int model_index = -1;
     Player_State player_state = Player_State::Idle;
 
-    std::shared_ptr<BoundingOrientedBox> m_localOBB;  // º¯ÇÏÁö ¾Ê´Â ±âº» °ª
-    std::shared_ptr<BoundingOrientedBox> m_worldOBB;  // Ãæµ¹ °Ë»ç¿ë 
+    std::shared_ptr<BoundingOrientedBox> m_localOBB;  // ë³€í•˜ì§€ ì•ŠëŠ” ê¸°ë³¸ ê°’
+    std::shared_ptr<BoundingOrientedBox> m_worldOBB;  // ì¶©ëŒ ê²€ì‚¬ìš© 
 
 public:
     Player(int model_index);

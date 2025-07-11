@@ -164,3 +164,4 @@ public:
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
 };
+
