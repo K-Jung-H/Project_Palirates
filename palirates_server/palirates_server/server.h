@@ -27,6 +27,13 @@ struct ClientSession
     std::string lastSentPacket;
     std::mutex packetLogMutex;
 
+
+    std::queue<std::string> recvQueue;
+    std::mutex recvQueueMutex;
+
+    std::queue<std::string> sendQueue;
+    std::mutex sendQueueMutex;
+
     ClientSession(SOCKET sock)
         : socket(sock) {}
 
@@ -45,6 +52,8 @@ public:
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
+    void HandlePacket(int clientId, const std::string& packet);
+    void ProcessQueuedPackets();
     void Broadcast_Scene_State_All();
     
     void Server_Update();
@@ -65,11 +74,15 @@ public:
 
     void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
     void PrintClientDebugInfo();
+   
+
 
     static Server* Get();
     void BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type, const XMFLOAT3& pos, int hp);
     void BroadcastMonsterDespawn(Scene_Type scene, int id);
     void SendToSceneClients(Scene_Type scene, const std::string& packet, bool saveLog = false);
+
+    void FlushSendQueues();
 
 private:
     SOCKET listenSocket;
