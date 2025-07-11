@@ -37,3 +37,17 @@ void Player::UpdateWorldOBB()
     XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
     m_localOBB->Transform(*m_worldOBB, worldMatrix);
 }
+
+void Player::Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter)
+{
+    const XMFLOAT3& offset = m_localOBB->Center;
+
+    XMFLOAT3 newPos = {
+        newWorldCenter.x - offset.x,
+        newWorldCenter.y - offset.y,
+        newWorldCenter.z - offset.z
+    };
+
+    SetPosition(newPos);
+    UpdateWorldOBB(); 
+}

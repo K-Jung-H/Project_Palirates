@@ -41,4 +41,9 @@ public:
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
+    void Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter);
+
+    XMFLOAT3 m_prevPosition;
+
+    void UpdatePrevPosition() { m_prevPosition = GetPosition(); }
 };

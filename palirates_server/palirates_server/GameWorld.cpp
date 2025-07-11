@@ -104,24 +104,100 @@ void GameWorld::Compute_CellBounds_From_OBB(const std::shared_ptr<BoundingOrient
     out_max_cell = Get_CellIndexFromPosition(max);
 }
 
+//void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
+//{
+//    if (!player_obj) return;
+//
+//    player_obj->UpdateWorldOBB();
+//    
+//    shared_ptr<BoundingOrientedBox> player_obb = player_obj->Get_Collider_OBB();
+//
+//    constexpr int maxIterations = 10;
+//    constexpr float pushDist = 1.0f;
+//    bool collisionOccurred;
+//
+//    for (int iteration = 0; iteration < maxIterations; ++iteration)
+//    {
+//        collisionOccurred = false;
+//
+//        // 현재 OBB 위치 기준으로 셀 계산
+//        XMINT3 cellPos = Get_CellIndexFromPosition(player_obb->Center);
+//
+//        for (int x = cellPos.x - 1; x <= cellPos.x + 1; ++x)
+//        {
+//            for (int y = cellPos.y - 1; y <= cellPos.y + 1; ++y)
+//            {
+//                for (int z = cellPos.z - 1; z <= cellPos.z + 1; ++z)
+//                {
+//                    XMINT3 checkCell = { x, y, z };
+//                    auto it = uniform_cell_map.find(checkCell);
+//                    if (it == uniform_cell_map.end()) continue;
+//
+//                    for (int objIndex : it->second)
+//                    {
+//                        auto other = fixed_object_list[objIndex];
+//                        if (!other || !other->Get_Collider_OBB()) continue;
+//
+//                        other->UpdateWorldOBB();
+//                        const auto& other_obb = *other->Get_Collider_OBB();
+//
+//                        // OBB 간 충돌 검사
+//                        if (player_obb->Intersects(other_obb))
+//                        {
+//                            collisionOccurred = true;
+//
+//                            // 밀어내기 방향 계산
+//                            XMVECTOR pCenter = XMLoadFloat3(&player_obb->Center);
+//                            XMVECTOR oCenter = XMLoadFloat3(&other_obb.Center);
+//                            XMVECTOR pushDir = XMVector3Normalize(pCenter - oCenter);
+//
+//                            if (XMVector3Equal(pushDir, XMVectorZero()))
+//                                pushDir = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+//
+//                            // 밀어내기 적용
+//                            pCenter += XMVectorScale(pushDir, pushDist);
+//                            XMStoreFloat3(&player_obb->Center, pCenter);
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        if (!collisionOccurred)
+//            break;
+//    }
+//
+//    // 최종 OBB 위치의 Center 기준으로 플레이어 위치 역산
+//    // OBB Center = player_pos + y_offset (0, height, 0)
+//    float y_offset = player_obj->Get_Collider_OBB()->Center.y - player_obj->GetPosition().y;
+//    XMFLOAT3 finalPos = {
+//        player_obb->Center.x,
+//        player_obb->Center.y - y_offset,
+//        player_obb->Center.z
+//    };
+//
+//    player_obj->SetPosition(finalPos);
+//}
+
+
 void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 {
-    if (!player_obj) return;
+    if (!player_obj || !player_obj->Get_Collider_OBB()) return;
 
-    player_obj->UpdateWorldOBB();
-    
-    shared_ptr<BoundingOrientedBox> player_obb = player_obj->Get_Collider_OBB();
-
+    constexpr float pushStrength = 2.0f;
     constexpr int maxIterations = 10;
-    constexpr float pushDist = 1.0f;
-    bool collisionOccurred;
+
+    player_obj->UpdateWorldOBB(); // 갱신된 월드 OBB
+    auto& player_worldOBB = *player_obj->Get_Collider_OBB();
 
     for (int iteration = 0; iteration < maxIterations; ++iteration)
     {
-        collisionOccurred = false;
+        bool collided = false;
+        XMVECTOR totalPushDir = XMVectorZero();
+        int hitCount = 0;
 
-        // 현재 OBB 위치 기준으로 셀 계산
-        XMINT3 cellPos = Get_CellIndexFromPosition(player_obb->Center);
+        XMINT3 cellPos = Get_CellIndexFromPosition(player_worldOBB.Center);
+        std::unordered_set<const BoundingOrientedBox*> alreadyProcessed;
 
         for (int x = cellPos.x - 1; x <= cellPos.x + 1; ++x)
         {
@@ -139,44 +215,40 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
                         if (!other || !other->Get_Collider_OBB()) continue;
 
                         other->UpdateWorldOBB();
-                        const auto& other_obb = *other->Get_Collider_OBB();
+                        const auto& otherOBB = *other->Get_Collider_OBB();
 
-                        // OBB 간 충돌 검사
-                        if (player_obb->Intersects(other_obb))
+                        if (alreadyProcessed.count(&otherOBB)) continue;
+
+                        if (player_worldOBB.Intersects(otherOBB))
                         {
-                            collisionOccurred = true;
+                            alreadyProcessed.insert(&otherOBB);
+                            collided = true;
 
-                            // 밀어내기 방향 계산
-                            XMVECTOR pCenter = XMLoadFloat3(&player_obb->Center);
-                            XMVECTOR oCenter = XMLoadFloat3(&other_obb.Center);
-                            XMVECTOR pushDir = XMVector3Normalize(pCenter - oCenter);
+                            XMVECTOR pushDir = XMVector3Normalize(
+                                XMLoadFloat3(&player_worldOBB.Center) - XMLoadFloat3(&otherOBB.Center)
+                            );
 
-                            if (XMVector3Equal(pushDir, XMVectorZero()))
-                                pushDir = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-                            // 밀어내기 적용
-                            pCenter += XMVectorScale(pushDir, pushDist);
-                            XMStoreFloat3(&player_obb->Center, pCenter);
+                            if (!XMVector3Equal(pushDir, XMVectorZero()))
+                            {
+                                totalPushDir += pushDir;
+                                ++hitCount;
+                            }
                         }
                     }
                 }
             }
         }
 
-        if (!collisionOccurred)
+        if (!collided || hitCount == 0)
             break;
+
+        // 평균 푸시 방향 계산
+        XMVECTOR avgPushDir = XMVector3Normalize(totalPushDir);
+        XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorScale(avgPushDir, pushStrength);
+        XMStoreFloat3(&player_worldOBB.Center, newCenter);
     }
 
-    // 최종 OBB 위치의 Center 기준으로 플레이어 위치 역산
-    // OBB Center = player_pos + y_offset (0, height, 0)
-    float y_offset = player_obj->Get_Collider_OBB()->Center.y - player_obj->GetPosition().y;
-    XMFLOAT3 finalPos = {
-        player_obb->Center.x,
-        player_obb->Center.y - y_offset,
-        player_obb->Center.z
-    };
-
-    player_obj->SetPosition(finalPos);
+    player_obj->Set_Collider_OBB_Center(player_worldOBB.Center);
 }
 
 
