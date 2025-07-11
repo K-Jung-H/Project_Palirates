@@ -995,6 +995,26 @@ void Server::PrintClientDebugInfo()
     std::cout << "===============================================\n\n";
 }
 
+
+void Server::FlushSendQueues()
+{
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    for (auto& [clientId, session] : clients)
+    {
+        if (!session->is_connected) continue;
+
+        std::lock_guard<std::mutex> sendLock(session->sendQueueMutex);
+        while (!session->sendQueue.empty())
+        {
+            std::string packet = session->sendQueue.front();
+            session->sendQueue.pop();
+
+            send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+
+        }
+    }
+}
+
 //========================================================================================
 
 int main()

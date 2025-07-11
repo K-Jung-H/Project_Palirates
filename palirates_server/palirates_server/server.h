@@ -98,7 +98,6 @@ private:
     std::shared_ptr<Scene> activeScene;
     bool serverResetDone = false;
 
-
     bool HandleSceneBroadcast(std::string& outPacket);
     bool Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket);
 
@@ -111,4 +110,6 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+
+    void FlushSendQueues();
 };
