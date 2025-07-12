@@ -1409,7 +1409,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ← 기존 (플레이어)
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
-		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
+		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
+			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
+
 	}
 	break;
 
@@ -1614,6 +1616,47 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 	}
 }
 
+void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+{
+	if (command == "PARTICLE_CREATE" || command == "PARTICLE_UPDATE")
+	{
+		int count = std::stoi(tokens[1]);
+		int base = 2;
+
+		for (int i = 0; i < count; ++i)
+		{
+			int idx = base + i * 15;
+			if (idx + 14 >= tokens.size()) break;
+
+			UINT id = std::stoi(tokens[idx]);
+			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));
+			XMFLOAT3 pos{ std::stof(tokens[idx + 2]), std::stof(tokens[idx + 3]), std::stof(tokens[idx + 4]) };
+			XMFLOAT3 look{ std::stof(tokens[idx + 5]), std::stof(tokens[idx + 6]), std::stof(tokens[idx + 7]) };
+			XMFLOAT3 area{ std::stof(tokens[idx + 8]), std::stof(tokens[idx + 9]), std::stof(tokens[idx + 10]) };
+			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };
+			float lifetime = std::stof(tokens[idx + 14]);
+
+//			stage_scene->CreateOrUpdateParticle(id, type, pos, look, area, dir, lifetime);
+		}
+	}
+	else if (command == "PARTICLE_REMOVE")
+	{
+		int count = std::stoi(tokens[1]);
+
+		for (int i = 0; i < count; ++i)
+		{
+			int idx = 2 + i;
+			if (idx >= tokens.size()) break;
+
+			UINT id = std::stoi(tokens[idx]);
+//			stage_scene->RemoveParticle(id);
+		}
+	}
+}
+
+
+
+
 void CGameFramework::HandleClientIdAssignment()
 {
 	std::cout << "[DEBUG] Received my client ID: " << Client_ID << std::endl;
@@ -1699,9 +1742,9 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-	//		강제로 애니메이션을 전환해야 하는 경우 필요함
-	//		ex: 서버에서 맞는 모션으로 전환 신호가 오는 경우
-		m_pPlayer->SetPosition(syncData.position);
+		// 애니메이션 및 상태 전환은 추가 예정
+		if (syncData.bStateChange)
+			m_pPlayer->SetPosition(syncData.position);
 		return;
 	}
 	else
