@@ -1,8 +1,6 @@
 ﻿#include "stdafx.h"
 #include "server.h"
 
-
-
 Server::Server(int port)
 {
     WSADATA wsaData;
@@ -100,27 +98,68 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
         buffer[bytesReceived] = '\0';
 
+
         {
             std::lock_guard<std::mutex> lock(clientsMutex);
-            auto session = clients[clientId];
-            session->lastActiveTime = std::chrono::steady_clock::now();
+            clients[clientId]->lastActiveTime = std::chrono::steady_clock::now();
 
-  
+
+            std::lock_guard<std::mutex> logLock(clients[clientId]->packetLogMutex);
+            clients[clientId]->lastReceivedPacket = buffer;
+        }
+
+        std::istringstream iss(buffer);
+        std::string line;
+
+        while (std::getline(iss, line))
+        {
+            std::istringstream linestream(line);
+            std::string command;
+            std::getline(linestream, command, ',');
+
+            std::vector<std::string> tokens;
+            tokens.push_back(command);
+            std::string token;
+            while (std::getline(linestream, token, ','))
+                tokens.push_back(token);
+
+
+            if (command == "PING")
             {
-                std::lock_guard<std::mutex> logLock(session->packetLogMutex);
-                session->lastReceivedPacket = buffer;
+                HandlePingPacket(clientId, command, tokens); // 핑 메시지 처리
             }
 
-            std::istringstream iss(buffer);
-            std::string line;
-            while (std::getline(iss, line)) 
+
+            // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
+            if (tokens.size() < 3) continue;
+
+            int sceneTypeInt = std::stoi(tokens[1]);
+            Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
+            
+            clients[clientId]->client_scene_type = sceneType;
+
+            switch (sceneType)
             {
-                std::lock_guard<std::mutex> recvLock(session->recvQueueMutex);
-                session->recvQueue.push(line);
+            case Scene_Type::Lobby:
+                HandleLobbyPacket(clientId, command, tokens);
+                break;
+            case Scene_Type::Board:
+                HandleBoardPacket(clientId, command, tokens);
+                break;
+            case Scene_Type::Stage_1:
+                HandleStage1Packet(clientId, command, tokens);
+                break;
+            case Scene_Type::Stage_2:
+                break;
+            default:
+                std::cerr << "[ERROR] Unknown scene type received: " << sceneTypeInt << std::endl;
+                break;
             }
         }
     }
-    activeClientCount--;
+
+    activeClientCount--; // 현재 활성화된 클라 스레드 개수
+
 }
 
 void Server::HandlePacket(int clientId, const std::string& packet)
@@ -149,11 +188,11 @@ void Server::HandlePacket(int clientId, const std::string& packet)
 
     // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
     int sceneTypeInt = 0;
-    try 
+    try
     {
         sceneTypeInt = std::stoi(tokens[1]);
     }
-    catch (...) 
+    catch (...)
     {
         std::cerr << "[ERROR] Invalid sceneType token: " << tokens[1] << std::endl;
         return;
@@ -165,9 +204,9 @@ void Server::HandlePacket(int clientId, const std::string& packet)
     }
 
     Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
-    
+
     clients[clientId]->client_scene_type = sceneType;
-    
+
 
     switch (sceneType)
     {
@@ -191,7 +230,7 @@ void Server::HandlePacket(int clientId, const std::string& packet)
 
 void Server::ProcessQueuedPackets()
 {
-    std::lock_guard<std::mutex> lock(clientsMutex); 
+    std::lock_guard<std::mutex> lock(clientsMutex);
     for (auto it = clients.begin(); it != clients.end(); ++it)
     {
         int clientId = it->first;
@@ -216,7 +255,6 @@ void Server::ProcessQueuedPackets()
         }
     }
 }
-
 
 void Server::HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
@@ -635,6 +673,46 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
 
+    const auto& monster_list = stage->GetMonsterList(); 
+
+    if (!monster_list.empty())
+    {
+        std::lock_guard<std::recursive_mutex> lock(stage->GetSceneMutex());
+
+        float list_size = monster_list.size();
+        oss << "MONSTER_SNAPSHOT," << list_size;
+
+        for (const auto& monster : monster_list) {
+            if (!monster) continue;
+            int mID = monster->GetID();
+            oss << "," << mID;
+
+            auto sync_Data = monster->MakeSyncData();
+            oss << "," << sync_Data.position.x << "," << sync_Data.position.y << "," << sync_Data.position.z
+                << "," << sync_Data.lookVector.x << "," << sync_Data.lookVector.y << "," << sync_Data.lookVector.z
+                << "," << sync_Data.track_info_list.size();
+
+            for (auto track_data : sync_Data.track_info_list)
+            {
+                oss << "," << to_string(track_data.track_index)
+                    << "," << to_string(track_data.weight)
+                    << "," << to_string(track_data.track_position);
+            }
+            oss << "," << sync_Data.stateChanged;
+        }
+        oss << "\n";
+    }
+
+    const auto despawn_list = stage->FlushDespawnQueue();
+    if (!despawn_list.empty()) {
+        oss << "MONSTER_COMMAND," << despawn_list.size();
+        for (int id : despawn_list) {
+            oss << ",DESPAWN," << id;
+        }
+        oss << "\n";
+    }
+
+	//std::cout << "oss size : " << oss.str().size() << std::endl;
     return oss.str();
 }
 
@@ -651,20 +729,29 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 }
 
 
+void Server::BroadcastServerTime()
+{
+    double now = m_gameTimer.GetTotalTime();
+
+    std::string packet = "SERVER_TIME," + std::to_string(now) + "\n";
+
+    BroadcastPacket(packet);
+}
+
 
 void Server::Server_Update()
 {
     m_gameTimer.Reset();
-    float FPS = 150.0f;
-    float time_acc = 0.0f; // 누적 타임
+    float FPS = 300.0f;
+    float time_accum = 0.0f;
     while (true)
     {
         m_gameTimer.Tick(FPS);
         float elapsedTime = m_gameTimer.GetTimeElapsed();
+        time_accum += elapsedTime;
 
         Scene::active_client_num = activeClientCount;
         Check_Connected_Player();
-        ProcessQueuedPackets();
 
         std::shared_ptr<Scene> scene = GetActiveScene();
         if (!scene) continue;
@@ -682,18 +769,18 @@ void Server::Server_Update()
         else
         {
             Broadcast_Scene_State_All();
-        }
 
-        time_acc += elapsedTime;
-        if (time_acc > 0.2f) // 0.2초 마다 한 번
-        {
-            //BroadcastServerTime();
-            time_acc = 0.0f;
+            FlushSendQueues();
         }
-
-        FlushSendQueues();
 
         PrintClientDebugInfo();
+
+
+        if (time_accum > 5.0f)
+        {
+            BroadcastServerTime();
+            time_accum = 0.0f;
+        }
     }
 
     
@@ -788,7 +875,7 @@ void Server::CleanupInactiveClients()
         {
             if (!session->is_connected)
                 continue;
-                               
+
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - session->lastActiveTime);
             if (elapsed.count() > 10) // 10초 이상 무응답
             {
@@ -874,7 +961,6 @@ void Server::BroadcastPacket(const std::string& packet)
     }
 }
 
-
 void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog)
 {
     if (!session->is_connected) return;
@@ -891,39 +977,6 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
     }
 }
 
-void Server::FlushSendQueues()
-{
-    std::lock_guard<std::mutex> lock(clientsMutex);
-    for (auto& [clientId, session] : clients)
-    {
-        if (!session->is_connected) continue;
-
-        std::lock_guard<std::mutex> sendLock(session->sendQueueMutex);
-        while (!session->sendQueue.empty())
-        {
-            std::string packet = session->sendQueue.front();
-            session->sendQueue.pop();
-
-            send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
-
-        }
-    }
-}
-
-//void Server::BroadcastServerTime()
-//{
-//    auto now = std::chrono::system_clock::now();
-//    auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
-//
-//    std::string packet = "SERVER_TIME," + std::to_string(millis) + "\n";
-//
-//    std::lock_guard<std::mutex> lock(clientsMutex);
-//    for (auto& [id, session] : clients)
-//    {
-//        if (!session->is_connected) continue;
-//        Send_Custom(session, packet, false);
-//    }
-//}
 
 void Server::PrintClientDebugInfo()
 {
@@ -960,6 +1013,25 @@ void Server::PrintClientDebugInfo()
     std::cout << "===============================================\n\n";
 }
 
+
+void Server::FlushSendQueues()
+{
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    for (auto& [clientId, session] : clients)
+    {
+        if (!session->is_connected) continue;
+
+        std::lock_guard<std::mutex> sendLock(session->sendQueueMutex);
+        while (!session->sendQueue.empty())
+        {
+            std::string packet = session->sendQueue.front();
+            session->sendQueue.pop();
+
+            send(session->socket, packet.c_str(), static_cast<int>(packet.length()), 0);
+
+        }
+    }
+}
 
 //========================================================================================
 

@@ -267,12 +267,12 @@ public:
     void ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene> lobby_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Board(shared_ptr<Board_Scene> board_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
 
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;
-    long long lastServerTime = 0;
-
+    double m_ServerTime = 0;
     //=================SERVER=================
 
 };

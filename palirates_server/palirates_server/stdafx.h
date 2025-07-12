@@ -19,6 +19,7 @@
 #include <random>
 #include <tchar.h>
 #include <unordered_set>
+#include <unordered_map>
 //#include <DirectXMath.h>
 #include "DX_Setter.h"
 

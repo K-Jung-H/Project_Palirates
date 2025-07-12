@@ -745,7 +745,7 @@ void CGameFramework::ProcessInput()
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
 			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 1000.0f * m_GameTimer.GetTimeElapsed(), true);
+				m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
 		}
 
 	}
@@ -1360,6 +1360,16 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	const std::string& cmd = tokens[0];
 
 	// 공통 처리
+
+	if (cmd == "SERVER_TIME" && tokens.size() >= 2)
+	{
+		double serverTime = std::stod(tokens[1]);
+		
+		m_ServerTime = serverTime;
+		return;
+	}
+
+
 	if (cmd == "PLAYER_LEFT_GAME " && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
@@ -1370,23 +1380,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	{
 		std::cout << "[CLIENT][RECV] CHANGE_SCENE " << tokens[1] << std::endl;
 		HandleChangeScene(tokens);
-		return;
-	}
-	if (receivedData.rfind("SERVER_TIME,", 0) == 0)
-	{
-		std::vector<std::string> tokens;
-		std::stringstream ss(receivedData);
-		std::string item;
-		while (std::getline(ss, item, ',')) tokens.push_back(item);
-
-		if (tokens.size() >= 2)
-		{
-			try 
-			{
-				lastServerTime = std::stoll(tokens[1]);
-			}
-			catch (...) {}
-		}
 		return;
 	}
 
@@ -1421,9 +1414,23 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		shared_ptr<CScene>stage_scene = std::dynamic_pointer_cast<CScene>(active_scene);
 		if (!stage_scene)
 			break;
-
-
-		ProcessReceivedData_Stage(stage_scene, cmd, tokens);
+		if (cmd == "STAGE_1")
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
+		else if (cmd == "MONSTER_SNAPSHOT")
+			ProcessReceivedData_Monster(stage_scene, tokens);
+		else if (cmd == "MONSTER_COMMAND") {
+			// need func
+			int cmdCount = std::stoi(tokens[1]);
+			int idx = 2;
+			for (int i = 0; i < cmdCount; ++i) {
+				std::string cmdType = tokens[idx++];
+				if (cmdType == "DESPAWN") {
+					int id = std::stoi(tokens[idx++]);
+					stage_scene->DespawnMonster(id);
+				}
+			}
+		}
+		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 	}
 	break;
 
@@ -1569,7 +1576,56 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-		// 다음 플레이어를 위해 시작 위치 조정
+		startIndex = stateFlagIndex + 1;
+	}
+}
+
+void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
+{
+	if (tokens.size() < 3) return;
+	float list_size = std::stof(tokens[1]);
+
+	int startIndex = 2;
+	for (int i = 0; i<int(list_size); ++i) 
+	{
+		int base = startIndex;
+
+		int monsterId = std::stoi(tokens[base + 0]);
+		float px = std::stof(tokens[base + 1]);
+		float py = std::stof(tokens[base + 2]);
+		float pz = std::stof(tokens[base + 3]);
+		float lx = std::stof(tokens[base + 4]);
+		float ly = std::stof(tokens[base + 5]);
+		float lz = std::stof(tokens[base + 6]);
+		int trackCount = std::stoi(tokens[base + 7]);
+
+		int trackStart = base + 8;
+
+		int expectedTrackTokenCount = trackCount * 3;
+
+		std::vector<Animation_Sync> track_list;
+
+		for (int t = 0; t < trackCount; ++t)
+		{
+			int idx = trackStart + t * 3;
+			int trackIdx = std::stoi(tokens[idx]);
+			float weight = std::stof(tokens[idx + 1]);
+			float position = std::stof(tokens[idx + 2]);
+			track_list.push_back({ trackIdx, weight, position });
+		}
+
+		int stateFlagIndex = trackStart + expectedTrackTokenCount;
+
+		ServerSyncData syncData;
+		syncData.position = XMFLOAT3(px, py, pz);
+		syncData.lookVector = XMFLOAT3(lx, ly, lz);
+
+		syncData.track_info_list = track_list;
+		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
+
+
+		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+
 		startIndex = stateFlagIndex + 1;
 	}
 }
@@ -1661,7 +1717,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	{
 	//		강제로 애니메이션을 전환해야 하는 경우 필요함
 	//		ex: 서버에서 맞는 모션으로 전환 신호가 오는 경우
-	//		m_pPlayer->ApplySyncData(syncData);
+		m_pPlayer->SetPosition(syncData.position);
 		return;
 	}
 	else
@@ -1752,37 +1808,59 @@ void CGameFramework::Disconnect()
 
 void CGameFramework::NetworkLoop()
 {
+	char buf[2048];
+	std::string pending;                
 
 	while (isRunning)
 	{
-		char buffer[1024 + 1];
-		int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-		//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+		int n = recv(serverSocket, buf, sizeof(buf), 0);
+		if (n <= 0) { break; }
 
-		if (bytesReceived > 0)
+		pending.append(buf, n);
+
+		size_t pos;
+		while ((pos = pending.find('\n')) != std::string::npos)
 		{
-			buffer[bytesReceived] = '\0';
-			std::string receivedData(buffer);
+			std::string line = pending.substr(0, pos);   
+			pending.erase(0, pos + 1);                   
 
 			{
-				std::lock_guard<std::mutex> lock(recvQueueMutex);
-				recvQueue.push(receivedData);
-				//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+				std::lock_guard<std::mutex> lk(recvQueueMutex);
+				recvQueue.push(std::move(line));         
 			}
 		}
-
-		else if (bytesReceived == SOCKET_ERROR)
-		{
-			std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
-		}
-		else if (bytesReceived == 0)
-		{
-			std::cerr << "[INFO] Connection with server closed" << std::endl;
-			isRunning = false;
-			break;
-		}
-
 	}
+
+	//while (isRunning)
+	//{
+	//	char buffer[1024 + 1];
+	//	int bytesReceived = recv(serverSocket, buffer, 1024, 0);
+	//	//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
+
+	//	if (bytesReceived > 0)
+	//	{
+	//		buffer[bytesReceived] = '\0';
+	//		std::string receivedData(buffer);
+
+	//		{
+	//			std::lock_guard<std::mutex> lock(recvQueueMutex);
+	//			recvQueue.push(receivedData);
+	//			//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
+	//		}
+	//	}
+
+	//	else if (bytesReceived == SOCKET_ERROR)
+	//	{
+	//		std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
+	//	}
+	//	else if (bytesReceived == 0)
+	//	{
+	//		std::cerr << "[INFO] Connection with server closed" << std::endl;
+	//		isRunning = false;
+	//		break;
+	//	}
+
+	//}
 }
 
 bool CGameFramework::IsServerConnected()

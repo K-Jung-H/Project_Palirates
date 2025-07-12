@@ -20,12 +20,13 @@ class GameObject : public std::enable_shared_from_this<GameObject>
 protected:
     Object_Type obj_type;
     string Obj_Name;
+    int Obj_ID;
 
     shared_ptr<GameObject> child_obj = NULL;
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
-    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+    std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -67,6 +68,8 @@ public:
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
 
+    void SetScale(float x, float y, float z, bool keepPosition);
+
     void Move(XMFLOAT3 xmf3Offset);
 
 
@@ -94,11 +97,18 @@ public:
     void Obj_Info(int depth = 0);
     Object_Type GetType() { return obj_type; }
 
+    virtual void UpdateWorldOBB();
+    virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
+
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
+
+
+    void SetID(int ID) { Obj_ID = ID; }
+    int GetID() { return Obj_ID; }
+
     std::unordered_set<int> RootMotionTrackSet;
-
-
-    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
-    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
+    
+    virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
 };
 
 
@@ -122,39 +132,30 @@ public:
     XMFLOAT3 Get_Velocity() const { return m_xmf3Velocity; }
 };
 
-struct Animation_Sync
-{
-    int track_index;
-    float weight;
-    float track_position;
-};
-
-struct AnimationTrackData
-{
-    std::vector<Animation_Sync> track_info_list;
-    bool stateChanged = false;
-};
-
-
 class Skinned_GameObject : public GameObject
 {
 private:
-    AnimationTrackData animation_sync_data;
+    ServerSyncData animation_sync_data;
 
+protected:
+    std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
 public:
-    void SetAnimationSyncData(const AnimationTrackData& data) { animation_sync_data = data; }
+    void SetAnimationSyncData(const ServerSyncData& data) { animation_sync_data = data; }
     void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
     void SetStateChanged(bool changed) { animation_sync_data.stateChanged = changed; }
 
 
-    const AnimationTrackData& GetAnimationSyncData() const { return animation_sync_data; }
+    const ServerSyncData& GetAnimationSyncData() const { return animation_sync_data; }
     const std::vector<Animation_Sync>& GetTrackInfoList() const { return animation_sync_data.track_info_list; }
 
     
-    AnimationTrackData& GetAnimationSyncData() { return animation_sync_data; }
+    ServerSyncData& GetAnimationSyncData() { return animation_sync_data; }
     std::vector<Animation_Sync>& GetTrackInfoList() { return animation_sync_data.track_info_list; }
     bool GetStateChanged() const { return animation_sync_data.stateChanged; }
+
+    std::shared_ptr<CAnimationController> GetSkinnedAnimationController() { return m_pSkinnedAnimationController; }
+    void DelSkinnedAnimationController() { m_pSkinnedAnimationController.reset(); }
 
     int n_Animation = 0;
     int RootIndex{ 0 };

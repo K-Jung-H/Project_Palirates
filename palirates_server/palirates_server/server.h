@@ -52,6 +52,8 @@ public:
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
+    void HandlePacket(int clientId, const std::string& packet);
+    void ProcessQueuedPackets();
     void Broadcast_Scene_State_All();
     
     void Server_Update();
@@ -71,10 +73,8 @@ public:
     void removePlayerFromAllScenes(int clientId);
 
     void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
-    void FlushSendQueues();
-    void BroadcastServerTime();
     void PrintClientDebugInfo();
-
+   
 private:
     SOCKET listenSocket;
     Logger logger;
@@ -98,7 +98,6 @@ private:
     std::shared_ptr<Scene> activeScene;
     bool serverResetDone = false;
 
-
     bool HandleSceneBroadcast(std::string& outPacket);
     bool Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket);
 
@@ -107,12 +106,12 @@ private:
     std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
     std::string Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
 
-    void ProcessQueuedPackets();
-
-    void HandlePacket(int clientId, const std::string& packet);
+    void BroadcastServerTime();
 
     void HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+
+    void FlushSendQueues();
 };

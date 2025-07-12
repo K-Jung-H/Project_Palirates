@@ -14,19 +14,15 @@ public:
 
     void LoadMeshFromFile(FILE* pInFile);
     void LoadMeshFrom_OtherFile(const char* pstrFileName);
-    void AddRef() { m_nReferences++; }
-    void Release() { if (--m_nReferences <= 0) delete this; }
+
 
     char							m_pstrMeshName[64] = { 0 };
 
-private:
-    int								m_nReferences = 0;
 
 protected:
     UINT							m_nType = 0x00;
 
-    XMFLOAT3						m_xmf3AABBCenter = XMFLOAT3(0.0f, 0.0f, 0.0f);
-    XMFLOAT3						m_xmf3AABBExtents = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
 
     int								m_nVertices = 0;
     XMFLOAT3* m_pxmf3Positions = NULL;
@@ -34,6 +30,10 @@ protected:
     int								m_nSubMeshes = 0;
     int* m_pnSubSetIndices = NULL;
     UINT** m_ppnSubSetIndices = NULL;
+
+public:
+    XMFLOAT3						m_xmf3AABBCenter = XMFLOAT3(0.0f, 0.0f, 0.0f);
+    XMFLOAT3						m_xmf3AABBExtents = XMFLOAT3(0.0f, 0.0f, 0.0f);
 };
 
 class CSkinnedMesh : public CStandardMesh

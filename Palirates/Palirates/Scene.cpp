@@ -1083,7 +1083,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(AnubisObject, Object_Type::skinned);
 	*/
 
-		std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		/*std::shared_ptr<CMonsterObject> Dragon = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		Dragon->Set_Child(Dragon->m_pRootModel);
 		Dragon->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 
@@ -1093,12 +1093,19 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		XMFLOAT3 tt2 = { 0.0f, 1.0f, 0.0f };
 		Dragon->Rotate(&tt2, 180.0f);
 		Dragon->test_num = 5;
-		obj_manager->Add_Object(Dragon, Object_Type::skinned);
+		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 5; i++)
+		/*for (int i = 0; i < 12; i++)
 		{
-			std::shared_ptr<CMonsterObject> m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			std::shared_ptr<CMonsterObject> m;
+			if (i % 3 == 0)
+				m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			else if(i % 3 == 1)
+				m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			else if (i % 3 == 2)
+				m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+			m->SetID(i);
 			m->Set_Child(m->m_pRootModel);
 			m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
 			m->SetupWeaponCollider();
@@ -1108,6 +1115,12 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
 
+		for (int i = 0; i < 12; i++)
+		{
+			SpawnMonster(pd3dDevice, pd3dCommandList, ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i), XMFLOAT3(10.0f * i + 1450.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 1450.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
+
+		}*/
+		
 #ifdef LOAD_SCENE
 
 
@@ -1857,12 +1870,17 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
 
-	auto list = obj_manager->Get_Object_List(Object_Type::skinned);
-	if (list) {
-		for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
-			if (!obj_ptr || !obj_ptr->Get_Active()) continue;
-			if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
-				monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+	if (isRunning) {
+
+	}
+	else {
+		auto list = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (list) {
+			for (const std::shared_ptr<CGameObject>& obj_ptr : *list) {
+				if (!obj_ptr || !obj_ptr->Get_Active()) continue;
+				if (auto monster_ptr = std::dynamic_pointer_cast<CMonsterObject>(obj_ptr)) {
+					monster_ptr->GetStateMachine()->SetTargetPos(m_pPlayer->GetPosition());
+				}
 			}
 		}
 	}
@@ -1936,8 +1954,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 #ifdef USING_OBB
-	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
-	obj_manager->Check_Player_Collision(m_pPlayer);
+//	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
+//	obj_manager->Check_Player_Collision(m_pPlayer);
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 #endif
@@ -2207,6 +2225,86 @@ void CScene::Remove_Multi_Player(int player_id)
 void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
+{
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	auto found = id2idx.find(monsterID);
+
+	if (found != id2idx.end())
+	{
+		size_t idx = found->second;
+		auto* Monster_List = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (idx < Monster_List->size()) 
+		{
+			auto& monster = (*Monster_List)[idx];
+			if (monster) {
+				monster->ApplySyncData(syncData);
+				return;
+			}
+		}
+	}
+	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
+}
+
+void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
+{
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	if (id2idx.find(id) != id2idx.end())
+		return;
+
+	int mType = GET_MONSTER_TYPE(id);
+	std::shared_ptr<CMonsterObject> m;
+
+	if (mType == static_cast<int>(Monster_Type::Fishman)) {
+		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
+		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
+		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else {
+		return;
+	}
+
+	m->SetID(id);
+	m->Set_Child(m->m_pRootModel);
+	m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+	m->SetupWeaponCollider();
+	m->SetPosition(pos.x, pos.y, pos.z);
+	id2idx[id] = obj_manager->Get_Object_List(Object_Type::skinned)->size();
+	obj_manager->Add_Object(m, Object_Type::skinned);
+}
+
+void CScene::DespawnMonster(int id)
+{
+	auto* plist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!plist) return;
+
+	auto& mMap = obj_manager->Get_Monster_Map();
+
+	auto it = mMap.find(id);
+	if (it == mMap.end()) return;
+
+	size_t idx = it->second;
+	size_t last = plist->size() - 1;
+
+	if (idx != last)
+	{
+		std::swap((*plist)[idx], (*plist)[last]);
+
+		if ((*plist)[idx])
+		{
+			int newId = (*plist)[idx]->GetID();
+			mMap[newId] = idx;
+		}
+	}
+
+	plist->pop_back();
+	mMap.erase(it);
 }
 
 //==========================================================================================

@@ -208,6 +208,7 @@ private:
 
 	// Dynamic object lists
 	std::vector<std::shared_ptr<CGameObject>> skinned_object_list;
+	std::unordered_map<int, size_t> id2idx;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
 
@@ -242,6 +243,7 @@ public:
 
 	// Accessors for object lists
 	std::vector<std::shared_ptr<CGameObject>>* Get_Object_List(Object_Type type);
+	std::unordered_map<int, size_t>& Get_Monster_Map() { return id2idx; };
 	std::unordered_map<std::string, Fixed_Object_Info>* Get_Object_List_Map(Object_Type type);
 	std::vector<std::shared_ptr<CGameObject>> Gather_All_Fixed_Objects();
 

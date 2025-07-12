@@ -7,6 +7,18 @@
 
 class MonsterStateMachine;
 
+constexpr int ENCODE_MONSTER_ID(int type, int index) {
+    return (type << 24) | (index & 0xFFFFFF);
+}
+
+constexpr int GET_MONSTER_TYPE(int id) {
+    return (id >> 24) & 0xFF;
+}
+
+constexpr int GET_MONSTER_INDEX(int id) {
+    return id & 0xFFFFFF;
+}
+
 enum class Monster_Type : int
 {
     Fishman,
@@ -49,6 +61,7 @@ public:
     void SetState(Monster_State new_state) { monster_state = new_state; }
 
     virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+    virtual ServerSyncData MakeSyncData();
 };
 
 
@@ -60,8 +73,6 @@ public:
 
     virtual void animate(float Elapsedtime) {}
     virtual void update() {}
-
-    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 };
 
 class Anubis : public Monster

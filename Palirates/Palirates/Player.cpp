@@ -357,7 +357,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		ModelNum = 0; 
 	CLoadedModelInfo* pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(
 		pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelPaths[ModelNum], NULL);
-	//Set_Child(pAngrybotModel->m_pModelRootObject);
 	m_pRootModel = pAngrybotModel->m_pModelRootObject;
 
 	n_Animation = 17;
@@ -366,33 +365,18 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	targetWeights.resize(n_Animation, 0.0f);
 	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pAngrybotModel);
 	m_pSkinnedAnimationController->RootIndex = RootIndex;
-	//m_pSkinnedAnimationController->SetTrackWeight(TRACK_IDLE, 1.0f);
-	//m_pSkinnedAnimationController->SetTrackWeight(1, 0.2f);
-	//m_pSkinnedAnimationController->SetTrackWeight(2, 0.5f);
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
 	}
-	/*m_pSkinnedAnimationController->SetTrackEnable(TRACK_IDLE, true);
-	m_pSkinnedAnimationController->SetTrackEnable(TRACK_RUN_FORWARD, false);
-	for (int i = 2; i < n_Animation; ++i) {
-		m_pSkinnedAnimationController->SetTrackEnable(i, false);
-	}*/
 	for (int i = 0; i < n_Animation; ++i) {
 		m_pSkinnedAnimationController->SetTrackEnable(i, true);
 	}
-	//m_pSkinnedAnimationController->Bone_Info();
 	// Once type Setting
 	for (int i = 0; i < n_Animation; ++i) {
 		if (GetUpdateHipsTracks().contains(i)) {
 			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
 		}
 	}
-	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_IDLE].m_nType = ANIMATION_TYPE_LOOP;
-	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_nType = ANIMATION_TYPE_ONCE;
-	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_GET_UP].m_nType = ANIMATION_TYPE_ONCE;
-	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK1].m_nType = ANIMATION_TYPE_ONCE;
-	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK2].m_nType = ANIMATION_TYPE_ONCE;
-	//m_pSkinnedAnimationController->m_pAnimationTracks[TRACK_ATTACK3].m_nType = ANIMATION_TYPE_ONCE;
 
 	m_pSkinnedAnimationController->SetCallbackKeys(1, 2);
 #ifdef _WITH_SOUND_RESOURCE
@@ -419,23 +403,6 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 
 	WeaponName = "SM_Wep_Cutlass_01";
-	//auto model = FindFrame_v2("SM_Wep_Cutlass_01");
-	////auto model = FindFrame("body_lp");
-	//model->Object_type = OBJECT_TPYE_PLAYER_WEAPON;
-	//XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World; // 월드 행렬
-	//XMVECTOR scale, rotationQuat, translation;
-	//XMFLOAT4 quaternion;
-	//XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
-
-	//if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
-	//{
-
-	//	XMStoreFloat4(&quaternion, rotationQuat);
-	//}
-	//BoundingOrientedBox* b = new BoundingOrientedBox(model->m_pMesh->GetAABBCenter(), model->m_pMesh->GetAABBExtents(), quaternion);
-	//model->Set_Collider(b);
-	//model->bUpdateOBBOff();
-	//Weapon_ptr = model;
 
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.8f, 0.0f),
@@ -482,11 +449,9 @@ shared_ptr<CCamera> CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTi
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);
 			break;
 		case THIRD_PERSON_CAMERA:
-//			SetFriction(10.0f);
-			SetFriction(800.0f);
-//			SetGravity(XMFLOAT3(0.0f, 0.0f, 0.0f));
+			SetFriction(500.0f);
 			SetGravity(XMFLOAT3(0.0f, -250.0f, 0.0f));
-			SetMaxVelocityXZ(500.0f);
+			SetMaxVelocityXZ(100.0f);
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);

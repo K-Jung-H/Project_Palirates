@@ -178,6 +178,50 @@ void GameObject::Rotate(XMFLOAT4* pxmf4Quaternion)
 	UpdateTransform(NULL);
 }
 
+void GameObject::SetScale(float x, float y, float z, bool keepPosition)
+{
+	XMVECTOR worldPosBefore;
+
+	if (keepPosition)
+	{
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+		worldPosBefore = XMVector3TransformCoord(XMVectorZero(), worldMatrix);
+	}
+
+	XMMATRIX parentMatrix = XMLoadFloat4x4(&m_xmf4x4Parent);
+	XMVECTOR scaleVec, rotQuat, transVec;
+	XMMatrixDecompose(&scaleVec, &rotQuat, &transVec, parentMatrix);
+
+	scaleVec = XMVectorSet(x, y, z, 1.0f);
+
+	XMMATRIX newParentMatrix = XMMatrixScalingFromVector(scaleVec) *
+		XMMatrixRotationQuaternion(rotQuat) *
+		XMMatrixTranslationFromVector(transVec);
+
+	XMStoreFloat4x4(&m_xmf4x4Parent, newParentMatrix);
+
+	UpdateTransform(m_pParent ? &m_pParent->m_xmf4x4World : nullptr);
+
+	if (keepPosition)
+	{
+		XMMATRIX newWorldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+		XMVECTOR worldPosAfter = XMVector3TransformCoord(XMVectorZero(), newWorldMatrix);
+		XMVECTOR offset = worldPosBefore - worldPosAfter;
+
+		XMMATRIX offsetMatrix = XMMatrixTranslationFromVector(offset);
+		newWorldMatrix = offsetMatrix * newWorldMatrix;
+
+		XMMATRIX invParentWorld = XMMatrixIdentity();
+		if (m_pParent)
+			invParentWorld = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
+
+		XMMATRIX correctedLocal = newWorldMatrix * invParentWorld;
+		XMStoreFloat4x4(&m_xmf4x4Parent, correctedLocal);
+
+		UpdateTransform(m_pParent ? &m_pParent->m_xmf4x4World : nullptr);
+	}
+}
+
 
 XMFLOAT3 GameObject::GetPosition()
 {
@@ -278,9 +322,7 @@ void GameObject::SetRight(XMFLOAT3 xmf3Right)
 
 void GameObject::SetMesh(std::shared_ptr<CStandardMesh> pMesh)
 {
-	if (m_pMesh) m_pMesh->Release();
 	m_pMesh = pMesh;
-	if (m_pMesh) m_pMesh->AddRef();
 }
 
 static void SkipMaterialsBlock(FILE* fp)
@@ -491,8 +533,11 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_p
 		}
 		else if (!strcmp(pstrToken, "<Mesh>:"))
 		{
-			char meshName[64];
-			ReadStringFromFile(pInFile, meshName);
+			shared_ptr<CStandardMesh> mesh = std::make_shared<CStandardMesh>();
+			mesh->LoadMeshFromFile(pInFile);
+			pGameObject->SetMesh(mesh);
+			/*char meshName[64];
+			::ReadStringFromFile(pInFile, meshName);
 
 			auto mesh = MeshManager::GetMesh(meshName);
 			if (!mesh)
@@ -502,7 +547,7 @@ std::shared_ptr<GameObject> GameObject::LoadFrameHierarchyFromFile(std::shared_p
 				MeshManager::AddMesh(meshName, mesh);
 			}
 
-			pGameObject->SetMesh(mesh);
+			pGameObject->SetMesh(mesh);*/
 		}
 		else if (!strcmp(pstrToken, "<SkinningInfo>:"))
 		{
@@ -614,6 +659,7 @@ std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::s
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
 				std::string fileName = "Scene/Meshes/" + std::string(pstrToken);
+				pGameObject->Set_Name(pstrToken);
 
 				auto mesh = MeshManager::GetMesh(fileName);
 				if (!mesh)
@@ -668,9 +714,7 @@ void GameObject::FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>
 
 void GameObject::SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh)
 {
-	if (m_pMesh) m_pMesh->Release();
 	m_pMesh = pMesh;
-	if (m_pMesh) m_pMesh->AddRef();
 }
 
 void GameObject::Obj_Info(int depth)
@@ -701,6 +745,23 @@ void GameObject::Obj_Info(int depth)
 		sibling_obj->Obj_Info(depth);
 	}
 }
+
+void GameObject::UpdateWorldOBB()
+{
+	if (!m_pMesh) return;
+
+	XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;
+	XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
+
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+	auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
+
+	obb->Transform(*obb, worldMatrix);
+
+	m_OBB = obb;
+}
+
 
 //===================================================================
 

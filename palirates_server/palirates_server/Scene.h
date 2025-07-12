@@ -66,9 +66,6 @@ public:
     
     const std::array<std::array<bool, MaxPlayer>, MaxPlayer>& GetCharacterSelections() const { return characterSelections; }
     const std::array<int, MaxPlayer>& GetCharacterReadyStates() const { return characterReady; }
-
-    // test
-    std::vector<std::shared_ptr<Monster>> Monster_List;
 };
 
 
@@ -107,11 +104,9 @@ private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
     GameWorld game_world;
+
 public:
-    Stage_Scene() : Scene(Scene_Type::Stage_1) 
-    {
-        Init();
-    }
+    Stage_Scene();
     virtual void Init();
 
     virtual void Update_Scene(float elapsedTime);
@@ -126,9 +121,19 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
-
-
-    std::vector<std::shared_ptr<Monster>> Monster_List;
-
     void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged);
+
+private:
+    std::vector<std::shared_ptr<Monster>> Monster_List;
+    std::unordered_map<int, size_t> id2idx;
+    std::vector<int> monster_despawn_queue;
+
+public:
+    void SpawnMonster(int id, const XMFLOAT3& pos, int hp);
+    void DespawnMonster(int id);
+    std::shared_ptr<Monster> GetMonster(int id);
+
+    const std::vector<std::shared_ptr<Monster>>& GetMonsterList() const { return Monster_List; }
+    void QueueDespawnCommand(int id) { monster_despawn_queue.emplace_back(id); }
+    std::vector<int> FlushDespawnQueue();
 };
