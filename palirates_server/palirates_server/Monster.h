@@ -1,9 +1,13 @@
 #pragma once
+
 #include "GameObject.h"
 #include "Object_StateMachine.h"
+#include "StateEnum.h"
+#include "AnimationTrackEnum.h"
 #include <string>
 #include <vector>
 #include <sstream>
+#include <memory>
 
 class MonsterStateMachine;
 
@@ -19,76 +23,61 @@ constexpr int GET_MONSTER_INDEX(int id) {
     return id & 0xFFFFFF;
 }
 
-enum class Monster_Type : int
-{
+enum class Monster_Type : int {
     Fishman,
     Anubis,
     Dragon,
     ETC
 };
 
-enum class Monster_State : int
-{
-    Idle ,
-    Walk,
-    Attack,
-    ETC
-};
-
-
-class Monster : public Skinned_GameObject
-{
+class Monster : public Skinned_GameObject {
 protected:
-    Monster_Type type;
-    Monster_State monster_state; 
-    int monster_id;
+    Monster_Type type = Monster_Type::ETC;
+    int monster_id = -1;
+    int hp = 100;
+
     std::unique_ptr<MonsterStateMachine> m_StateMachine;
 
 public:
-    int hp;
-
     float stateElapsedTime = 0.0f;
     float stateChangeInterval = 2.0f;
 
 public:
     Monster(int id);
-    Monster();
+    Monster() = default;
+    virtual ~Monster() = default;
 
+    virtual void update() override;
 
-    virtual void update() {}
+    MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 
-    Monster_State GetState() { return monster_state; }
-    void SetState(Monster_State new_state) { monster_state = new_state; }
-
-    virtual MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+    virtual void PlayAnimation(State state);
     virtual ServerSyncData MakeSyncData();
+
+    virtual GameObject* FindNearestPlayerInRange(float range);
+    virtual void SetTarget(GameObject* target);
+    virtual void StartAttackCooldown();
+    virtual bool IsAttackCooldownOver() const;
+
+    Monster_Type GetType() const { return type; }
+    int GetID() const { return monster_id; }
+    void SetID(int id) { monster_id = id; }
 };
 
-
-
-class Fishman : public Monster
-{
+class Fishman : public Monster {
 public:
     Fishman(int id);
-
-    virtual void animate(float Elapsedtime) {}
-    virtual void update() {}
+    //void update() override;
 };
 
-class Anubis : public Monster
-{
+class Anubis : public Monster {
 public:
     Anubis(int id);
-
-    virtual void animate(float Elapsedtime) {}
-    virtual void update() {}
+    //void update() override;
 };
 
-class Dragon : public Monster
-{
+class Dragon : public Monster {
 public:
     Dragon(int id);
-
-    virtual void animate(float Elapsedtime) {}
-    virtual void update() {}
+   // void update() override;
 };

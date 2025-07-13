@@ -109,6 +109,8 @@ public:
     std::unordered_set<int> RootMotionTrackSet;
     
     virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
+
+    virtual void update() {};
 };
 
 
@@ -162,4 +164,6 @@ public:
 
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
+
+    virtual void update() override {};
 };

@@ -317,7 +317,7 @@ void Stage_Scene::Init()
         if (i % 3 == 0)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 3 == 1)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
         else if (i % 3 == 2)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
         else continue;
@@ -350,50 +350,49 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         }
     }
     // test
-    static float spawnTimer = 0.0f;
-    static float despawnTimer = 0.0f;
-    static float spawnInterval = 1.0f;
-    static float despawnInterval = 1.0f;
-    static int nextIndex = 6;
+    //static float spawnTimer = 0.0f;
+    //static float despawnTimer = 0.0f;
+    //static float spawnInterval = 1.0f;
+    //static float despawnInterval = 1.0f;
+    //static int nextIndex = 6;
 
-    spawnTimer += elapsedTime;
-    despawnTimer += elapsedTime;
+    //spawnTimer += elapsedTime;
+    //despawnTimer += elapsedTime;
 
-    if (spawnTimer >= spawnInterval) {
-        spawnTimer = 0.0f;
+    //if (spawnTimer >= spawnInterval) {
+    //    spawnTimer = 0.0f;
 
-        float chance = static_cast<float>(rand()) / RAND_MAX;
-        if (chance < 0.5f) {
-            int newID = 0;
-            if (chance < 0.2f)
-                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
-            else if (chance < 0.4f)
-                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), nextIndex++);
-            else if (chance < 0.5f)
-                newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), nextIndex++);
-            float randX = 1400.f + static_cast<float>(rand() % 100);
-            float randZ = 700.f + static_cast<float>(rand() % 100);
-            SpawnMonster(newID, { randX, 0.f, randZ }, 100);
-            std::cout << "몬스터 생성: " << newID << std::endl;
-        }
-    }
+    //    float chance = static_cast<float>(rand()) / RAND_MAX;
+    //    if (chance < 0.5f) {
+    //        int newID = 0;
+    //        if (chance < 0.2f)
+    //            newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), nextIndex++);
+    //        else if (chance < 0.4f)
+    //            newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), nextIndex++);
+    //        else if (chance < 0.5f)
+    //            newID = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), nextIndex++);
+    //        float randX = 1400.f + static_cast<float>(rand() % 100);
+    //        float randZ = 700.f + static_cast<float>(rand() % 100);
+    //        SpawnMonster(newID, { randX, 0.f, randZ }, 100);
+    //        std::cout << "몬스터 생성: " << newID << std::endl;
+    //    }
+    //}
 
-    if (despawnTimer >= despawnInterval) {
-        despawnTimer = 0.0f;
+    //if (despawnTimer >= despawnInterval) {
+    //    despawnTimer = 0.0f;
 
-        float chance = static_cast<float>(rand()) / RAND_MAX;
-        if (!Monster_List.empty() && chance < 0.5f) {
-            std::cout << "m list size : " << Monster_List.size() << " m idx - ";
-            for (int i = 0; i < Monster_List.size(); ++i) {
-                std::cout << Monster_List[i]->GetID() << ", ";
-            }
-            int idx = rand() % Monster_List.size();
-            int id = Monster_List[idx]->GetID();
-            DespawnMonster(id);
-           
-        }
-    }
-    //std::cout << "몬스터 리스트: " << Monster_List.size() << std::endl;
+    //    float chance = static_cast<float>(rand()) / RAND_MAX;
+    //    if (!Monster_List.empty() && chance < 0.5f) {
+    //        std::cout << "m list size : " << Monster_List.size() << " m idx - ";
+    //        for (int i = 0; i < Monster_List.size(); ++i) {
+    //            std::cout << Monster_List[i]->GetID() << ", ";
+    //        }
+    //        int idx = rand() % Monster_List.size();
+    //        int id = Monster_List[idx]->GetID();
+    //        DespawnMonster(id);
+    //       
+    //    }
+    //}
 }
 
 Scene_Type Stage_Scene::CheckSceneTransition()
