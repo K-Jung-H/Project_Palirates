@@ -788,7 +788,7 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
 			if (type == Particle_Shader_Type::sand)
-				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
+				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Get_Particle_State());
 
 
 			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed, false);
@@ -928,24 +928,28 @@ void Particle_Manager::Enqueue_Delete(UINT id)
 
 void Particle_Manager::Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
-	// 1. 생성 처리
 	Create_Particles_From_Queue(device, cmdList);
 
-	// 2. 업데이트 처리
-	while (!updateQueue.empty()) {
+	while (!updateQueue.empty())
+	{
 		const auto& data = updateQueue.front();
+
 		auto it = particle_id_map.find(data.particle_ID);
-		if (it != particle_id_map.end()) {
+		if (it != particle_id_map.end())
+		{
 			auto obj = it->second;
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
 		}
+		else
+			createQueue.push(data);
+
 		updateQueue.pop();
 	}
 
-	// 3. 제거 처리
 	Remove_Particles_From_Queue();
 }
+
 
 void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
@@ -993,7 +997,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.shader_type = Particle_Shader_Type::continuous;
 			format.particle_type = Particle_Type::dragon_breath;
 			format.max_particles = 3000;
-			format.MaxLifetime = data.LifeTime;
+			format.MaxLifetime = 1.0f;
 			format.area_xyz = data.area_extent;
 			format.EmitFaceIndex = FACE_FRONT;
 			format.main_direction = data.main_direction;

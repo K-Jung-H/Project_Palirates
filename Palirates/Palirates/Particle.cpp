@@ -603,7 +603,6 @@ void Particle::Reset_Debug_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
 
 //==============================================================================
 
-
 ParticleObject::ParticleObject() : CGameObject(1)
 {
 	m_pMesh = NULL;
@@ -750,6 +749,14 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 
 }
 
+void ParticleObject::Update_Particle_State()
+{
+	if (shader_type == Particle_Shader_Type::sand)
+	{
+		Particle_State_Func_Index += 1;
+		Particle_State_Func_Index %= 3;
+	}
+}
 
 CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage)
 {

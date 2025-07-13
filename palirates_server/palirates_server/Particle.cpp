@@ -21,6 +21,28 @@ void Particle_Object::Update(float elapsedtime)
 
     LifeTime -= elapsedtime;
 
+    XMFLOAT3 now_pos = GetPosition();
+    SetPosition(now_pos.x, now_pos.y+0.2f, now_pos.z);
+
+    float angle = XMConvertToRadians(1.0f);
+
+    // 현재 방향 벡터 (예: p.main_direction)
+    XMFLOAT3 dir = GetLook();
+
+    // XMVECTOR로 변환
+    XMVECTOR vDir = XMLoadFloat3(&dir);
+
+    // Y축 회전 행렬
+    XMMATRIX rotY = XMMatrixRotationY(angle);
+
+    // 회전 적용
+    vDir = XMVector3TransformNormal(vDir, rotY);
+
+    // 다시 XMFLOAT3로 저장
+    XMStoreFloat3(&dir, vDir);
+
+    SetLook(dir);
+
     if (LifeTime <= 0.0f)
     {
         Active = false;

@@ -1742,10 +1742,10 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand == NULL)
 				break;
 
-			test_sand->Update_Func_Index +=1;
-			test_sand->Update_Func_Index %= 3;
+			test_sand->Update_Particle_State();;
+			test_sand->Update_Particle_State();
 
-			if (test_sand->Update_Func_Index == 0)
+			if (test_sand->Get_Particle_State() == 0)
 			{
 				test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 				test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
@@ -1753,7 +1753,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				test_sand->Set_Speed(0.0f);
 				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
 			}
-			else if (test_sand->Update_Func_Index == 1 || test_sand->Update_Func_Index == 2)
+			else if (test_sand->Get_Particle_State() == 1 || test_sand->Get_Particle_State() == 2)
 			{
 				auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 				if (mon)
@@ -1771,7 +1771,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 							test_sand->Set_Focus_Point(anubisPos);
 							test_sand->Set_Speed(0.0f);
 
-							if (test_sand->Update_Func_Index == 2)
+							if (test_sand->Get_Particle_State())
 							{
 								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 								XMFLOAT3 pos = anubisPos;
@@ -1784,8 +1784,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 								test_sand->Set_Speed(100.0f);
 								test_sand->Set_Direction(dir);
 							}
-
 							break; 
+
 						}
 					}
 				}
@@ -1980,7 +1980,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 
 
-	if (test_sand && test_sand->Update_Func_Index == 1)
+	if (test_sand && test_sand->Get_Particle_State() == 1)
 	{
 		auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 		if (mon)

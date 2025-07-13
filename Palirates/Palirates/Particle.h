@@ -290,8 +290,9 @@ private:
 	//=============================
 	Particle_Shader_Type shader_type = Particle_Shader_Type::etc;
 
+	UINT Particle_State_Func_Index = 0; //for Sand
 public:
-	UINT Update_Func_Index = 0; //for Sand
+
 	ParticleObject();
 	virtual ~ParticleObject();
 
@@ -320,6 +321,9 @@ public:
 	Particle* Get_Particle_Data() { return particle_data; }
 	CB_Particle_Update_Info Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage);
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
+
+	void Update_Particle_State();
+	UINT Get_Particle_State() { return Particle_State_Func_Index; }
 
 	void Set_Local_Coordinate() { is_local = true; }
 	void Set_World_Coordinate() { is_local = false; }

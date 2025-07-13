@@ -17,8 +17,8 @@ void GameWorld::Init()
     Particle_Format p;
     p.area_xyz = XMFLOAT3{ 1000,2000,3000 };
     p.lifetime = 300;
-    p.main_direction = XMFLOAT3{ 0,1,0 };
-    p.particle_type = Particle_Type::sand;
+    p.main_direction = XMFLOAT3{ 0,0,1 };
+    p.particle_type = Particle_Type::dragon_breath;
 
     shared_ptr<Particle_Object> p_obj = particle_manager.Create_Particle_Object(p);
     p_obj->SetNeedSyncType(true);
