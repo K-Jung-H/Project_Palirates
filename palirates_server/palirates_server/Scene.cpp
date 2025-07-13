@@ -299,8 +299,6 @@ Stage_Scene::Stage_Scene() : Scene (Scene_Type::Stage_1)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
     scene = GameObject::Load_Scene("Scene/Scene_Name.bin");
 
-
-    game_world.Init();
     game_world.Load_Scene_Data(scene);
     Init();
 }

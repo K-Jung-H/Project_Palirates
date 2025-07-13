@@ -1000,7 +1000,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
-		test_sand_storm_info.EmitFaceIndex = 5;
+		test_sand_storm_info.EmitFaceIndex = FACE_FRONT;
 
 		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 		test_sand_storm_info.init_velocity_value = 100.0f;

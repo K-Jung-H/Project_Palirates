@@ -649,8 +649,6 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 {
 	std::shared_ptr<ParticleObject> new_particle_obj = nullptr;
 
-	static int Particle_ID = 0;
-
 	if (particle_info.shader_type == Particle_Shader_Type::interval)
 	{
 		std::shared_ptr<ParticleObject> recycled_particle = Recycle_Particle(particle_shape_mesh, particle_info);
@@ -668,12 +666,12 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 	new_particle_obj->Set_OwnerManager(this);
 	new_particle_obj->Set_Shape(particle_shape_mesh);
 	new_particle_obj->Init_Info(particle_info);
-	new_particle_obj->Set_Name(std::to_string(Particle_ID));
 	new_particle_obj->Set_Max_Interval(particle_info.MaxLifetime);
-	Particle_ID++;
+
 
 	Particle* new_particle_data = new Particle(pd3dDevice, pd3dCommandList, particle_info);
 	new_particle_obj->Set_Particle_Data(new_particle_data);
+	new_particle_obj->Set_Shader_Type(particle_info.shader_type);
 
 	particle_object_list_map[particle_info.shader_type].push_back(new_particle_obj);
 
@@ -979,14 +977,15 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.shader_type = Particle_Shader_Type::sand;
 			format.particle_type = Particle_Type::sand;
 			format.max_particles = 5000;
-			format.MaxLifetime = data.LifeTime;
+			format.MaxLifetime = 10;
 			format.area_xyz = data.area_extent;
-			format.EmitFaceIndex = FACE_TOP;
+			format.EmitFaceIndex = FACE_FRONT;
 			format.main_direction = data.main_direction;
-			format.init_velocity_value = 80;
+			format.init_velocity_value = 100;
 			format.acceleration = XMFLOAT3(0, 0, 0);
-			format.color = XMFLOAT3(0.8f, 0.7f, 0.5f);
-			format.size = 0.25f;
+			format.color = XMFLOAT3(1,0,0);
+
+			format.size = 0.3f;
 			mesh = particle_mesh_map["billboard"];
 			break;
 
@@ -1020,8 +1019,13 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 		obj->Set_Main_Direction(data.obj_look);
 		obj->Set_Name(std::to_string(data.particle_ID));
 
+		if (format.particle_type == Particle_Type::sand)
+		{
+			obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
+			obj->Set_Local_Coordinate();
+		}
+
 		particle_id_map[data.particle_ID] = obj;
-		particle_object_list_map[format.shader_type].push_back(obj);
 
 		createQueue.pop();
 	}
@@ -1029,7 +1033,8 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 
 void Particle_Manager::Remove_Particles_From_Queue() 
 {
-	while (!deleteQueue.empty()) {
+	while (!deleteQueue.empty()) 
+	{
 		UINT id = deleteQueue.front();
 
 		auto it = particle_id_map.find(id);
