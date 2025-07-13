@@ -498,6 +498,7 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
     }
     m->SetID(id);
     m->SetPosition(pos);
+    m->SetPlayerListPtr(&player_list);
 
     id2idx[id] = Monster_List.size();       
     Monster_List.emplace_back(std::move(m));

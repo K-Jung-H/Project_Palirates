@@ -1,14 +1,19 @@
 #include "stdafx.h"
 #include "MonsterState.h"
 #include "Object_StateMachine.h"
+#include "MonsterAnimationRegistry.h"
 #include <memory>
 
 // -------------------------
 // IdleState
 // -------------------------
 void IdleState::Enter(Monster* monster, MonsterStateMachine* sm) {
-    if (!monster) return;
+    if (!monster) {
+        std::cout << "no monster" << std::endl;
+        return;
+    }
     monster->PlayAnimation(State::Idle);
+
 }
 
 void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
@@ -35,10 +40,17 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
 }
 
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
-    if (!monster || !sm) return;
+    if (!monster || !sm || !sm->animController) return;
 
-    if (monster->IsAttackCooldownOver()) {
-        sm->ChangeState(std::make_unique<IdleState>());
+    int track = MonsterAnimationRegistry::GetAnimationTrack(monster->GetType(), State::Attack1);
+
+    // 애니메이션 트랙이 유효한지 확인
+    if (track >= 0 && track < sm->n_Ani) {
+        const auto& animTrack = sm->animController->m_pAnimationTracks[track];
+
+        if (animTrack.m_nType == ANIMATION_TYPE_ONCE && animTrack.m_bFinished) {
+            sm->ChangeState(std::make_unique<IdleState>());
+        }
     }
 }
 

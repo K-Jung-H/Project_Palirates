@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameObject.h"
+#include "Player.h"
 #include "Object_StateMachine.h"
 #include "StateEnum.h"
 #include "AnimationTrackEnum.h"
@@ -37,6 +38,7 @@ protected:
     int hp = 100;
 
     std::unique_ptr<MonsterStateMachine> m_StateMachine;
+    const std::array<std::shared_ptr<Player>, MaxPlayer>* pPlayerList = nullptr;
 
 public:
     float stateElapsedTime = 0.0f;
@@ -54,6 +56,7 @@ public:
     virtual void PlayAnimation(State state);
     virtual ServerSyncData MakeSyncData();
 
+    void SetPlayerListPtr(const std::array<std::shared_ptr<Player>, MaxPlayer>* ptr) { pPlayerList = ptr; }
     virtual GameObject* FindNearestPlayerInRange(float range);
     virtual void SetTarget(GameObject* target);
     virtual void StartAttackCooldown();
@@ -64,6 +67,7 @@ public:
     void SetID(int id) { monster_id = id; }
 
     void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks);
+    void InitStateMachine();
 };
 
 class Fishman : public Monster {

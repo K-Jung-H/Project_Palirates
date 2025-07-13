@@ -9,8 +9,6 @@
 #include "Monster.h"
 #include "ServerAnimLoader.h"
 
-#define MaxPlayer 6
-
 class Scene
 {
 public:

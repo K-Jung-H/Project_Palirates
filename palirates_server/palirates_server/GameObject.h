@@ -28,6 +28,8 @@ protected:
 
     std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
+    bool bActive = true;
+
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
@@ -111,6 +113,9 @@ public:
     virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
 
     virtual void update(float deltaTime) {};
+
+    void Set_Active(bool active) { bActive = active; }
+    bool Get_Active() const { return bActive; }
 };
 
 

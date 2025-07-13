@@ -4,6 +4,7 @@
 #include "MonsterState.h"
 #include "MonsterAnimationRegistry.h"
 #include <unordered_set>
+#include <array>
 
 Monster::Monster(int id) : monster_id(id) {
     type = Monster_Type::ETC;
@@ -11,8 +12,9 @@ Monster::Monster(int id) : monster_id(id) {
 
 void Monster::update(float deltaTime) {
     if (m_StateMachine) {
+        m_StateMachine->OnPrepareUpdate(deltaTime);
+        m_StateMachine->update(deltaTime);
         m_StateMachine->SetWeight(deltaTime);
-        m_StateMachine->update(stateElapsedTime);
     }
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
@@ -20,7 +22,7 @@ void Monster::update(float deltaTime) {
 }
 
 void Monster::PlayAnimation(State state) {
-    if (!m_pSkinnedAnimationController) return;
+    //if (!m_pSkinnedAnimationController) return;
 
     int track = MonsterAnimationRegistry::GetAnimationTrack(type, state);
 
@@ -29,6 +31,12 @@ void Monster::PlayAnimation(State state) {
             targetWeights[i] = 0.0f;
         }
         targetWeights[track] = 1.0f;
+
+        auto& animTrack = m_pSkinnedAnimationController->m_pAnimationTracks[track];
+        if (animTrack.m_nType == ANIMATION_TYPE_ONCE) {
+            animTrack.m_bFinished = false;
+            animTrack.m_fPosition = 0.0f;  
+        }
     }
 }
 
@@ -43,7 +51,30 @@ ServerSyncData Monster::MakeSyncData() {
 }
 
 GameObject* Monster::FindNearestPlayerInRange(float range) {
-    return nullptr;
+    if (!pPlayerList) return nullptr;
+
+    const float rangeSq = range * range;
+    float minDistSq = rangeSq;
+    GameObject* nearest = nullptr;
+    const XMFLOAT3 myPos = GetPosition();
+
+    for (const auto& player : *pPlayerList) {
+        if (!player || !player->Get_Active()) continue; 
+
+        const XMFLOAT3 pPos = player->GetPosition();
+
+        const float dx = pPos.x - myPos.x;
+        const float dy = pPos.y - myPos.y;
+        const float dz = pPos.z - myPos.z;
+        const float distSq = dx * dx + dy * dy + dz * dz;
+
+        if (distSq < minDistSq) {
+            minDistSq = distSq;
+            nearest = player.get();
+        }
+    }
+
+    return nearest;
 }
 
 void Monster::SetTarget(GameObject* target) {
@@ -67,7 +98,6 @@ void Monster::InitAnimationController(const std::string& filepath, int animCount
 
     prevWeights.assign(n_Animation, 0.0f);
     targetWeights.assign(n_Animation, 0.0f);
-    prevWeights[0] = 1.0f;
 
     m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
     m_pSkinnedAnimationController->RootIndex = RootIndex;
@@ -80,7 +110,20 @@ void Monster::InitAnimationController(const std::string& filepath, int animCount
             m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
         }
     }
+
+    m_pSkinnedAnimationController->m_pAnimationTracks[MonsterAnimationRegistry::GetAnimationTrack(type, State::Idle)].m_fWeight = 1.0f;
 }
+
+void Monster::InitStateMachine() {
+    if (!m_StateMachine) return;
+
+    m_StateMachine->animController = m_pSkinnedAnimationController;
+    m_StateMachine->n_Ani = n_Animation;
+
+    if (auto state = m_StateMachine->GetCurrentState())
+        state->Enter(this, m_StateMachine.get());
+}
+
 // ---------------- Fishman ----------------
 
 Fishman::Fishman(int id) : Monster(id) {
@@ -102,9 +145,10 @@ Fishman::Fishman(int id) : Monster(id) {
         TRACK_FISHMAN_DEAD
     };
 
-    m_StateMachine = std::make_unique<FishManStateMachine>(this);
-
     InitAnimationController("Model/FishmanLP.bin", 9, 0, OnceType);
+
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
 }
 
 // ---------------- Anubis ----------------
@@ -133,9 +177,10 @@ Anubis::Anubis(int id) : Monster(id) {
         TRACK_ANUBIS_DEAD
     };
 
-    m_StateMachine = std::make_unique<AnubisStateMachine>(this);
-
     InitAnimationController("Model/Anubis_lp.bin", 10, 0, OnceType);
+
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
 }
 
 // ---------------- Dragon ----------------
@@ -157,7 +202,8 @@ Dragon::Dragon(int id) : Monster(id) {
         TRACK_DRAGON_DEAD
     };
 
-    m_StateMachine = std::make_unique<DragonStateMachine>(this);
-
     InitAnimationController("Model/Dragon_LP.bin", 13, 16, OnceType);
+
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
 }

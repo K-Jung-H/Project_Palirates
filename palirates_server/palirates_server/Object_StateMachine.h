@@ -36,6 +36,13 @@ protected:
 public:
     MonsterStateMachine(Monster* owner)
         : StateMachine(State::Idle), m_pOwner(owner) {
+        currentState = std::make_unique<IdleState>();
+        currentStateEnum = State::Idle;
+        if (currentState) {
+            currentState->Enter(m_pOwner, this);
+        }
+        else
+            std::cout << "fail enter" << std::endl;
     }
 
     void update(float deltaTime) override;
@@ -46,6 +53,8 @@ public:
     State GetCurrentStateEnum() const { return currentStateEnum; }
     MonsterState* GetCurrentState() const { return currentState.get(); }
     Monster* GetOwner() const { return m_pOwner; }
+
+    void OnPrepareUpdate(float deltaTime);
 };
 
 class FishManStateMachine : public MonsterStateMachine {
