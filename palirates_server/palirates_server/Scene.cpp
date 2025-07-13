@@ -337,17 +337,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     }
 
     for (auto m : Monster_List) {
-        auto con = m->GetSkinnedAnimationController();
-        if (con) {
-            con->AdvanceTime(elapsedTime, m.get());
-
-            if (m->GetStateMachine())
-                m->GetStateMachine()->update(elapsedTime);
-        }
-        else {
-            //std::cout << "con 없음" << std::endl;
-
-        }
+        m->update(elapsedTime);
     }
     // test
     //static float spawnTimer = 0.0f;

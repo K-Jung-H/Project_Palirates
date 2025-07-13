@@ -9,9 +9,14 @@ Monster::Monster(int id) : monster_id(id) {
     type = Monster_Type::ETC;
 }
 
-void Monster::update() {
-    if (m_StateMachine)
+void Monster::update(float deltaTime) {
+    if (m_StateMachine) {
+        m_StateMachine->SetWeight(deltaTime);
         m_StateMachine->update(stateElapsedTime);
+    }
+    if (m_pSkinnedAnimationController) {
+        m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
+    }
 }
 
 void Monster::PlayAnimation(State state) {
@@ -19,13 +24,14 @@ void Monster::PlayAnimation(State state) {
 
     int track = MonsterAnimationRegistry::GetAnimationTrack(type, state);
 
-    for (int i = 0; i < n_Animation; ++i) {
-        targetWeights[i] = 0.0f;
-    }
     if (track >= 0 && track < n_Animation) {
+        for (int i = 0; i < n_Animation; ++i) {
+            targetWeights[i] = 0.0f;
+        }
         targetWeights[track] = 1.0f;
     }
 }
+
 ServerSyncData Monster::MakeSyncData() {
     ServerSyncData data;
     data.position = GetPosition();

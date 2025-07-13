@@ -47,7 +47,7 @@ public:
     Monster() = default;
     virtual ~Monster() = default;
 
-    virtual void update() override;
+    virtual void update(float deltaTime) override;
 
     MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 

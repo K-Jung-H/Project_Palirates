@@ -110,7 +110,7 @@ public:
     
     virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
 
-    virtual void update() {};
+    virtual void update(float deltaTime) {};
 };
 
 
@@ -165,5 +165,5 @@ public:
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
 
-    virtual void update() override {};
+    virtual void update(float deltaTime) override {};
 };
