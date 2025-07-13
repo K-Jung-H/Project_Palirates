@@ -4,11 +4,16 @@
 
 enum class Particle_Type
 {
-    bleed,
-    sand,
-    dragon_breath,
-    etc,
+    snow = 0,
+    splash = 1,
+    dragon_breath = 2,
+    sand = 3,
+    sand_storm = 4,
+    //=======================
+    bleed = 10,
+    etc = -1
 };
+
 
 struct Particle_Format
 {

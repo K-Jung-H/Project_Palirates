@@ -440,11 +440,13 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		return std::clamp(result, 0.0f, 1.0f); 
 		};
 
+	UINT particle_Type = static_cast<UINT>(particle_format.particle_type);
+
 	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
 	{
 		particle_info[i].Active = 0;
-		particle_info[i].Type = particle_format.particle_type;
+		particle_info[i].Type = particle_Type;
 
 		particle_info[i].MaxLifetime = particle_format.MaxLifetime;
 		particle_info[i].Lifetime = 0.0f;

@@ -21,7 +21,10 @@
 class Object_Manager;
 class Particle_Manager;
 class ParticleObject;
+struct Particle_Sync_Data;
+
 class Particle_Shape_Mesh;
+
 class Texture_UI_Manager;
 struct TextureBlock;
 
@@ -278,6 +281,10 @@ public:
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
 	virtual void Sync_Monster_Data(int monsterID, const ServerSyncData& syncData);
+
+	void Create_Particle_Object(const Particle_Sync_Data& syncData);
+	void Update_Particle_Object(const Particle_Sync_Data& syncData);
+	void Remove_Particle_Object(UINT p_obj_id);
 };
 
 class Character_Select_Scene : public CScene

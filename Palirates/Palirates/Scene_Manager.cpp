@@ -337,7 +337,13 @@ void Scene_Manager::Animate_Active_Objects(ID3D12Device* pd3dDevice, ID3D12Graph
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
     if (particle_manager)
+    {
+        if (isRunning)
+        {
+            particle_manager->Process_Sync_Queues(pd3dDevice, pd3dCommandList);
+        }
         particle_manager->AnimateObjects(pd3dCommandList, fTimeElapsed);
+    }
     else
         DebugOutput("[Scene_Manager] ERROR:  particle_manager is not exist");
 

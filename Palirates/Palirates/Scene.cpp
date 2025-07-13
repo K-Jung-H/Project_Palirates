@@ -974,8 +974,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #ifdef RENDER_PARTICLE
 	Particle_Format test_dragon_fire_info;
 	{
-		test_dragon_fire_info.shader_type = Particle_Type::loop;
-		test_dragon_fire_info.particle_type = 5;
+		test_dragon_fire_info.shader_type = Particle_Shader_Type::continuous;
+		test_dragon_fire_info.particle_type = Particle_Type::dragon_breath;
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
 
@@ -994,8 +994,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format test_sand_storm_info;
 	{
-		test_sand_storm_info.shader_type = Particle_Type::sand;
-		test_sand_storm_info.particle_type = 3;
+		test_sand_storm_info.shader_type = Particle_Shader_Type::sand;
+		test_sand_storm_info.particle_type = Particle_Type::sand;
 		test_sand_storm_info.max_particles = 10000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
@@ -1012,8 +1012,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format bleeding_info;
 	{
-		bleeding_info.shader_type = Particle_Type::interval;
-		bleeding_info.particle_type = 6;
+		bleeding_info.shader_type = Particle_Shader_Type::interval;
+		bleeding_info.particle_type = Particle_Type::bleed;
 		bleeding_info.max_particles = 30;
 		bleeding_info.MaxLifetime = 3.0f;
 
@@ -2236,6 +2236,25 @@ void CScene::Sync_Monster_Data(int monsterID, const ServerSyncData& syncData)
 	}
 }
 
+void CScene::Create_Particle_Object(const Particle_Sync_Data& syncData)
+{
+	if (particle_manager)
+		particle_manager->Enqueue_Create(syncData);
+
+}
+
+void CScene::Update_Particle_Object(const Particle_Sync_Data& syncData)
+{
+	if (particle_manager)
+		particle_manager->Enqueue_Update(syncData);
+}
+
+void CScene::Remove_Particle_Object(UINT p_obj_id)
+{
+	if (particle_manager)
+		particle_manager->Enqueue_Delete(p_obj_id);
+}
+
 //==========================================================================================
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
@@ -2988,8 +3007,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
-		water_splashes_info.shader_type = Particle_Type::loop;
-		water_splashes_info.particle_type = 2;
+		water_splashes_info.shader_type = Particle_Shader_Type::continuous;
+		water_splashes_info.particle_type = Particle_Type::splash;
 		water_splashes_info.max_particles = 300;
 
 		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);

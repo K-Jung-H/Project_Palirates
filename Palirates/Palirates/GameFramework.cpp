@@ -1175,7 +1175,7 @@ void CGameFramework::FrameAdvance()
 	
 	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
 	if (active_scene_particle_manager)
-		active_scene_particle_manager->Process_Destroy_Queue();
+		active_scene_particle_manager->Destroy_Particle_Resource();
 
 	SendPacket();
 
@@ -1623,10 +1623,13 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 		int count = std::stoi(tokens[1]);
 		int base = 2;
 
+
 		for (int i = 0; i < count; ++i)
 		{
 			int idx = base + i * 15;
 			if (idx + 14 >= tokens.size()) break;
+
+			Particle_Sync_Data particle_sync_data;
 
 			UINT id = std::stoi(tokens[idx]);
 			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));
@@ -1636,7 +1639,18 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };
 			float lifetime = std::stof(tokens[idx + 14]);
 
-//			stage_scene->CreateOrUpdateParticle(id, type, pos, look, area, dir, lifetime);
+			particle_sync_data.particle_ID = id;
+			particle_sync_data.particle_type = type;
+			particle_sync_data.obj_pos = pos;
+			particle_sync_data.obj_look = look;
+			particle_sync_data.area_extent = area;
+			particle_sync_data.main_direction = dir;
+			particle_sync_data.LifeTime = lifetime;
+
+			if (command == "PARTICLE_CREATE")
+				stage_scene->Create_Particle_Object(particle_sync_data);
+			else if (command == "PARTICLE_UPDATE")
+				stage_scene->Update_Particle_Object(particle_sync_data);
 		}
 	}
 	else if (command == "PARTICLE_REMOVE")
@@ -1649,7 +1663,8 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 			if (idx >= tokens.size()) break;
 
 			UINT id = std::stoi(tokens[idx]);
-//			stage_scene->RemoveParticle(id);
+			stage_scene->Remove_Particle_Object(id);
+
 		}
 	}
 }
