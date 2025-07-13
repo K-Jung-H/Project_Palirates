@@ -350,6 +350,8 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
         }
     }
+
+    game_world.Update_Particle(elapsedTime);
 }
 
 Scene_Type Stage_Scene::CheckSceneTransition()

@@ -35,6 +35,7 @@ public:
 
     Particle_Format Get_Format() { return particle_format; };
     UINT Get_Particle_ID() { return particle_id; }
+    float Get_LifeTime() { return LifeTime; }
 
     void SetNeedSyncType(bool enable) { is_need_to_sync = enable; }
     bool IsContinuousSyncType() const { return is_need_to_sync; }

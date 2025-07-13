@@ -92,22 +92,24 @@ void ParticleManager::Clear()
 
 void ParticleManager::Update_Particle(float elapsed_time)
 {
-    std::lock_guard<std::mutex> lock(particle_manage_mutex);
-
     std::vector<UINT> to_remove;
-
-    for (auto& [id, particle] : particle_map)
     {
-        particle->Update(elapsed_time);
+        std::lock_guard<std::mutex> lock(particle_manage_mutex);
 
-        if (!particle->IsActive())
+
+        for (auto& [id, particle] : particle_map)
         {
-            to_remove.push_back(id);
-            continue;
-        }
+            particle->Update(elapsed_time);
 
-        if (particle->IsContinuousSyncType())
-            pos_updated_this_frame.push_back(particle);
+            if (!particle->IsActive())
+            {
+                to_remove.push_back(id);
+                continue;
+            }
+
+            if (particle->IsContinuousSyncType())
+                pos_updated_this_frame.push_back(particle);
+        }
     }
 
     for (UINT id : to_remove)

@@ -14,6 +14,14 @@ GameWorld::~GameWorld()
 
 void GameWorld::Init()
 {
+    Particle_Format p;
+    p.area_xyz = XMFLOAT3{ 100,200,300 };
+    p.lifetime = 100;
+    p.main_direction = XMFLOAT3{ 0,1,0 };
+    p.particle_type = Particle_Type::dragon_breath;
+
+    shared_ptr<Particle_Object> p_obj = particle_manager.Create_Particle_Object(p);
+    p_obj->SetNeedSyncType(true);
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)

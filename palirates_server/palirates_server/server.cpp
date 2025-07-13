@@ -758,7 +758,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
-            float life = fmt.lifetime;
+            float life = obj->Get_LifeTime();
 
             temp_p_update << std::to_string(id) << ","
                 << std::to_string(type) << ","
@@ -1038,7 +1038,7 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
 
 void Server::PrintClientDebugInfo()
 {
-    //system("cls");
+    system("cls");
     std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
 
 
