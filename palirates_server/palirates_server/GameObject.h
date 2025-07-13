@@ -28,6 +28,8 @@ protected:
 
     std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
+    bool bActive = true;
+
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
     XMFLOAT4X4            m_xmf4x4World{};
@@ -83,8 +85,8 @@ public:
     void SetUp(XMFLOAT3 xmf3Up);
     void SetRight(XMFLOAT3 xmf3Right);
 
-    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
-    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(const char* pstrFileName);
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, const char* pstrFileName);
     static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
 
     static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);
@@ -109,6 +111,11 @@ public:
     std::unordered_set<int> RootMotionTrackSet;
     
     virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
+
+    virtual void update(float deltaTime) {};
+
+    void Set_Active(bool active) { bActive = active; }
+    bool Get_Active() const { return bActive; }
 };
 
 
@@ -162,4 +169,6 @@ public:
 
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
+
+    virtual void update(float deltaTime) override {};
 };
