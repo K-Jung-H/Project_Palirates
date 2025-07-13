@@ -57,6 +57,30 @@ bool Monster::IsAttackCooldownOver() const {
     return stateElapsedTime >= stateChangeInterval;
 }
 
+void Monster::InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks)
+{
+    auto asset = GameObject::LoadGeometryAndAnimationFromFile(filepath.data());
+    if (!asset || !asset->m_pAnimationSets) return;
+
+    n_Animation = animCount;
+    RootIndex = rootIdx;
+
+    prevWeights.assign(n_Animation, 0.0f);
+    targetWeights.assign(n_Animation, 0.0f);
+    prevWeights[0] = 1.0f;
+
+    m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
+    m_pSkinnedAnimationController->RootIndex = RootIndex;
+
+    for (int i = 0; i < n_Animation; ++i) {
+        m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+        m_pSkinnedAnimationController->SetTrackEnable(i, true);
+
+        if (onceTracks.find(i) != onceTracks.end()) {
+            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+        }
+    }
+}
 // ---------------- Fishman ----------------
 
 Fishman::Fishman(int id) : Monster(id) {
@@ -80,27 +104,7 @@ Fishman::Fishman(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
 
-    n_Animation = 9;
-    RootIndex = 0;
-
-    prevWeights.resize(n_Animation, 0.0f);
-    prevWeights[0] = 1.0f;
-    targetWeights.resize(n_Animation, 0.0f);
-
-    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/FishmanLP.bin");
-    if (!asset || !asset->m_pAnimationSets) return;
-
-    m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
-    m_pSkinnedAnimationController->RootIndex = RootIndex;
-
-    for (int i = 0; i < n_Animation; ++i) {
-        m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-        m_pSkinnedAnimationController->SetTrackEnable(i, true);
-
-        if (OnceType.find(i) != OnceType.end()) {
-            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
-        }
-    }
+    InitAnimationController("Model/FishmanLP.bin", 9, 0, OnceType);
 }
 
 // ---------------- Anubis ----------------
@@ -131,27 +135,7 @@ Anubis::Anubis(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<AnubisStateMachine>(this);
 
-    n_Animation = 10;
-    RootIndex = 0;
-
-    prevWeights.resize(n_Animation, 0.0f);
-    prevWeights[0] = 1.0f;
-    targetWeights.resize(n_Animation, 0.0f);
-
-    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/Anubis_lp.bin");
-    if (!asset || !asset->m_pAnimationSets) return;
-
-    m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
-    m_pSkinnedAnimationController->RootIndex = RootIndex;
-
-    for (int i = 0; i < n_Animation; ++i) {
-        m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-        m_pSkinnedAnimationController->SetTrackEnable(i, true);
-
-        if (OnceType.find(i) != OnceType.end()) {
-            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
-        }
-    }
+    InitAnimationController("Model/Anubis_lp.bin", 10, 0, OnceType);
 }
 
 // ---------------- Dragon ----------------
@@ -175,25 +159,5 @@ Dragon::Dragon(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<DragonStateMachine>(this);
 
-    n_Animation = 13;
-    RootIndex = 16; 
-
-    prevWeights.resize(n_Animation, 0.0f);
-    prevWeights[0] = 1.0f;
-    targetWeights.resize(n_Animation, 0.0f);
-
-    auto asset = GameObject::LoadGeometryAndAnimationFromFile("Model/Dragon_LP.bin");
-    if (!asset || !asset->m_pAnimationSets) return;
-
-    m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
-    m_pSkinnedAnimationController->RootIndex = RootIndex;
-
-    for (int i = 0; i < n_Animation; ++i) {
-        m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
-        m_pSkinnedAnimationController->SetTrackEnable(i, true);
-
-        if (OnceType.find(i) != OnceType.end()) {
-            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
-        }
-    }
+    InitAnimationController("Model/Dragon_LP.bin", 13, 16, OnceType);
 }

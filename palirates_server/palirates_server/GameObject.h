@@ -83,8 +83,8 @@ public:
     void SetUp(XMFLOAT3 xmf3Up);
     void SetRight(XMFLOAT3 xmf3Right);
 
-    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
-    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(const char* pstrFileName);
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, const char* pstrFileName);
     static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
 
     static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);

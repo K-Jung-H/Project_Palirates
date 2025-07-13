@@ -374,7 +374,7 @@ static void SkipMaterialsBlock(FILE* fp)
 	}
 }
 
-CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileName)
+CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(const char* pstrFileName)
 {
 	FILE* pInFile = NULL;
 	::fopen_s(&pInFile, pstrFileName, "rb");
@@ -416,7 +416,7 @@ CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(char* pstrFileNam
 	return(pLoadedModel);
 }
 
-void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName)
+void GameObject::LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, const char* pstrFileName)
 {
 	char pstrToken[64] = { '\0' };
 	UINT nReads = 0;

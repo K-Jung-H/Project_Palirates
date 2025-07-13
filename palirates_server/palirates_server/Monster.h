@@ -62,6 +62,8 @@ public:
     Monster_Type GetType() const { return type; }
     int GetID() const { return monster_id; }
     void SetID(int id) { monster_id = id; }
+
+    void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks);
 };
 
 class Fishman : public Monster {
