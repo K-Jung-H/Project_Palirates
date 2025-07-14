@@ -149,6 +149,7 @@
     <ClCompile Include="MonsterAnimationRegistry.cpp" />
     <ClCompile Include="MonsterState.cpp" />
     <ClCompile Include="Object_StateMachine.cpp" />
+    <ClCompile Include="Particle.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="server.cpp" />
@@ -173,6 +174,7 @@
     <ClInclude Include="MonsterAnimationRegistry.h" />
     <ClInclude Include="MonsterState.h" />
     <ClInclude Include="Object_StateMachine.h" />
+    <ClInclude Include="Particle.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="server.h" />

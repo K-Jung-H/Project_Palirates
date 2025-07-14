@@ -8,16 +8,6 @@
 //==============================================================================
 #define MAX_PARTICLES				900 * 64
 
-enum class Particle_Type
-{
-	loop,
-	interval,
-	sand,
-	sample_1,
-	sample_2,
-	etc
-};
-
 #define FACE_LEFT    0 // -X
 #define FACE_RIGHT   1 // +X
 #define FACE_BOTTOM  2 // -Y
@@ -25,10 +15,42 @@ enum class Particle_Type
 #define FACE_BACK    4 // -Z
 #define FACE_FRONT   5 // +Z
 
+enum class Particle_Shader_Type
+{
+	continuous,
+	interval,
+	sand,
+	etc
+};
+
+enum class Particle_Type
+{
+	snow = 0,
+	splash = 1,
+	dragon_breath = 2,
+	sand = 3,
+	sand_storm = 4,
+	//=======================
+	bleed = 10,
+	etc = -1
+};
+
+struct Particle_Sync_Data
+{
+	UINT particle_ID;
+	XMFLOAT3 obj_pos;
+	XMFLOAT3 obj_look;
+
+	Particle_Type particle_type;
+	float LifeTime;
+	XMFLOAT3 area_extent;
+	XMFLOAT3 main_direction;
+};
+
 struct Particle_Format
 {
-	Particle_Type shader_type = Particle_Type::etc;
-	UINT particle_type;
+	Particle_Shader_Type shader_type = Particle_Shader_Type::etc;
+	Particle_Type particle_type;
 	UINT max_particles = MAX_PARTICLES;
 
 	XMFLOAT3 area_xyz{};
@@ -266,9 +288,11 @@ private:
 	float ElapsedTime = 0.0f;
 	float Max_Lifetime = 0.0f;
 	//=============================
+	Particle_Shader_Type shader_type = Particle_Shader_Type::etc;
 
+	UINT Particle_State_Func_Index = 0; //for Sand
 public:
-	UINT Update_Func_Index = 0;
+
 	ParticleObject();
 	virtual ~ParticleObject();
 
@@ -298,6 +322,9 @@ public:
 	CB_Particle_Update_Info Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage);
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 
+	void Update_Particle_State();
+	UINT Get_Particle_State() { return Particle_State_Func_Index; }
+
 	void Set_Local_Coordinate() { is_local = true; }
 	void Set_World_Coordinate() { is_local = false; }
 	bool Is_Local_Coordinate() const { return is_local; }
@@ -323,6 +350,8 @@ public:
 	void Set_Direction(XMFLOAT3& dir) { m_xmf3Direction = Vector3::Normalize(dir); }
 	void Set_Speed(float speed) { m_fSpeed = speed; }
 
+	void Set_Shader_Type(Particle_Shader_Type setting_shader_type) { shader_type = setting_shader_type; }
+	Particle_Shader_Type Get_Shader_Type() { return shader_type; };
 
 	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
 	void Add_Destroy_Queue();

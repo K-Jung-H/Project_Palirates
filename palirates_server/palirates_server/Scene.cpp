@@ -299,8 +299,6 @@ Stage_Scene::Stage_Scene() : Scene (Scene_Type::Stage_1)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
     scene = GameObject::Load_Scene("Scene/Scene_Name.bin");
 
-
-    game_world.Init();
     game_world.Load_Scene_Data(scene);
     Init();
 }
@@ -339,6 +337,10 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     for (auto m : Monster_List) {
         m->update(elapsedTime);
     }
+
+
+    game_world.Update_Particle(elapsedTime);
+
     // test
     //static float spawnTimer = 0.0f;
     //static float despawnTimer = 0.0f;
@@ -383,6 +385,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     //       
     //    }
     //}
+
 }
 
 Scene_Type Stage_Scene::CheckSceneTransition()
@@ -531,6 +534,14 @@ std::shared_ptr<Monster> Stage_Scene::GetMonster(int id)
 {
     auto it = id2idx.find(id);
     return (it == id2idx.end()) ? nullptr : Monster_List[it->second];
+}
+
+
+const FrameParticleChanges Stage_Scene::Get_Particle_Sync_Data()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    return game_world.Get_Particle_Sync_Data();
 }
 
 std::vector<int> Stage_Scene::FlushDespawnQueue()

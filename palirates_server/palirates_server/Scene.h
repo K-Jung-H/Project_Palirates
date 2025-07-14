@@ -132,6 +132,11 @@ public:
     std::shared_ptr<Monster> GetMonster(int id);
 
     const std::vector<std::shared_ptr<Monster>>& GetMonsterList() const { return Monster_List; }
+
+
+    const FrameParticleChanges Get_Particle_Sync_Data();
+
     void QueueDespawnCommand(int id) { monster_despawn_queue.emplace_back(id); }
     std::vector<int> FlushDespawnQueue();
+
 };

@@ -3,6 +3,7 @@
 #include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
+#include "Particle.h"
 
 namespace DirectX
 {
@@ -26,6 +27,8 @@ class GameWorld
 {
 private:
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
+	ParticleManager particle_manager;
+
 	std::unordered_map<XMINT3, std::vector<UINT>, XMINT3Hasher> uniform_cell_map;
 
 
@@ -44,6 +47,8 @@ public:
 	void Update_Collision(shared_ptr<Player> player_obj);
 
 	void Update_Monster(float elapsed_time);
+	void Update_Particle(float elapsed_time);
+	FrameParticleChanges Get_Particle_Sync_Data();
 
 private:
 	void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);

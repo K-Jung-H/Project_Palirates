@@ -168,14 +168,6 @@ void Emit_Snow(inout Particle_Info p, uint index)
 
 }
 
-void Emit_Spark(inout Particle_Info p, uint index)
-{
-    float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
-    p.Position = center;
-    float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 2.0f);
-    p.Velocity = normalize(dir) * Init_Velocity_Value;
-
-}
 
 void Emit_Water_Splash(inout Particle_Info p, uint index)
 {
@@ -253,13 +245,12 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
 
 
 #define PARTICLE_TYPE_SNOW     0
-#define PARTICLE_TYPE_SPARK     1
-#define PARTICLE_TYPE_SPLASH    2
+#define PARTICLE_TYPE_SPLASH    1
+#define PARTICLE_TYPE_DRAGON_FIRE 2
 #define PARTICLE_TYPE_SAND      3
 #define PARTICLE_TYPE_SAND_STORM 4
-#define PARTICLE_TYPE_DRAGON_FIRE 5
 
-#define PARTICLE_TYPE_INTERVAL_BLEEDING 6
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
 //===============================================================
 
@@ -315,8 +306,6 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
 
     if (p.Type == PARTICLE_TYPE_SNOW)
         Emit_Snow(p, index);
-    else if (p.Type == PARTICLE_TYPE_SPARK)
-        Emit_Spark(p, index);
     else if (p.Type == PARTICLE_TYPE_SPLASH)
             Emit_Water_Splash(p, index);
     else if (p.Type == PARTICLE_TYPE_SAND)

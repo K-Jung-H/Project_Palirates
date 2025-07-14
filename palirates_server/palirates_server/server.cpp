@@ -648,7 +648,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
             const auto& anim_data = player_ptr->GetAnimationSyncData();
             const auto& track_list = anim_data.track_info_list;
-            bool state_changed = anim_data.stateChanged;
+            bool state_changed = anim_data.stateChanged || player_ptr->need_to_client_sync;
 
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
@@ -672,6 +672,8 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         player_data_str.pop_back(); 
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
+
+    //===================================================================
 
     const auto& monster_list = stage->GetMonsterList(); 
 
@@ -711,8 +713,90 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         }
         oss << "\n";
     }
+  
+    //===================================================================
 
-	//std::cout << "oss size : " << oss.str().size() << std::endl;
+    const auto& particle_sync_data = stage->Get_Particle_Sync_Data();
+
+    if (!particle_sync_data.created.empty())
+    {
+        std::ostringstream temp_p_create;
+        temp_p_create << "PARTICLE_CREATE," << std::to_string(particle_sync_data.created.size()) << ",";
+
+        for (const auto& obj : particle_sync_data.created)
+        {
+            UINT id = obj->Get_Particle_ID();
+            XMFLOAT3 pos = obj->GetPosition();
+            XMFLOAT3 look = obj->GetLook();
+            Particle_Format fmt = obj->Get_Format();
+            UINT type = static_cast<int>(fmt.particle_type);
+
+            XMFLOAT3 area = fmt.area_xyz;
+            XMFLOAT3 dir = fmt.main_direction;
+            float life = fmt.lifetime;
+
+            temp_p_create << std::to_string(id) << ","
+                << std::to_string(type) << ","
+                << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
+                << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
+                << std::to_string(life) << ",";
+        }
+
+        std::string line = temp_p_create.str();
+        if (!line.empty() && line.back() == ',') line.pop_back();
+
+        oss << line << "\n";
+    }
+
+    // ────────────────────────────────
+    if (!particle_sync_data.pos_updated.empty())
+    {
+        std::ostringstream temp_p_update;
+        temp_p_update << "PARTICLE_UPDATE," << std::to_string(particle_sync_data.pos_updated.size()) << ",";
+
+        for (const auto& obj : particle_sync_data.pos_updated)
+        {
+            UINT id = obj->Get_Particle_ID();
+            XMFLOAT3 pos = obj->GetPosition();
+            XMFLOAT3 look = obj->GetLook();
+            Particle_Format fmt = obj->Get_Format();
+            UINT type = static_cast<int>(fmt.particle_type);
+
+            XMFLOAT3 area = fmt.area_xyz;
+            XMFLOAT3 dir = fmt.main_direction;
+            float life = obj->Get_LifeTime();
+
+            temp_p_update << std::to_string(id) << ","
+                << std::to_string(type) << ","
+                << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
+                << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
+                << std::to_string(life) << ",";
+        }
+        std::string line = temp_p_update.str();
+        if (!line.empty() && line.back() == ',') line.pop_back();
+
+        oss << line << "\n";
+    }
+
+    // ────────────────────────────────
+    if (!particle_sync_data.removed.empty())
+    {
+        std::ostringstream temp_p_remove;
+        temp_p_remove << "PARTICLE_REMOVE," << std::to_string(particle_sync_data.removed.size()) << ",";
+
+        for (UINT id : particle_sync_data.removed)
+            temp_p_remove << std::to_string(id) << ",";
+
+        std::string line = temp_p_remove.str();
+        if (!line.empty() && line.back() == ',') line.pop_back();
+
+        oss << line << "\n";
+    }
+
     return oss.str();
 }
 
@@ -962,7 +1046,7 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
 
 void Server::PrintClientDebugInfo()
 {
-    //system("cls");
+    system("cls");
     std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
 
 

@@ -42,13 +42,14 @@ struct CellInfo
     uint count; // OBB num
 };
 
-#define PARTICLE_TYPE_SNOW       0
-#define PARTICLE_TYPE_SPARK      1
-#define PARTICLE_TYPE_SPLASH     2
-#define PARTICLE_TYPE_SAND       3
-#define PARTICLE_TYPE_SAND_STORM       4
-#define PARTICLE_TYPE_DRAGON_FIRE       5
-#define PARTICLE_TYPE_INTERVAL_BLEEDING 6
+#define PARTICLE_TYPE_SNOW     0
+#define PARTICLE_TYPE_SPLASH    1
+#define PARTICLE_TYPE_DRAGON_FIRE 2
+#define PARTICLE_TYPE_SAND      3
+#define PARTICLE_TYPE_SAND_STORM 4
+
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
+
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
@@ -216,13 +217,6 @@ void Update_Snow(inout Particle_Info p, uint index)
     p.Rotate_Value += 2.5f * ElapsedTime;
 }
 
-void Update_Spark(inout Particle_Info p, uint index)
-{
-    p.Velocity += p.Acceleration * ElapsedTime;
-    p.Velocity += RandomSpreadDirection(index, Main_Direction, 1.0f);
-    p.Position += p.Velocity * ElapsedTime;
-    p.Rotate_Value += 8.0f * ElapsedTime;
-}
 
 void Update_Water_Splash(inout Particle_Info p, uint index)
 {
@@ -310,7 +304,7 @@ void Extract_Instance(in Particle_Info p)
 
 #define THREAD_COUNT 64
 [numthreads(THREAD_COUNT, 1, 1)]
-void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
+void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
 {
     uint index = DTid.x;
     
@@ -353,8 +347,6 @@ void Update_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     {
         if (p.Type == PARTICLE_TYPE_SNOW)
             Update_Snow(p, index);
-        else if (p.Type == PARTICLE_TYPE_SPARK)
-            Update_Spark(p, index);
         else if (p.Type == PARTICLE_TYPE_SPLASH)
             Update_Water_Splash(p, index);
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)

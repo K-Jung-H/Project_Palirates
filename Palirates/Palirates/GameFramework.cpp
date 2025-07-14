@@ -582,11 +582,11 @@ bool CGameFramework::Change_Scene()
 {
 	shared_ptr<CScene> active_scene = scene_manager->Get_Active_Scene();
 	Change_Signal c_signal;
-	if (isRunning) // ¸ÖÆ¼ÀÎ °æ¿ì¿¡¸¸ µ¿ÀÛ
+	if (isRunning) // ë©€í‹°ì¸ ê²½ìš°ì—ë§Œ ë™ì‘
 	{
 		if (Change_Call_By_Server != -1)
 		{
-			std::cout << "[DEBUG] ¼­¹ö ÆĞÅ¶¿¡ ÀÇÇÑ ¾ÀÀüÈ¯ ºĞ±â ÁøÀÔ" << std::endl;
+			std::cout << "[DEBUG] ì„œë²„ íŒ¨í‚·ì— ì˜í•œ ì”¬ì „í™˜ ë¶„ê¸° ì§„ì…" << std::endl;
 			c_signal = change_signal;
 
 			Change_Call_By_Server = -1;
@@ -594,7 +594,7 @@ bool CGameFramework::Change_Scene()
 
 		}
 	}
-	else // ¿ÀÇÁ¶óÀÎ ÀÎ °æ¿ì
+	else // ì˜¤í”„ë¼ì¸ ì¸ ê²½ìš°
 	{
 		c_signal  = active_scene->Get_Change_Signal();
 	}
@@ -1175,7 +1175,7 @@ void CGameFramework::FrameAdvance()
 	
 	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
 	if (active_scene_particle_manager)
-		active_scene_particle_manager->Process_Destroy_Queue();
+		active_scene_particle_manager->Destroy_Particle_Resource();
 
 	SendPacket();
 
@@ -1337,7 +1337,7 @@ int CGameFramework::SendPacket_String(const std::string& packet)
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &Client_ID) == 1) // Client_ID·Î ÀúÀå
+	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &Client_ID) == 1) // Client_IDë¡œ ì €ì¥
 	{
 		Connected_Player_List[Client_ID] = true;
 		HandleClientIdAssignment();
@@ -1359,7 +1359,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	const std::string& cmd = tokens[0];
 
-	// °øÅë Ã³¸®
+	// ê³µí†µ ì²˜ë¦¬
 	if (cmd == "PLAYER_LEFT_GAME " && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
@@ -1373,7 +1373,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	// ¾À º° Ã³¸®
+	// ì”¬ ë³„ ì²˜ë¦¬
 	auto active_scene = scene_manager->Get_Active_Scene();
 	if (!active_scene) return;
 
@@ -1421,6 +1421,8 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
+		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
+			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
 	}
 	break;
 
@@ -1440,11 +1442,11 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 
 	if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 2)
 	{
-		// ÃÊ±âÈ­
+		// ì´ˆê¸°í™”
 		for (int charId = 0; charId < MaxPlayer; ++charId)
 		{
 			readyClientIds[charId] = -1;
-			characterSelections[charId].reset();  // ¼±ÅÃ ¿©ºÎ ÃÊ±âÈ­
+			characterSelections[charId].reset();  // ì„ íƒ ì—¬ë¶€ ì´ˆê¸°í™”
 		}
 
 		for (int i = 1; i + 2 < tokens.size(); i += 3)
@@ -1453,10 +1455,10 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 			int readyClientId = std::stoi(tokens[i + 1]);
 			std::string selectedRaw = tokens[i + 2];
 
-			// Ready Á¤º¸ ÀúÀå
+			// Ready ì •ë³´ ì €ì¥
 			readyClientIds[charId] = readyClientId;
 
-			// ¼±ÅÃ Á¤º¸ ÀúÀå
+			// ì„ íƒ ì •ë³´ ì €ì¥
 			if (selectedRaw != "-1")
 			{
 				std::stringstream ss(selectedRaw);
@@ -1479,11 +1481,11 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 	}
 	else if (cmd == "CHARACTER_SELECT_SUCCESS")
 	{
-		// Ä³¸¯ÅÍ ¼±ÅÃ º¯°æ Â÷´ÜÇÏ±â
+		// ìºë¦­í„° ì„ íƒ ë³€ê²½ ì°¨ë‹¨í•˜ê¸°
 	}
 	else if (cmd == "CHARACTER_SELECT_FAIL")
 	{
-		// select ¹öÆ° Ã³¸® °ª ÃÊ±âÈ­ ÇÏ±â
+		// select ë²„íŠ¼ ì²˜ë¦¬ ê°’ ì´ˆê¸°í™” í•˜ê¸°
 		//select_scene->Set_Character_Select_Status(false);
 	}
 }
@@ -1620,6 +1622,62 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 	}
 }
 
+void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+{
+	if (command == "PARTICLE_CREATE" || command == "PARTICLE_UPDATE")
+	{
+		int count = std::stoi(tokens[1]);
+		int base = 2;
+
+
+		for (int i = 0; i < count; ++i)
+		{
+			int idx = base + i * 15;
+			if (idx + 14 >= tokens.size()) break;
+
+			Particle_Sync_Data particle_sync_data;
+
+			UINT id = std::stoi(tokens[idx]);
+			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));
+			XMFLOAT3 pos{ std::stof(tokens[idx + 2]), std::stof(tokens[idx + 3]), std::stof(tokens[idx + 4]) };
+			XMFLOAT3 look{ std::stof(tokens[idx + 5]), std::stof(tokens[idx + 6]), std::stof(tokens[idx + 7]) };
+			XMFLOAT3 area{ std::stof(tokens[idx + 8]), std::stof(tokens[idx + 9]), std::stof(tokens[idx + 10]) };
+			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };
+			float lifetime = std::stof(tokens[idx + 14]);
+
+			particle_sync_data.particle_ID = id;
+			particle_sync_data.particle_type = type;
+			particle_sync_data.obj_pos = pos;
+			particle_sync_data.obj_look = look;
+			particle_sync_data.area_extent = area;
+			particle_sync_data.main_direction = dir;
+			particle_sync_data.LifeTime = lifetime;
+
+			if (command == "PARTICLE_CREATE")
+				stage_scene->Create_Particle_Object(particle_sync_data);
+			else if (command == "PARTICLE_UPDATE")
+				stage_scene->Update_Particle_Object(particle_sync_data);
+		}
+	}
+	else if (command == "PARTICLE_REMOVE")
+	{
+		int count = std::stoi(tokens[1]);
+
+		for (int i = 0; i < count; ++i)
+		{
+			int idx = 2 + i;
+			if (idx >= tokens.size()) break;
+
+			UINT id = std::stoi(tokens[idx]);
+			stage_scene->Remove_Particle_Object(id);
+
+		}
+	}
+}
+
+
+
+
 void CGameFramework::HandleClientIdAssignment()
 {
 	std::cout << "[DEBUG] Received my client ID: " << Client_ID << std::endl;
@@ -1647,7 +1705,7 @@ void CGameFramework::HandleClientIdAssignment()
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
 	if (tokens.size() < 2) {
-		std::cerr << "[ERROR][HandleChangeScene] Scene type Á¤º¸ ºÎÁ·" << std::endl;
+		std::cerr << "[ERROR][HandleChangeScene] Scene type ì •ë³´ ë¶€ì¡±" << std::endl;
 		return;
 	}
 
@@ -1658,29 +1716,29 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 
 	switch (Change_Call_By_Server)
 	{
-	case -1:		// º¯°æ ¾øÀ½
+	case -1:		// ë³€ê²½ ì—†ìŒ
 		break;
 
-	case 0:		//·Îºñ
+	case 0:		//ë¡œë¹„
 		change_signal.change = true;
 		change_signal.scene_name = "Character_Select";
 		change_signal.type = Scene_Type::Lobby;
 		break;
 		
-	case 1:		// ½ºÅÂÀÌÁö ¼±ÅÃ
+	case 1:		// ìŠ¤íƒœì´ì§€ ì„ íƒ
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_Select";
 		change_signal.type = Scene_Type::Board;
 		break;
 
-	case 2:		// ½ºÅ×ÀÌÁö 1
+	case 2:		// ìŠ¤í…Œì´ì§€ 1
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_1";
 		change_signal.type = Scene_Type::Stage_1;
 		break;
 
 	case 3:
-		// ½ºÅ×ÀÌÁö 2
+		// ìŠ¤í…Œì´ì§€ 2
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_2";
 		change_signal.type = Scene_Type::Stage_2;
@@ -1690,7 +1748,7 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 	case 5:
 	case 6:
 	default:
-		// Ãß°¡ ¿¹Á¤
+		// ì¶”ê°€ ì˜ˆì •
 		break;
 	}
 	
@@ -1705,18 +1763,18 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-	//		°­Á¦·Î ¾Ö´Ï¸ŞÀÌ¼ÇÀ» ÀüÈ¯ÇØ¾ß ÇÏ´Â °æ¿ì ÇÊ¿äÇÔ
-	//		ex: ¼­¹ö¿¡¼­ ¸Â´Â ¸ğ¼ÇÀ¸·Î ÀüÈ¯ ½ÅÈ£°¡ ¿À´Â °æ¿ì
-		m_pPlayer->SetPosition(syncData.position);
+		// ì• ë‹ˆë©”ì´ì…˜ ë° ìƒíƒœ ì „í™˜ì€ ì¶”ê°€ ì˜ˆì •
+		if (syncData.bStateChange)
+			m_pPlayer->SetPosition(syncData.position);
 		return;
 	}
 	else
 	{
-		if (Connected_Player_List[player_ID]) // ÀÌ¹Ì ÇÃ·¹ÀÌ¾î µ¥ÀÌÅÍ Á¸Àç
+		if (Connected_Player_List[player_ID]) // ì´ë¯¸ í”Œë ˆì´ì–´ ë°ì´í„° ì¡´ì¬
 		{
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 		}
-		else // ÇÃ·¹ÀÌ¾î µ¥ÀÌÅÍ ¾øÀ½, Ãß°¡ ÇÊ¿ä
+		else // í”Œë ˆì´ì–´ ë°ì´í„° ì—†ìŒ, ì¶”ê°€ í•„ìš”
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);

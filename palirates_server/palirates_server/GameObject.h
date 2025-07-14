@@ -170,5 +170,6 @@ public:
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
 
+
     virtual void update(float deltaTime) override {};
 };
