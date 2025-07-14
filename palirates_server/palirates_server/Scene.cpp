@@ -500,6 +500,8 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
     }
     else if (mType == static_cast<int>(Monster_Type::ETC)) {
         m = std::make_shared<TestPlayer>(1);
+        m->Set_Child(m->m_pRootModel);
+        m->SetupWeaponCollider();
     }
     else {
         return;

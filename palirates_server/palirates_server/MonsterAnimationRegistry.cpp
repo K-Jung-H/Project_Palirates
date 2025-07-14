@@ -35,8 +35,8 @@ int MonsterAnimationRegistry::GetAnimationTrack(Monster_Type type, State state) 
         }
     case Monster_Type::ETC:
         switch (state) {
-        case State::Idle:        return TRACK_FISHMAN_IDLE;
-        case State::Attack1:     return TRACK_FISHMAN_ATTACK1;
+        case State::Idle:        return TRACK_IDLE;
+        case State::Attack1:     return TRACK_ATTACK1;
         case State::Attack2:     return TRACK_FISHMAN_ATTACK2;
         case State::Get_Hit:     return TRACK_FISHMAN_GET_HIT;
         case State::Run:         return TRACK_FISHMAN_WALK;

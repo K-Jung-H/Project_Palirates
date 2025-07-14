@@ -95,7 +95,7 @@ void Monster::InitAnimationController(const std::string& filepath, int animCount
 {
     auto asset = GameObject::LoadGeometryAndAnimationFromFile(filepath.data());
     if (!asset || !asset->m_pAnimationSets) return;
-
+    m_pRootModel = asset->m_pModelRootObject;
     n_Animation = animCount;
     RootIndex = rootIdx;
 
@@ -215,15 +215,16 @@ Dragon::Dragon(int id) : Monster(id) {
 
 TestPlayer::TestPlayer(int id) : Monster(id) {
     type = Monster_Type::ETC;
-
+    WeaponName = "SM_Wep_Cutlass_01";
     RootMotionTrackSet = {
     };
 
     std::unordered_set<int> OnceType = {
+        TRACK_ATTACK1
     };
 
     InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-
+    SetScale(10.0f, 10.0f, 10.0f, false);
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
 }

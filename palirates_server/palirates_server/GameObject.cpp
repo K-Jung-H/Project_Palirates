@@ -762,7 +762,6 @@ void GameObject::UpdateWorldOBB()
 	m_OBB = obb;
 }
 
-
 //===================================================================
 
 Boat_Object::Boat_Object()
@@ -845,4 +844,37 @@ void Boat_Object::HandleBoundaryReflection(float boundary)
 		XMFLOAT3 newLook = Vector3::Normalize(vel);
 		SetLook(newLook);
 	}
+}
+
+void Skinned_GameObject::SetupWeaponCollider()
+{
+	std::shared_ptr<GameObject> model = FindFrame(WeaponName);
+
+	if (!model || !model->m_pMesh) {
+		std::cout << "weapon set fail" << std::endl;
+		return;
+	}
+	//model->type = EObjectType::PlayerWeapon;
+
+	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+	XMVECTOR scale, rotationQuat, translation;
+	XMFLOAT4 quaternion;
+	XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+	if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+		XMStoreFloat4(&quaternion, rotationQuat);
+	else
+		quaternion = XMFLOAT4(0, 0, 0, 1);
+
+	std::shared_ptr<BoundingOrientedBox> obb = std::shared_ptr<BoundingOrientedBox>(
+		new BoundingOrientedBox(
+			model->m_pMesh->m_xmf3AABBCenter,
+			model->m_pMesh->m_xmf3AABBExtents,
+			quaternion
+		)
+	);
+	model->Set_Collider_OBB(obb);
+	//model->bUpdateOBBOff();
+	Weapon_ptr = model;
+	std::cout << "weapon set" << std::endl;
 }

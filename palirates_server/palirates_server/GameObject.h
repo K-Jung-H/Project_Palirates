@@ -36,6 +36,7 @@ public:
     char                     m_pstrFrameName[64];
 
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
+    std::shared_ptr<GameObject> m_pRootModel = NULL;
 
 public:
     GameObject()
@@ -101,6 +102,7 @@ public:
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
+    virtual void Set_Collider_OBB(std::shared_ptr<BoundingOrientedBox> obb_ptr) { m_OBB = obb_ptr; }
 
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
@@ -170,6 +172,9 @@ public:
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
 
+    char* WeaponName = "";
+    std::shared_ptr<GameObject> Weapon_ptr = nullptr;
 
     virtual void update(float deltaTime) override {};
+    void SetupWeaponCollider();
 };
