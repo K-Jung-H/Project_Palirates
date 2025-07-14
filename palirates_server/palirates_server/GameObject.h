@@ -20,13 +20,15 @@ class GameObject : public std::enable_shared_from_this<GameObject>
 protected:
     Object_Type obj_type;
     string Obj_Name;
-    float Obj_ID;
+    int Obj_ID;
 
     shared_ptr<GameObject> child_obj = NULL;
     shared_ptr<GameObject> sibling_obj = NULL;
     shared_ptr<GameObject> m_pParent = NULL;
 
     std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
+
+    bool bActive = true;
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -83,8 +85,8 @@ public:
     void SetUp(XMFLOAT3 xmf3Up);
     void SetRight(XMFLOAT3 xmf3Right);
 
-    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(char* pstrFileName);
-    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, char* pstrFileName);
+    static CLoadedModelInfo* LoadGeometryAndAnimationFromFile(const char* pstrFileName);
+    static void LoadAnimationFromFile(FILE* pInFile, CLoadedModelInfo* pLoadedModel, const char* pstrFileName);
     static std::shared_ptr<GameObject> LoadFrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile, int* pnSkinnedMeshes);
 
     static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);
@@ -97,19 +99,23 @@ public:
     void Obj_Info(int depth = 0);
     Object_Type GetType() { return obj_type; }
 
-
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
 
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
 
-    void SetID(float ID) { Obj_ID = ID; }
-    float GetID() { return Obj_ID; }
+    void SetID(int ID) { Obj_ID = ID; }
+    int GetID() { return Obj_ID; }
 
     std::unordered_set<int> RootMotionTrackSet;
     
     virtual ServerSyncData MakeSyncData() { return ServerSyncData(); };
+
+    virtual void update(float deltaTime) {};
+
+    void Set_Active(bool active) { bActive = active; }
+    bool Get_Active() const { return bActive; }
 };
 
 
@@ -163,5 +169,7 @@ public:
 
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
-};
 
+
+    virtual void update(float deltaTime) override {};
+};

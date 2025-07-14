@@ -1,0 +1,59 @@
+#include "stdafx.h"
+#include "MonsterState.h"
+#include "Object_StateMachine.h"
+#include "MonsterAnimationRegistry.h"
+#include <memory>
+
+// -------------------------
+// IdleState
+// -------------------------
+void IdleState::Enter(Monster* monster, MonsterStateMachine* sm) {
+    if (!monster) {
+        std::cout << "no monster" << std::endl;
+        return;
+    }
+    monster->PlayAnimation(State::Idle);
+
+}
+
+void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    if (!monster || !sm) return;
+
+    auto target = monster->FindNearestPlayerInRange(10.0f);
+    if (target) {
+        monster->SetTarget(target);
+        sm->ChangeState(std::make_unique<AttackState>());
+    }
+}
+
+void IdleState::Exit(Monster* monster) {
+    // Exit 시 별도 처리 필요 시 작성
+}
+
+// -------------------------
+// AttackState
+// -------------------------
+void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
+    if (!monster) return;
+    monster->PlayAnimation(State::Attack1);
+    monster->StartAttackCooldown();
+}
+
+void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    if (!monster || !sm || !sm->animController) return;
+
+    int track = MonsterAnimationRegistry::GetAnimationTrack(monster->GetType(), State::Attack1);
+
+    // 애니메이션 트랙이 유효한지 확인
+    if (track >= 0 && track < sm->n_Ani) {
+        const auto& animTrack = sm->animController->m_pAnimationTracks[track];
+
+        if (animTrack.m_nType == ANIMATION_TYPE_ONCE && animTrack.m_bFinished) {
+            sm->ChangeState(std::make_unique<IdleState>());
+        }
+    }
+}
+
+void AttackState::Exit(Monster* monster) {
+    // 공격 상태에서 빠져나올 때 효과 종료 등 필요 시 처리
+}

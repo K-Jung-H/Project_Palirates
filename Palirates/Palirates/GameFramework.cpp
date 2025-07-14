@@ -582,11 +582,11 @@ bool CGameFramework::Change_Scene()
 {
 	shared_ptr<CScene> active_scene = scene_manager->Get_Active_Scene();
 	Change_Signal c_signal;
-	if (isRunning) // ¸ÖÆ¼ÀÎ °æ¿ì¿¡¸¸ µ¿ÀÛ
+	if (isRunning) // ë©€í‹°ì¸ ê²½ìš°ì—ë§Œ ë™ì‘
 	{
 		if (Change_Call_By_Server != -1)
 		{
-			std::cout << "[DEBUG] ¼­¹ö ÆĞÅ¶¿¡ ÀÇÇÑ ¾ÀÀüÈ¯ ºĞ±â ÁøÀÔ" << std::endl;
+			std::cout << "[DEBUG] ì„œë²„ íŒ¨í‚·ì— ì˜í•œ ì”¬ì „í™˜ ë¶„ê¸° ì§„ì…" << std::endl;
 			c_signal = change_signal;
 
 			Change_Call_By_Server = -1;
@@ -594,7 +594,7 @@ bool CGameFramework::Change_Scene()
 
 		}
 	}
-	else // ¿ÀÇÁ¶óÀÎ ÀÎ °æ¿ì
+	else // ì˜¤í”„ë¼ì¸ ì¸ ê²½ìš°
 	{
 		c_signal  = active_scene->Get_Change_Signal();
 	}
@@ -1337,7 +1337,7 @@ int CGameFramework::SendPacket_String(const std::string& packet)
 
 void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 {
-	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &Client_ID) == 1) // Client_ID·Î ÀúÀå
+	if (sscanf_s(receivedData.c_str(), "CLIENT_ID,%d", &Client_ID) == 1) // Client_IDë¡œ ì €ì¥
 	{
 		Connected_Player_List[Client_ID] = true;
 		HandleClientIdAssignment();
@@ -1359,7 +1359,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 
 	const std::string& cmd = tokens[0];
 
-	// °øÅë Ã³¸®
+	// ê³µí†µ ì²˜ë¦¬
 	if (cmd == "PLAYER_LEFT_GAME " && tokens.size() >= 2)
 	{
 		int leaveId = std::stoi(tokens[1]);
@@ -1373,7 +1373,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		return;
 	}
 
-	// ¾À º° Ã³¸®
+	// ì”¬ ë³„ ì²˜ë¦¬
 	auto active_scene = scene_manager->Get_Active_Scene();
 	if (!active_scene) return;
 
@@ -1404,14 +1404,25 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		shared_ptr<CScene>stage_scene = std::dynamic_pointer_cast<CScene>(active_scene);
 		if (!stage_scene)
 			break;
-
 		if (cmd == "STAGE_1")
-			ProcessReceivedData_Stage(stage_scene, cmd, tokens);   // ¡ç ±âÁ¸ (ÇÃ·¹ÀÌ¾î)
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
+		else if (cmd == "MONSTER_COMMAND") {
+			// need func
+			int cmdCount = std::stoi(tokens[1]);
+			int idx = 2;
+			for (int i = 0; i < cmdCount; ++i) {
+				std::string cmdType = tokens[idx++];
+				if (cmdType == "DESPAWN") {
+					int id = std::stoi(tokens[idx++]);
+					stage_scene->DespawnMonster(id);
+				}
+			}
+		}
+		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
-
 	}
 	break;
 
@@ -1431,11 +1442,11 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 
 	if (cmd == "CHARACTER_SELECT_SCENE" && tokens.size() >= 2)
 	{
-		// ÃÊ±âÈ­
+		// ì´ˆê¸°í™”
 		for (int charId = 0; charId < MaxPlayer; ++charId)
 		{
 			readyClientIds[charId] = -1;
-			characterSelections[charId].reset();  // ¼±ÅÃ ¿©ºÎ ÃÊ±âÈ­
+			characterSelections[charId].reset();  // ì„ íƒ ì—¬ë¶€ ì´ˆê¸°í™”
 		}
 
 		for (int i = 1; i + 2 < tokens.size(); i += 3)
@@ -1444,10 +1455,10 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 			int readyClientId = std::stoi(tokens[i + 1]);
 			std::string selectedRaw = tokens[i + 2];
 
-			// Ready Á¤º¸ ÀúÀå
+			// Ready ì •ë³´ ì €ì¥
 			readyClientIds[charId] = readyClientId;
 
-			// ¼±ÅÃ Á¤º¸ ÀúÀå
+			// ì„ íƒ ì •ë³´ ì €ì¥
 			if (selectedRaw != "-1")
 			{
 				std::stringstream ss(selectedRaw);
@@ -1470,11 +1481,11 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 	}
 	else if (cmd == "CHARACTER_SELECT_SUCCESS")
 	{
-		// Ä³¸¯ÅÍ ¼±ÅÃ º¯°æ Â÷´ÜÇÏ±â
+		// ìºë¦­í„° ì„ íƒ ë³€ê²½ ì°¨ë‹¨í•˜ê¸°
 	}
 	else if (cmd == "CHARACTER_SELECT_FAIL")
 	{
-		// select ¹öÆ° Ã³¸® °ª ÃÊ±âÈ­ ÇÏ±â
+		// select ë²„íŠ¼ ì²˜ë¦¬ ê°’ ì´ˆê¸°í™” í•˜ê¸°
 		//select_scene->Set_Character_Select_Status(false);
 	}
 }
@@ -1557,18 +1568,15 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-		// ´ÙÀ½ ÇÃ·¹ÀÌ¾î¸¦ À§ÇØ ½ÃÀÛ À§Ä¡ Á¶Á¤
 		startIndex = stateFlagIndex + 1;
 	}
 }
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
-	// MONSTER_SNAPSHOT,x,y,z,lx,ly,lz
-	//std::cout << "ÅäÅ« Å©±â Ã¼Å© : " << tokens.size() << std::endl;
 	if (tokens.size() < 3) return;
 	float list_size = std::stof(tokens[1]);
-	//std::cout << "¸®½ºÆ® »çÀÌÁî : " << list_size << std::endl;
+
 	int startIndex = 2;
 	for (int i = 0; i<int(list_size); ++i) 
 	{
@@ -1586,8 +1594,6 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		int trackStart = base + 8;
 
 		int expectedTrackTokenCount = trackCount * 3;
-
-		//std::cout << "¸ó½ºÅÍ ID : " << monsterId << " pos : " << px << ", " << py << ", " << pz << ", " << std::endl;
 
 		std::vector<Animation_Sync> track_list;
 
@@ -1610,8 +1616,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
 
 
-		stage_scene->Sync_Monster_Data(monsterId, syncData);
-		// ´ÙÀ½ ÇÃ·¹ÀÌ¾î¸¦ À§ÇØ ½ÃÀÛ À§Ä¡ Á¶Á¤
+		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+
 		startIndex = stateFlagIndex + 1;
 	}
 }
@@ -1699,7 +1705,7 @@ void CGameFramework::HandleClientIdAssignment()
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
 	if (tokens.size() < 2) {
-		std::cerr << "[ERROR][HandleChangeScene] Scene type Á¤º¸ ºÎÁ·" << std::endl;
+		std::cerr << "[ERROR][HandleChangeScene] Scene type ì •ë³´ ë¶€ì¡±" << std::endl;
 		return;
 	}
 
@@ -1710,29 +1716,29 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 
 	switch (Change_Call_By_Server)
 	{
-	case -1:		// º¯°æ ¾øÀ½
+	case -1:		// ë³€ê²½ ì—†ìŒ
 		break;
 
-	case 0:		//·Îºñ
+	case 0:		//ë¡œë¹„
 		change_signal.change = true;
 		change_signal.scene_name = "Character_Select";
 		change_signal.type = Scene_Type::Lobby;
 		break;
 		
-	case 1:		// ½ºÅÂÀÌÁö ¼±ÅÃ
+	case 1:		// ìŠ¤íƒœì´ì§€ ì„ íƒ
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_Select";
 		change_signal.type = Scene_Type::Board;
 		break;
 
-	case 2:		// ½ºÅ×ÀÌÁö 1
+	case 2:		// ìŠ¤í…Œì´ì§€ 1
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_1";
 		change_signal.type = Scene_Type::Stage_1;
 		break;
 
 	case 3:
-		// ½ºÅ×ÀÌÁö 2
+		// ìŠ¤í…Œì´ì§€ 2
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_2";
 		change_signal.type = Scene_Type::Stage_2;
@@ -1742,7 +1748,7 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 	case 5:
 	case 6:
 	default:
-		// Ãß°¡ ¿¹Á¤
+		// ì¶”ê°€ ì˜ˆì •
 		break;
 	}
 	
@@ -1757,18 +1763,18 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		// ¾Ö´Ï¸ŞÀÌ¼Ç ¹× »óÅÂ ÀüÈ¯Àº Ãß°¡ ¿¹Á¤
+		// ì• ë‹ˆë©”ì´ì…˜ ë° ìƒíƒœ ì „í™˜ì€ ì¶”ê°€ ì˜ˆì •
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
 		return;
 	}
 	else
 	{
-		if (Connected_Player_List[player_ID]) // ÀÌ¹Ì ÇÃ·¹ÀÌ¾î µ¥ÀÌÅÍ Á¸Àç
+		if (Connected_Player_List[player_ID]) // ì´ë¯¸ í”Œë ˆì´ì–´ ë°ì´í„° ì¡´ì¬
 		{
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 		}
-		else // ÇÃ·¹ÀÌ¾î µ¥ÀÌÅÍ ¾øÀ½, Ãß°¡ ÇÊ¿ä
+		else // í”Œë ˆì´ì–´ ë°ì´í„° ì—†ìŒ, ì¶”ê°€ í•„ìš”
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);

@@ -558,6 +558,26 @@ namespace Plane
 	}
 }
 
+constexpr int ENCODE_MONSTER_ID(int type, int index) {
+	return (type << 24) | (index & 0xFFFFFF);
+}
+
+constexpr int GET_MONSTER_TYPE(int id) {
+	return (id >> 24) & 0xFF;
+}
+
+constexpr int GET_MONSTER_INDEX(int id) {
+	return id & 0xFFFFFF;
+}
+
+enum class Monster_Type : int
+{
+	Fishman,
+	Anubis,
+	Dragon,
+	ETC
+};
+
 
 //#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"
@@ -565,3 +585,4 @@ namespace Plane
 #define SERVER_IP "127.0.0.1"
 
 #define SERVER_PORT 9000
+

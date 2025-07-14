@@ -4754,6 +4754,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	}
 
 	controller->ApplyCurrentAnimationPose(this);
+	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////

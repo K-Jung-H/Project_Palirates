@@ -1096,7 +1096,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		obj_manager->Add_Object(Dragon, Object_Type::skinned);*/
 
 
-		for (int i = 0; i < 12; i++)
+		/*for (int i = 0; i < 12; i++)
 		{
 			std::shared_ptr<CMonsterObject> m;
 			if (i % 3 == 0)
@@ -1115,6 +1115,12 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 			obj_manager->Add_Object(m, Object_Type::skinned);
 		}
 
+		for (int i = 0; i < 12; i++)
+		{
+			SpawnMonster(pd3dDevice, pd3dCommandList, ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i), XMFLOAT3(10.0f * i + 1450.0f, m_pTerrain->Get_Mesh_Height(10.0f * i + 1450.0f, 10.0f * i + 700.0f), 10.0f * i + 700.0f);
+
+		}*/
+		
 #ifdef LOAD_SCENE
 
 
@@ -2221,19 +2227,84 @@ void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 	obj_manager->Sync_Player_Data(player_id, syncData);
 }
 
-void CScene::Sync_Monster_Data(int monsterID, const ServerSyncData& syncData)
+void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
 {
-	auto v = obj_manager->Get_Object_List(Object_Type::skinned); 
-	if (!v || v->empty()) return;
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	auto found = id2idx.find(monsterID);
 
-	// map으로 바꿔야 될 듯?
-	for (auto& obj : *v)
+	if (found != id2idx.end())
 	{
-		if (obj->GetID() == monsterID) {
-			obj->ApplySyncData(syncData);
-			//std::cout << "몬스터 ID : " << monsterID << " 데이터 어플라이" << std::endl;
+		size_t idx = found->second;
+		auto* Monster_List = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (idx < Monster_List->size()) 
+		{
+			auto& monster = (*Monster_List)[idx];
+			if (monster) {
+				monster->ApplySyncData(syncData);
+				return;
+			}
 		}
 	}
+	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
+}
+
+void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
+{
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	if (id2idx.find(id) != id2idx.end())
+		return;
+
+	int mType = GET_MONSTER_TYPE(id);
+	std::shared_ptr<CMonsterObject> m;
+
+	if (mType == static_cast<int>(Monster_Type::Fishman)) {
+		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
+		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
+		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else {
+		return;
+	}
+
+	m->SetID(id);
+	m->Set_Child(m->m_pRootModel);
+	m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+	m->SetupWeaponCollider();
+	m->SetPosition(pos.x, pos.y, pos.z);
+	id2idx[id] = obj_manager->Get_Object_List(Object_Type::skinned)->size();
+	obj_manager->Add_Object(m, Object_Type::skinned);
+}
+
+void CScene::DespawnMonster(int id)
+{
+	auto* plist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!plist) return;
+
+	auto& mMap = obj_manager->Get_Monster_Map();
+
+	auto it = mMap.find(id);
+	if (it == mMap.end()) return;
+
+	size_t idx = it->second;
+	size_t last = plist->size() - 1;
+
+	if (idx != last)
+	{
+		std::swap((*plist)[idx], (*plist)[last]);
+
+		if ((*plist)[idx])
+		{
+			int newId = (*plist)[idx]->GetID();
+			mMap[newId] = idx;
+		}
+	}
+
+	plist->pop_back();
+	mMap.erase(it);
 }
 
 void CScene::Create_Particle_Object(const Particle_Sync_Data& syncData)

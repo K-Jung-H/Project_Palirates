@@ -146,6 +146,8 @@
     <ClCompile Include="LobbyManager.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Monster.cpp" />
+    <ClCompile Include="MonsterAnimationRegistry.cpp" />
+    <ClCompile Include="MonsterState.cpp" />
     <ClCompile Include="Object_StateMachine.cpp" />
     <ClCompile Include="Particle.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -162,18 +164,22 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AnimationSetCore.h" />
+    <ClInclude Include="AnimationTrackEnum.h" />
     <ClInclude Include="DX_Setter.h" />
     <ClInclude Include="GameObject.h" />
     <ClInclude Include="GameWorld.h" />
     <ClInclude Include="LobbyManager.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Monster.h" />
+    <ClInclude Include="MonsterAnimationRegistry.h" />
+    <ClInclude Include="MonsterState.h" />
     <ClInclude Include="Object_StateMachine.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="Player.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="server.h" />
     <ClInclude Include="ServerAnimLoader.h" />
+    <ClInclude Include="StateEnum.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Timer.h" />
   </ItemGroup>

@@ -75,15 +75,6 @@ public:
     void Send_Custom(std::shared_ptr<ClientSession> session, const std::string& packet, bool saveLog);
     void PrintClientDebugInfo();
    
-
-
-    static Server* Get();
-    void BroadcastMonsterSpawn(Scene_Type scene, int id, Monster_Type type, const XMFLOAT3& pos, int hp);
-    void BroadcastMonsterDespawn(Scene_Type scene, int id);
-    void SendToSceneClients(Scene_Type scene, const std::string& packet, bool saveLog = false);
-
-    void FlushSendQueues();
-
 private:
     SOCKET listenSocket;
     Logger logger;
@@ -107,7 +98,6 @@ private:
     std::shared_ptr<Scene> activeScene;
     bool serverResetDone = false;
 
-
     bool HandleSceneBroadcast(std::string& outPacket);
     bool Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket);
 
@@ -120,4 +110,6 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+
+    void FlushSendQueues();
 };

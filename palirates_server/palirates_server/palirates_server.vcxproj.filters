@@ -54,7 +54,14 @@
     <ClCompile Include="GameWorld.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
+
     <ClCompile Include="Particle.cpp">
+
+    <ClCompile Include="MonsterState.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="MonsterAnimationRegistry.cpp">
+
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,7 +108,20 @@
     <ClInclude Include="GameWorld.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+
     <ClInclude Include="Particle.h">
+
+    <ClInclude Include="MonsterState.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="StateEnum.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimationTrackEnum.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="MonsterAnimationRegistry.h">
+
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
