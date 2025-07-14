@@ -649,7 +649,7 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
             const auto& anim_data = player_ptr->GetAnimationSyncData();
             const auto& track_list = anim_data.track_info_list;
             bool state_changed = anim_data.stateChanged || player_ptr->need_to_client_sync;
-
+            
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","

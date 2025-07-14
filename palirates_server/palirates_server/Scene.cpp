@@ -331,7 +331,10 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     for (shared_ptr<Player> player_ptr : player_list)
     {
         if (player_ptr)
+        {
+            player_ptr->need_to_client_sync = false;
             game_world.Update_Collision(player_ptr);
+        }
     }
 
     for (auto m : Monster_List) {

@@ -114,7 +114,6 @@ void GameWorld::Compute_CellBounds_From_OBB(const std::shared_ptr<BoundingOrient
     out_max_cell = Get_CellIndexFromPosition(max);
 }
 
-
 void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 {
     if (!player_obj || !player_obj->Get_Collider_OBB()) return;
@@ -159,12 +158,12 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
                             alreadyProcessed.insert(&otherOBB);
                             collided = true;
 
-                            XMVECTOR pushDir = XMVector3Normalize(
-                                XMLoadFloat3(&player_worldOBB.Center) - XMLoadFloat3(&otherOBB.Center)
-                            );
+                            // Compute push direction (from other to player)
+                            XMVECTOR pushDir = XMLoadFloat3(&player_worldOBB.Center) - XMLoadFloat3(&otherOBB.Center);
 
                             if (!XMVector3Equal(pushDir, XMVectorZero()))
                             {
+                                pushDir = XMVector3Normalize(pushDir);
                                 totalPushDir += pushDir;
                                 ++hitCount;
                             }
@@ -176,16 +175,24 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 
         if (!collided || hitCount == 0)
             break;
+        else
+            player_obj->need_to_client_sync = true;
 
-        // 평균 푸시 방향 계산
+        // Normalize total push direction
         XMVECTOR avgPushDir = XMVector3Normalize(totalPushDir);
-        XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorScale(avgPushDir, pushStrength);
+
+        // 이동할 때만 Y 성분 제거 → 방향은 유지, 수직 이동만 차단
+        XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorSet(
+            XMVectorGetX(avgPushDir) * pushStrength,
+            0.0f,
+            XMVectorGetZ(avgPushDir) * pushStrength,
+            0.0f
+        );
         XMStoreFloat3(&player_worldOBB.Center, newCenter);
     }
 
     player_obj->Set_Collider_OBB_Center(player_worldOBB.Center);
 }
-
 
 void GameWorld::Update_Monster(float elapsed_time)
 {
