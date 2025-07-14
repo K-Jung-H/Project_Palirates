@@ -407,17 +407,17 @@ LRESULT CALLBACK CGameFramework::OnProcessingWindowMessage(HWND hWnd, UINT nMess
 		case WM_SIZE:
 			break;
 		case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_RBUTTONUP:
-        case WM_MOUSEMOVE:
+		case WM_RBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONUP:
+		case WM_MOUSEMOVE:
 			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
-            break;
+			break;
 		case WM_MOUSEWHEEL:
 			OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
 			break;
-        case WM_KEYDOWN:
-        case WM_KEYUP:
+		case WM_KEYDOWN:
+		case WM_KEYUP:
 		case WM_CHAR:
 			OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
 			if (nMessageID == WM_KEYDOWN && wParam == 'U') {
@@ -462,7 +462,7 @@ void CGameFramework::OnDestroy()
 
 	m_pdxgiSwapChain->SetFullscreenState(FALSE, NULL);
 	if (m_pdxgiSwapChain) m_pdxgiSwapChain->Release();
-    if (m_pd3dDevice) m_pd3dDevice->Release();
+	if (m_pd3dDevice) m_pd3dDevice->Release();
 	if (m_pdxgiFactory) m_pdxgiFactory->Release();
 
 #ifdef WRITE_TEXT_UI
@@ -1704,8 +1704,9 @@ void CGameFramework::HandleClientIdAssignment()
 
 void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 {
-	if (tokens.size() < 2) {
-		std::cerr << "[ERROR][HandleChangeScene] Scene type 정보 부족" << std::endl;
+	if (tokens.size() < 2)
+	{
+		//std::cerr << "[ERROR][HandleChangeScene] Scene type 정보 부족" << std::endl;
 		return;
 	}
 
