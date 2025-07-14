@@ -311,13 +311,15 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     int id;
-    for (int i = 0; i < 3; ++i) {
-        if (i % 3 == 0)
+    for (int i = 0; i < 4; ++i) {
+        if (i % 4 == 0)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
-        else if (i % 3 == 1)
+        else if (i % 4 == 1)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-        else if (i % 3 == 2)
+        else if (i % 4 == 2)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 3)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
         else continue;
         SpawnMonster(id, XMFLOAT3(1500 + i * 10, 0, 700), 100);
         std::cout << "몬스터 생성 : " << id << std::endl;
@@ -495,6 +497,9 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
     }
     else if (mType == static_cast<int>(Monster_Type::Dragon)) {
         m = std::make_shared<Dragon>(1);
+    }
+    else if (mType == static_cast<int>(Monster_Type::ETC)) {
+        m = std::make_shared<TestPlayer>(1);
     }
     else {
         return;

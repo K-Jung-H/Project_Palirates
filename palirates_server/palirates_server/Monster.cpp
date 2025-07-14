@@ -18,6 +18,9 @@ void Monster::update(float deltaTime) {
     }
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
+        /*if (type == Monster_Type::ETC) {
+            std::cout << "test player AdvanceTime" << std::endl;
+        }*/
     }
 }
 
@@ -203,6 +206,23 @@ Dragon::Dragon(int id) : Monster(id) {
     };
 
     InitAnimationController("Model/Dragon_LP.bin", 13, 16, OnceType);
+
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
+}
+
+// ---------------- Test ----------------
+
+TestPlayer::TestPlayer(int id) : Monster(id) {
+    type = Monster_Type::ETC;
+
+    RootMotionTrackSet = {
+    };
+
+    std::unordered_set<int> OnceType = {
+    };
+
+    InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();

@@ -87,3 +87,9 @@ public:
     Dragon(int id);
    // void update() override;
 };
+
+class TestPlayer : public Monster {
+public:
+    TestPlayer(int id);
+    // void update() override;
+};
