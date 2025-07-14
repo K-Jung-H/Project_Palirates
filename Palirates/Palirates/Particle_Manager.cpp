@@ -956,6 +956,17 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 	while (!createQueue.empty())
 	{
 		const auto& data = createQueue.front();
+		if (particle_id_map.contains(data.particle_ID)) 
+		{
+			createQueue.pop();
+			continue;
+		}
+		if (data.particle_ID == 0 || data.particle_ID == UINT_MAX) 
+		{
+			OutputDebugStringA("Invalid particle_ID in syncData\n");
+			createQueue.pop();
+			continue;
+		}
 
 		Particle_Format format{};
 		shared_ptr<Particle_Shape_Mesh> mesh = nullptr;
