@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "GameObject.h"
-
-
+#include "AnimationTrackEnum.h"
+#include <unordered_set> 
 
 enum class Player_State : int
 {
@@ -39,11 +39,11 @@ public:
     void key_input(uint32_t keyState);
 
     virtual void animate(float Elapsedtime);
-    virtual void update();
+    //virtual void update(float deltaTime) override;
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
     void Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter);
 
-
+   // void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;
 };

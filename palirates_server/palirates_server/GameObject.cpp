@@ -124,13 +124,7 @@ std::shared_ptr<GameObject> GameObject::FindFrame(const char* pstrFrameName)
 void GameObject::UpdateTransform(XMFLOAT4X4* pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Parent, *pxmf4x4Parent) : m_xmf4x4Parent;
-	if (GetType() == Object_Type::weapon) {
-		//std::cout << GetParent()->m_pstrFrameName << " local pos - " << GetParent()->GetPosition().x << std::endl;
-	/*	std::cout << "weapon update anime, pos - " << m_xmf4x4Parent._41 << ", "
-			<< m_xmf4x4Parent._42 << ", "
-			<< m_xmf4x4Parent._43
-			<< std::endl;*/
-	}
+	
 	if (sibling_obj) sibling_obj->UpdateTransform(pxmf4x4Parent);
 	if (child_obj) child_obj->UpdateTransform(&m_xmf4x4World);
 }
@@ -882,5 +876,6 @@ void Skinned_GameObject::SetupWeaponCollider()
 	model->Set_Collider_OBB(obb);
 	//model->bUpdateOBBOff();
 	Weapon_ptr = model;
-	std::cout << "weapon set" << std::endl;
+	std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
+	std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;
 }

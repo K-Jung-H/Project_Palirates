@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Monster.h"
 #include "Object_StateMachine.h"
-#include "MonsterState.h"
-#include "MonsterAnimationRegistry.h"
+#include "State.h"
+#include "AnimationRegistry.h"
 #include <unordered_set>
 #include <array>
 
@@ -22,12 +22,23 @@ void Monster::update(float deltaTime) {
             std::cout << "test player AdvanceTime" << std::endl;
         }*/
     }
+    if (Weapon_ptr) {
+        Weapon_ptr->UpdateWorldOBB();
+        std::shared_ptr<BoundingOrientedBox> obb = Weapon_ptr->Get_Collider_OBB();
+        if (obb)
+        {
+            const XMFLOAT4& q = obb->Orientation;
+            std::cout << "OBB Orientation Quaternion: ("
+                << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")"
+                << std::endl;
+        }
+    }
 }
 
 void Monster::PlayAnimation(State state) {
     //if (!m_pSkinnedAnimationController) return;
 
-    int track = MonsterAnimationRegistry::GetAnimationTrack(type, state);
+    int track = AnimationRegistry::GetMonsterAnimationTrack(type, state);
 
     if (track >= 0 && track < n_Animation) {
         for (int i = 0; i < n_Animation; ++i) {
@@ -114,7 +125,7 @@ void Monster::InitAnimationController(const std::string& filepath, int animCount
         }
     }
 
-    m_pSkinnedAnimationController->m_pAnimationTracks[MonsterAnimationRegistry::GetAnimationTrack(type, State::Idle)].m_fWeight = 1.0f;
+    m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetMonsterAnimationTrack(type, State::Idle)].m_fWeight = 1.0f;
 }
 
 void Monster::InitStateMachine() {

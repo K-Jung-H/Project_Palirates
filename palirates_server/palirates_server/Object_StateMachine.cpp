@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Object_StateMachine.h"
 #include "GameObject.h"
-#include "MonsterState.h"
+#include "State.h"
 
 void MonsterStateMachine::update(float deltaTime)
 {

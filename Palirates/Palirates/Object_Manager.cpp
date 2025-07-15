@@ -991,14 +991,6 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 				if (obj_ptr->Get_Active()) {
 					if (!obj_ptr->HasType(EObjectType::MainPlayer | EObjectType::Monster))
 						obj_ptr->Animate(fTimeElapsed);
-					else {
-						if (obj_ptr->GetID() != 50331651) {//std::cout << "test anime" << std::endl;
-							//obj_ptr->OnPrepareAnimate();
-						}
-						else {
-							std::cout << obj_ptr->Weapon_ptr->GetPosition().x << ", " << obj_ptr->Weapon_ptr->GetPosition().y << ", " << obj_ptr->Weapon_ptr->GetPosition().z << std::endl;
-						}
-					}
 				}
 		}
 		else {

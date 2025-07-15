@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "MonsterAnimationRegistry.h"
+#include "AnimationRegistry.h"
 
-int MonsterAnimationRegistry::GetAnimationTrack(Monster_Type type, State state) {
+int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) {
     switch (type) {
     case Monster_Type::Fishman:
         switch (state) {
@@ -46,4 +46,18 @@ int MonsterAnimationRegistry::GetAnimationTrack(Monster_Type type, State state) 
     default:
         return 0;
     }
+}
+
+int AnimationRegistry::GetPlayerAnimationTrack(State state) {
+
+    switch (state) {
+    case State::Idle:        return TRACK_IDLE;
+    case State::Attack1:     return TRACK_ATTACK1;
+    case State::Attack2:     return TRACK_ATTACK2;
+    case State::Get_Hit_F2:     return TRACK_GET_HIT_F2;
+    //case State::Run:         return TRACK_FISHMAN_WALK;
+    case State::Knock_Down:  return TRACK_KNOCK_DOWN;
+    default: return TRACK_IDLE;
+    }
+    return 0;
 }

@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "MonsterState.h"
+#include "State.h"
 #include "Object_StateMachine.h"
-#include "MonsterAnimationRegistry.h"
+#include "AnimationRegistry.h"
 #include <memory>
 
 // -------------------------
@@ -42,7 +42,7 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
 
-    int track = MonsterAnimationRegistry::GetAnimationTrack(monster->GetType(), State::Attack1);
+    int track = AnimationRegistry::GetMonsterAnimationTrack(monster->GetType(), State::Attack1);
 
 
     if (monster->Weapon_ptr && monster->GetID() == 50331651) {

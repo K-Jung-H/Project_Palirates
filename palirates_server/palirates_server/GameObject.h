@@ -1,6 +1,8 @@
 #pragma once
 #include "stdafx.h"
 #include "ServerAnimLoader.h"
+//#include "AnimationRegistry.h"
+//#include <unordered_set> 
 
 using namespace std;
 
@@ -150,7 +152,7 @@ private:
 
 protected:
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
-
+    //Monster_Type monsterType = Monster_Type::ETC;
 public:
     void SetAnimationSyncData(const ServerSyncData& data) { animation_sync_data = data; }
     void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
@@ -179,4 +181,6 @@ public:
 
     virtual void update(float deltaTime) override {};
     void SetupWeaponCollider();
+
+    //virtual void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) = 0;
 };
