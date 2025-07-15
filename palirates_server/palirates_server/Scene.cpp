@@ -338,6 +338,10 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
     for (auto m : Monster_List) {
         m->update(elapsedTime);
+        if (m->GetType() == Monster_Type::ETC) {
+            std::cout << m->Weapon_ptr->GetPosition().x << ", " << m->Weapon_ptr->GetPosition().y << ", " << m->Weapon_ptr->GetPosition().z << std::endl;
+
+        }
     }
 
 
@@ -508,6 +512,10 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
     }
     m->SetID(id);
     m->SetPosition(pos);
+    if (m->Weapon_ptr) {
+        std::cout << "m pos x : " << m->GetPosition().x << std::endl;;
+        std::cout << "w pos x : " << m->Weapon_ptr->GetPosition().x << std::endl;;
+    }
     m->SetPlayerListPtr(&player_list);
 
     id2idx[id] = Monster_List.size();       

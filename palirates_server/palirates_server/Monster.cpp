@@ -131,7 +131,7 @@ void Monster::InitStateMachine() {
 
 Fishman::Fishman(int id) : Monster(id) {
     type = Monster_Type::Fishman;
-
+    SetType(Object_Type::monster);
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
@@ -158,7 +158,7 @@ Fishman::Fishman(int id) : Monster(id) {
 
 Anubis::Anubis(int id) : Monster(id) {
     type = Monster_Type::Anubis;
-
+    SetType(Object_Type::monster);
     RootMotionTrackSet = {
         TRACK_ANUBIS_IDLE,
         TRACK_ANUBIS_IDLE_BREAK,
@@ -190,7 +190,7 @@ Anubis::Anubis(int id) : Monster(id) {
 
 Dragon::Dragon(int id) : Monster(id) {
     type = Monster_Type::Dragon;
-
+    SetType(Object_Type::monster);
     RootMotionTrackSet = {
         TRACK_DRAGON_ATTACK1,
         TRACK_DRAGON_RUN,
@@ -215,6 +215,7 @@ Dragon::Dragon(int id) : Monster(id) {
 
 TestPlayer::TestPlayer(int id) : Monster(id) {
     type = Monster_Type::ETC;
+    SetType(Object_Type::monster);
     WeaponName = "SM_Wep_Cutlass_01";
     RootMotionTrackSet = {
     };
@@ -224,7 +225,7 @@ TestPlayer::TestPlayer(int id) : Monster(id) {
     };
 
     InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    SetScale(10.0f, 10.0f, 10.0f, false);
+    SetScale(10.0f, 10.0f, 10.0f);
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
 }

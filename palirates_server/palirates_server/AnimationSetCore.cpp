@@ -48,7 +48,7 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 		if ((m_pfKeyFrameTimes[i] <= fPosition) && (fPosition < m_pfKeyFrameTimes[i + 1]))
 		{
 			float t = (fPosition - m_pfKeyFrameTimes[i]) / (m_pfKeyFrameTimes[i + 1] - m_pfKeyFrameTimes[i]);
-			//xmf4x4Transform = Matrix4x4::Interpolate(m_ppxmf4x4KeyFrameTransforms[i][nBone], m_ppxmf4x4KeyFrameTransforms[i + 1][nBone], t);
+			xmf4x4Transform = Matrix4x4::Interpolate(m_ppxmf4x4KeyFrameTransforms[i][nBone], m_ppxmf4x4KeyFrameTransforms[i + 1][nBone], t);
 			break;
 		}
 	}
@@ -231,6 +231,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 	{
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 		{
+			//if (m_pAnimationSets->m_ppBoneFrameCaches[j]->GetType() != Object_Type::weapon)
 			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
 		}
 
@@ -273,7 +274,21 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 						}
 
 					}
+					//if (m_pAnimationSets->m_ppBoneFrameCaches[j]->GetType() == Object_Type::weapon) {
+					//	if (j == RootIndex) {
+					//		if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.find(k) != pRootGameObject->RootMotionTrackSet.end()) {
+					//			HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+					//		}
 
+					//		blendedTransform._41 = 0.0f;
+					//		//blendedTransform._42 = 0.0f;
+					//		blendedTransform._43 = 0.0f;
+					//	}
+						/*std::cout << "weapon update anime, pos - " << m_pAnimationSets->m_ppBoneFrameCaches[j]->GetPosition().x << ", "
+							<< m_pAnimationSets->m_ppBoneFrameCaches[j]->GetPosition().y << ", "
+							<< m_pAnimationSets->m_ppBoneFrameCaches[j]->GetPosition().z
+							<< std::endl;*/
+							//std::cout << m_pAnimationSets->m_ppBoneFrameCaches[j]->GetParent()->m_pstrFrameName << std::endl;
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 				}
 

@@ -1961,7 +1961,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-	obj_manager->Check_Player_Collision(m_pPlayer);
+	//obj_manager->Check_Player_Collision(m_pPlayer);
 	
 	if (m_pPlayer->GetTrailOn())
 	{

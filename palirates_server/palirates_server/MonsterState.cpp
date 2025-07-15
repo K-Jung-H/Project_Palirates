@@ -45,10 +45,10 @@ void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine*
     int track = MonsterAnimationRegistry::GetAnimationTrack(monster->GetType(), State::Attack1);
 
 
-    if (monster->Weapon_ptr) {
+    if (monster->Weapon_ptr && monster->GetID() == 50331651) {
         const XMFLOAT3& pos = monster->Weapon_ptr->GetPosition();
         std::cout << std::fixed << std::setprecision(3);
-        std::cout << "weapon got - " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+       // std::cout << "weapon got - " << pos.x << " " << pos.y << " " << pos.z << std::endl;
     }
 
     if (track >= 0 && track < sm->n_Ani) {

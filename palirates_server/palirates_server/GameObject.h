@@ -12,7 +12,8 @@ enum class Object_Type
 {
     player,
     monster,
-    etc
+    etc,
+    weapon
 };
 
 class GameObject : public std::enable_shared_from_this<GameObject>
@@ -71,7 +72,7 @@ public:
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
 
-    void SetScale(float x, float y, float z, bool keepPosition);
+    void SetScale(float x, float y, float z, bool keepPosition = false);
 
     void Move(XMFLOAT3 xmf3Offset);
 
@@ -98,6 +99,7 @@ public:
     void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
 
     void Obj_Info(int depth = 0);
+    void SetType(Object_Type Object_Type) { obj_type = Object_Type; }
     Object_Type GetType() { return obj_type; }
 
     virtual void UpdateWorldOBB();

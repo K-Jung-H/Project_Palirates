@@ -124,7 +124,13 @@ std::shared_ptr<GameObject> GameObject::FindFrame(const char* pstrFrameName)
 void GameObject::UpdateTransform(XMFLOAT4X4* pxmf4x4Parent)
 {
 	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Parent, *pxmf4x4Parent) : m_xmf4x4Parent;
-
+	if (GetType() == Object_Type::weapon) {
+		//std::cout << GetParent()->m_pstrFrameName << " local pos - " << GetParent()->GetPosition().x << std::endl;
+	/*	std::cout << "weapon update anime, pos - " << m_xmf4x4Parent._41 << ", "
+			<< m_xmf4x4Parent._42 << ", "
+			<< m_xmf4x4Parent._43
+			<< std::endl;*/
+	}
 	if (sibling_obj) sibling_obj->UpdateTransform(pxmf4x4Parent);
 	if (child_obj) child_obj->UpdateTransform(&m_xmf4x4World);
 }
@@ -854,7 +860,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 		std::cout << "weapon set fail" << std::endl;
 		return;
 	}
-	//model->type = EObjectType::PlayerWeapon;
+	model->SetType(Object_Type::weapon);
 
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
 	XMVECTOR scale, rotationQuat, translation;
