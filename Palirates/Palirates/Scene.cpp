@@ -1961,8 +1961,8 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 	obj_manager->Update(pd3dDevice, pd3dCommandList);
-
-
+	//obj_manager->Check_Player_Collision(m_pPlayer);
+	
 	if (m_pPlayer->GetTrailOn())
 	{
 		if (!m_pPlayer->GetTrailStart()) 
@@ -2246,6 +2246,8 @@ void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		}
 	}
 	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
+	if (monsterID == 50331651) std::cout << "testplayer spawn" << std::endl;
+
 }
 
 void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
@@ -2255,7 +2257,7 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		return;
 
 	int mType = GET_MONSTER_TYPE(id);
-	std::shared_ptr<CMonsterObject> m;
+	std::shared_ptr<CGameObject> m;
 
 	if (mType == static_cast<int>(Monster_Type::Fishman)) {
 		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
@@ -2265,6 +2267,11 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::ETC)) {
+		m = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		m->type = EObjectType::Monster;
+		m->SetScale(10.0f, 10.0f, 10.0f);
 	}
 	else {
 		return;

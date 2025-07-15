@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "Monster.h"
 #include "Object_StateMachine.h"
-#include "MonsterState.h"
-#include "MonsterAnimationRegistry.h"
+#include "State.h"
+#include "AnimationRegistry.h"
 #include <unordered_set>
 #include <array>
 
@@ -18,13 +18,27 @@ void Monster::update(float deltaTime) {
     }
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
+        /*if (type == Monster_Type::ETC) {
+            std::cout << "test player AdvanceTime" << std::endl;
+        }*/
     }
+   /* if (Weapon_ptr) {
+        Weapon_ptr->UpdateWorldOBB();
+        std::shared_ptr<BoundingOrientedBox> obb = Weapon_ptr->Get_Collider_OBB();
+        if (obb)
+        {
+            const XMFLOAT4& q = obb->Orientation;
+            std::cout << "OBB Orientation Quaternion: ("
+                << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")"
+                << std::endl;
+        }
+    }*/
 }
 
 void Monster::PlayAnimation(State state) {
     //if (!m_pSkinnedAnimationController) return;
 
-    int track = MonsterAnimationRegistry::GetAnimationTrack(type, state);
+    int track = AnimationRegistry::GetMonsterAnimationTrack(type, state);
 
     if (track >= 0 && track < n_Animation) {
         for (int i = 0; i < n_Animation; ++i) {
@@ -92,7 +106,7 @@ void Monster::InitAnimationController(const std::string& filepath, int animCount
 {
     auto asset = GameObject::LoadGeometryAndAnimationFromFile(filepath.data());
     if (!asset || !asset->m_pAnimationSets) return;
-
+    m_pRootModel = asset->m_pModelRootObject;
     n_Animation = animCount;
     RootIndex = rootIdx;
 
@@ -111,7 +125,7 @@ void Monster::InitAnimationController(const std::string& filepath, int animCount
         }
     }
 
-    m_pSkinnedAnimationController->m_pAnimationTracks[MonsterAnimationRegistry::GetAnimationTrack(type, State::Idle)].m_fWeight = 1.0f;
+    m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetMonsterAnimationTrack(type, State::Idle)].m_fWeight = 1.0f;
 }
 
 void Monster::InitStateMachine() {
@@ -128,7 +142,7 @@ void Monster::InitStateMachine() {
 
 Fishman::Fishman(int id) : Monster(id) {
     type = Monster_Type::Fishman;
-
+    SetType(Object_Type::monster);
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
@@ -155,7 +169,7 @@ Fishman::Fishman(int id) : Monster(id) {
 
 Anubis::Anubis(int id) : Monster(id) {
     type = Monster_Type::Anubis;
-
+    SetType(Object_Type::monster);
     RootMotionTrackSet = {
         TRACK_ANUBIS_IDLE,
         TRACK_ANUBIS_IDLE_BREAK,
@@ -187,7 +201,7 @@ Anubis::Anubis(int id) : Monster(id) {
 
 Dragon::Dragon(int id) : Monster(id) {
     type = Monster_Type::Dragon;
-
+    SetType(Object_Type::monster);
     RootMotionTrackSet = {
         TRACK_DRAGON_ATTACK1,
         TRACK_DRAGON_RUN,
@@ -204,6 +218,25 @@ Dragon::Dragon(int id) : Monster(id) {
 
     InitAnimationController("Model/Dragon_LP.bin", 13, 16, OnceType);
 
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
+}
+
+// ---------------- Test ----------------
+
+TestPlayer::TestPlayer(int id) : Monster(id) {
+    type = Monster_Type::ETC;
+    SetType(Object_Type::monster);
+    WeaponName = "SM_Wep_Cutlass_01";
+    RootMotionTrackSet = {
+    };
+
+    std::unordered_set<int> OnceType = {
+        TRACK_ATTACK1
+    };
+
+    InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
+    SetScale(10.0f, 10.0f, 10.0f);
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
 }

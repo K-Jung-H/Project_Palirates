@@ -991,7 +991,6 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 				if (obj_ptr->Get_Active()) {
 					if (!obj_ptr->HasType(EObjectType::MainPlayer | EObjectType::Monster))
 						obj_ptr->Animate(fTimeElapsed);
-					else obj_ptr->OnPrepareAnimate();
 				}
 		}
 		else {
@@ -1545,16 +1544,18 @@ void Object_Manager::Check_Player_Collision(shared_ptr<CPlayer> player_ptr)
 
 	std::shared_ptr<CGameObject> player_weapon = NULL;
 
+	
+
 	for (std::shared_ptr<CGameObject> obj_ptr : obb_targets)
 		if (obj_ptr->HasType(EObjectType::PlayerWeapon))
 		{
 			player_weapon = obj_ptr;
 			break;
 		}
-
+	
 	if (player_weapon != NULL && player_weapon->bUpdateOBB)
 		Check_Dynamic_OBB_Collision(player_weapon);
-
+	//if (player_weapon->bUpdateOBB) std::cout << "weapon pos x = " << player_weapon->Get_Collider()->Center.x << std::endl;
 }
 
 
@@ -1565,7 +1566,9 @@ void Object_Manager::Check_Dynamic_OBB_Collision(const shared_ptr<CGameObject>& 
 
 	BoundingOrientedBox worldOBB;
 	localOBB->Transform(worldOBB, XMLoadFloat4x4(&obj_ptr->m_xmf4x4World));
-
+	obj_ptr->cachedWorldOBB = worldOBB;
+	std::cout << "weapon pos x = " << worldOBB.Center.x << std::endl;
+	//std::cout << "weapon world pos x = " << obj_ptr->m_xmf4x4World._41 << std::endl;
 	std::vector<OBB_Info> collision_list = dynamic_obb_manager->Check_OBB_Collision(worldOBB);
 
 	if (!collision_list.size())

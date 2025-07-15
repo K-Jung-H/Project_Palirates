@@ -1,6 +1,8 @@
 #pragma once
 #include "stdafx.h"
 #include "ServerAnimLoader.h"
+//#include "AnimationRegistry.h"
+//#include <unordered_set> 
 
 using namespace std;
 
@@ -12,7 +14,8 @@ enum class Object_Type
 {
     player,
     monster,
-    etc
+    etc,
+    weapon
 };
 
 class GameObject : public std::enable_shared_from_this<GameObject>
@@ -36,6 +39,7 @@ public:
     char                     m_pstrFrameName[64];
 
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
+    std::shared_ptr<GameObject> m_pRootModel = NULL;
 
 public:
     GameObject()
@@ -70,7 +74,7 @@ public:
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
 
-    void SetScale(float x, float y, float z, bool keepPosition);
+    void SetScale(float x, float y, float z, bool keepPosition = false);
 
     void Move(XMFLOAT3 xmf3Offset);
 
@@ -97,10 +101,12 @@ public:
     void SetMesh(std::shared_ptr<CStandardMesh> pMesh);
 
     void Obj_Info(int depth = 0);
+    void SetType(Object_Type Object_Type) { obj_type = Object_Type; }
     Object_Type GetType() { return obj_type; }
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_OBB; }
+    virtual void Set_Collider_OBB(std::shared_ptr<BoundingOrientedBox> obb_ptr) { m_OBB = obb_ptr; }
 
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
 
@@ -146,7 +152,7 @@ private:
 
 protected:
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;
-
+    //Monster_Type monsterType = Monster_Type::ETC;
 public:
     void SetAnimationSyncData(const ServerSyncData& data) { animation_sync_data = data; }
     void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
@@ -170,6 +176,11 @@ public:
     std::vector<float> prevWeights;
     std::vector<float> targetWeights;
 
+    char* WeaponName = "";
+    std::shared_ptr<GameObject> Weapon_ptr = nullptr;
 
     virtual void update(float deltaTime) override {};
+    void SetupWeaponCollider();
+
+    virtual void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) = 0;
 };
