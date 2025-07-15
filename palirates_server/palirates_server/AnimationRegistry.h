@@ -1,7 +1,8 @@
 #pragma once
 #include "StateEnum.h"
-#include "Monster.h"
 #include <unordered_map>
+
+enum class Monster_Type : int;
 
 class AnimationRegistry {
 public:

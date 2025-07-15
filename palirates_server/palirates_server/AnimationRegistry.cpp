@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "AnimationRegistry.h"
+#include "Monster.h"
 
 int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) {
     switch (type) {

@@ -22,7 +22,7 @@ void Monster::update(float deltaTime) {
             std::cout << "test player AdvanceTime" << std::endl;
         }*/
     }
-    if (Weapon_ptr) {
+   /* if (Weapon_ptr) {
         Weapon_ptr->UpdateWorldOBB();
         std::shared_ptr<BoundingOrientedBox> obb = Weapon_ptr->Get_Collider_OBB();
         if (obb)
@@ -32,7 +32,7 @@ void Monster::update(float deltaTime) {
                 << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")"
                 << std::endl;
         }
-    }
+    }*/
 }
 
 void Monster::PlayAnimation(State state) {

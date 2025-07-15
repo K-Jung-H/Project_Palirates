@@ -182,5 +182,5 @@ public:
     virtual void update(float deltaTime) override {};
     void SetupWeaponCollider();
 
-    //virtual void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) = 0;
+    virtual void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) = 0;
 };
