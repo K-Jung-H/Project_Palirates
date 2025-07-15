@@ -47,7 +47,7 @@ struct ServerSyncData
     XMFLOAT3 position;
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
-    bool bStateChange;
+    bool bStateChange = false;
 };
 
 class CTexture

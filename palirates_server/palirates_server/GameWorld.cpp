@@ -177,6 +177,8 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
         if (!collided || hitCount == 0)
             break;
 
+        player_obj->need_to_client_sync = true;
+
         // 평균 푸시 방향 계산
         XMVECTOR avgPushDir = XMVector3Normalize(totalPushDir);
         XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorScale(avgPushDir, pushStrength);
