@@ -1,7 +1,7 @@
 #include "stdafx.h"
-#include "MonsterState.h"
+#include "State.h"
 #include "Object_StateMachine.h"
-#include "MonsterAnimationRegistry.h"
+#include "AnimationRegistry.h"
 #include <memory>
 
 // -------------------------
@@ -38,13 +38,19 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
     monster->PlayAnimation(State::Attack1);
     monster->StartAttackCooldown();
 }
-
+#include <iomanip> 
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
 
-    int track = MonsterAnimationRegistry::GetAnimationTrack(monster->GetType(), State::Attack1);
+    int track = AnimationRegistry::GetMonsterAnimationTrack(monster->GetType(), State::Attack1);
 
-    // 애니메이션 트랙이 유효한지 확인
+
+    if (monster->Weapon_ptr && monster->GetID() == 50331651) {
+        const XMFLOAT3& pos = monster->Weapon_ptr->GetPosition();
+        std::cout << std::fixed << std::setprecision(3);
+       // std::cout << "weapon got - " << pos.x << " " << pos.y << " " << pos.z << std::endl;
+    }
+
     if (track >= 0 && track < sm->n_Ani) {
         const auto& animTrack = sm->animController->m_pAnimationTracks[track];
 

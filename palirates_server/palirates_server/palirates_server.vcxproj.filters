@@ -19,10 +19,10 @@
     <ClCompile Include="Monster.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="MonsterAnimationRegistry.cpp">
+    <ClCompile Include="AnimationRegistry.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="MonsterState.cpp">
+    <ClCompile Include="State.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
     <ClCompile Include="Object_StateMachine.cpp">
@@ -75,10 +75,10 @@
     <ClInclude Include="Monster.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="MonsterAnimationRegistry.h">
+    <ClInclude Include="AnimationRegistry.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="MonsterState.h">
+    <ClInclude Include="State.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
     <ClInclude Include="Object_StateMachine.h">

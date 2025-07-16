@@ -178,7 +178,8 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
         else
             player_obj->need_to_client_sync = true;
 
-        // Normalize total push direction
+
+        // 평균 푸시 방향 계산
         XMVECTOR avgPushDir = XMVector3Normalize(totalPushDir);
 
         // 이동할 때만 Y 성분 제거 → 방향은 유지, 수직 이동만 차단

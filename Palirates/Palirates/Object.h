@@ -654,6 +654,7 @@ public:
 
     char* WeaponName = "";
     BoundingOrientedBox m_WorldOBB;
+    BoundingOrientedBox cachedWorldOBB;
     XMMATRIX customRotation = XMMatrixIdentity();
     XMFLOAT4X4 WeaponMatrix{};
 

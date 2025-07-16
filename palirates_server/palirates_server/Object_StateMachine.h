@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Monster.h"
-#include "MonsterState.h"
+#include "State.h"
 #include "StateEnum.h"  
 
 class Monster;

@@ -66,7 +66,7 @@ public:
     int GetID() const { return monster_id; }
     void SetID(int id) { monster_id = id; }
 
-    void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks);
+    void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;
     void InitStateMachine();
 };
 
@@ -86,4 +86,10 @@ class Dragon : public Monster {
 public:
     Dragon(int id);
    // void update() override;
+};
+
+class TestPlayer : public Monster {
+public:
+    TestPlayer(int id);
+    // void update() override;
 };
