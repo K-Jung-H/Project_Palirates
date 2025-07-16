@@ -85,11 +85,12 @@ void Player::InitAnimationController(const std::string& filepath, int animCount,
     for (int i = 0; i < n_Animation; ++i) {
         m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
         m_pSkinnedAnimationController->SetTrackEnable(i, true);
-
+        m_pSkinnedAnimationController->SetTrackWeight(i, 0.0f);
         if (onceTracks.find(i) != onceTracks.end()) {
             m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
         }
     }
 
     m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetPlayerAnimationTrack(State::Idle)].m_fWeight = 1.0f;
+    //m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetPlayerAnimationTrack(State::Attack2)].m_fWeight = 1.0f;
 }
