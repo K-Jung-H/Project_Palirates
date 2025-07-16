@@ -41,10 +41,13 @@ void Player::animate(float Elapsedtime)
    
 }
 
-//void Player::update(float deltaTime)
-//{
-//
-//}
+void Player::update(float deltaTime)
+{
+    auto con = GetSkinnedAnimationController();
+    if (con) {
+        con->AdvanceTime(deltaTime, this);
+    }
+}
 
 void Player::UpdateWorldOBB()
 {

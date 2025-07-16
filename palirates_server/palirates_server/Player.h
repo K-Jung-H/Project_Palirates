@@ -39,7 +39,7 @@ public:
     void key_input(uint32_t keyState);
 
     virtual void animate(float Elapsedtime);
-    //virtual void update(float deltaTime) override;
+    virtual void update(float deltaTime) override;
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
