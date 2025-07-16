@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "GameObject.h"
 #include "AnimationTrackEnum.h"
+#include "PlayerStateMachine.h"
 #include <unordered_set> 
 
 enum class Player_State : int
@@ -24,6 +25,8 @@ private:
 
     std::shared_ptr<BoundingOrientedBox> m_localOBB;  // 변하지 않는 기본 값
     std::shared_ptr<BoundingOrientedBox> m_worldOBB;  // 충돌 검사용 
+
+    std::unique_ptr<PlayerStateMachine> m_StateMachine;
 
 public:
     bool need_to_client_sync = false;

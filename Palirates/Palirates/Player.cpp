@@ -615,6 +615,9 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
 
+	if (syncData.changedStateNum == -1) {
+
+	}
 	controller->ApplyCurrentAnimationPose(this);
 }
 //º¸·ù

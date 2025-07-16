@@ -1567,6 +1567,9 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
+		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
+		syncData.changedStateNum = changedStateNum;
+
 		HandlePlayerSync(playerId, modelId, syncData);
 
 		startIndex = stateFlagIndex + 1;
