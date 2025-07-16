@@ -17,7 +17,7 @@ void IdleState::Enter(Monster* monster, MonsterStateMachine* sm) {
 }
 
 void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
-    if (!monster || !sm) return;
+    if (!monster || !sm || monster->bGetHit) return;
 
     auto target = monster->FindNearestPlayerInRange(10.0f);
     if (target) {
@@ -40,7 +40,7 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
 }
 #include <iomanip> 
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
-    if (!monster || !sm || !sm->animController) return;
+    if (!monster || !sm || !sm->animController || monster->bGetHit) return;
 
     int track = AnimationRegistry::GetMonsterAnimationTrack(monster->GetType(), State::Attack1);
 

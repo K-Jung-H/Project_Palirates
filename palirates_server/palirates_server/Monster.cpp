@@ -163,6 +163,13 @@ Fishman::Fishman(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
+
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.8f, 0.0f),    
+        XMFLOAT3(0.4f, 0.8f, 0.4f),   
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
+    );
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Anubis ----------------
@@ -195,6 +202,13 @@ Anubis::Anubis(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
+
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.9f, 0.0f),
+        XMFLOAT3(0.3f, 0.9f, 0.3f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Dragon ----------------
@@ -220,6 +234,13 @@ Dragon::Dragon(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
+
+   /* auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.8f, 0.0f),
+        XMFLOAT3(0.4f, 0.8f, 0.4f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);*/
 }
 
 // ---------------- Test ----------------
