@@ -447,9 +447,6 @@ void CGameFramework::OnDestroy()
 
 	Release_Scenes();
 
-	delete MRT_shader;
-	delete playerDepthIDShader;
-
 	::CloseHandle(m_hFenceEvent);
 
 	if (m_pd3dDepthStencilBuffer) m_pd3dDepthStencilBuffer->Release();
@@ -536,18 +533,18 @@ void CGameFramework::Build_Default_Elements()
 	//==========================================
 	// Player_X-Ray Info Shader
 
-	playerDepthIDShader = new PostProcessBaseShader();
-	playerDepthIDShader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
+	X_Ray_Shader = make_shared<PostProcessBaseShader>();
+	X_Ray_Shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE player_rtvHandle = m_pd3dPlayerRTVHeap->GetCPUDescriptorHandleForHeapStart();
 	DXGI_FORMAT format = DXGI_FORMAT_R32G32_FLOAT;
-	playerDepthIDShader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 1, &format, player_rtvHandle, ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX);
+	X_Ray_Shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 1, &format, player_rtvHandle, ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX);
 
-	scene_manager->Set_X_Ray_Shader(playerDepthIDShader);
+	scene_manager->Set_X_Ray_Shader(X_Ray_Shader);
 
 	//==========================================
 	// Multi - Render Target Shader
-	MRT_shader = new G_BufferMerger_Shader();
+	MRT_shader = make_shared<G_BufferMerger_Shader>();
 	MRT_shader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1046,31 +1043,31 @@ void CGameFramework::FrameAdvance()
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-		playerDepthIDShader->Prepare_Multi_RenderTarget(Active_CommandList, 0, nullptr, &dsvHandle);
+		X_Ray_Shader->Prepare_Multi_RenderTarget(Active_CommandList, 0, nullptr, &dsvHandle); // SRV -> RTV
 
 		scene_manager->Render_Depth(m_pd3dDevice, Active_CommandList);
 
-		playerDepthIDShader->OnPostRenderTarget(Active_CommandList);
+		X_Ray_Shader->OnPostRenderTarget(Active_CommandList); // RTV -> SRV
 	}
 
 	EndGPUStage(GPU_Stage::Render, true);
 
 
-	// ====================== [3.5] ShadowMap Phase ======================
+	// ====================== [3.2] ShadowMap Phase ======================
 
-		for (int i = 0; i < NUM_CASCADES; i++)
+	for (int i = 0; i < NUM_CASCADES; i++)
+	{
 		{
-			{
-				BeginGPUStage(GPU_Stage::Render);
-				PrepareStage(GPU_Stage::Render);
+			BeginGPUStage(GPU_Stage::Render);
+			PrepareStage(GPU_Stage::Render);
 
-				scene_manager->Prepare_Render_Scene_ShadowMap(Active_CommandList);
-				scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
+			scene_manager->Prepare_Render_Scene_ShadowMap(Active_CommandList);
+			scene_manager->Render_Scene_ShadowMap(m_pd3dDevice, Active_CommandList, i);
 
-				EndGPUStage(GPU_Stage::Render, true);
+			EndGPUStage(GPU_Stage::Render, true);
 
-			}
 		}
+	}
 	
 
 	
@@ -1082,7 +1079,7 @@ void CGameFramework::FrameAdvance()
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &DsvDescriptorCPUHandle);
+		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &dsvHandle);
 
 		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList);
 		UpdateShaderVariables();

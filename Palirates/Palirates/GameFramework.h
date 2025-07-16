@@ -210,8 +210,8 @@ public:
     Scene_Manager* scene_manager = NULL;
     Post_Effect_Manager* post_effect_manager = NULL;
 
-    PostProcessBaseShader* playerDepthIDShader = NULL;
-    PostProcessBaseShader* MRT_shader = NULL;
+    shared_ptr<PostProcessBaseShader> X_Ray_Shader = NULL;
+    shared_ptr<PostProcessBaseShader> MRT_shader = NULL;
 
     std::shared_ptr<CPlayer> m_pPlayer = NULL;
 

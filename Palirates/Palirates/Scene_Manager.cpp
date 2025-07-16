@@ -17,7 +17,7 @@ Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12Comma
         if (!Empty_GraphicsRootSignature)
             Empty_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_EmptyRootSignature(pd3dDevice), com_deleter);
 
-        Fade_shader = new ScreenFade_Shader();
+        Fade_shader = make_shared<ScreenFade_Shader>();
         Fade_shader->CreateShader(pd3dDevice, NULL, Empty_GraphicsRootSignature);
     }
 
