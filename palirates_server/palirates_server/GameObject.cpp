@@ -749,16 +749,51 @@ void GameObject::UpdateWorldOBB()
 {
 	if (!m_pMesh) return;
 
-	XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;
-	XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
+	std::shared_ptr<CSkinnedMesh> skinnedMesh = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
+	if (skinnedMesh && skinnedMesh->m_ppstrSkinningBoneNames)
+	{
+		if (strcmp(skinnedMesh->m_ppstrSkinningBoneNames[0], "spear_lp") == 0)
+		{
+			std::cout << "spear is skinned" << "\n";
+		}
+		else
+		{
+			std::cout << "skinned, but not spear" << "\n";
+		}
+	}
+	if (skinnedMesh) {
+		if (XMVector3Equal(XMLoadFloat3(&skinnedMesh->m_xmf3AABBExtents), XMVectorZero())) {
+			std::cout << "not extents" << "\n";
+			return;
+		}
 
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+		auto localOBB = std::make_shared<DirectX::BoundingOrientedBox>(XMFLOAT3(0.0f, 0.0f, 0.0f), skinnedMesh->m_xmf3AABBExtents, XMFLOAT4(0, 0, 0, 1));
 
-	auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
+		if (skinnedMesh->m_ppSkinningBoneFrameCaches.empty() || !skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]) {
+			std::cout << "not bone cashes" << "\n";
+			return;
+		}
+		const XMFLOAT4X4& boneWorld = skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]->m_xmf4x4World;
+		XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
 
-	obb->Transform(*obb, worldMatrix);
+		localOBB->Transform(*localOBB, boneWorldMatrix);
+		m_xmf4x4World = boneWorld;
+		m_OBB = localOBB;
 
-	m_OBB = obb;
+		std::cout << "skined mesh weapon obb pos : " << m_OBB.get()->Center.x << ", " << m_OBB.get()->Center.y << ", " << m_OBB.get()->Center.z << "\n";
+	}
+	else {
+		XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;
+		XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
+
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+
+		auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
+
+		obb->Transform(*obb, worldMatrix);
+
+		m_OBB = obb;
+	}
 }
 
 //===================================================================
@@ -853,6 +888,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 		std::cout << "weapon set fail" << std::endl;
 		return;
 	}
+
 	model->SetType(Object_Type::weapon);
 
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;

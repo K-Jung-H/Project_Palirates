@@ -152,6 +152,9 @@ void CSkinnedMesh::LoadSkinInfoFromFile(FILE* pInFile)
 				m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
 				//				m_ppSkinningBoneFrameCaches = new CGameObject*[m_nSkinningBones];
 				m_ppSkinningBoneFrameCaches.resize(m_nSkinningBones);
+				/*if (strcmp(*m_ppstrSkinningBoneNames,"spear_lp")==1) {
+					std::cout << "spear extents : " << m_xmf3AABBExtents.x << ", " << m_xmf3AABBExtents.y << ", " << m_xmf3AABBExtents.z << "\n";
+				}*/
 				for (int i = 0; i < m_nSkinningBones; i++)
 				{
 					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);
