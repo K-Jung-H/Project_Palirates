@@ -12,17 +12,14 @@ Monster::Monster(int id) : monster_id(id) {
 
 void Monster::update(float deltaTime) {
     if (m_StateMachine) {
-        if (!bGetHit) {
+        //if (!bGetHit) {
             m_StateMachine->OnPrepareUpdate(deltaTime);
             m_StateMachine->update(deltaTime);
             m_StateMachine->SetWeight(deltaTime);
-        }
+        //}
     }
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
-        /*if (type == Monster_Type::ETC) {
-            std::cout << "test player AdvanceTime" << std::endl;
-        }*/
     }
    /* if (Weapon_ptr) {
         Weapon_ptr->UpdateWorldOBB();
@@ -145,10 +142,11 @@ void Monster::InitStateMachine() {
 Fishman::Fishman(int id) : Monster(id) {
     type = Monster_Type::Fishman;
     SetType(Object_Type::monster);
+    WeaponName = "spear_lp";
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
-        TRACK_FISHMAN_ATTACK1,
+       // TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
         TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
@@ -179,6 +177,7 @@ Fishman::Fishman(int id) : Monster(id) {
 Anubis::Anubis(int id) : Monster(id) {
     type = Monster_Type::Anubis;
     SetType(Object_Type::monster);
+    WeaponName = "Staff_LP";
     RootMotionTrackSet = {
         TRACK_ANUBIS_IDLE,
         TRACK_ANUBIS_IDLE_BREAK,
@@ -218,6 +217,7 @@ Anubis::Anubis(int id) : Monster(id) {
 Dragon::Dragon(int id) : Monster(id) {
     type = Monster_Type::Dragon;
     SetType(Object_Type::monster);
+    WeaponName = "HeadA_LP";
     RootMotionTrackSet = {
         TRACK_DRAGON_ATTACK1,
         TRACK_DRAGON_RUN,
