@@ -222,7 +222,6 @@ void GameObject::SetScale(float x, float y, float z, bool keepPosition)
 	}
 }
 
-
 XMFLOAT3 GameObject::GetPosition()
 {
 	return(XMFLOAT3(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43));

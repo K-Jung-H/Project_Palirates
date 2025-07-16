@@ -12,9 +12,11 @@ Monster::Monster(int id) : monster_id(id) {
 
 void Monster::update(float deltaTime) {
     if (m_StateMachine) {
-        m_StateMachine->OnPrepareUpdate(deltaTime);
-        m_StateMachine->update(deltaTime);
-        m_StateMachine->SetWeight(deltaTime);
+        if (!bGetHit) {
+            m_StateMachine->OnPrepareUpdate(deltaTime);
+            m_StateMachine->update(deltaTime);
+            m_StateMachine->SetWeight(deltaTime);
+        }
     }
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
@@ -155,7 +157,7 @@ Fishman::Fishman(int id) : Monster(id) {
     std::unordered_set<int> OnceType = {
         TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
-        TRACK_FISHMAN_GET_HIT,
+      //  TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
     };
 
@@ -163,7 +165,7 @@ Fishman::Fishman(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-
+    SetScale(10.0f, 10.0f, 10.0f);
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.8f, 0.0f),    
         XMFLOAT3(0.4f, 0.8f, 0.4f),   
@@ -202,7 +204,7 @@ Anubis::Anubis(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-
+    SetScale(15.0f, 15.0f, 15.0f);
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.9f, 0.0f),
         XMFLOAT3(0.3f, 0.9f, 0.3f),
