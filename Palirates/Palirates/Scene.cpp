@@ -2041,6 +2041,15 @@ void CScene::After_Update_Objects()
 
 }
 
+void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_MRT_GraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
+
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+
+	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get());	
+}
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
 {
