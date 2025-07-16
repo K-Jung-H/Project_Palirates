@@ -279,7 +279,7 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
-
+	void Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
 
 	// Instancing update flag

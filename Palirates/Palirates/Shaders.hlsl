@@ -224,6 +224,14 @@ PS_MULTIPLE_RENDER_TARGETS_OUTPUT PSStandard(VS_STANDARD_OUTPUT input)
 }
 
 
+float2 PS_ObjectDepthAndID(VS_STANDARD_OUTPUT input) : SV_Target0
+{
+    float viewZ = input.positionV.z;
+    float Outline_ID = (float) material_info.Outline_Color_ID;
+
+    return float2(viewZ, Outline_ID);
+}
+
 //===========================================================
 
 struct VS_STANDARD_INPUT_INSTANCE

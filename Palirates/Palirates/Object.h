@@ -725,6 +725,7 @@ public:
     virtual bool IsVisible(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     
     virtual void OnLateUpdate() {}
