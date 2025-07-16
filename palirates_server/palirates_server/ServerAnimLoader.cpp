@@ -123,6 +123,14 @@ void CStandardMesh::LoadMeshFromFile(FILE* pInFile)
 	}
 }
 
+void CSkinnedMesh::PrepareSkinning(std::shared_ptr<GameObject> pModelRootObject)
+{
+	for (int j = 0; j < m_nSkinningBones; j++)
+	{
+		m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]).get();
+	}
+}
+
 void CSkinnedMesh::LoadSkinInfoFromFile(FILE* pInFile)
 {
 	char pstrToken[64] = { '\0' };

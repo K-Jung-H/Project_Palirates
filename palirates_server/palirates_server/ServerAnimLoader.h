@@ -50,7 +50,7 @@ public:
     void AddRef() {}
     void Release() {}
 
-    void PrepareSkinning(const std::shared_ptr<GameObject>& root) {  }
+    void PrepareSkinning(std::shared_ptr<GameObject> pModelRootObject);
 
     void LoadSkinInfoFromFile(FILE* pInFile);
 
