@@ -297,7 +297,7 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 Stage_Scene::Stage_Scene() : Scene (Scene_Type::Stage_1)
 {
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
-    scene = GameObject::Load_Scene("Scene/Scene_Name.bin");
+    scene = GameObject::Load_Scene("Scene/Scene_File_5/Scene_Name.bin");
 
 
     game_world.Init();
