@@ -71,6 +71,7 @@ void SobelEdge_Toon(uint3 tid, uint3 gid)
 [numthreads(CX_THREADS, CY_THREADS, 1)]
 void CS_EdgeDetection(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
 {
+   
     uint texWidth, texHeight;
     gtxtInput.GetDimensions(texWidth, texHeight);
     uint2 texSize = uint2(texWidth, texHeight);

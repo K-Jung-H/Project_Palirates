@@ -30,6 +30,8 @@ CGameFramework::CGameFramework()
 	ptr_Rtv_DescriptorHeap = NULL;
 	m_pd3dDsvDescriptorHeap = NULL;
 
+	m_pd3dPlayerRTVHeap = NULL;
+
 	m_hFenceEvent = NULL;
 	m_pd3dFence = NULL;
 	for (int i = 0; i < N_SwapChainBuffers; i++) 
@@ -233,6 +235,12 @@ void CGameFramework::CreateRtvAndDsvDescriptorHeaps()
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	hResult = m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, __uuidof(ID3D12DescriptorHeap), (void **)&m_pd3dDsvDescriptorHeap);
 	::gnDsvDescriptorIncrementSize = m_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	//==================================
+
+	d3dDescriptorHeapDesc.NumDescriptors = 1;
+	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	m_pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dPlayerRTVHeap));
 }
 
 void CGameFramework::CreateRenderTargetViews()
@@ -252,6 +260,10 @@ void CGameFramework::CreateRenderTargetViews()
 		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
 	}
 	
+
+	//============================================
+
+	m_d3dPlayerRTVHandle = m_pd3dPlayerRTVHeap->GetCPUDescriptorHandleForHeapStart();
 }
 
 void CGameFramework::CreateDepthStencilView()
@@ -436,6 +448,7 @@ void CGameFramework::OnDestroy()
 	Release_Scenes();
 
 	delete MRT_shader;
+	delete playerDepthIDShader;
 
 	::CloseHandle(m_hFenceEvent);
 
@@ -448,6 +461,11 @@ void CGameFramework::OnDestroy()
 	
 	if (ptr_Rtv_DescriptorHeap) 
 		ptr_Rtv_DescriptorHeap->Release();
+
+	if (m_pd3dPlayerRTVHeap)
+		m_pd3dPlayerRTVHeap->Release();
+
+	
 
 	if (p_CommandQueue) p_CommandQueue->Release();
 	
@@ -514,6 +532,19 @@ void CGameFramework::Build_Default_Elements()
 	post_effect_manager->CreateShaderResource(m_pd3dDevice, Active_CommandList);
 
 	CreateShaderVariables();
+
+	//==========================================
+	// Player_X-Ray Info Shader
+
+	playerDepthIDShader = new PostProcessBaseShader();
+	playerDepthIDShader->CreateShader(m_pd3dDevice, NULL, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE player_rtvHandle = m_pd3dPlayerRTVHeap->GetCPUDescriptorHandleForHeapStart();
+	DXGI_FORMAT format = DXGI_FORMAT_R32G32_FLOAT;
+	playerDepthIDShader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, 1, &format, player_rtvHandle, ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX);
+
+	scene_manager->Set_X_Ray_Shader(playerDepthIDShader);
+
 	//==========================================
 	// Multi - Render Target Shader
 	MRT_shader = new G_BufferMerger_Shader();
@@ -1007,6 +1038,24 @@ void CGameFramework::FrameAdvance()
 #ifdef WRITE_TEXT_UI
 	scene_manager->Update_UI();
 #endif
+
+	// ====================== [3.1] Player_Depth_Map Phase ==================
+	BeginGPUStage(GPU_Stage::Render);
+	PrepareStage(GPU_Stage::Render);
+	{
+		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+		playerDepthIDShader->Prepare_Multi_RenderTarget(Active_CommandList, 0, nullptr, &dsvHandle);
+
+		scene_manager->Render_Depth(m_pd3dDevice, Active_CommandList);
+
+		playerDepthIDShader->OnPostRenderTarget(Active_CommandList);
+	}
+
+	EndGPUStage(GPU_Stage::Render, true);
+
+
 	// ====================== [3.5] ShadowMap Phase ======================
 
 		for (int i = 0; i < NUM_CASCADES; i++)
@@ -1039,7 +1088,6 @@ void CGameFramework::FrameAdvance()
 		UpdateShaderVariables();
 		scene_manager->Render_MRT_Scene(m_pd3dDevice, Active_CommandList);
 
-//		shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 		
 
 
@@ -1051,6 +1099,8 @@ void CGameFramework::FrameAdvance()
 		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
 
 		scene_manager->Prepare_Deffered_Render_Scene(Active_CommandList);
+
+
 		scene_manager->Deffered_Render_Scene(m_pd3dDevice, Active_CommandList);
 	}
 	EndGPUStage(GPU_Stage::Render, true);
@@ -1073,6 +1123,7 @@ void CGameFramework::FrameAdvance()
 		// Reserve Effects
 		D3D12_GPU_DESCRIPTOR_HANDLE  Blur_Info_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
+
 
 		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };

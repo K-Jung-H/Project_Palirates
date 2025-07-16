@@ -1287,6 +1287,18 @@ void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* p
 }
 
 
+void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	for (auto& [id, obj_ptr] : player_map)
+	{
+		if (obj_ptr != NULL)
+			if (obj_ptr->Get_Active())
+			{
+				obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+			}
+	}
+}
+
 void Object_Manager::Post_Update(Object_Type type)
 {
 	switch (type)

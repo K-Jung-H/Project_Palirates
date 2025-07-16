@@ -2357,6 +2357,45 @@ void CGameObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 
 }
 
+void CGameObject::Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (Active && m_pMesh)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Material_list.size())
+		{
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+					{
+						pShader->Setting_Render(pd3dCommandList, 2);
+
+						m_pMesh->Render(pd3dCommandList, i);
+
+					}
+				}
+			}
+		}
+	}
+
+	if (m_pSibling)
+		m_pSibling->Render_Depth(pd3dCommandList, pCamera);
+
+
+	if (m_pChild)
+		m_pChild->Render_Depth(pd3dCommandList, pCamera);
+
+}
+
+
 void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 }
