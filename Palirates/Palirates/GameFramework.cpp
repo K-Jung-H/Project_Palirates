@@ -1296,6 +1296,7 @@ void CGameFramework::SendPacket()
 		}
 
 		oss << "," << (sync_Data.bStateChange ? "1" : "0");
+		oss << "," << sync_Data.changedStateNum;
 
 		break;
 	}

@@ -365,14 +365,14 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
 void Server::HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
     // 최소한 track_count토큰까지 존재해야 함
-    if (tokens.size() < 10)
+    if (tokens.size() < 11)
         return;
 
     int trackCount = std::stoi(tokens[10]);
 
     // 전체 패킷에 필요한 최소 토큰 개수
-    // 기본(11) + 트랙데이터(3개씩) + bStateChange(1)
-    int expectedMinTokens = 11 + (trackCount * 3) + 1; 
+    // 기본(11) + 트랙데이터(3개씩) + bStateChange(1) + changedStateNum(1)
+    int expectedMinTokens = 11 + (trackCount * 3) + 1 + 1; 
 
     if (tokens.size() < expectedMinTokens)
         return;
@@ -418,8 +418,10 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
     // bStateChange (마지막 토큰)
     bool bStateChange = (tokens[11 + (trackCount * 3)] == "1" || tokens[11 + (trackCount * 3)] == "true");
 
+    int stateNum = stoi(tokens[11 + (trackCount * 3) + 1]);
+
     // Scene 업데이트 호출
-    stageScene->update_player_State(clientId, inputFlags, pos, look, trackInfoList, bStateChange);
+    stageScene->update_player_State(clientId, inputFlags, pos, look, trackInfoList, bStateChange, stateNum);
 }
 
 
