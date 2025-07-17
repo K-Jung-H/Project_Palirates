@@ -817,7 +817,6 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 
 	if (instance_obj_num > instance_buffer_max_num)
 	{
-//		DebugOutput("\n\nResizing buffer to fit more" + obj_mesh->Get_Name() + "instances\n\n\n");
 
 		Release_Instance_Data_ShaderVariables();
 
@@ -825,7 +824,6 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 
 		Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
 	}
-
 
 	for (auto& obj_ptr : fixed_obj_list)
 	{
@@ -839,6 +837,30 @@ void Fixed_Object_Info::Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12Gra
 	}
 
 	rendering_num = visible_count; 
+}
+
+void Fixed_Object_Info::Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	int instance_obj_num = static_cast<int>(fixed_obj_list.size());
+
+	if (instance_obj_num > instance_buffer_max_num)
+	{
+		Release_Instance_Data_ShaderVariables();
+
+		instance_buffer_max_num = std::min<int>(instance_obj_num * 2, MAX_INSTANCING_NUM);
+		Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	for (int i = 0; i < instance_obj_num; ++i)
+	{
+		auto& obj_ptr = fixed_obj_list[i];
+		XMFLOAT4X4 world_matrix = obj_ptr->m_xmf4x4World;
+		XMStoreFloat4x4(&world_matrix, XMMatrixTranspose(XMLoadFloat4x4(&world_matrix)));
+
+		Mapped_Instance_info[i] = { world_matrix };
+	}
+
+	rendering_num = instance_obj_num;
 }
 
 void Fixed_Object_Info::Release_Instance_Data_ShaderVariables()
@@ -1062,7 +1084,7 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 
 }
 
-void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Object_Manager::Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (do_instance_update == false)
 		return;
@@ -1082,6 +1104,23 @@ void Object_Manager::Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 
 }
+
+void Object_Manager::Prepare_ShadowMap_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	for (auto& pair : fixed_obj_info_map)
+	{
+		Fixed_Object_Info& info = pair.second;
+		if (info.Instance_info == NULL)
+		{
+			info.Create_Instance_Data_ShaderVariables(pd3dDevice, pd3dCommandList);
+			info.Update_Instance_Data_AllObjects(pd3dDevice, pd3dCommandList);
+		}
+		else
+			info.Update_Instance_Data_AllObjects(pd3dDevice, pd3dCommandList);
+	}
+
+}
+
 
 void Object_Manager::Check_Culling(CCamera* pCamera, Object_Type obj_type)
 {
