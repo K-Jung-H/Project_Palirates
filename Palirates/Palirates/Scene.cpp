@@ -1146,7 +1146,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
@@ -1958,9 +1958,10 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 //	obj_manager->Check_Player_Collision(m_pPlayer);
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
+
 #endif
 
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
 	//obj_manager->Check_Player_Collision(m_pPlayer);
 	
 	if (m_pPlayer->GetTrailOn())
@@ -2051,7 +2052,7 @@ void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get());	
 }
 
-void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
+void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
@@ -2070,6 +2071,7 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandLis
 		}
 	}
 
+	obj_manager->Prepare_ShadowMap_Render(pd3dDevice, pd3dCommandList);
 
 }
 
@@ -2078,10 +2080,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
 
+	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
-
-	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
 
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
@@ -2098,12 +2101,14 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
-
 
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
@@ -2554,7 +2559,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 	UpdatePlayerSelection();
 }
 
@@ -3193,7 +3198,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
 
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -3715,7 +3720,7 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif

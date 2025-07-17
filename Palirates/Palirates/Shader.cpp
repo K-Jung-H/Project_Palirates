@@ -6,6 +6,8 @@
 #include "Shader.h"
 #include "Scene.h"
 
+#define Shadow_DepthBias 13000
+
 CShader::CShader()
 {
 }
@@ -1582,7 +1584,7 @@ D3D12_RASTERIZER_DESC Deferred_CStandard_Shader::CreateRasterizerState(int nPipe
 
 	if (nPipelineState == 1)
 	{
-		d3dRasterizerDesc.DepthBias = 500;
+		d3dRasterizerDesc.DepthBias = Shadow_DepthBias;
 		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
 	}
@@ -1836,9 +1838,9 @@ D3D12_RASTERIZER_DESC Deferred_CTerrainShader::CreateRasterizerState(int nPipeli
 
 	if (nPipelineState == 1) 
 	{
-		d3dRasterizerDesc.DepthBias = 80000;
-		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+		d3dRasterizerDesc.DepthBias = Shadow_DepthBias;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
+		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 	}
 
 	return(d3dRasterizerDesc);
