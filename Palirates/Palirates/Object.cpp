@@ -553,8 +553,8 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.gAlbedoColor = m_cAlbedo;
 	material_packet.light_material_ID = m_Material_ID;
 	material_packet.Blur_Mask_ID = Blur_Mask_ID;
-	material_packet.Outline_Color_ID = Outline_Color_ID;
 	material_packet.Object_Type_ID = Object_Type_ID;
+	material_packet.Outline_Color_ID = Outline_Color_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
@@ -2377,6 +2377,7 @@ void CGameObject::Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 					if (pShader)
 					{
 						pShader->Setting_Render(pd3dCommandList, 2);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
 
 						m_pMesh->Render(pd3dCommandList, i);
 

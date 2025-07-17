@@ -319,9 +319,15 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     float playerDepth = Player_Depth_ID.x;
     float playerID = Player_Depth_ID.y;
 
-    bool shouldApplyXRay = (playerDepth > 0.0f) && (playerDepth > viewspace_Z + 0.05f);
+    float fogXRayThreshold = 0.6f; 
+    bool isFogDenseEnough = (Fog_Trigger == 1) && (fogFactor >= fogXRayThreshold) && (playerDepth > 0.0f);
+    
+    bool isPlayerOccluded = (playerDepth > 0.0f) && (playerDepth > viewspace_Z + 0.05f);
 
-    float3 xrayColor = GetObjectColorById(playerID) * 1.5f; // 색상 강조
+    bool shouldApplyXRay = isPlayerOccluded || isFogDenseEnough;
+
+    float3 xrayColor = GetObjectColorById(playerID) * 1.5f; 
+
     float xrayAlpha = 0.7f;
 
     float3 finalColor = shouldApplyXRay ? lerp(baseColor, xrayColor, xrayAlpha) : baseColor;
@@ -332,6 +338,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     return float4(finalColor, 1.0f);
 }
+
 
 //-------------------------------------------------------------------------------------------------------------
 
