@@ -32,6 +32,7 @@ protected:
     std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
     bool bActive = true;
+    bool bCanCollide = true;
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -122,6 +123,9 @@ public:
 
     void Set_Active(bool active) { bActive = active; }
     bool Get_Active() const { return bActive; }
+
+    void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
+    bool CanCollide() const { return bCanCollide; }
 };
 
 
@@ -157,7 +161,7 @@ public:
     void SetAnimationSyncData(const ServerSyncData& data) { animation_sync_data = data; }
     void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
     void SetStateChanged(bool changed) { animation_sync_data.stateChanged = changed; }
-
+    void SetStateChangeNum(int stateNum) { animation_sync_data.changedStateNum = stateNum; }
 
     const ServerSyncData& GetAnimationSyncData() const { return animation_sync_data; }
     const std::vector<Animation_Sync>& GetTrackInfoList() const { return animation_sync_data.track_info_list; }

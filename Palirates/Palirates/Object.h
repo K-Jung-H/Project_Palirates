@@ -854,7 +854,12 @@ public:
     void SetID(int id) { m_nPlayerId = id; }
     int GetID() const { return m_nPlayerId; }
 
+protected:
+    bool bCanCollide = true;
 
+public:
+    void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
+    bool CanCollide() const { return bCanCollide; }
 };
 
 //==================================================================================

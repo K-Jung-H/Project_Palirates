@@ -49,4 +49,7 @@ public:
     void Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter);
 
     void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;
+    void InitStateMachine();
+
+    PlayerStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 };

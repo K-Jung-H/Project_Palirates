@@ -19,6 +19,7 @@ struct ServerSyncData
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
     bool stateChanged = false;
+    int changedStateNum = -1;
 };
 
 class CAnimationSet

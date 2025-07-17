@@ -750,27 +750,15 @@ void GameObject::UpdateWorldOBB()
 	if (!m_pMesh) return;
 
 	std::shared_ptr<CSkinnedMesh> skinnedMesh = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
-	if (skinnedMesh && skinnedMesh->m_ppstrSkinningBoneNames)
-	{
-		if (strcmp(skinnedMesh->m_ppstrSkinningBoneNames[0], "spear_lp") == 0)
-		{
-			std::cout << "spear is skinned" << "\n";
-		}
-		else
-		{
-			std::cout << "skinned, but not spear" << "\n";
-		}
-	}
+
 	if (skinnedMesh) {
 		if (XMVector3Equal(XMLoadFloat3(&skinnedMesh->m_xmf3AABBExtents), XMVectorZero())) {
-			std::cout << "not extents" << "\n";
 			return;
 		}
 
 		auto localOBB = std::make_shared<DirectX::BoundingOrientedBox>(XMFLOAT3(0.0f, 0.0f, 0.0f), skinnedMesh->m_xmf3AABBExtents, XMFLOAT4(0, 0, 0, 1));
 
 		if (skinnedMesh->m_ppSkinningBoneFrameCaches.empty() || !skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]) {
-			std::cout << "not bone cashes" << "\n";
 			return;
 		}
 		const XMFLOAT4X4& boneWorld = skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]->m_xmf4x4World;
@@ -779,8 +767,6 @@ void GameObject::UpdateWorldOBB()
 		localOBB->Transform(*localOBB, boneWorldMatrix);
 		m_xmf4x4World = boneWorld;
 		m_OBB = localOBB;
-
-		std::cout << "skined mesh weapon obb pos : " << m_OBB.get()->Center.x << ", " << m_OBB.get()->Center.y << ", " << m_OBB.get()->Center.z << "\n";
 	}
 	else {
 		XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;

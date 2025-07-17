@@ -1558,7 +1558,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		int stateFlagIndex = trackStart + expectedTrackTokenCount;
 		if (stateFlagIndex >= tokens.size()) break;
 
-		bool stateChanged = (tokens[stateFlagIndex] == "1");
+		bool stateChanged = (tokens[stateFlagIndex++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
@@ -1567,9 +1567,8 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
-		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
+		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
 		syncData.changedStateNum = changedStateNum;
-
 		HandlePlayerSync(playerId, modelId, syncData);
 
 		startIndex = stateFlagIndex + 1;
@@ -1771,6 +1770,10 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
+
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+		}
 		return;
 	}
 	else

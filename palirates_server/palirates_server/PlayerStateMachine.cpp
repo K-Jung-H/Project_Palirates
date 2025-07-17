@@ -3,6 +3,7 @@
 #include "GameObject.h"
 #include "PlayerState.h"
 #include "PlayerStateMachine.h"
+#include "AnimationSetCore.h"
 
 void PlayerStateMachine::update(float deltaTime)
 {
@@ -22,4 +23,7 @@ void PlayerStateMachine::ChangeState(std::unique_ptr<PlayerState> newState)
 
     if (currentState)
         currentState->Enter(m_pOwner, this);
+
+	lastStateChange = static_cast<int>(currentState->GetStateEnum());
+	m_pOwner->SetStateChangeNum(lastStateChange);
 }
