@@ -38,22 +38,78 @@ Server::~Server()
 
 void Server::Start()
 {
-    std::thread(&Server::AcceptClients, this).detach();
-    std::thread(&Server::Server_Update, this).detach();
 
-    std::thread([this]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-            CleanupInactiveClients();
+    std::thread([this]()
+        {
+        try
+        {
+            AcceptClients();
+        }
+        catch (const std::exception& e) 
+        {
+            std::cerr << "[AcceptClients Thread EXCEPTION] " << e.what() << std::endl;
+        }
+        catch (...) 
+        {
+            std::cerr << "[AcceptClients Thread UNKNOWN EXCEPTION]" << std::endl;
         }
         }).detach();
 
-    //std::thread([this]() {
-    //    while (true) {
-    //        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //        PrintClientDebugInfo();
-    //    }
-    //    }).detach();
+
+        std::thread([this]()
+            {
+            try
+            {
+                Server_Update();
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "[Server_Update Thread EXCEPTION] " << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::cerr << "[Server_Update Thread UNKNOWN EXCEPTION]" << std::endl;
+            }
+            }).detach();
+
+            std::thread([this]() 
+                {
+                try {
+                    while (true) 
+                    {
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                        CleanupInactiveClients();
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "[CleanupInactiveClients Thread EXCEPTION] " << e.what() << std::endl;
+                }
+                catch (...) 
+                {
+                    std::cerr << "[CleanupInactiveClients Thread UNKNOWN EXCEPTION]" << std::endl;
+                }
+                }).detach();
+
+                //std::thread([this]()
+                //  {
+                //    try
+                //  {
+                //        while (true)
+                //  {
+                //            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                //            PrintClientDebugInfo();
+                //        }
+                //    }
+                //    catch (const std::exception& e)
+                //  {
+                //        std::cerr << "[PrintClientDebugInfo Thread EXCEPTION] " << e.what() << std::endl;
+                //    }
+                //    catch (...)
+                //  {
+                //        std::cerr << "[PrintClientDebugInfo Thread UNKNOWN EXCEPTION]" << std::endl;
+                //    }
+                //}).detach();
 }
 
 
@@ -1046,7 +1102,7 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
 
 void Server::PrintClientDebugInfo()
 {
-    system("cls");
+    //system("cls");
     std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
 
 
