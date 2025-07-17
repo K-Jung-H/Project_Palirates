@@ -292,7 +292,7 @@ void OBBCollision_Manager::Update_OBB_Data(const std::unordered_map<std::string,
 
 	for (const auto& [meshName, info] : fixed_obj_info_map)
 	{
-		if (meshName.find("Env") != std::string::npos) continue;
+		//if (meshName.find("Env") != std::string::npos) continue;
 		if (!info.obj_mesh || !info.obj_mesh->Get_BoundingBox()) continue;
 
 		const BoundingOrientedBox& localOBB = *info.obj_mesh->Get_BoundingBox();
