@@ -170,6 +170,11 @@ Fishman::Fishman(int id) : Monster(id) {
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
     );
     Set_Collider_OBB(body);
+
+    WeaponCustomRotation = XMMatrixRotationRollPitchYaw(
+        XMConvertToRadians(160.0f),
+        XMConvertToRadians(90.0f),
+        XMConvertToRadians(0.0f));
 }
 
 // ---------------- Anubis ----------------

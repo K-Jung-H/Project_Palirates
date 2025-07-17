@@ -42,6 +42,7 @@ public:
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
     std::shared_ptr<GameObject> m_pRootModel = NULL;
 
+    XMMATRIX WeaponCustomRotation = XMMatrixIdentity();
 public:
     GameObject()
         : obj_type(Object_Type::etc)
