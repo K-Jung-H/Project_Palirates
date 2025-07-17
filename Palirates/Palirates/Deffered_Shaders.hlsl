@@ -327,6 +327,7 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     bool shouldApplyXRay = isPlayerOccluded || isFogDenseEnough;
 
     float3 xrayColor = GetObjectColorById(playerID) * 1.5f; 
+
     float xrayAlpha = 0.7f;
 
     float3 finalColor = shouldApplyXRay ? lerp(baseColor, xrayColor, xrayAlpha) : baseColor;
