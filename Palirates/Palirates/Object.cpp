@@ -3129,7 +3129,7 @@ std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Dev
 			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken);
+				std::string fileName = "Scene/Scene_File_7/Meshes/bin/" + std::string(pstrToken);
 
 				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
 				if (sharedMesh)
