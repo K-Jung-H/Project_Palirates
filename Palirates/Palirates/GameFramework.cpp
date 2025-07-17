@@ -1527,15 +1527,7 @@ void CGameFramework::ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene
 		lobby_scene->SetCharacterSelections(characterSelections);
 		lobby_scene->SetReadyClientIds(readyClientIds);
 	}
-	else if (cmd == "CHARACTER_SELECT_SUCCESS")
-	{
-		// 캐릭터 선택 변경 차단하기
-	}
-	else if (cmd == "CHARACTER_SELECT_FAIL")
-	{
-		// select 버튼 처리 값 초기화 하기
-		//select_scene->Set_Character_Select_Status(false);
-	}
+
 }
 
 void CGameFramework::ProcessReceivedData_Board(shared_ptr<Board_Scene> board_scene, const std::string& cmd, const std::vector<std::string>& tokens)
@@ -1845,6 +1837,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	new_Player->SetState(0);
 	new_Player->SetID(playerId);
+	new_Player->SetOutlineColor(playerId);
 	new_Player->Set_Name("Remote_" + std::to_string(playerId));
 	new_Player->type = EObjectType::Player;
 	new_Player->SetRotationSpeed(1.0f);
