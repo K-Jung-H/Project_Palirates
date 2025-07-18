@@ -181,6 +181,7 @@ float4 PS_BILLBOARD_PARTICLE_DRAW(PS__BILLBOARD_INPUT input) : SV_Target
 struct VS_TRAIL_INPUT
 {
     float3 position : POSITION;
+    float4 color : COLOR;
     float2 uv : TEXCOORD0;
     float4 sideTime : TEXCOORD1; // x=side, y=time, z=centerY, w=offsetY
     float ratio : TEXCOORD2; // fading factor (0.0 to 1.0)
@@ -190,6 +191,7 @@ struct VS_TRAIL_OUTPUT
 {
     float4 position : SV_POSITION;
     float3 positionW : POSITIONW;
+    float4 color : COLOR;
     float2 uv : TEXCOORD0;
     float time : TEXCOORD1;
     float ratio : TEXCOORD2; 
@@ -215,6 +217,7 @@ VS_TRAIL_OUTPUT Trail_VS(VS_TRAIL_INPUT input)
     float4 viewPos = mul(worldPos, gmtxView);
     output.position = mul(viewPos, gmtxProjection);
 
+    output.color = input.color;
     output.uv = input.uv;
     output.time = input.sideTime.y;
     output.ratio = ratio; // ratio РќДо
@@ -229,7 +232,7 @@ float4 Trail_PS(VS_TRAIL_OUTPUT input) : SV_Target
     float fade = pow(ratio, 1.5); // soft transparency falloff
     float glow = 0.3f + 0.7f * pow(ratio, 0.8); // enhanced brightness near head
 
-    float3 baseColor = float3(1.0f, 0.2f, 0.1f); // reddish trail
+    float3 baseColor = input.color.xyz;
     float3 finalColor = baseColor * glow;
 
     return float4(finalColor, fade);
