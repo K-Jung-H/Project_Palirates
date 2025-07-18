@@ -21,17 +21,14 @@ void Monster::update(float deltaTime) {
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
     }
-   /* if (Weapon_ptr) {
-        Weapon_ptr->UpdateWorldOBB();
-        std::shared_ptr<BoundingOrientedBox> obb = Weapon_ptr->Get_Collider_OBB();
-        if (obb)
-        {
-            const XMFLOAT4& q = obb->Orientation;
-            std::cout << "OBB Orientation Quaternion: ("
-                << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")"
-                << std::endl;
+
+    if (bIsInvincible) {
+        invincibleTimeRemaining += deltaTime;
+        if (invincibleTimeRemaining >= invincibleDuration) {
+            bIsInvincible = false;
+            invincibleTimeRemaining = 0.0f;
         }
-    }*/
+    }
 }
 
 void Monster::PlayAnimation(State state) {
@@ -155,7 +152,7 @@ Fishman::Fishman(int id) : Monster(id) {
     std::unordered_set<int> OnceType = {
         TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
-      //  TRACK_FISHMAN_GET_HIT,
+        TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
     };
 
@@ -170,11 +167,6 @@ Fishman::Fishman(int id) : Monster(id) {
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
     );
     Set_Collider_OBB(body);
-
-    WeaponCustomRotation = XMMatrixRotationRollPitchYaw(
-        XMConvertToRadians(160.0f),
-        XMConvertToRadians(90.0f),
-        XMConvertToRadians(0.0f));
 }
 
 // ---------------- Anubis ----------------
@@ -234,6 +226,8 @@ Dragon::Dragon(int id) : Monster(id) {
 
     std::unordered_set<int> OnceType = {
         TRACK_DRAGON_ATTACK1,
+        TRACK_DRAGON_GOT_HIT1,
+        TRACK_DRAGON_GOT_HIT2,
         TRACK_DRAGON_DEAD
     };
 

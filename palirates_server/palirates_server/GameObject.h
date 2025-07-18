@@ -33,6 +33,9 @@ protected:
 
     bool bActive = true;
     bool bCanCollide = true;
+    bool bIsInvincible = false;
+    float invincibleTimeRemaining = 0.0f;
+    float invincibleDuration = 2.0f;
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -127,6 +130,9 @@ public:
 
     void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
     bool CanCollide() const { return bCanCollide; }
+
+    void SetIsInvincible(bool IsInvincible) { bIsInvincible = IsInvincible; }
+    bool IsInvincible() const { return bIsInvincible; }
 };
 
 

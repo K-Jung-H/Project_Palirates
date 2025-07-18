@@ -44,8 +44,6 @@ public:
     float stateElapsedTime = 0.0f;
     float stateChangeInterval = 2.0f;
 
-    bool bGetHit = false;
-
 public:
     Monster(int id);
     Monster() = default;

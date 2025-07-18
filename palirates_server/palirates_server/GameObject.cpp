@@ -895,6 +895,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 		)
 	);
 	model->Set_Collider_OBB(obb);
+	model->SetCanCollide(false); 
 	//model->bUpdateOBBOff();
 	if (WeaponName == "HeadA_LP") {
 		model->WeaponCustomRotation = XMMatrixRotationRollPitchYaw(
