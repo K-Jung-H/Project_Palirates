@@ -1,6 +1,6 @@
 #include "Light.hlsl"
 
-#define NUM_CASCADES 4
+#define NUM_CASCADES 3
 #define LIGHT_CAMERA_TYPE_DIRECTIONAL 0
 
 
@@ -14,7 +14,7 @@ Texture2D<float4> T_ViewSpace_Z : register(t4);
 Texture2D<float4> T_Fog_Noise : register(t6);
 Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t10
 
-Texture2D<float4> T_Player_X_Ray : register(t11);
+Texture2D<float4> T_Player_X_Ray : register(t10);
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -119,7 +119,7 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
             break;
         }
     }
-
+    
     float shadowFactor = 1.0f;
 
     if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
@@ -286,6 +286,9 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     if (isEmptyPixel && Fog_Trigger == 0)
         discard;
 
+    if (Fog_Trigger)
+        return Debug_ShadowMap(input.uv);
+    
     // ======= Lighting =======
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;

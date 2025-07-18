@@ -69,7 +69,7 @@ struct Fog_Info
 
 
 
-#define NUM_CASCADES 4
+#define NUM_CASCADES 3
 
 struct alignas(16) LightCamera_Info
 {
