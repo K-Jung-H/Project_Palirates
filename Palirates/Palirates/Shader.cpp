@@ -6,6 +6,8 @@
 #include "Shader.h"
 #include "Scene.h"
 
+#define Shadow_DepthBias 13000
+
 CShader::CShader()
 {
 }
@@ -774,13 +776,14 @@ void Trail_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 D3D12_INPUT_LAYOUT_DESC Trail_Shader::CreateInputLayout(int nPipelineState)
 {
-	UINT nInputElementDescs = 4;
+	UINT nInputElementDescs = 5;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	pd3dInputElementDescs[0] = { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[1] = { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,        1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[2] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[3] = { "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT,          2, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[0] = { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "COLOR",     0, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,        2, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TEXCOORD",  1, DXGI_FORMAT_R32G32B32A32_FLOAT,  3, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "TEXCOORD",  2, DXGI_FORMAT_R32_FLOAT,           3, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc = {};
@@ -1582,7 +1585,8 @@ D3D12_RASTERIZER_DESC Deferred_CStandard_Shader::CreateRasterizerState(int nPipe
 
 	if (nPipelineState == 1)
 	{
-		d3dRasterizerDesc.DepthBias = 500;
+		d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+		d3dRasterizerDesc.DepthBias = Shadow_DepthBias;
 		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
 	}
@@ -1836,9 +1840,10 @@ D3D12_RASTERIZER_DESC Deferred_CTerrainShader::CreateRasterizerState(int nPipeli
 
 	if (nPipelineState == 1) 
 	{
-		d3dRasterizerDesc.DepthBias = 80000;
-		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+		d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+		d3dRasterizerDesc.DepthBias = Shadow_DepthBias;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
+		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 	}
 
 	return(d3dRasterizerDesc);
@@ -2119,100 +2124,6 @@ void Deferred_CSkinnedAnimationStandardShader::OnPrepareRender(ID3D12GraphicsCom
 
 }
 
-//========================================================================================
-
-CShadowMapShader::CShadowMapShader()
-{
-}
-
-CShadowMapShader::~CShadowMapShader()
-{
-}
-
-void CShadowMapShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
-{
-	m_ngraphicsPipelineStates = 1;
-	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0);
-}
-
-D3D12_INPUT_LAYOUT_DESC CShadowMapShader::CreateInputLayout(int nPipelineState)
-{
-	UINT nInputElementDescs = 1;
-	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
-
-	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,		0, 0,		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-
-	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
-	d3dInputLayoutDesc.NumElements = nInputElementDescs;
-
-	return d3dInputLayoutDesc;
-}
-
-
-D3D12_SHADER_BYTECODE CShadowMapShader::CreateVertexShader(ID3DBlob** blob, int nPipelineState)
-{
-	return CompileShaderFromFile(L"ShadowMap.hlsl", "VS_Shadow", "vs_5_1", blob);
-}
-
-D3D12_SHADER_BYTECODE CShadowMapShader::CreatePixelShader(ID3DBlob** blob, int nPipelineState)
-{
-	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	d3dShaderByteCode.BytecodeLength = 0;
-	d3dShaderByteCode.pShaderBytecode = NULL;
-
-	return(d3dShaderByteCode);
-}
-
-D3D12_RASTERIZER_DESC CShadowMapShader::CreateRasterizerState(int nPipelineState)
-{
-	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
-	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
-
-	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
-	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
-
-	// Shadow map bias ¼³Á¤
-	d3dRasterizerDesc.DepthBias = 100000;
-	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
-	d3dRasterizerDesc.SlopeScaledDepthBias = 1.0f;
-
-	d3dRasterizerDesc.DepthClipEnable = TRUE;
-	d3dRasterizerDesc.MultisampleEnable = FALSE;
-	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
-	d3dRasterizerDesc.ForcedSampleCount = 0;
-	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
-	return d3dRasterizerDesc;
-}
-
-D3D12_DEPTH_STENCIL_DESC CShadowMapShader::CreateDepthStencilState(int nPipelineState)
-{
-	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
-	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
-
-	d3dDepthStencilDesc.DepthEnable = TRUE;
-	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-
-	d3dDepthStencilDesc.StencilEnable = FALSE;
-	d3dDepthStencilDesc.StencilReadMask = 0x00;
-	d3dDepthStencilDesc.StencilWriteMask = 0x00;
-
-	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
-
-	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
-
-	return d3dDepthStencilDesc;
-}
 
 //==================================================================
 

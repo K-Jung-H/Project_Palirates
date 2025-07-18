@@ -553,8 +553,8 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.gAlbedoColor = m_cAlbedo;
 	material_packet.light_material_ID = m_Material_ID;
 	material_packet.Blur_Mask_ID = Blur_Mask_ID;
-	material_packet.Outline_Color_ID = Outline_Color_ID;
 	material_packet.Object_Type_ID = Object_Type_ID;
+	material_packet.Outline_Color_ID = Outline_Color_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
@@ -2377,6 +2377,7 @@ void CGameObject::Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCame
 					if (pShader)
 					{
 						pShader->Setting_Render(pd3dCommandList, 2);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
 
 						m_pMesh->Render(pd3dCommandList, i);
 
@@ -3128,7 +3129,7 @@ std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Dev
 			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				std::string fileName = "Scene/Scene_File/Meshes/bin/" + std::string(pstrToken);
+				std::string fileName = "Scene/Scene_File_7/Meshes/bin/" + std::string(pstrToken);
 
 				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
 				if (sharedMesh)
@@ -4625,9 +4626,9 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 
 //=====================================================================================
 
-Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4 main_color)
 {
-	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // N = length,  N * 32
+	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, main_color, 64); // N = length,  N * 32
 	m_fAccumulatedTime = 0.0f;
 }
 
@@ -4643,8 +4644,10 @@ void Trail_Object::Animate(float fTimeElapsed)
 
 	m_fAccumulatedTime += fTimeElapsed;
 	m_fSegmentTimer += fTimeElapsed;
+
 	if (m_fSegmentTimer < m_fSegmentInterval)
 		return;
+	
 	m_fSegmentTimer = 0.0f;
 
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_pTargetObject->m_xmf4x4World);
