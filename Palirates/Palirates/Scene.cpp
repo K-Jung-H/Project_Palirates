@@ -1973,8 +1973,14 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	{
 		if (!m_pPlayer->GetTrailStart()) 
 		{
+			XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f};
+			XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
+
 			shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+			trail_obj->Set_Main_Color(test_main_color);
+			trail_obj->Set_SubColor(test_sub_color);
+
 			trail_obj->Set_Trail_Target(trail_target, false);
 			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
 			obj_manager->Add_Object(trail_obj, Object_Type::trail);
