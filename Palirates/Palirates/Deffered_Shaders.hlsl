@@ -57,7 +57,7 @@ cbuffer LightCamera_Info : register(b3)
     float2 shadow_map_size;
     float2 inv_shadow_map_size;
 
-    float CascadeSplits[NUM_CASCADES];
+    float4 CascadeSplits;
 }
 
 
@@ -107,34 +107,47 @@ float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_
     return shadowSum / count;
 }
 
+
 float CalcCSMShadowFactor(float3 worldPos, float viewZ)
 {
-    int cascadeIdx = 0;
-    [unroll]
-    for (int i = 0; i < NUM_CASCADES; ++i)
-    {
-        if (viewZ < CascadeSplits[i])
-        {
-            cascadeIdx = i;
-            break;
-        }
-    }
-    
+    int cascadeIdx = 3; // default to last cascade
+
+    if (viewZ < CascadeSplits.x)
+        cascadeIdx = 0;
+    else if (viewZ < CascadeSplits.y)
+        cascadeIdx = 1;
+    else if (viewZ < CascadeSplits.z)
+        cascadeIdx = 2;
+    else if (viewZ < CascadeSplits.w)
+        cascadeIdx = 3;
+
     float shadowFactor = 1.0f;
 
     if (shadow_pass == 1 && light_type == LIGHT_CAMERA_TYPE_DIRECTIONAL)
     {
         const float transitionRange = 0.05f;
-        float splitCurr = CascadeSplits[cascadeIdx];
+        float splitCurr = 0.0f;
+        if (cascadeIdx == 0)
+            splitCurr = CascadeSplits.x;
+        else if (cascadeIdx == 1)
+            splitCurr = CascadeSplits.y;
+        else if (cascadeIdx == 2)
+            splitCurr = CascadeSplits.z;
+        else
+            splitCurr = CascadeSplits.w;
+
         float blendWeight = 0.0f;
+        
         if (cascadeIdx > 0)
             blendWeight = saturate((viewZ - (splitCurr - transitionRange)) / transitionRange);
 
         float4 shadowCoord0 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx]);
         shadowCoord0 /= shadowCoord0.w;
-        
+
         float shadow0 = 1.0f;
-        if (shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f && shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f && shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
+        if (shadowCoord0.x >= 0.0f && shadowCoord0.x <= 1.0f &&
+            shadowCoord0.y >= 0.0f && shadowCoord0.y <= 1.0f &&
+            shadowCoord0.z >= 0.0f && shadowCoord0.z <= 1.0f)
         {
             shadow0 = SampleShadowPCF(gShadowMaps[cascadeIdx], gssShadowSampler, shadowCoord0.xy, shadowCoord0.z - shadow_bias, cascadeIdx);
         }
@@ -145,17 +158,19 @@ float CalcCSMShadowFactor(float3 worldPos, float viewZ)
             float4 shadowCoord1 = mul(float4(worldPos, 1.0f), LightViewProjTex[cascadeIdx - 1]);
             shadowCoord1 /= shadowCoord1.w;
 
-            if (shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f && shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f && shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
+            if (shadowCoord1.x >= 0.0f && shadowCoord1.x <= 1.0f &&
+                shadowCoord1.y >= 0.0f && shadowCoord1.y <= 1.0f &&
+                shadowCoord1.z >= 0.0f && shadowCoord1.z <= 1.0f)
             {
                 shadow1 = SampleShadowPCF(gShadowMaps[cascadeIdx - 1], gssShadowSampler, shadowCoord1.xy, shadowCoord1.z - shadow_bias, cascadeIdx - 1);
             }
         }
+
         shadowFactor = lerp(shadow0, shadow1, blendWeight);
     }
 
     return shadowFactor;
 }
-
 
 float4 Debug_ShadowMap(float2 uv)
 {
@@ -191,20 +206,7 @@ float4 Debug_ShadowMap(float2 uv)
     return color;
 }
 
-int FindCascadeIdx(float viewZ, float CascadeSplits[NUM_CASCADES])
-{
-    int cascadeIdx = 0;
-    [unroll]
-    for (int i = 0; i < NUM_CASCADES; ++i)
-    {
-        if (viewZ < CascadeSplits[i])
-        {
-            cascadeIdx = i;
-            break;
-        }
-    }
-    return cascadeIdx;
-}
+
 //================================================================
 
 float3 ReconstructWorldPos(float2 uv, float linearViewZ)
@@ -286,9 +288,6 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     if (isEmptyPixel && Fog_Trigger == 0)
         discard;
 
-    if (Fog_Trigger)
-        return Debug_ShadowMap(input.uv);
-    
     // ======= Lighting =======
     float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
