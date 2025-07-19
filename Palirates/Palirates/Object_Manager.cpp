@@ -1373,8 +1373,14 @@ void Object_Manager::Post_Update(Object_Type type)
 
 void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
+<<<<<<< HEAD
 	if (player_map[player_id])
 		player_map[player_id]->ApplySyncData(syncData);
+=======
+	if (player_map[player_id]) {
+		player_map[player_id]->ApplySyncData(syncData);
+	}
+>>>>>>> main
 
 }
 

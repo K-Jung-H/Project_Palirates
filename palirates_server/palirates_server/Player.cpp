@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "Player.h"
 #include "AnimationRegistry.h"
+<<<<<<< HEAD
+=======
+#include "PlayerStateMachine.h"
+>>>>>>> main
 
 Player::Player(int playerId) : Skinned_GameObject()
 {
@@ -22,6 +26,7 @@ Player::Player(int playerId) : Skinned_GameObject()
     };
 
     std::unordered_set<int> OnceType = {
+<<<<<<< HEAD
         TRACK_ATTACK1
     };
 
@@ -29,6 +34,22 @@ Player::Player(int playerId) : Skinned_GameObject()
     //SetScale(10.0f, 10.0f, 10.0f);
     //m_StateMachine = std::make_unique<FishManStateMachine>(this);
     //InitStateMachine();
+=======
+        TRACK_ATTACK1,
+		TRACK_GET_HIT_F2
+    };
+
+    for (int i = 0; i < n_Animation; ++i) {
+        if (OnceType.find(i) != OnceType.end()) {
+            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+        }
+    }
+
+    InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
+    //SetScale(10.0f, 10.0f, 10.0f);
+    m_StateMachine = std::make_unique<PlayerStateMachine>(this);
+    InitStateMachine();
+>>>>>>> main
 }
 
 void Player::key_input(uint32_t keyState)
@@ -41,10 +62,36 @@ void Player::animate(float Elapsedtime)
    
 }
 
+<<<<<<< HEAD
 //void Player::update(float deltaTime)
 //{
 //
 //}
+=======
+void Player::update(float deltaTime)
+{
+    if (m_StateMachine) {
+        // m_StateMachine->OnPrepareUpdate(deltaTime);
+        m_StateMachine->update(deltaTime);
+        //m_StateMachine->SetWeight(deltaTime);
+    }
+    auto con = GetSkinnedAnimationController();
+    if (con) {
+
+        con->AdvanceTime(deltaTime, this);
+     //   if (con->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fWeight >= 0.5)
+      //      std::cout << con->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fPosition << std::endl;
+    }
+
+    if (bIsInvincible) {
+		invincibleTimeRemaining += deltaTime;
+        if (invincibleTimeRemaining >= invincibleDuration) {
+            bIsInvincible = false;
+			invincibleTimeRemaining = 0.0f;
+        }
+    }
+}
+>>>>>>> main
 
 void Player::UpdateWorldOBB()
 {
@@ -85,11 +132,30 @@ void Player::InitAnimationController(const std::string& filepath, int animCount,
     for (int i = 0; i < n_Animation; ++i) {
         m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
         m_pSkinnedAnimationController->SetTrackEnable(i, true);
+<<<<<<< HEAD
 
+=======
+        m_pSkinnedAnimationController->SetTrackWeight(i, 0.0f);
+>>>>>>> main
         if (onceTracks.find(i) != onceTracks.end()) {
             m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
         }
     }
 
     m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetPlayerAnimationTrack(State::Idle)].m_fWeight = 1.0f;
+<<<<<<< HEAD
 }
+=======
+    //m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetPlayerAnimationTrack(State::Attack2)].m_fWeight = 1.0f;
+}
+
+void Player::InitStateMachine() {
+    if (!m_StateMachine) return;
+
+    m_StateMachine->animController = m_pSkinnedAnimationController;
+    m_StateMachine->n_Ani = n_Animation;
+
+    if (auto state = m_StateMachine->GetCurrentState())
+        state->Enter(this, m_StateMachine.get());
+}
+>>>>>>> main

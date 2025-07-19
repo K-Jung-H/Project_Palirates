@@ -1350,6 +1350,10 @@ void CGameFramework::SendPacket()
 		}
 
 		oss << "," << (sync_Data.bStateChange ? "1" : "0");
+<<<<<<< HEAD
+=======
+		oss << "," << sync_Data.changedStateNum;
+>>>>>>> main
 
 		break;
 	}
@@ -1603,7 +1607,11 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		int stateFlagIndex = trackStart + expectedTrackTokenCount;
 		if (stateFlagIndex >= tokens.size()) break;
 
+<<<<<<< HEAD
 		bool stateChanged = (tokens[stateFlagIndex] == "1");
+=======
+		bool stateChanged = (tokens[stateFlagIndex++] == "1");
+>>>>>>> main
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
@@ -1612,6 +1620,11 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
+<<<<<<< HEAD
+=======
+		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
+		syncData.changedStateNum = changedStateNum;
+>>>>>>> main
 		HandlePlayerSync(playerId, modelId, syncData);
 
 		startIndex = stateFlagIndex + 1;
@@ -1813,6 +1826,13 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
+<<<<<<< HEAD
+=======
+
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
+			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+		}
+>>>>>>> main
 		return;
 	}
 	else

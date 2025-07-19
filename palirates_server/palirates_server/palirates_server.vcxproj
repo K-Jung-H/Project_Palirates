@@ -147,6 +147,11 @@
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Monster.cpp" />
     <ClCompile Include="AnimationRegistry.cpp" />
+<<<<<<< HEAD
+=======
+    <ClCompile Include="PlayerState.cpp" />
+    <ClCompile Include="PlayerStateMachine.cpp" />
+>>>>>>> main
     <ClCompile Include="State.cpp" />
     <ClCompile Include="Object_StateMachine.cpp" />
     <ClCompile Include="Particle.cpp" />
@@ -172,6 +177,11 @@
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Monster.h" />
     <ClInclude Include="AnimationRegistry.h" />
+<<<<<<< HEAD
+=======
+    <ClInclude Include="PlayerState.h" />
+    <ClInclude Include="PlayerStateMachine.h" />
+>>>>>>> main
     <ClInclude Include="State.h" />
     <ClInclude Include="Object_StateMachine.h" />
     <ClInclude Include="Particle.h" />

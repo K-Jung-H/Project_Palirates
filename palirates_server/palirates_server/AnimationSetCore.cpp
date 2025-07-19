@@ -304,4 +304,14 @@ std::vector<Animation_Sync> CAnimationController::MakeSyncData()
 		//std::cout << "블랜딩 중" << std::endl;
 	}
 	return data;
+<<<<<<< HEAD
+=======
+}
+
+void CAnimationController::ResetWeight()
+{
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+>>>>>>> main
 }
