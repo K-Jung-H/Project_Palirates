@@ -48,10 +48,6 @@ struct ServerSyncData
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
     bool bStateChange = false;
-<<<<<<< HEAD
-=======
-    int changedStateNum = -1;
->>>>>>> main
 };
 
 class CTexture
@@ -858,12 +854,7 @@ public:
     void SetID(int id) { m_nPlayerId = id; }
     int GetID() const { return m_nPlayerId; }
 
-protected:
-    bool bCanCollide = true;
 
-public:
-    void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
-    bool CanCollide() const { return bCanCollide; }
 };
 
 //==================================================================================
@@ -1088,13 +1079,11 @@ private:
     float m_fSegmentTimer = 0.0f;
 
 public:
-    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4 main_color = {1.0f,1.0f, 1.0f, 1.0f});
+    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
     virtual ~Trail_Object();
 
     void Set_Trail_Target(shared_ptr<CGameObject> target, bool bUseScale = true) { m_pTargetObject = target;  m_bUseTargetScale = bUseScale; }
     void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom) { m_vLocalTop = top; m_vLocalBottom = bottom; }
-    void Set_Main_Color(XMFLOAT4 new_color) { if (trail_mesh) trail_mesh->Set_MainColor(new_color); }
-    void Set_SubColor(XMFLOAT4 new_color) { if (trail_mesh) trail_mesh->Set_SubColor(new_color); }
 
     virtual void Animate(float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);

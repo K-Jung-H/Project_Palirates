@@ -4626,9 +4626,9 @@ void CSkyBox::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamer
 
 //=====================================================================================
 
-Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4 main_color)
+Trail_Object::Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, main_color, 64); // N = length,  N * 32
+	trail_mesh = new Trail_Mesh(pd3dDevice, pd3dCommandList, 64); // N = length,  N * 32
 	m_fAccumulatedTime = 0.0f;
 }
 
@@ -4644,10 +4644,8 @@ void Trail_Object::Animate(float fTimeElapsed)
 
 	m_fAccumulatedTime += fTimeElapsed;
 	m_fSegmentTimer += fTimeElapsed;
-
 	if (m_fSegmentTimer < m_fSegmentInterval)
 		return;
-	
 	m_fSegmentTimer = 0.0f;
 
 	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_pTargetObject->m_xmf4x4World);

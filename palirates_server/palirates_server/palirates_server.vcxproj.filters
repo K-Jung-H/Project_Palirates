@@ -49,15 +49,6 @@
     <ClCompile Include="Timer.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-<<<<<<< HEAD
-=======
-    <ClCompile Include="PlayerState.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
-    <ClCompile Include="PlayerStateMachine.cpp">
-      <Filter>소스 파일</Filter>
-    </ClCompile>
->>>>>>> main
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AnimationSetCore.h">
@@ -117,15 +108,6 @@
     <ClInclude Include="Timer.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-<<<<<<< HEAD
-=======
-    <ClInclude Include="PlayerState.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerStateMachine.h">
-      <Filter>헤더 파일</Filter>
-    </ClInclude>
->>>>>>> main
   </ItemGroup>
   <ItemGroup>
     <Filter Include="헤더 파일">

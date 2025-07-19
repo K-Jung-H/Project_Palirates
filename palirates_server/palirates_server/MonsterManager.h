@@ -1,0 +1,19 @@
+#pragma once
+#include "Monster.h"
+#include <unordered_map>
+#include <vector>
+
+class MonsterManager
+{
+private:
+    std::unordered_map<int, Monster> monster_map;
+    mutable std::mutex monsterMutex;
+    
+public:
+    //MonsterManager();
+    //void SpawnMonster(int id, float x, float y, float z, int hp);
+    //void UpdateMonster(int id, float x, float y, float z, int hp, int state);
+    //std::vector<std::string> GetAllMonsterData();
+    void UpdateAI(float deltaTime);
+    std::mutex& GetMonsterMutex() const { return monsterMutex; }
+};

@@ -32,13 +32,6 @@ protected:
     std::shared_ptr <BoundingOrientedBox> m_OBB = NULL;
 
     bool bActive = true;
-<<<<<<< HEAD
-=======
-    bool bCanCollide = true;
-    bool bIsInvincible = false;
-    float invincibleTimeRemaining = 0.0f;
-    float invincibleDuration = 2.0f;
->>>>>>> main
 
 public:
     XMFLOAT4X4            m_xmf4x4Parent{};
@@ -48,10 +41,6 @@ public:
     std::shared_ptr<CStandardMesh> m_pMesh = NULL;
     std::shared_ptr<GameObject> m_pRootModel = NULL;
 
-<<<<<<< HEAD
-=======
-    XMMATRIX WeaponCustomRotation = XMMatrixIdentity();
->>>>>>> main
 public:
     GameObject()
         : obj_type(Object_Type::etc)
@@ -133,15 +122,6 @@ public:
 
     void Set_Active(bool active) { bActive = active; }
     bool Get_Active() const { return bActive; }
-<<<<<<< HEAD
-=======
-
-    void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
-    bool CanCollide() const { return bCanCollide; }
-
-    void SetIsInvincible(bool IsInvincible) { bIsInvincible = IsInvincible; }
-    bool IsInvincible() const { return bIsInvincible; }
->>>>>>> main
 };
 
 
@@ -177,11 +157,7 @@ public:
     void SetAnimationSyncData(const ServerSyncData& data) { animation_sync_data = data; }
     void SetTrackInfoList(const std::vector<Animation_Sync>& list) { animation_sync_data.track_info_list = list; }
     void SetStateChanged(bool changed) { animation_sync_data.stateChanged = changed; }
-<<<<<<< HEAD
 
-=======
-    void SetStateChangeNum(int stateNum) { animation_sync_data.changedStateNum = stateNum; }
->>>>>>> main
 
     const ServerSyncData& GetAnimationSyncData() const { return animation_sync_data; }
     const std::vector<Animation_Sync>& GetTrackInfoList() const { return animation_sync_data.track_info_list; }
@@ -207,9 +183,4 @@ public:
     void SetupWeaponCollider();
 
     virtual void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) = 0;
-<<<<<<< HEAD
-=======
-
-    //virtual Get_Collider_OBB
->>>>>>> main
 };

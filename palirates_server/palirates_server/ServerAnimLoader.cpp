@@ -123,17 +123,6 @@ void CStandardMesh::LoadMeshFromFile(FILE* pInFile)
 	}
 }
 
-<<<<<<< HEAD
-=======
-void CSkinnedMesh::PrepareSkinning(std::shared_ptr<GameObject> pModelRootObject)
-{
-	for (int j = 0; j < m_nSkinningBones; j++)
-	{
-		m_ppSkinningBoneFrameCaches[j] = pModelRootObject->FindFrame(m_ppstrSkinningBoneNames[j]).get();
-	}
-}
-
->>>>>>> main
 void CSkinnedMesh::LoadSkinInfoFromFile(FILE* pInFile)
 {
 	char pstrToken[64] = { '\0' };
@@ -163,12 +152,6 @@ void CSkinnedMesh::LoadSkinInfoFromFile(FILE* pInFile)
 				m_ppstrSkinningBoneNames = new char[m_nSkinningBones][64];
 				//				m_ppSkinningBoneFrameCaches = new CGameObject*[m_nSkinningBones];
 				m_ppSkinningBoneFrameCaches.resize(m_nSkinningBones);
-<<<<<<< HEAD
-=======
-				/*if (strcmp(*m_ppstrSkinningBoneNames,"spear_lp")==1) {
-					std::cout << "spear extents : " << m_xmf3AABBExtents.x << ", " << m_xmf3AABBExtents.y << ", " << m_xmf3AABBExtents.z << "\n";
-				}*/
->>>>>>> main
 				for (int i = 0; i < m_nSkinningBones; i++)
 				{
 					::ReadStringFromFile(pInFile, m_ppstrSkinningBoneNames[i]);
