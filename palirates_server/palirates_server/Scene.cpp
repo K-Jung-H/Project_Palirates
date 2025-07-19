@@ -250,13 +250,7 @@ Scene_Type Board_Scene::CheckSceneTransition()
 
     if (Change_Scene_Trigger)
     {
-        if (selected_stage_index == 0)        return Scene_Type::Stage_1;
-        else if (selected_stage_index == 1)        return Scene_Type::Stage_2;
-        else if (selected_stage_index == 2)        return Scene_Type::Stage_3;
-        else if (selected_stage_index == 3)        return Scene_Type::Stage_4;
-        else if (selected_stage_index == 4)        return Scene_Type::Stage_5;
-        else if (selected_stage_index == 5)        return Scene_Type::Stage_6;
-        else if (selected_stage_index == 6)        return Scene_Type::Stage_7;
+        return Scene_Type::Stage_1;
     }
 
     return Scene_Type::None;
@@ -306,18 +300,11 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 
 //======================================================
 
-Stage_Scene::Stage_Scene(Scene_Type stage_type) : Scene (stage_type)
+Stage_Scene::Stage_Scene() : Scene (Stage_1)
 {
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
-    if(stage_type == Stage_1)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-    else if (stage_type == Stage_2)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-    else if (stage_type == Stage_3)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-    else if (stage_type == Stage_4)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-    else if (stage_type == Stage_5)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-    else if (stage_type == Stage_6)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-    else if (stage_type == Stage_7)        scene = GameObject::Load_Scene("Scene/Scene_File_7/Scene_Name.bin");
-
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
     game_world.Load_Scene_Data(scene);
     Init();
 }
