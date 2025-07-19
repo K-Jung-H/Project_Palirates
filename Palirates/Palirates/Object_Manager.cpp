@@ -1395,7 +1395,6 @@ void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 			}
 		}
 		else {
-			std::cout << syncData.changedStateNum << "\n";
 			player_map[player_id]->bTrailOff();
 			player_map[player_id]->GetTrailObj()->Set_Active(false);
 		}

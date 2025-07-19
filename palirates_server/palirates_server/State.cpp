@@ -67,8 +67,8 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
         sm->ChangeState(std::make_unique<AttackState>());
     }
     //monster->Move();
-    if (monster->GetID() == 0)
-        std::cout << sm->animController->HipsPosition.x << ", " << sm->animController->HipsPosition.y << ", " << sm->animController->HipsPosition.z << "\n";
+    //if (monster->GetID() == 0)
+        //std::cout << sm->animController->HipsPosition.x << ", " << sm->animController->HipsPosition.y << ", " << sm->animController->HipsPosition.z << "\n";
     monster->stateElapsedTime += deltaTime;
     if (monster->stateElapsedTime > 3.0f) {
         monster->stateElapsedTime = 0.0f;

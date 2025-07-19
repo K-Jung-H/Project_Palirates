@@ -1818,7 +1818,8 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			m_pPlayer->SetPosition(syncData.position);
 
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
-			m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			if (!m_pPlayer->bIsInvincible)
+				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 		}
 		return;
 	}
