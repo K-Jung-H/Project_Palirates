@@ -657,7 +657,7 @@ std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::s
 			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				std::string fileName = "Scene/Scene_File_7/Meshes/" + std::string(pstrToken);
+				std::string fileName = "Scene/Scene_File_7/Meshes/bin/" + std::string(pstrToken);
 				pGameObject->Set_Name(pstrToken);
 
 				auto mesh = MeshManager::GetMesh(fileName);
