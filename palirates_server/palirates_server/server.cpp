@@ -206,6 +206,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
                 HandleStage1Packet(clientId, command, tokens);
                 break;
             case Scene_Type::Stage_2:
+                HandleStage1Packet(clientId, command, tokens);
                 break;
             default:
                 std::cerr << "[ERROR] Unknown scene type received: " << sceneTypeInt << std::endl;
@@ -276,7 +277,7 @@ void Server::HandlePacket(int clientId, const std::string& packet)
         HandleStage1Packet(clientId, command, tokens);
         break;
     case Scene_Type::Stage_2:
-        // 필요시 추가
+        HandleStage1Packet(clientId, command, tokens);
         break;
     default:
         std::cerr << "[ERROR] Unknown scene type received: " << sceneTypeInt << std::endl;

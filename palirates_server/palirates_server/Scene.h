@@ -98,6 +98,9 @@ public:
 
 class Stage_Scene : public Scene
 {
+protected:
+    Scene_Type current_type;
+
 private:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
@@ -105,6 +108,7 @@ private:
 
 public:
     Stage_Scene();
+    Stage_Scene(Scene_Type type);
     virtual void Init();
 
     virtual void Update_Scene(float elapsedTime);
