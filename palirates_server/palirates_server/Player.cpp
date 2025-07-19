@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Player.h"
+#include "AnimationRegistry.h"
 
 Player::Player(int playerId) : Skinned_GameObject()
 {
@@ -13,6 +14,21 @@ Player::Player(int playerId) : Skinned_GameObject()
     );
 
     m_worldOBB = std::make_shared<BoundingOrientedBox>();
+
+    //type = Monster_Type::ETC;
+    SetType(Object_Type::player);
+    WeaponName = "SM_Wep_Cutlass_01";
+    RootMotionTrackSet = {
+    };
+
+    std::unordered_set<int> OnceType = {
+        TRACK_ATTACK1
+    };
+
+    InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
+    //SetScale(10.0f, 10.0f, 10.0f);
+    //m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    //InitStateMachine();
 }
 
 void Player::key_input(uint32_t keyState)
@@ -25,10 +41,10 @@ void Player::animate(float Elapsedtime)
    
 }
 
-void Player::update()
-{
-
-}
+//void Player::update(float deltaTime)
+//{
+//
+//}
 
 void Player::UpdateWorldOBB()
 {
@@ -50,4 +66,30 @@ void Player::Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter)
 
     SetPosition(newPos);
     UpdateWorldOBB(); 
+}
+
+void Player::InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks)
+{
+    auto asset = GameObject::LoadGeometryAndAnimationFromFile(filepath.data());
+    if (!asset || !asset->m_pAnimationSets) return;
+    m_pRootModel = asset->m_pModelRootObject;
+    n_Animation = animCount;
+    RootIndex = rootIdx;
+
+    prevWeights.assign(n_Animation, 0.0f);
+    targetWeights.assign(n_Animation, 0.0f);
+
+    m_pSkinnedAnimationController = std::make_shared<CAnimationController>(n_Animation, asset);
+    m_pSkinnedAnimationController->RootIndex = RootIndex;
+
+    for (int i = 0; i < n_Animation; ++i) {
+        m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+        m_pSkinnedAnimationController->SetTrackEnable(i, true);
+
+        if (onceTracks.find(i) != onceTracks.end()) {
+            m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+        }
+    }
+
+    m_pSkinnedAnimationController->m_pAnimationTracks[AnimationRegistry::GetPlayerAnimationTrack(State::Idle)].m_fWeight = 1.0f;
 }

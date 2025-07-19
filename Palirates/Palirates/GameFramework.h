@@ -148,6 +148,10 @@ private:
     ID3D12Resource* ptr_RTV_Buffer_List[RTV_Format_Num];
     D3D12_CPU_DESCRIPTOR_HANDLE      RTV_Buffer_CPUHandle_list[RTV_Format_Num];
 
+    
+    ID3D12DescriptorHeap* m_pd3dPlayerRTVHeap = NULL;
+    D3D12_CPU_DESCRIPTOR_HANDLE      m_d3dPlayerRTVHandle;
+
     //=======================================================
     // DSV
     ID3D12Resource* m_pd3dDepthStencilBuffer = NULL;
@@ -206,7 +210,8 @@ public:
     Scene_Manager* scene_manager = NULL;
     Post_Effect_Manager* post_effect_manager = NULL;
 
-    PostProcessBaseShader* MRT_shader = NULL;
+    shared_ptr<PostProcessBaseShader> X_Ray_Shader = NULL;
+    shared_ptr<PostProcessBaseShader> MRT_shader = NULL;
 
     std::shared_ptr<CPlayer> m_pPlayer = NULL;
 
@@ -268,11 +273,13 @@ public:
     void ProcessReceivedData_Board(shared_ptr<Board_Scene> board_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
 
+    
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;
-    double m_ServerTime = 0;
+
     //=================SERVER=================
 
 };

@@ -440,11 +440,13 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 		return std::clamp(result, 0.0f, 1.0f); 
 		};
 
+	UINT particle_Type = static_cast<UINT>(particle_format.particle_type);
+
 	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
 	{
 		particle_info[i].Active = 0;
-		particle_info[i].Type = particle_format.particle_type;
+		particle_info[i].Type = particle_Type;
 
 		particle_info[i].MaxLifetime = particle_format.MaxLifetime;
 		particle_info[i].Lifetime = 0.0f;
@@ -601,7 +603,6 @@ void Particle::Reset_Debug_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
 
 //==============================================================================
 
-
 ParticleObject::ParticleObject() : CGameObject(1)
 {
 	m_pMesh = NULL;
@@ -748,6 +749,14 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 		shape_mesh->Instancing_Render(pd3dCommandList, Particle_Instancing_BufferView, instance_num); 
 }
 
+void ParticleObject::Update_Particle_State()
+{
+	if (shader_type == Particle_Shader_Type::sand)
+	{
+		Particle_State_Func_Index += 1;
+		Particle_State_Func_Index %= 3;
+	}
+}
 
 CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElapsed, bool is_emit_stage)
 {

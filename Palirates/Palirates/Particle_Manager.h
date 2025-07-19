@@ -56,7 +56,7 @@ public:
 
 };
 
-class Spread_ParticleShader : public ParticleShader
+class Continuous_ParticleShader : public ParticleShader
 {
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
@@ -89,7 +89,7 @@ class Particle_Manager
 {
 private:
 	static bool is_cs_shader_compiled;
-	static 	std::unordered_map<Particle_Type, ParticleShader*> particle_shader_map;
+	static 	std::unordered_map<Particle_Shader_Type, ParticleShader*> particle_shader_map;
 
 	unique_ptr<Grid_Builder> grid_builder;
 
@@ -101,10 +101,13 @@ private:
 	static constexpr UINT THREAD_COUNT = 64;
 	static constexpr UINT MAX_OBBS = 5000;
 
-	std::vector<std::shared_ptr<ParticleObject>> destroy_queue;
+	std::vector<std::shared_ptr<ParticleObject>> destroy_resource_queue;
+
+	std::unordered_map<Particle_Shader_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
 
 public:
-	std::unordered_map<Particle_Type, std::vector<std::shared_ptr<ParticleObject>>> particle_object_list_map;
+
+
 	Particle_Manager();
 	~Particle_Manager();
 	void Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
@@ -126,10 +129,10 @@ public:
 	void Update_and_Extract_Instance_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 
 
-	void Sync_AfterAnimate(Particle_Type type);
+	void Sync_AfterAnimate(Particle_Shader_Type type);
 	void Sync_AfterAnimateObjects();
 
-	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Particle_Type type);
+	void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Particle_Shader_Type type);
 	void Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 
@@ -144,8 +147,25 @@ public:
 	void Clear_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 	void Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommandList);
 
-	void Queue_Destroy(std::shared_ptr<ParticleObject> obj) { destroy_queue.push_back(obj); }
-	void Process_Destroy_Queue();
+	void Queue_Destroy(std::shared_ptr<ParticleObject> obj) { destroy_resource_queue.push_back(obj); }
+	void Destroy_Particle_Resource();
+
+protected:
+	std::unordered_map<UINT, std::shared_ptr<ParticleObject>> particle_id_map;
+
+	std::queue<Particle_Sync_Data> createQueue;
+	std::queue<Particle_Sync_Data> updateQueue;
+	std::queue<UINT> deleteQueue;
+
+public:
+	void Enqueue_Create(const Particle_Sync_Data& syncData);
+	void Enqueue_Update(const Particle_Sync_Data& syncData);
+	void Enqueue_Delete(UINT id);
+	void Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+
+	void Create_Particles_From_Queue(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void Remove_Particles_From_Queue();
+
 };
 
 //==============================================================================

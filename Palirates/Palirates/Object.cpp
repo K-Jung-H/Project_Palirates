@@ -553,8 +553,8 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
 	material_packet.gAlbedoColor = m_cAlbedo;
 	material_packet.light_material_ID = m_Material_ID;
 	material_packet.Blur_Mask_ID = Blur_Mask_ID;
-	material_packet.Outline_Color_ID = Outline_Color_ID;
 	material_packet.Object_Type_ID = Object_Type_ID;
+	material_packet.Outline_Color_ID = Outline_Color_ID;
 
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 8, &material_packet, 16); // 16~23
 	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX, 1, &m_nType, 24);       // 24
@@ -2357,6 +2357,46 @@ void CGameObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 
 }
 
+void CGameObject::Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (m_pSkinnedAnimationController)
+		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+
+	if (Active && m_pMesh)
+	{
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		if (Material_list.size())
+		{
+			int i = 0;
+			for (std::shared_ptr<CMaterial> material_ptr : Material_list)
+			{
+				if (material_ptr)
+				{
+					CShader* pShader = material_ptr->m_pShader;
+					if (pShader)
+					{
+						pShader->Setting_Render(pd3dCommandList, 2);
+						material_ptr->UpdateShaderVariable(pd3dCommandList);
+
+						m_pMesh->Render(pd3dCommandList, i);
+
+					}
+				}
+			}
+		}
+	}
+
+	if (m_pSibling)
+		m_pSibling->Render_Depth(pd3dCommandList, pCamera);
+
+
+	if (m_pChild)
+		m_pChild->Render_Depth(pd3dCommandList, pCamera);
+
+}
+
+
 void CGameObject::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 }
@@ -3089,7 +3129,7 @@ std::shared_ptr<CGameObject> CGameObject::Load_Scene_HierarchyFromFile(ID3D12Dev
 			if (!strcmp(pstrToken, "<Mesh_Name>:"))
 			{
 				::ReadStringFromFile(pInFile, pstrToken);
-				std::string fileName = "Scene/Scene_File/11/bin/" + std::string(pstrToken);
+				std::string fileName = "Scene/Scene_File_7/Meshes/bin/" + std::string(pstrToken);
 
 				std::shared_ptr<CMesh> sharedMesh = CGameObject::LoadMeshWithCache(fileName, pd3dDevice, pd3dCommandList);
 				if (sharedMesh)
@@ -4754,6 +4794,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	}
 
 	controller->ApplyCurrentAnimationPose(this);
+	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////

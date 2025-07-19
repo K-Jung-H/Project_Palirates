@@ -974,8 +974,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #ifdef RENDER_PARTICLE
 	Particle_Format test_dragon_fire_info;
 	{
-		test_dragon_fire_info.shader_type = Particle_Type::loop;
-		test_dragon_fire_info.particle_type = 5;
+		test_dragon_fire_info.shader_type = Particle_Shader_Type::continuous;
+		test_dragon_fire_info.particle_type = Particle_Type::dragon_breath;
 		test_dragon_fire_info.max_particles = 3000;
 		test_dragon_fire_info.MaxLifetime = 1.0f;
 
@@ -994,13 +994,13 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format test_sand_storm_info;
 	{
-		test_sand_storm_info.shader_type = Particle_Type::sand;
-		test_sand_storm_info.particle_type = 3;
+		test_sand_storm_info.shader_type = Particle_Shader_Type::sand;
+		test_sand_storm_info.particle_type = Particle_Type::sand;
 		test_sand_storm_info.max_particles = 10000;
 		test_sand_storm_info.MaxLifetime = 10.0f;
 
 		test_sand_storm_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
-		test_sand_storm_info.EmitFaceIndex = 5;
+		test_sand_storm_info.EmitFaceIndex = FACE_FRONT;
 
 		test_sand_storm_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
 		test_sand_storm_info.init_velocity_value = 100.0f;
@@ -1012,8 +1012,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 	Particle_Format bleeding_info;
 	{
-		bleeding_info.shader_type = Particle_Type::interval;
-		bleeding_info.particle_type = 6;
+		bleeding_info.shader_type = Particle_Shader_Type::interval;
+		bleeding_info.particle_type = Particle_Type::bleed;
 		bleeding_info.max_particles = 30;
 		bleeding_info.MaxLifetime = 3.0f;
 
@@ -1124,12 +1124,12 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #ifdef LOAD_SCENE
 
 
-		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_5/Scene_Name.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map1.bin", NULL);
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 		test_scene->Set_Name("test_scene");
 		test_scene = Test_Scene_Model->m_pModelRootObject;
-		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 210.0f , 800.0f);
+		test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 213.0f , 800.0f);
 		test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 		obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
@@ -1137,7 +1137,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 		Object_Manager::Reserve_Update();
 		Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
-
+		
 #ifdef USING_OBB
 		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
 		obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
@@ -1146,7 +1146,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
@@ -1748,10 +1748,10 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand == NULL)
 				break;
 
-			test_sand->Update_Func_Index +=1;
-			test_sand->Update_Func_Index %= 3;
+			test_sand->Update_Particle_State();;
+			test_sand->Update_Particle_State();
 
-			if (test_sand->Update_Func_Index == 0)
+			if (test_sand->Get_Particle_State() == 0)
 			{
 				test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 				test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
@@ -1759,7 +1759,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 				test_sand->Set_Speed(0.0f);
 				test_sand->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
 			}
-			else if (test_sand->Update_Func_Index == 1 || test_sand->Update_Func_Index == 2)
+			else if (test_sand->Get_Particle_State() == 1 || test_sand->Get_Particle_State() == 2)
 			{
 				auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 				if (mon)
@@ -1777,7 +1777,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 							test_sand->Set_Focus_Point(anubisPos);
 							test_sand->Set_Speed(0.0f);
 
-							if (test_sand->Update_Func_Index == 2)
+							if (test_sand->Get_Particle_State())
 							{
 								anu->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
 								XMFLOAT3 pos = anubisPos;
@@ -1790,8 +1790,8 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 								test_sand->Set_Speed(100.0f);
 								test_sand->Set_Direction(dir);
 							}
-
 							break; 
+
 						}
 					}
 				}
@@ -1958,11 +1958,12 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 //	obj_manager->Check_Player_Collision(m_pPlayer);
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
+
 #endif
 
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
-
-
+	//obj_manager->Check_Player_Collision(m_pPlayer);
+	
 	if (m_pPlayer->GetTrailOn())
 	{
 		if (!m_pPlayer->GetTrailStart()) 
@@ -1986,7 +1987,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 
 
 
-	if (test_sand && test_sand->Update_Func_Index == 1)
+	if (test_sand && test_sand->Get_Particle_State() == 1)
 	{
 		auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 		if (mon)
@@ -2041,8 +2042,17 @@ void CScene::After_Update_Objects()
 
 }
 
+void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_MRT_GraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
-void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList)
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+
+	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get());	
+}
+
+void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
@@ -2061,6 +2071,7 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandLis
 		}
 	}
 
+	obj_manager->Prepare_ShadowMap_Render(pd3dDevice, pd3dCommandList);
 
 }
 
@@ -2069,10 +2080,11 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	if (!shadow_camera || shadow_camera->update_shadow == false)
 		return;
 
+	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
+
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
-
-	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
 
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
@@ -2089,12 +2101,14 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+
+
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	main_Camera.get()->Update_Last_Frame_Info(pd3dCommandList);
-
 
 	// Light Update
 	UpdateShaderVariables(pd3dCommandList);
@@ -2246,6 +2260,8 @@ void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		}
 	}
 	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
+	if (monsterID == 50331651) std::cout << "testplayer spawn" << std::endl;
+
 }
 
 void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
@@ -2255,7 +2271,7 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		return;
 
 	int mType = GET_MONSTER_TYPE(id);
-	std::shared_ptr<CMonsterObject> m;
+	std::shared_ptr<CGameObject> m;
 
 	if (mType == static_cast<int>(Monster_Type::Fishman)) {
 		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
@@ -2265,6 +2281,11 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::ETC)) {
+		m = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		m->type = EObjectType::Monster;
+		m->SetScale(10.0f, 10.0f, 10.0f);
 	}
 	else {
 		return;
@@ -2305,6 +2326,25 @@ void CScene::DespawnMonster(int id)
 
 	plist->pop_back();
 	mMap.erase(it);
+}
+
+void CScene::Create_Particle_Object(const Particle_Sync_Data& syncData)
+{
+	if (particle_manager)
+		particle_manager->Enqueue_Create(syncData);
+
+}
+
+void CScene::Update_Particle_Object(const Particle_Sync_Data& syncData)
+{
+	if (particle_manager)
+		particle_manager->Enqueue_Update(syncData);
+}
+
+void CScene::Remove_Particle_Object(UINT p_obj_id)
+{
+	if (particle_manager)
+		particle_manager->Enqueue_Delete(p_obj_id);
 }
 
 //==========================================================================================
@@ -2519,7 +2559,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 	UpdatePlayerSelection();
 }
 
@@ -3059,8 +3099,8 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	Particle_Shape_Mesh* cube_shape_mesh = new Cube_Shape_Mesh(pd3dDevice, pd3dCommandList, 2.0f);
 	Particle_Format water_splashes_info;
 	{
-		water_splashes_info.shader_type = Particle_Type::loop;
-		water_splashes_info.particle_type = 2;
+		water_splashes_info.shader_type = Particle_Shader_Type::continuous;
+		water_splashes_info.particle_type = Particle_Type::splash;
 		water_splashes_info.max_particles = 300;
 
 		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);
@@ -3158,7 +3198,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
 
-	obj_manager->Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -3680,7 +3720,7 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif

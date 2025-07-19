@@ -31,6 +31,8 @@ using namespace std;
 
 #define ANIMATION_CALLBACK_EPSILON		0.00165f
 
+#define MaxPlayer 6
+
 enum Scene_Type
 {
 	Lobby,

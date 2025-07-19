@@ -1,0 +1,34 @@
+#pragma once
+
+#include <memory>
+#include "StateEnum.h"
+
+class Monster;
+class MonsterStateMachine;
+
+class MonsterState {
+public:
+    virtual ~MonsterState() = default;
+
+    virtual void Enter(Monster* monster, MonsterStateMachine* sm) = 0;
+    virtual void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) = 0;
+    virtual void Exit(Monster* monster) = 0;
+
+    virtual State GetStateEnum() const = 0;
+};
+
+class IdleState : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Idle; }
+};
+
+class AttackState : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Attack1; }
+};

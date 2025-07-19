@@ -38,22 +38,78 @@ Server::~Server()
 
 void Server::Start()
 {
-    std::thread(&Server::AcceptClients, this).detach();
-    std::thread(&Server::Server_Update, this).detach();
 
-    std::thread([this]() {
-        while (true) {
-            std::this_thread::sleep_for(std::chrono::seconds(5));
-            CleanupInactiveClients();
+    std::thread([this]()
+        {
+        try
+        {
+            AcceptClients();
+        }
+        catch (const std::exception& e) 
+        {
+            std::cerr << "[AcceptClients Thread EXCEPTION] " << e.what() << std::endl;
+        }
+        catch (...) 
+        {
+            std::cerr << "[AcceptClients Thread UNKNOWN EXCEPTION]" << std::endl;
         }
         }).detach();
 
-    //std::thread([this]() {
-    //    while (true) {
-    //        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    //        PrintClientDebugInfo();
-    //    }
-    //    }).detach();
+
+        std::thread([this]()
+            {
+            try
+            {
+                Server_Update();
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "[Server_Update Thread EXCEPTION] " << e.what() << std::endl;
+            }
+            catch (...)
+            {
+                std::cerr << "[Server_Update Thread UNKNOWN EXCEPTION]" << std::endl;
+            }
+            }).detach();
+
+            std::thread([this]() 
+                {
+                try {
+                    while (true) 
+                    {
+                        std::this_thread::sleep_for(std::chrono::seconds(5));
+                        CleanupInactiveClients();
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "[CleanupInactiveClients Thread EXCEPTION] " << e.what() << std::endl;
+                }
+                catch (...) 
+                {
+                    std::cerr << "[CleanupInactiveClients Thread UNKNOWN EXCEPTION]" << std::endl;
+                }
+                }).detach();
+
+                //std::thread([this]()
+                //  {
+                //    try
+                //  {
+                //        while (true)
+                //  {
+                //            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                //            PrintClientDebugInfo();
+                //        }
+                //    }
+                //    catch (const std::exception& e)
+                //  {
+                //        std::cerr << "[PrintClientDebugInfo Thread EXCEPTION] " << e.what() << std::endl;
+                //    }
+                //    catch (...)
+                //  {
+                //        std::cerr << "[PrintClientDebugInfo Thread UNKNOWN EXCEPTION]" << std::endl;
+                //    }
+                //}).detach();
 }
 
 
@@ -648,8 +704,8 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
 
             const auto& anim_data = player_ptr->GetAnimationSyncData();
             const auto& track_list = anim_data.track_info_list;
-            bool state_changed = anim_data.stateChanged;
-
+            bool state_changed = anim_data.stateChanged || player_ptr->need_to_client_sync;
+            
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
@@ -672,6 +728,8 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         player_data_str.pop_back(); 
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
+
+    //===================================================================
 
     const auto& monster_list = stage->GetMonsterList(); 
 
@@ -711,8 +769,90 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
         }
         oss << "\n";
     }
+  
+    //===================================================================
 
-	//std::cout << "oss size : " << oss.str().size() << std::endl;
+    const auto& particle_sync_data = stage->Get_Particle_Sync_Data();
+
+    if (!particle_sync_data.created.empty())
+    {
+        std::ostringstream temp_p_create;
+        temp_p_create << "PARTICLE_CREATE," << std::to_string(particle_sync_data.created.size()) << ",";
+
+        for (const auto& obj : particle_sync_data.created)
+        {
+            UINT id = obj->Get_Particle_ID();
+            XMFLOAT3 pos = obj->GetPosition();
+            XMFLOAT3 look = obj->GetLook();
+            Particle_Format fmt = obj->Get_Format();
+            UINT type = static_cast<int>(fmt.particle_type);
+
+            XMFLOAT3 area = fmt.area_xyz;
+            XMFLOAT3 dir = fmt.main_direction;
+            float life = fmt.lifetime;
+
+            temp_p_create << std::to_string(id) << ","
+                << std::to_string(type) << ","
+                << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
+                << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
+                << std::to_string(life) << ",";
+        }
+
+        std::string line = temp_p_create.str();
+        if (!line.empty() && line.back() == ',') line.pop_back();
+
+        oss << line << "\n";
+    }
+
+    // ────────────────────────────────
+    if (!particle_sync_data.pos_updated.empty())
+    {
+        std::ostringstream temp_p_update;
+        temp_p_update << "PARTICLE_UPDATE," << std::to_string(particle_sync_data.pos_updated.size()) << ",";
+
+        for (const auto& obj : particle_sync_data.pos_updated)
+        {
+            UINT id = obj->Get_Particle_ID();
+            XMFLOAT3 pos = obj->GetPosition();
+            XMFLOAT3 look = obj->GetLook();
+            Particle_Format fmt = obj->Get_Format();
+            UINT type = static_cast<int>(fmt.particle_type);
+
+            XMFLOAT3 area = fmt.area_xyz;
+            XMFLOAT3 dir = fmt.main_direction;
+            float life = obj->Get_LifeTime();
+
+            temp_p_update << std::to_string(id) << ","
+                << std::to_string(type) << ","
+                << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
+                << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
+                << std::to_string(life) << ",";
+        }
+        std::string line = temp_p_update.str();
+        if (!line.empty() && line.back() == ',') line.pop_back();
+
+        oss << line << "\n";
+    }
+
+    // ────────────────────────────────
+    if (!particle_sync_data.removed.empty())
+    {
+        std::ostringstream temp_p_remove;
+        temp_p_remove << "PARTICLE_REMOVE," << std::to_string(particle_sync_data.removed.size()) << ",";
+
+        for (UINT id : particle_sync_data.removed)
+            temp_p_remove << std::to_string(id) << ",";
+
+        std::string line = temp_p_remove.str();
+        if (!line.empty() && line.back() == ',') line.pop_back();
+
+        oss << line << "\n";
+    }
+
     return oss.str();
 }
 
@@ -729,26 +869,15 @@ std::string Server::Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene
 }
 
 
-void Server::BroadcastServerTime()
-{
-    double now = m_gameTimer.GetTotalTime();
-
-    std::string packet = "SERVER_TIME," + std::to_string(now) + "\n";
-
-    BroadcastPacket(packet);
-}
-
 
 void Server::Server_Update()
 {
     m_gameTimer.Reset();
-    float FPS = 300.0f;
-    float time_accum = 0.0f;
+    float FPS = 150.0f;
     while (true)
     {
         m_gameTimer.Tick(FPS);
         float elapsedTime = m_gameTimer.GetTimeElapsed();
-        time_accum += elapsedTime;
 
         Scene::active_client_num = activeClientCount;
         Check_Connected_Player();
@@ -774,13 +903,6 @@ void Server::Server_Update()
         }
 
         PrintClientDebugInfo();
-
-
-        if (time_accum > 5.0f)
-        {
-            BroadcastServerTime();
-            time_accum = 0.0f;
-        }
     }
 
     

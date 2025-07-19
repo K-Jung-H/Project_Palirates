@@ -106,8 +106,6 @@ private:
     std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
     std::string Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
 
-    void BroadcastServerTime();
-
     void HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);

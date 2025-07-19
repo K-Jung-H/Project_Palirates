@@ -438,12 +438,12 @@ void ParticleShader::Dispatch(ID3D12GraphicsCommandList* pd3dCommandList, UINT c
 
 //------------------------------------------------------------------------------------------------
 
-D3D12_SHADER_BYTECODE Spread_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE Continuous_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 1)
-		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Spread_CS", "cs_5_1", ppd3dShaderBlob);
+		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Continuous_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
 
@@ -503,7 +503,7 @@ D3D12_SHADER_BYTECODE Interval_ParticleShader::CreateComputeShader(ID3DBlob** pp
 
 //===================================================================
  bool Particle_Manager::is_cs_shader_compiled = false;
- std::unordered_map<Particle_Type, ParticleShader*>Particle_Manager::particle_shader_map;
+ std::unordered_map<Particle_Shader_Type, ParticleShader*>Particle_Manager::particle_shader_map;
 
 Particle_Manager::Particle_Manager()
 {
@@ -527,8 +527,8 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 
 	Particle_Format bleeding_info;
 	{
-		bleeding_info.shader_type = Particle_Type::interval;
-		bleeding_info.particle_type = 6;
+		bleeding_info.shader_type = Particle_Shader_Type::interval;
+		bleeding_info.particle_type = Particle_Type::bleed;
 		bleeding_info.max_particles = 30;
 		bleeding_info.MaxLifetime = 3.0f;
 
@@ -553,8 +553,8 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 
 void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	ParticleShader* loop_shader = new Spread_ParticleShader();
-	loop_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	ParticleShader* continuous_shader = new Continuous_ParticleShader();
+	continuous_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
 	ParticleShader* sand_shader = new Sand_ParticleShader();
 	sand_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
@@ -563,12 +563,9 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	interval_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 	//===================================================================
 
-	particle_shader_map[Particle_Type::loop] = loop_shader;
-	particle_shader_map[Particle_Type::interval] = interval_shader;
-	particle_shader_map[Particle_Type::sand] = sand_shader;
-
-	particle_shader_map[Particle_Type::sample_1] = NULL;
-	particle_shader_map[Particle_Type::sample_2] = NULL;
+	particle_shader_map[Particle_Shader_Type::continuous] = continuous_shader;
+	particle_shader_map[Particle_Shader_Type::interval] = interval_shader;
+	particle_shader_map[Particle_Shader_Type::sand] = sand_shader;
 }
 
 void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -652,9 +649,7 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 {
 	std::shared_ptr<ParticleObject> new_particle_obj = nullptr;
 
-	static int Particle_ID = 0;
-
-	if (particle_info.shader_type == Particle_Type::interval)
+	if (particle_info.shader_type == Particle_Shader_Type::interval)
 	{
 		std::shared_ptr<ParticleObject> recycled_particle = Recycle_Particle(particle_shape_mesh, particle_info);
 		if (recycled_particle != nullptr)
@@ -671,12 +666,12 @@ std::shared_ptr<ParticleObject> Particle_Manager::Add_Particle(ID3D12Device* pd3
 	new_particle_obj->Set_OwnerManager(this);
 	new_particle_obj->Set_Shape(particle_shape_mesh);
 	new_particle_obj->Init_Info(particle_info);
-	new_particle_obj->Set_Name(std::to_string(Particle_ID));
 	new_particle_obj->Set_Max_Interval(particle_info.MaxLifetime);
-	Particle_ID++;
+
 
 	Particle* new_particle_data = new Particle(pd3dDevice, pd3dCommandList, particle_info);
 	new_particle_obj->Set_Particle_Data(new_particle_data);
+	new_particle_obj->Set_Shader_Type(particle_info.shader_type);
 
 	particle_object_list_map[particle_info.shader_type].push_back(new_particle_obj);
 
@@ -747,7 +742,7 @@ void Particle_Manager::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandL
 			if (particle_obj->Get_Active())
 			{
 				particle_obj->Animate(pd3dCommandList, fTimeElapsed);
-				if (type == Particle_Type::interval)
+				if (type == Particle_Shader_Type::interval)
 					particle_obj->Update_Interval(fTimeElapsed);
 			}
 
@@ -792,8 +787,8 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
-			if (type == Particle_Type::sand)
-				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Update_Func_Index);
+			if (type == Particle_Shader_Type::sand)
+				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Get_Particle_State());
 
 
 			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed, false);
@@ -848,7 +843,7 @@ void Particle_Manager::Copy_CounterBuffer(ID3D12GraphicsCommandList* pd3dCommand
 	}
 }
 
-void Particle_Manager::Sync_AfterAnimate( Particle_Type type)
+void Particle_Manager::Sync_AfterAnimate( Particle_Shader_Type type)
 {
 	for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 	{
@@ -873,7 +868,7 @@ void Particle_Manager::Sync_AfterAnimateObjects()
 	}
 }
 
-void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Particle_Type type)
+void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Particle_Shader_Type type)
 {
 	if (!particle_shader_map[type])
 		return;
@@ -902,33 +897,176 @@ void Particle_Manager::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 
 void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	Render(pd3dCommandList, pCamera, Particle_Type::loop);
-	Render(pd3dCommandList, pCamera, Particle_Type::interval);
-	Render(pd3dCommandList, pCamera, Particle_Type::sand);
-	Render(pd3dCommandList, pCamera, Particle_Type::sample_1);
-	Render(pd3dCommandList, pCamera, Particle_Type::sample_2);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::continuous);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::interval);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::sand);
+
 }
 
 
-void Particle_Manager::Process_Destroy_Queue()
+void Particle_Manager::Destroy_Particle_Resource()
 {
-	for (const auto& obj : destroy_queue)
-	{
-		for (std::pair<const Particle_Type, std::vector<std::shared_ptr<ParticleObject>>>& pair : particle_object_list_map)
-		{
-			std::vector<std::shared_ptr<ParticleObject>>& list = pair.second;
-
-			std::vector<std::shared_ptr<ParticleObject>>::iterator it = std::find(list.begin(), list.end(), obj);
-			if (it != list.end())
-			{
-				list.erase(it);
-				break;
-			}
-		}
-	}
-	destroy_queue.clear();
+	destroy_resource_queue.clear();
 }
 
+
+void Particle_Manager::Enqueue_Create(const Particle_Sync_Data& syncData) 
+{
+	createQueue.push(syncData);
+}
+
+void Particle_Manager::Enqueue_Update(const Particle_Sync_Data& syncData) 
+{
+	updateQueue.push(syncData);
+}
+
+void Particle_Manager::Enqueue_Delete(UINT id) 
+{
+	deleteQueue.push(id);
+}
+
+
+void Particle_Manager::Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+	Create_Particles_From_Queue(device, cmdList);
+
+	while (!updateQueue.empty())
+	{
+		const auto& data = updateQueue.front();
+
+		auto it = particle_id_map.find(data.particle_ID);
+		if (it != particle_id_map.end())
+		{
+			auto obj = it->second;
+			obj->SetPosition(data.obj_pos);
+			obj->Set_Main_Direction(data.obj_look);
+		}
+		else
+			createQueue.push(data);
+
+		updateQueue.pop();
+	}
+
+	Remove_Particles_From_Queue();
+}
+
+
+void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
+{
+	while (!createQueue.empty())
+	{
+		const auto& data = createQueue.front();
+		if (particle_id_map.contains(data.particle_ID)) 
+		{
+			createQueue.pop();
+			continue;
+		}
+		if (data.particle_ID == 0 || data.particle_ID == UINT_MAX) 
+		{
+			OutputDebugStringA("Invalid particle_ID in syncData\n");
+			createQueue.pop();
+			continue;
+		}
+
+		Particle_Format format{};
+		shared_ptr<Particle_Shape_Mesh> mesh = nullptr;
+
+		switch (data.particle_type)
+		{
+		case Particle_Type::bleed:
+			format.shader_type = Particle_Shader_Type::interval;
+			format.particle_type = Particle_Type::bleed;
+			format.max_particles = 30;
+			format.MaxLifetime = data.LifeTime;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 50;
+			format.acceleration = XMFLOAT3(0, -9.8f, 0);
+			format.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+			format.size = 0.3f;
+			mesh = particle_mesh_map["cube_dust"];
+			break;
+
+		case Particle_Type::sand:
+			format.shader_type = Particle_Shader_Type::sand;
+			format.particle_type = Particle_Type::sand;
+			format.max_particles = 5000;
+			format.MaxLifetime = 10;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 100;
+			format.acceleration = XMFLOAT3(0, 0, 0);
+			format.color = XMFLOAT3(1,0,0);
+
+			format.size = 0.3f;
+			mesh = particle_mesh_map["billboard"];
+			break;
+
+		case Particle_Type::dragon_breath:
+			format.shader_type = Particle_Shader_Type::continuous;
+			format.particle_type = Particle_Type::dragon_breath;
+			format.max_particles = 3000;
+			format.MaxLifetime = 1.0f;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 100;
+			format.acceleration = XMFLOAT3(0, 10.0f, 0);
+			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.size = 1.0f;
+			mesh = particle_mesh_map["cube"];
+			break;
+
+		default:
+			createQueue.pop(); // skip unknown type
+			continue;
+		}
+
+		if (!mesh) {
+			createQueue.pop();
+			continue;
+		}
+
+		auto obj = Add_Particle(device, cmdList, mesh, format);
+		obj->SetPosition(data.obj_pos);
+		obj->Set_Main_Direction(data.obj_look);
+		obj->Set_Name(std::to_string(data.particle_ID));
+
+		if (format.particle_type == Particle_Type::sand)
+		{
+			obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
+			obj->Set_Local_Coordinate();
+		}
+
+		particle_id_map[data.particle_ID] = obj;
+
+		createQueue.pop();
+	}
+}
+
+void Particle_Manager::Remove_Particles_From_Queue() 
+{
+	while (!deleteQueue.empty()) 
+	{
+		UINT id = deleteQueue.front();
+
+		auto it = particle_id_map.find(id);
+		if (it != particle_id_map.end()) {
+			auto obj = it->second;
+			Particle_Shader_Type shader_type = obj->Get_Shader_Type();
+
+			auto& list = particle_object_list_map[shader_type];
+			list.erase(std::remove(list.begin(), list.end(), obj), list.end());
+
+			particle_id_map.erase(it);
+			destroy_resource_queue.push_back(obj);
+		}
+
+		deleteQueue.pop();
+	}
+}
 //=========================================================================
 
 Grid_Builder::Grid_Builder()

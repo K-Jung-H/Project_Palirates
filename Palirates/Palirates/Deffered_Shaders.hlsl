@@ -12,7 +12,9 @@ Texture2D<float4> T_ViewSpace_Z : register(t4);
 
 // t5 = Light_Material_Info
 Texture2D<float4> T_Fog_Noise : register(t6);
-Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t11
+Texture2D<float> gShadowMaps[NUM_CASCADES] : register(t7); // t7 ~ t10
+
+Texture2D<float4> T_Player_X_Ray : register(t11);
 
 cbuffer cb_Fog_Info : register(b0)
 {
@@ -64,6 +66,26 @@ SamplerState gssWrap : register(s0);
 SamplerComparisonState gssShadowSampler : register(s1);
 
 //==================================================================
+
+float3 GetObjectColorById(float objId)
+{
+    if (objId == 0.0f)
+        return float3(0.0, 0.0, 0.0); // Black
+    else if (objId == 1.0f)
+        return float3(1.0, 0.0, 0.0); // Red
+    else if (objId == 2.0f)
+        return float3(1.0, 0.5, 0.0); // Orange
+    else if (objId == 3.0f)
+        return float3(1.0, 1.0, 0.0); // Yellow
+    else if (objId == 4.0f)
+        return float3(0.0, 1.0, 0.0); // Green
+    else if (objId == 5.0f)
+        return float3(0.0, 0.0, 1.0); // Blue
+    else if (objId == 6.0f)
+        return float3(0.5, 0.0, 1.0); // Violet
+    else
+        return float3(1.0, 1.0, 1.0); // White
+}
 
 // PCF 필터링 함수 (3x3 커널)
 float SampleShadowPCF(Texture2D<float> shadowMap, SamplerComparisonState shadow_sampler, float2 uv, float depth, int cascadeIdx)
@@ -248,30 +270,27 @@ VS_TEXTURED_SCREEN_RECT_OUTPUT VS_Textured_ScreenRect(uint nVertexID : SV_Vertex
 
 float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 {
+    // ======= G-Buffer Sample =======
     float4 colorTexture = T_Albedo_Color.Sample(gssWrap, input.uv);
     float4 wNormal_CD = T_World_Normal_and_Camera_Distance.Sample(gssWrap, input.uv);
     float viewspace_Z = T_ViewSpace_Z.Sample(gssWrap, input.uv).x;
-    float3 world_position = ReconstructWorldPos(input.uv, viewspace_Z);
+    float4 blurInfo = T_Blur_Info.Sample(gssWrap, input.uv);
 
+    float3 world_position = ReconstructWorldPos(input.uv, viewspace_Z);
     float3 wNormal = wNormal_CD.xyz;
     float Camera_Distance = wNormal_CD.w;
+    float objectTypeID = blurInfo.z;
     uint materialID = (uint) (colorTexture.a * 255.0f + 0.5f);
-    
-    float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
 
     bool isEmptyPixel = all(wNormal == 0.0f) || Camera_Distance == 0.0f;
-    
-
-    
     if (isEmptyPixel && Fog_Trigger == 0)
-    {
         discard;
-    }
-    
-    // ======= Lighting calculation =======
+
+    // ======= Lighting =======
+    float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
-    // FOG calculationW
+    // ======= Fog =======
     float2 baseUV = world_position.xz - camera_pos.xz;
     float fogFactor = saturate((Camera_Distance - fogStart) / (fogEnd - fogStart));
     fogFactor = pow(fogFactor, fogDensity);
@@ -285,21 +304,39 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
 
     float n1 = T_Fog_Noise.Sample(gssWrap, noiseUV1).r;
     float n2 = T_Fog_Noise.Sample(gssWrap, noiseUV2).r;
-    float noiseVal = (n1 + n2) * 0.5f;
-    float smoothNoise = smoothstep(0.3f, 0.7f, noiseVal);
+    float smoothNoise = smoothstep(0.3f, 0.7f, (n1 + n2) * 0.5f);
 
     float tintStrength = 0.03f;
     float3 baseFogColor = fogColor * 1.2f;
-    float3 modFogColor = baseFogColor * (1.0 - tintStrength + smoothNoise * tintStrength * 2.0);
+    float3 modFogColor = baseFogColor * (1.0 - tintStrength + smoothNoise * tintStrength * 2.0f);
     float3 finalFogColor = modFogColor;
 
     float3 foggedColor = lerp(Light_Color, finalFogColor, fogFactor);
+    float3 baseColor = (Fog_Trigger == 1) ? foggedColor : Light_Color;
 
+    // ======= X-Ray Sample & Condition =======
+    float2 Player_Depth_ID = T_Player_X_Ray.Sample(gssWrap, input.uv).xy;
+    float playerDepth = Player_Depth_ID.x;
+    float playerID = Player_Depth_ID.y;
+
+    float fogXRayThreshold = 0.6f; 
+    bool isFogDenseEnough = (Fog_Trigger == 1) && (fogFactor >= fogXRayThreshold) && (playerDepth > 0.0f);
+    
+    bool isPlayerOccluded = (playerDepth > 0.0f) && (playerDepth > viewspace_Z + 0.05f);
+
+    bool shouldApplyXRay = isPlayerOccluded || isFogDenseEnough;
+
+    float3 xrayColor = GetObjectColorById(playerID) * 1.5f; 
+
+    float xrayAlpha = 0.7f;
+
+    float3 finalColor = shouldApplyXRay ? lerp(baseColor, xrayColor, xrayAlpha) : baseColor;
+
+    // ======= Final Output =======
     if (isEmptyPixel)
-    {
         return Fog_Trigger == 1 ? float4(finalFogColor, 1.0f) : float4(1.0f, 1.0f, 1.0f, 1.0f);
-    }
-    return Fog_Trigger == 1 ? float4(foggedColor, 1.0f) : float4(Light_Color, 1.0f);
+
+    return float4(finalColor, 1.0f);
 }
 
 

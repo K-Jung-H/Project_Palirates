@@ -47,7 +47,7 @@ struct ServerSyncData
     XMFLOAT3 position;
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
-    bool bStateChange;
+    bool bStateChange = false;
 };
 
 class CTexture
@@ -654,6 +654,7 @@ public:
 
     char* WeaponName = "";
     BoundingOrientedBox m_WorldOBB;
+    BoundingOrientedBox cachedWorldOBB;
     XMMATRIX customRotation = XMMatrixIdentity();
     XMFLOAT4X4 WeaponMatrix{};
 
@@ -724,6 +725,7 @@ public:
     virtual bool IsVisible(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     
     virtual void OnLateUpdate() {}
@@ -1113,7 +1115,7 @@ public:
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     virtual void SetupWeaponCollider();
-    virtual void ApplySyncData(const ServerSyncData& syncData);
+    void ApplySyncData(const ServerSyncData& syncData) override;
 };
 
 class CFishManObject : public CMonsterObject

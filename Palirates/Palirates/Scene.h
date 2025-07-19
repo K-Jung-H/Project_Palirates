@@ -21,7 +21,10 @@
 class Object_Manager;
 class Particle_Manager;
 class ParticleObject;
+struct Particle_Sync_Data;
+
 class Particle_Shape_Mesh;
+
 class Texture_UI_Manager;
 struct TextureBlock;
 
@@ -189,7 +192,10 @@ public:
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
 	
-	virtual void Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+
+	virtual void Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
 	virtual void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
@@ -272,15 +278,20 @@ public:
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 	virtual void Bind_Player_UI_Callback();
 
-
-	// 서버 동기화 함수
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+
+
+	void Create_Particle_Object(const Particle_Sync_Data& syncData);
+	void Update_Particle_Object(const Particle_Sync_Data& syncData);
+	void Remove_Particle_Object(UINT p_obj_id);
+
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 
 	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
 	virtual void DespawnMonster(int id);
+
 };
 
 class Character_Select_Scene : public CScene

@@ -1,7 +1,7 @@
-#pragma once
+ï»¿#pragma once
 #include "GameObject.h"
-
-
+#include "AnimationTrackEnum.h"
+#include <unordered_set> 
 
 enum class Player_State : int
 {
@@ -22,10 +22,12 @@ private:
     int model_index = -1;
     Player_State player_state = Player_State::Idle;
 
-    std::shared_ptr<BoundingOrientedBox> m_localOBB;  // º¯ÇÏÁö ¾Ê´Â ±âº» °ª
-    std::shared_ptr<BoundingOrientedBox> m_worldOBB;  // Ãæµ¹ °Ë»ç¿ë 
+    std::shared_ptr<BoundingOrientedBox> m_localOBB;  // ë³€í•˜ì§€ ì•ŠëŠ” ê¸°ë³¸ ê°’
+    std::shared_ptr<BoundingOrientedBox> m_worldOBB;  // ì¶©ëŒ ê²€ì‚¬ìš© 
 
 public:
+    bool need_to_client_sync = false;
+
     Player(int model_index);
     virtual ~Player() {}
 
@@ -37,13 +39,11 @@ public:
     void key_input(uint32_t keyState);
 
     virtual void animate(float Elapsedtime);
-    virtual void update();
+    //virtual void update(float deltaTime) override;
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
     void Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter);
 
-    XMFLOAT3 m_prevPosition;
-
-    void UpdatePrevPosition() { m_prevPosition = GetPosition(); }
+    void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;
 };

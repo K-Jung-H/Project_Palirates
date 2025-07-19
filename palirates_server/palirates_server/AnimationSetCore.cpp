@@ -48,7 +48,7 @@ XMFLOAT4X4 CAnimationSet::GetSRT(int nBone, float fPosition)
 		if ((m_pfKeyFrameTimes[i] <= fPosition) && (fPosition < m_pfKeyFrameTimes[i + 1]))
 		{
 			float t = (fPosition - m_pfKeyFrameTimes[i]) / (m_pfKeyFrameTimes[i + 1] - m_pfKeyFrameTimes[i]);
-			//xmf4x4Transform = Matrix4x4::Interpolate(m_ppxmf4x4KeyFrameTransforms[i][nBone], m_ppxmf4x4KeyFrameTransforms[i + 1][nBone], t);
+			xmf4x4Transform = Matrix4x4::Interpolate(m_ppxmf4x4KeyFrameTransforms[i][nBone], m_ppxmf4x4KeyFrameTransforms[i + 1][nBone], t);
 			break;
 		}
 	}
@@ -273,7 +273,6 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 						}
 
 					}
-
 					m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
 				}
 
@@ -302,7 +301,7 @@ std::vector<Animation_Sync> CAnimationController::MakeSyncData()
 		}
 	}
 	if (data.size() >= 2) {
-		std::cout << "블랜딩 중" << std::endl;
+		//std::cout << "블랜딩 중" << std::endl;
 	}
 	return data;
 }

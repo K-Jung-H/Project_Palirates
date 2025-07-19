@@ -1,4 +1,4 @@
-#include "stdafx.h"
+ï»¿#include "stdafx.h"
 #include "GameWorld.h"
 
 
@@ -14,11 +14,21 @@ GameWorld::~GameWorld()
 
 void GameWorld::Init()
 {
+    Particle_Format p;
+    p.area_xyz = XMFLOAT3{ 1000,2000,3000 };
+    p.lifetime = 300;
+    p.main_direction = XMFLOAT3{ 0,0,1 };
+    p.particle_type = Particle_Type::dragon_breath;
+
+    shared_ptr<Particle_Object> p_obj = particle_manager.Create_Particle_Object(p);
+    p_obj->SetNeedSyncType(true);
+    p_obj->SetPosition(1500, 50, 800);
+    p_obj->SetLook(XMFLOAT3{ 0,0,-1 });
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
 {
-    scene_obj->SetPosition(1300.0f, -27.0f, 800.0f);
+    scene_obj->SetPosition(1300.0f, 213.0f, 800.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
 
@@ -104,82 +114,6 @@ void GameWorld::Compute_CellBounds_From_OBB(const std::shared_ptr<BoundingOrient
     out_max_cell = Get_CellIndexFromPosition(max);
 }
 
-//void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
-//{
-//    if (!player_obj) return;
-//
-//    player_obj->UpdateWorldOBB();
-//    
-//    shared_ptr<BoundingOrientedBox> player_obb = player_obj->Get_Collider_OBB();
-//
-//    constexpr int maxIterations = 10;
-//    constexpr float pushDist = 1.0f;
-//    bool collisionOccurred;
-//
-//    for (int iteration = 0; iteration < maxIterations; ++iteration)
-//    {
-//        collisionOccurred = false;
-//
-//        // ÇöÀç OBB À§Ä¡ ±âÁØÀ¸·Î ¼¿ °è»ê
-//        XMINT3 cellPos = Get_CellIndexFromPosition(player_obb->Center);
-//
-//        for (int x = cellPos.x - 1; x <= cellPos.x + 1; ++x)
-//        {
-//            for (int y = cellPos.y - 1; y <= cellPos.y + 1; ++y)
-//            {
-//                for (int z = cellPos.z - 1; z <= cellPos.z + 1; ++z)
-//                {
-//                    XMINT3 checkCell = { x, y, z };
-//                    auto it = uniform_cell_map.find(checkCell);
-//                    if (it == uniform_cell_map.end()) continue;
-//
-//                    for (int objIndex : it->second)
-//                    {
-//                        auto other = fixed_object_list[objIndex];
-//                        if (!other || !other->Get_Collider_OBB()) continue;
-//
-//                        other->UpdateWorldOBB();
-//                        const auto& other_obb = *other->Get_Collider_OBB();
-//
-//                        // OBB °£ Ãæµ¹ °Ë»ç
-//                        if (player_obb->Intersects(other_obb))
-//                        {
-//                            collisionOccurred = true;
-//
-//                            // ¹Ð¾î³»±â ¹æÇâ °è»ê
-//                            XMVECTOR pCenter = XMLoadFloat3(&player_obb->Center);
-//                            XMVECTOR oCenter = XMLoadFloat3(&other_obb.Center);
-//                            XMVECTOR pushDir = XMVector3Normalize(pCenter - oCenter);
-//
-//                            if (XMVector3Equal(pushDir, XMVectorZero()))
-//                                pushDir = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-//
-//                            // ¹Ð¾î³»±â Àû¿ë
-//                            pCenter += XMVectorScale(pushDir, pushDist);
-//                            XMStoreFloat3(&player_obb->Center, pCenter);
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//
-//        if (!collisionOccurred)
-//            break;
-//    }
-//
-//    // ÃÖÁ¾ OBB À§Ä¡ÀÇ Center ±âÁØÀ¸·Î ÇÃ·¹ÀÌ¾î À§Ä¡ ¿ª»ê
-//    // OBB Center = player_pos + y_offset (0, height, 0)
-//    float y_offset = player_obj->Get_Collider_OBB()->Center.y - player_obj->GetPosition().y;
-//    XMFLOAT3 finalPos = {
-//        player_obb->Center.x,
-//        player_obb->Center.y - y_offset,
-//        player_obb->Center.z
-//    };
-//
-//    player_obj->SetPosition(finalPos);
-//}
-
-
 void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 {
     if (!player_obj || !player_obj->Get_Collider_OBB()) return;
@@ -187,7 +121,7 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
     constexpr float pushStrength = 2.0f;
     constexpr int maxIterations = 10;
 
-    player_obj->UpdateWorldOBB(); // °»½ÅµÈ ¿ùµå OBB
+    player_obj->UpdateWorldOBB(); // ê°±ì‹ ëœ ì›”ë“œ OBB
     auto& player_worldOBB = *player_obj->Get_Collider_OBB();
 
     for (int iteration = 0; iteration < maxIterations; ++iteration)
@@ -224,12 +158,12 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
                             alreadyProcessed.insert(&otherOBB);
                             collided = true;
 
-                            XMVECTOR pushDir = XMVector3Normalize(
-                                XMLoadFloat3(&player_worldOBB.Center) - XMLoadFloat3(&otherOBB.Center)
-                            );
+                            // Compute push direction (from other to player)
+                            XMVECTOR pushDir = XMLoadFloat3(&player_worldOBB.Center) - XMLoadFloat3(&otherOBB.Center);
 
                             if (!XMVector3Equal(pushDir, XMVectorZero()))
                             {
+                                pushDir = XMVector3Normalize(pushDir);
                                 totalPushDir += pushDir;
                                 ++hitCount;
                             }
@@ -241,17 +175,36 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 
         if (!collided || hitCount == 0)
             break;
+        else
+            player_obj->need_to_client_sync = true;
 
-        // Æò±Õ Çª½Ã ¹æÇâ °è»ê
+
+        // í‰ê·  í‘¸ì‹œ ë°©í–¥ ê³„ì‚°
         XMVECTOR avgPushDir = XMVector3Normalize(totalPushDir);
-        XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorScale(avgPushDir, pushStrength);
+
+        // ì´ë™í•  ë•Œë§Œ Y ì„±ë¶„ ì œê±° â†’ ë°©í–¥ì€ ìœ ì§€, ìˆ˜ì§ ì´ë™ë§Œ ì°¨ë‹¨
+        XMVECTOR newCenter = XMLoadFloat3(&player_worldOBB.Center) + XMVectorSet(
+            XMVectorGetX(avgPushDir) * pushStrength,
+            0.0f,
+            XMVectorGetZ(avgPushDir) * pushStrength,
+            0.0f
+        );
         XMStoreFloat3(&player_worldOBB.Center, newCenter);
     }
 
     player_obj->Set_Collider_OBB_Center(player_worldOBB.Center);
 }
 
-
 void GameWorld::Update_Monster(float elapsed_time)
 {
+}
+
+void GameWorld::Update_Particle(float elapsed_time)
+{
+    particle_manager.Update_Particle(elapsed_time);
+}
+
+FrameParticleChanges GameWorld::Get_Particle_Sync_Data()
+{
+    return particle_manager.FlushFrameChanges();
 }
