@@ -910,6 +910,6 @@ void Skinned_GameObject::SetupWeaponCollider()
 			XMConvertToRadians(0.0f));
 	}
 	Weapon_ptr = model;
-	std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
-	std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;
+	//std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
+	//std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;
 }

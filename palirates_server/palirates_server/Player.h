@@ -23,8 +23,8 @@ private:
     int model_index = -1;
     Player_State player_state = Player_State::Idle;
 
-    std::shared_ptr<BoundingOrientedBox> m_localOBB;  // 변하지 않는 기본 값
-    std::shared_ptr<BoundingOrientedBox> m_worldOBB;  // 충돌 검사용 
+    std::shared_ptr<BoundingOrientedBox> m_localOBB; 
+    std::shared_ptr<BoundingOrientedBox> m_worldOBB;  
 
     std::unique_ptr<PlayerStateMachine> m_StateMachine;
 
