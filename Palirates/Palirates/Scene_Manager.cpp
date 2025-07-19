@@ -17,7 +17,7 @@ Scene_Manager::Scene_Manager(UINT nFrames, ID3D12Device* pd3dDevice, ID3D12Comma
         if (!Empty_GraphicsRootSignature)
             Empty_GraphicsRootSignature = std::shared_ptr<ID3D12RootSignature>(Create_EmptyRootSignature(pd3dDevice), com_deleter);
 
-        Fade_shader = new ScreenFade_Shader();
+        Fade_shader = make_shared<ScreenFade_Shader>();
         Fade_shader->CreateShader(pd3dDevice, NULL, Empty_GraphicsRootSignature);
     }
 
@@ -32,6 +32,7 @@ Scene_Manager::~Scene_Manager()
     {
         pair.second->ReleaseObjects();
     }
+
     sceneCache.clear();
 
 }
@@ -199,6 +200,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
         pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
+
+
         pPlayer->SetupWeaponCollider();
         pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
@@ -443,11 +446,21 @@ void Scene_Manager::Unload_Scene()
     activeScene.reset();
 }
 
-void Scene_Manager::Prepare_Render_Scene_ShadowMap(ID3D12GraphicsCommandList* pd3dCommandList)
+void Scene_Manager::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
     {
-        activeScene->Prepare_Shadow_Map_Render(pd3dCommandList);
+        activeScene->Render_Depth(pd3dDevice, pd3dCommandList);
+    }
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+}
+
+void Scene_Manager::Prepare_Render_Scene_ShadowMap(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+    if (activeScene)
+    {
+        activeScene->Prepare_Shadow_Map_Render(pd3dDevice, pd3dCommandList);
     }
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
@@ -526,6 +539,7 @@ void Scene_Manager::Prepare_Deffered_Render_Scene(ID3D12GraphicsCommandList* pd3
     if (MRT_shader)
         MRT_shader->OnPostRenderTarget(pd3dCommandList);
 }
+
 void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
     if (activeScene)
@@ -547,10 +561,14 @@ void Scene_Manager::Deffered_Render_Scene(ID3D12Device* pd3dDevice, ID3D12Graphi
 
     Light_Material_Manager::UpdateGraphicsShaderVariables(pd3dCommandList);
 
+    if (Player_X_Ray_shader)
+        Player_X_Ray_shader->UpdateShaderVariables(pd3dCommandList);
 
     if (MRT_shader)
+    {
+        MRT_shader->UpdateShaderVariables(pd3dCommandList);
         MRT_shader->Render(pd3dCommandList, NULL);
-
+    }
 }
 
 

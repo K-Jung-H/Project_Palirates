@@ -69,7 +69,7 @@ struct Fog_Info
 
 
 
-#define NUM_CASCADES 4
+#define NUM_CASCADES 3
 
 struct alignas(16) LightCamera_Info
 {
@@ -192,7 +192,10 @@ public:
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
 	
-	virtual void Prepare_Shadow_Map_Render(ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+
+	virtual void Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n);
 
 	virtual void Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);

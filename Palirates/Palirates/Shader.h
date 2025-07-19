@@ -229,10 +229,13 @@ public:
 	virtual void CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState);
 
 	D3D12_CLEAR_VALUE Get_ClearValue_For_RTVFormat(DXGI_FORMAT format);
-	virtual void CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle);
+	virtual void CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle, int custom_index = -1);
 
 	virtual void Prepare_Multi_RenderTarget(ID3D12GraphicsCommandList* pd3dCommandList, int nRenderTargets, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dRtvCPUHandles, D3D12_CPU_DESCRIPTOR_HANDLE* pd3dDsvCPUHandle);
 	virtual void OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList);
+
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
@@ -404,7 +407,7 @@ public:
 	Deferred_CSkinnedAnimationStandardShader();
 	virtual ~Deferred_CSkinnedAnimationStandardShader();
 
-	void CreateShader(ID3D12Device* pd3dDevice, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
+	virtual void CreateShader(ID3D12Device* pd3dDevice, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat);
 
 	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
 	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
@@ -413,23 +416,8 @@ public:
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 };
 
+
 //============================================================================
-
-class CShadowMapShader : public CShader
-{
-public:
-	CShadowMapShader();
-	virtual ~CShadowMapShader();
-
-	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
-
-	virtual D3D12_INPUT_LAYOUT_DESC CreateInputLayout(int nPipelineState);
-	virtual D3D12_RASTERIZER_DESC CreateRasterizerState(int nPipelineState);
-	virtual D3D12_DEPTH_STENCIL_DESC CreateDepthStencilState(int nPipelineState);
-
-	virtual D3D12_SHADER_BYTECODE CreateVertexShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-	virtual D3D12_SHADER_BYTECODE CreatePixelShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
-};
 
 class CTextureToScreenShader : public CStandardShader
 {
@@ -450,3 +438,6 @@ public:
 
 	virtual void OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState = 0);
 };
+
+//============================================================================
+

@@ -257,6 +257,10 @@ protected:
 	XMFLOAT2						*m_pxmf2TextureCoords0 = NULL;
 	XMFLOAT2						*m_pxmf2TextureCoords1 = NULL;
 
+	ID3D12Resource* m_pd3dColorBuffer = NULL;
+	ID3D12Resource* m_pd3dColorUploadBuffer = NULL;
+	D3D12_VERTEX_BUFFER_VIEW		m_d3dColorBufferView;
+
 	ID3D12Resource					*m_pd3dTextureCoord0Buffer = NULL;
 	ID3D12Resource					*m_pd3dTextureCoord0UploadBuffer = NULL;
 	D3D12_VERTEX_BUFFER_VIEW		m_d3dTextureCoord0BufferView;
@@ -362,8 +366,12 @@ struct TrailVertexSide
 
 class Trail_Mesh : public CStandardMesh
 {
+private:
+	XMFLOAT4 Main_Color{};
+	XMFLOAT4 Sub_Color{};
+
 public:
-	Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments);
+	Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, XMFLOAT4 main_color, int nMaxTrailSegments);
 	virtual ~Trail_Mesh();
 
 	void AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float fTime);
@@ -377,6 +385,9 @@ public:
 
 	void SetSegmentThreshold(float fThreshold);
 	void SetTrailLifespan(float fSeconds);
+
+	void Set_MainColor(XMFLOAT4 new_color) { Main_Color = new_color; }
+	void Set_SubColor(XMFLOAT4 new_color) { Sub_Color = new_color; }
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = nullptr) override;
 

@@ -726,6 +726,7 @@ public:
     virtual bool IsVisible(CCamera* pCamera);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+    virtual void Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     
     virtual void OnLateUpdate() {}
@@ -1084,11 +1085,13 @@ private:
     float m_fSegmentTimer = 0.0f;
 
 public:
-    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4 main_color = {1.0f,1.0f, 1.0f, 1.0f});
     virtual ~Trail_Object();
 
     void Set_Trail_Target(shared_ptr<CGameObject> target, bool bUseScale = true) { m_pTargetObject = target;  m_bUseTargetScale = bUseScale; }
     void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom) { m_vLocalTop = top; m_vLocalBottom = bottom; }
+    void Set_Main_Color(XMFLOAT4 new_color) { if (trail_mesh) trail_mesh->Set_MainColor(new_color); }
+    void Set_SubColor(XMFLOAT4 new_color) { if (trail_mesh) trail_mesh->Set_SubColor(new_color); }
 
     virtual void Animate(float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);

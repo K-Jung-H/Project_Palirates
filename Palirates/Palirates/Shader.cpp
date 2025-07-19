@@ -6,6 +6,8 @@
 #include "Shader.h"
 #include "Scene.h"
 
+#define Shadow_DepthBias 13000
+
 CShader::CShader()
 {
 }
@@ -774,13 +776,14 @@ void Trail_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 D3D12_INPUT_LAYOUT_DESC Trail_Shader::CreateInputLayout(int nPipelineState)
 {
-	UINT nInputElementDescs = 4;
+	UINT nInputElementDescs = 5;
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
-	pd3dInputElementDescs[0] = { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[1] = { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,        1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[2] = { "TEXCOORD", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[3] = { "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT,          2, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[0] = { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "COLOR",     0, DXGI_FORMAT_R32G32B32A32_FLOAT,  1, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,        2, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TEXCOORD",  1, DXGI_FORMAT_R32G32B32A32_FLOAT,  3, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "TEXCOORD",  2, DXGI_FORMAT_R32_FLOAT,           3, 16, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc = {};
@@ -947,7 +950,7 @@ D3D12_BLEND_DESC PostProcessBaseShader::CreateBlendState(int n)
 
 ID3D12RootSignature* PostProcessBaseShader::CreateGraphicsRootSignature(ID3D12Device* pd3dDevice)
 {
-	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[4];
+	D3D12_DESCRIPTOR_RANGE pd3dDescriptorRanges[5];
 	{
 		pd3dDescriptorRanges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 		pd3dDescriptorRanges[0].NumDescriptors = RenderTarget_Config::RTV_FORMAT_num;
@@ -972,8 +975,14 @@ ID3D12RootSignature* PostProcessBaseShader::CreateGraphicsRootSignature(ID3D12De
 		pd3dDescriptorRanges[3].BaseShaderRegister = RenderTarget_Config::RTV_FORMAT_num + 2;
 		pd3dDescriptorRanges[3].RegisterSpace = 0;
 		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = 0;
+
+		pd3dDescriptorRanges[4].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		pd3dDescriptorRanges[4].NumDescriptors = 1;  // Object_X_Ray
+		pd3dDescriptorRanges[4].BaseShaderRegister = RenderTarget_Config::RTV_FORMAT_num + 2 + NUM_CASCADES;
+		pd3dDescriptorRanges[4].RegisterSpace = 0;
+		pd3dDescriptorRanges[4].OffsetInDescriptorsFromTableStart = 0;
 	}
-	D3D12_ROOT_PARAMETER pd3dRootParameters[8];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[9];
 	{
 		pd3dRootParameters[ROOT_PARAMETER_FOG_INFO_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 		pd3dRootParameters[ROOT_PARAMETER_FOG_INFO_INDEX].Constants.Num32BitValues = 12;
@@ -1015,6 +1024,11 @@ ID3D12RootSignature* PostProcessBaseShader::CreateGraphicsRootSignature(ID3D12De
 		pd3dRootParameters[ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
 		pd3dRootParameters[ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[3]; // Fixed ShadowMap Texture
 		pd3dRootParameters[ROOT_PARAMETER_FIXED_SHADOWMAP_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX].DescriptorTable.pDescriptorRanges = &pd3dDescriptorRanges[4]; // Object_X_Ray
+		pd3dRootParameters[ROOT_PARAMETER_Object_X_RAY_TEXTURE_SRV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[2] = {};
@@ -1171,7 +1185,7 @@ D3D12_CLEAR_VALUE PostProcessBaseShader::Get_ClearValue_For_RTVFormat(DXGI_FORMA
 	return clearValue;
 }
 
-void PostProcessBaseShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle)
+void PostProcessBaseShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, UINT nRenderTargets, DXGI_FORMAT* pdxgiFormats, D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvCPUDescriptorHandle,  int custom_index)
 {
 	m_pTexture = new CTexture(nRenderTargets, RESOURCE_TEXTURE2D, 0, 1, 0, 0, nRenderTargets, 0, 0);
 
@@ -1185,7 +1199,10 @@ void PostProcessBaseShader::CreateResourcesAndRtvsSrvs(ID3D12Device* pd3dDevice,
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX);
+	if(custom_index == -1)
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, m_pTexture, 0, ROOT_PARAMETER_G_BUFFER_SRV_INDEX);
+	else
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, m_pTexture, 0, custom_index);
 
 	
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
@@ -1241,6 +1258,12 @@ void PostProcessBaseShader::OnPostRenderTarget(ID3D12GraphicsCommandList* pd3dCo
 	}
 }
 
+void PostProcessBaseShader::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_pTexture) 
+		m_pTexture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+}
+
 void PostProcessBaseShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList, int nPipelineState)
 {
 	if (m_pd3dGraphicsRootSignature)
@@ -1250,8 +1273,6 @@ void PostProcessBaseShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 	CDescriptor_Heap::SetDescriptorHeaps(pd3dCommandList, 1);
 
 
-
-
 	if (m_ppd3dgraphicsPipelineStates && m_ppd3dgraphicsPipelineStates[nPipelineState])
 		pd3dCommandList->SetPipelineState(m_ppd3dgraphicsPipelineStates[nPipelineState]);
 
@@ -1259,8 +1280,6 @@ void PostProcessBaseShader::OnPrepareRender(ID3D12GraphicsCommandList* pd3dComma
 
 void PostProcessBaseShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (m_pTexture) m_pTexture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
-
 	pd3dCommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	pd3dCommandList->DrawInstanced(6, 1, 0, 0);
 }
@@ -1535,6 +1554,13 @@ D3D12_DEPTH_STENCIL_DESC Deferred_CStandard_Shader::CreateDepthStencilState(int 
 
 		d3dDepthStencilDesc.BackFace = d3dDepthStencilDesc.FrontFace;
 	}
+	else if (nPipelineState == 2) // X-Ray용 Depth & ID 저장
+	{
+		d3dDepthStencilDesc.DepthEnable = TRUE;
+		d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	}
+
 
 	return(d3dDepthStencilDesc);
 }
@@ -1559,7 +1585,8 @@ D3D12_RASTERIZER_DESC Deferred_CStandard_Shader::CreateRasterizerState(int nPipe
 
 	if (nPipelineState == 1)
 	{
-		d3dRasterizerDesc.DepthBias = 500;
+		d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+		d3dRasterizerDesc.DepthBias = Shadow_DepthBias;
 		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
 	}
@@ -1585,9 +1612,10 @@ D3D12_INPUT_LAYOUT_DESC Deferred_CStandard_Shader::CreateInputLayout(int nPipeli
 		return(d3dInputLayoutDesc);
 
 }
+
 D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
-	if (nPipelineState == 0)
+	if (nPipelineState == 0 || nPipelineState == 2)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VSStandard", "vs_5_1", VertexShaderBlob));
 	else if (nPipelineState == 1)
 		return CompileShaderFromFile(L"Shaders.hlsl", "VS_Shadow_Standard", "vs_5_1", VertexShaderBlob);
@@ -1597,10 +1625,13 @@ D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreateVertexShader(ID3DBlob** V
 		return 		d3dShaderByteCode;
 	}
 }
+
 D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", PixelShaderBlob));
+	else if (nPipelineState == 2)
+		return CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_ObjectDepthAndID", "ps_5_1", PixelShaderBlob);
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
@@ -1610,11 +1641,15 @@ D3D12_SHADER_BYTECODE Deferred_CStandard_Shader::CreatePixelShader(ID3DBlob** Pi
 
 void Deferred_CStandard_Shader::CreateShader(ID3D12Device* pd3dDevice, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_ngraphicsPipelineStates = 2;
+	m_ngraphicsPipelineStates = 3;
 	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
 
+	DXGI_FORMAT xrayRTVFormat[1] = { DXGI_FORMAT_R32G32_FLOAT };
+	
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0); // PSO - 0
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), nRenderTargets, pdxgiRtvFormats, DXGI_FORMAT_D32_FLOAT, 1); // PSO - 1 For ShadowMap
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 1, xrayRTVFormat, DXGI_FORMAT_D24_UNORM_S8_UINT, 2); //  PSO-2 (X-Ray)
+
 }
 
 void Deferred_CStandard_Shader::CreateGraphicsPipelineState(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat, int nPipelineState)
@@ -1654,6 +1689,13 @@ void Deferred_CStandard_Shader::CreateGraphicsPipelineState(ID3D12Device* pd3dDe
 		d3dPipelineStateDesc.NumRenderTargets = 0;
 		d3dPipelineStateDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 	}
+	else if (nPipelineState == 2) // X-Ray
+	{
+		d3dPipelineStateDesc.NumRenderTargets = nRenderTargets;
+		d3dPipelineStateDesc.RTVFormats[0] = pdxgiRtvFormats[0];
+		d3dPipelineStateDesc.DSVFormat = dxgiDsvFormat;
+	}
+
 
 	d3dPipelineStateDesc.SampleDesc.Count = 1;
 
@@ -1798,9 +1840,10 @@ D3D12_RASTERIZER_DESC Deferred_CTerrainShader::CreateRasterizerState(int nPipeli
 
 	if (nPipelineState == 1) 
 	{
-		d3dRasterizerDesc.DepthBias = 80000;
-		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
+		d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_NONE;
+		d3dRasterizerDesc.DepthBias = Shadow_DepthBias;
 		d3dRasterizerDesc.SlopeScaledDepthBias = 1.5f;
+		d3dRasterizerDesc.DepthBiasClamp = 0.0f;
 	}
 
 	return(d3dRasterizerDesc);
@@ -2015,11 +2058,16 @@ Deferred_CSkinnedAnimationStandardShader::~Deferred_CSkinnedAnimationStandardSha
 
 void Deferred_CSkinnedAnimationStandardShader::CreateShader(ID3D12Device* pd3dDevice, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, UINT nRenderTargets, DXGI_FORMAT* pdxgiRtvFormats, DXGI_FORMAT dxgiDsvFormat)
 {
-	m_ngraphicsPipelineStates = 2;
+	m_ngraphicsPipelineStates = 3;
 	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	DXGI_FORMAT xrayRTVFormat[1] = { DXGI_FORMAT_R32G32_FLOAT };
 
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), nRenderTargets, pdxgiRtvFormats, dxgiDsvFormat, 0);  // 기본 그리기
 	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), nRenderTargets, pdxgiRtvFormats, DXGI_FORMAT_D32_FLOAT, 1); // PSO - 1 For ShadowMap
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 1, xrayRTVFormat, DXGI_FORMAT_D24_UNORM_S8_UINT, 2); //  PSO-2 (X-Ray)
+
+
 }
 
 D3D12_INPUT_LAYOUT_DESC Deferred_CSkinnedAnimationStandardShader::CreateInputLayout(int nPipelineState)
@@ -2044,7 +2092,7 @@ D3D12_INPUT_LAYOUT_DESC Deferred_CSkinnedAnimationStandardShader::CreateInputLay
 
 D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreateVertexShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
 {
-	if (nPipelineState == 0)
+	if (nPipelineState == 0 || nPipelineState == 2)
 		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "VS_SkinnedAnimationStandard", "vs_5_1", VertexShaderBlob));
 	else if(nPipelineState == 1)
 		return CompileShaderFromFile(L"Shaders.hlsl", "VS_Shadow_SkinnedAnimationStandard", "vs_5_1", VertexShaderBlob);
@@ -2055,10 +2103,12 @@ D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreateVertexShad
 	}
 }
 
-D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreatePixelShader(ID3DBlob** VertexShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE Deferred_CSkinnedAnimationStandardShader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
-		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", VertexShaderBlob));
+		return(CShader::CompileShaderFromFile(L"Shaders.hlsl", "PSStandard", "ps_5_1", PixelShaderBlob));
+	else if (nPipelineState == 2)
+		return CShader::CompileShaderFromFile(L"Shaders.hlsl", "PS_ObjectDepthAndID", "ps_5_1", PixelShaderBlob);	
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };
@@ -2074,100 +2124,6 @@ void Deferred_CSkinnedAnimationStandardShader::OnPrepareRender(ID3D12GraphicsCom
 
 }
 
-//========================================================================================
-
-CShadowMapShader::CShadowMapShader()
-{
-}
-
-CShadowMapShader::~CShadowMapShader()
-{
-}
-
-void CShadowMapShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
-{
-	m_ngraphicsPipelineStates = 1;
-	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
-	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0);
-}
-
-D3D12_INPUT_LAYOUT_DESC CShadowMapShader::CreateInputLayout(int nPipelineState)
-{
-	UINT nInputElementDescs = 1;
-	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
-
-	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,		0, 0,		D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-
-	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
-	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
-	d3dInputLayoutDesc.NumElements = nInputElementDescs;
-
-	return d3dInputLayoutDesc;
-}
-
-
-D3D12_SHADER_BYTECODE CShadowMapShader::CreateVertexShader(ID3DBlob** blob, int nPipelineState)
-{
-	return CompileShaderFromFile(L"ShadowMap.hlsl", "VS_Shadow", "vs_5_1", blob);
-}
-
-D3D12_SHADER_BYTECODE CShadowMapShader::CreatePixelShader(ID3DBlob** blob, int nPipelineState)
-{
-	D3D12_SHADER_BYTECODE d3dShaderByteCode;
-	d3dShaderByteCode.BytecodeLength = 0;
-	d3dShaderByteCode.pShaderBytecode = NULL;
-
-	return(d3dShaderByteCode);
-}
-
-D3D12_RASTERIZER_DESC CShadowMapShader::CreateRasterizerState(int nPipelineState)
-{
-	D3D12_RASTERIZER_DESC d3dRasterizerDesc;
-	::ZeroMemory(&d3dRasterizerDesc, sizeof(D3D12_RASTERIZER_DESC));
-
-	d3dRasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-	d3dRasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
-	d3dRasterizerDesc.FrontCounterClockwise = FALSE;
-
-	// Shadow map bias 설정
-	d3dRasterizerDesc.DepthBias = 100000;
-	d3dRasterizerDesc.DepthBiasClamp = 0.0f;
-	d3dRasterizerDesc.SlopeScaledDepthBias = 1.0f;
-
-	d3dRasterizerDesc.DepthClipEnable = TRUE;
-	d3dRasterizerDesc.MultisampleEnable = FALSE;
-	d3dRasterizerDesc.AntialiasedLineEnable = FALSE;
-	d3dRasterizerDesc.ForcedSampleCount = 0;
-	d3dRasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-
-	return d3dRasterizerDesc;
-}
-
-D3D12_DEPTH_STENCIL_DESC CShadowMapShader::CreateDepthStencilState(int nPipelineState)
-{
-	D3D12_DEPTH_STENCIL_DESC d3dDepthStencilDesc;
-	::ZeroMemory(&d3dDepthStencilDesc, sizeof(D3D12_DEPTH_STENCIL_DESC));
-
-	d3dDepthStencilDesc.DepthEnable = TRUE;
-	d3dDepthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	d3dDepthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-
-	d3dDepthStencilDesc.StencilEnable = FALSE;
-	d3dDepthStencilDesc.StencilReadMask = 0x00;
-	d3dDepthStencilDesc.StencilWriteMask = 0x00;
-
-	d3dDepthStencilDesc.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
-
-	d3dDepthStencilDesc.BackFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-	d3dDepthStencilDesc.BackFace.StencilFunc = D3D12_COMPARISON_FUNC_NEVER;
-
-	return d3dDepthStencilDesc;
-}
 
 //==================================================================
 

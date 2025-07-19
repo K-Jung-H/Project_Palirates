@@ -38,6 +38,7 @@ struct Fixed_Object_Info
 
 	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList); // For Shadow-Map Render
 	void Release_Instance_Data_ShaderVariables();
 
 };
@@ -250,7 +251,8 @@ public:
 	// Animation and logic update
 	void Animate_Objects_All(float fTimeElapsed);
 	void Animate_Objects(Object_Type type, float fTimeElapsed);
-	void Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Prepare_ShadowMap_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
 	void Post_Update(Object_Type type);
 	void Post_Update_All();
 
@@ -267,6 +269,7 @@ public:
 	// Visibility / culling
 	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
 	void Check_Culling_All(CCamera* pCamera);
+	void Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// ShadowMapping
 	void Render_Terrain_Shadow(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
@@ -279,7 +282,7 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
-
+	void Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
 
 	// Instancing update flag

@@ -148,6 +148,10 @@ private:
     ID3D12Resource* ptr_RTV_Buffer_List[RTV_Format_Num];
     D3D12_CPU_DESCRIPTOR_HANDLE      RTV_Buffer_CPUHandle_list[RTV_Format_Num];
 
+    
+    ID3D12DescriptorHeap* m_pd3dPlayerRTVHeap = NULL;
+    D3D12_CPU_DESCRIPTOR_HANDLE      m_d3dPlayerRTVHandle;
+
     //=======================================================
     // DSV
     ID3D12Resource* m_pd3dDepthStencilBuffer = NULL;
@@ -206,7 +210,8 @@ public:
     Scene_Manager* scene_manager = NULL;
     Post_Effect_Manager* post_effect_manager = NULL;
 
-    PostProcessBaseShader* MRT_shader = NULL;
+    shared_ptr<PostProcessBaseShader> X_Ray_Shader = NULL;
+    shared_ptr<PostProcessBaseShader> MRT_shader = NULL;
 
     std::shared_ptr<CPlayer> m_pPlayer = NULL;
 
