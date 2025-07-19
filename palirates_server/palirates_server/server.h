@@ -110,6 +110,7 @@ private:
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 
     void FlushSendQueues();
 };
