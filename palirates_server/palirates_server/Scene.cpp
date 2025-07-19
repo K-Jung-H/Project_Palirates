@@ -469,7 +469,7 @@ void Stage_Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
     player_list[id]->SetLook(new_lookV);
 }
 
-void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged)
+void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged, int stateNum)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
