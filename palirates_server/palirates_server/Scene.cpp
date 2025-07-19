@@ -318,7 +318,7 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     int id;
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 40; ++i) {
         if (i % 4 == 0)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 4 == 1)

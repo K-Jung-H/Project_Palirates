@@ -411,7 +411,7 @@ CLoadedModelInfo* GameObject::LoadGeometryAndAnimationFromFile(const char* pstrF
 			break;
 		}
 	}
-
+	fclose(pInFile);
 	return(pLoadedModel);
 }
 
