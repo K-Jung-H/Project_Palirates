@@ -312,3 +312,29 @@ void CAnimationController::ResetWeight()
 		m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
 }
+
+void CAnimationController::OnRootMotion(GameObject* pRootGameObject)
+{
+	if (pRootGameObject->GetType() != Object_Type::monster) return;
+
+	XMFLOAT3 deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
+
+	//if (Vector3::LengthSquared(deltaMove) > 0.000001f) 
+	//{
+	//	// 현재 회전값 (yaw) 가져오기
+	//	float yaw = pRootGameObject->GetYaw();
+	//	XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(yaw));
+
+	//	XMVECTOR deltaVec = XMLoadFloat3(&deltaMove);
+	//	deltaVec = XMVector3TransformCoord(deltaVec, rot);
+
+	//	XMVECTOR pos = XMLoadFloat3(&pRootGameObject->GetPosition());
+	//	pos += deltaVec;
+	//	XMFLOAT3 newPos;
+	//	XMStoreFloat3(&newPos, pos);
+
+	//	pRootGameObject->SetPosition(newPos); // 위치 적용
+	//}
+
+	m_xmf3PrevHipsPosition = HipsPosition; // 다음 프레임 비교를 위해 저장
+}

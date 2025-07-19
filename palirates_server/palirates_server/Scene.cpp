@@ -488,7 +488,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
             if (stateNum == int(State::Attack1)) {
                 player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttackState>());
-                player_list[clientId]->SetStateChangeNum(AnimationRegistry::GetPlayerAnimationTrack(State(stateNum)));
+                player_list[clientId]->SetStateChangeNum(stateNum);
             }
         }
     }

@@ -48,6 +48,7 @@ void Monster::PlayAnimation(State state) {
             animTrack.m_fPosition = 0.0f;  
         }
     }
+    stateElapsedTime = 0.0f;
 }
 
 ServerSyncData Monster::MakeSyncData() {

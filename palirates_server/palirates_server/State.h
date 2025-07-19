@@ -25,6 +25,14 @@ public:
     State GetStateEnum() const override { return State::Idle; }
 };
 
+class WalkState : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Run; }
+};
+
 class AttackState : public MonsterState {
 public:
     void Enter(Monster* monster, MonsterStateMachine* sm) override;
