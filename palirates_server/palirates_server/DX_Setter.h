@@ -184,6 +184,12 @@ namespace Vector3
 	{
 		return(TransformCoord(xmf3Vector, XMLoadFloat4x4(&xmmtx4x4Matrix)));
 	}
+
+	inline float LengthSquared(const XMFLOAT3& v)
+	{
+		XMVECTOR vec = XMLoadFloat3(&v);
+		return XMVectorGetX(XMVector3LengthSq(vec));
+	}
 }
 
 namespace Vector4

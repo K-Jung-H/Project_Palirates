@@ -136,7 +136,7 @@ public:
 public:
     std::shared_ptr<GameObject>            m_pModelRootObject = NULL;
 
-    virtual void OnRootMotion(GameObject* pRootGameObject) {}
+    virtual void OnRootMotion(GameObject* pRootGameObject);
     virtual void OnAnimationIK(GameObject* pRootGameObject) {}
 
     XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };

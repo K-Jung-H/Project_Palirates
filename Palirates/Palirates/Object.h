@@ -648,6 +648,9 @@ public:
     WeaponObject* pWeapon;
 
     bool bIsControllable{ true };
+    bool bIsInvincible = false;
+    float invincibleTimeRemaining = 0.0f;
+    float invincibleDuration = 2.0f;
 
     std::unordered_set<int> RootMotionTrackSet;
 
