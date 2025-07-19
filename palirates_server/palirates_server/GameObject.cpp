@@ -222,7 +222,6 @@ void GameObject::SetScale(float x, float y, float z, bool keepPosition)
 	}
 }
 
-
 XMFLOAT3 GameObject::GetPosition()
 {
 	return(XMFLOAT3(m_xmf4x4World._41, m_xmf4x4World._42, m_xmf4x4World._43));
@@ -750,16 +749,37 @@ void GameObject::UpdateWorldOBB()
 {
 	if (!m_pMesh) return;
 
-	XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;
-	XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
+	std::shared_ptr<CSkinnedMesh> skinnedMesh = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
 
-	XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+	if (skinnedMesh) {
+		if (XMVector3Equal(XMLoadFloat3(&skinnedMesh->m_xmf3AABBExtents), XMVectorZero())) {
+			return;
+		}
 
-	auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
+		auto localOBB = std::make_shared<DirectX::BoundingOrientedBox>(XMFLOAT3(0.0f, 0.0f, 0.0f), skinnedMesh->m_xmf3AABBExtents, XMFLOAT4(0, 0, 0, 1));
 
-	obb->Transform(*obb, worldMatrix);
+		if (skinnedMesh->m_ppSkinningBoneFrameCaches.empty() || !skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]) {
+			return;
+		}
+		const XMFLOAT4X4& boneWorld = skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]->m_xmf4x4World;
+		XMMATRIX boneWorldMatrix = XMLoadFloat4x4(&boneWorld);
+		boneWorldMatrix = WeaponCustomRotation * boneWorldMatrix;
+		localOBB->Transform(*localOBB, boneWorldMatrix);
+		m_xmf4x4World = boneWorld;
+		m_OBB = localOBB;
+	}
+	else {
+		XMFLOAT3 centerLocal = m_pMesh->m_xmf3AABBCenter;
+		XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
 
-	m_OBB = obb;
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+		worldMatrix = WeaponCustomRotation * worldMatrix;
+		auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
+
+		obb->Transform(*obb, worldMatrix);
+
+		m_OBB = obb;
+	}
 }
 
 //===================================================================
@@ -854,6 +874,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 		std::cout << "weapon set fail" << std::endl;
 		return;
 	}
+
 	model->SetType(Object_Type::weapon);
 
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
@@ -874,8 +895,21 @@ void Skinned_GameObject::SetupWeaponCollider()
 		)
 	);
 	model->Set_Collider_OBB(obb);
+	model->SetCanCollide(false); 
 	//model->bUpdateOBBOff();
+	if (WeaponName == "HeadA_LP") {
+		model->WeaponCustomRotation = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(160.0f),
+			XMConvertToRadians(90.0f),
+			XMConvertToRadians(0.0f));
+	}
+	if (WeaponName == "spear_lp") {
+		model->WeaponCustomRotation = XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(45.0f),
+			XMConvertToRadians(30.0f),
+			XMConvertToRadians(0.0f));
+	}
 	Weapon_ptr = model;
-	std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
-	std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;
+	//std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
+	//std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;
 }

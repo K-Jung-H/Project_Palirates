@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "server.h"
 
 Server::Server(int port)
@@ -126,7 +126,7 @@ void Server::AcceptClients()
             clients[clientId] = std::make_shared<ClientSession>(clientSocket);
         }
 
-        activeClientCount++; // 현재 활성화된 클라 스레드 개수
+        activeClientCount++; 
 
         std::string idPacket = "CLIENT_ID," + std::to_string(clientId) + "\n";
 
@@ -182,7 +182,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
             if (command == "PING")
             {
-                HandlePingPacket(clientId, command, tokens); // 핑 메시지 처리
+                HandlePingPacket(clientId, command, tokens); 
             }
 
 
@@ -214,13 +214,12 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
         }
     }
 
-    activeClientCount--; // 현재 활성화된 클라 스레드 개수
+    activeClientCount--;
 
 }
 
 void Server::HandlePacket(int clientId, const std::string& packet)
 {
-    // 패킷 파싱
     std::istringstream linestream(packet);
     std::string command;
     std::getline(linestream, command, ',');
@@ -276,7 +275,6 @@ void Server::HandlePacket(int clientId, const std::string& packet)
         HandleStage1Packet(clientId, command, tokens);
         break;
     case Scene_Type::Stage_2:
-        // 필요시 추가
         break;
     default:
         std::cerr << "[ERROR] Unknown scene type received: " << sceneTypeInt << std::endl;
@@ -420,15 +418,13 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
 
 void Server::HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
-    // 최소한 track_count토큰까지 존재해야 함
-    if (tokens.size() < 10)
+    if (tokens.size() < 11)
         return;
 
     int trackCount = std::stoi(tokens[10]);
 
-    // 전체 패킷에 필요한 최소 토큰 개수
-    // 기본(11) + 트랙데이터(3개씩) + bStateChange(1)
-    int expectedMinTokens = 11 + (trackCount * 3) + 1; 
+    // 기본(11) + 트랙데이터(3개씩) + bStateChange(1) + changedStateNum(1)
+    int expectedMinTokens = 11 + (trackCount * 3) + 1 + 1; 
 
     if (tokens.size() < expectedMinTokens)
         return;
@@ -474,8 +470,9 @@ void Server::HandleStage1Packet(int clientId, const std::string& command, const 
     // bStateChange (마지막 토큰)
     bool bStateChange = (tokens[11 + (trackCount * 3)] == "1" || tokens[11 + (trackCount * 3)] == "true");
 
+    int stateNum = stoi(tokens[11 + (trackCount * 3) + 1]);
     // Scene 업데이트 호출
-    stageScene->update_player_State(clientId, inputFlags, pos, look, trackInfoList, bStateChange);
+    stageScene->update_player_State(clientId, inputFlags, pos, look, trackInfoList, bStateChange, stateNum);
 }
 
 
@@ -718,7 +715,9 @@ std::string Server::Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene
                     << "," << std::to_string(track.track_position);
             }
 
-            players_data << "," << (state_changed ? "1" : "0") << ",";
+            players_data << "," << (state_changed ? "1" : "0");
+
+            players_data << "," << changedStateNum << ",";
         }
     }
 

@@ -12,27 +12,23 @@ Monster::Monster(int id) : monster_id(id) {
 
 void Monster::update(float deltaTime) {
     if (m_StateMachine) {
-        m_StateMachine->OnPrepareUpdate(deltaTime);
-        m_StateMachine->update(deltaTime);
-        m_StateMachine->SetWeight(deltaTime);
+        //if (!bGetHit) {
+            m_StateMachine->OnPrepareUpdate(deltaTime);
+            m_StateMachine->update(deltaTime);
+            m_StateMachine->SetWeight(deltaTime);
+        //}
     }
     if (m_pSkinnedAnimationController) {
         m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
-        /*if (type == Monster_Type::ETC) {
-            std::cout << "test player AdvanceTime" << std::endl;
-        }*/
     }
-   /* if (Weapon_ptr) {
-        Weapon_ptr->UpdateWorldOBB();
-        std::shared_ptr<BoundingOrientedBox> obb = Weapon_ptr->Get_Collider_OBB();
-        if (obb)
-        {
-            const XMFLOAT4& q = obb->Orientation;
-            std::cout << "OBB Orientation Quaternion: ("
-                << q.x << ", " << q.y << ", " << q.z << ", " << q.w << ")"
-                << std::endl;
+
+    if (bIsInvincible) {
+        invincibleTimeRemaining += deltaTime;
+        if (invincibleTimeRemaining >= invincibleDuration) {
+            bIsInvincible = false;
+            invincibleTimeRemaining = 0.0f;
         }
-    }*/
+    }
 }
 
 void Monster::PlayAnimation(State state) {
@@ -143,10 +139,11 @@ void Monster::InitStateMachine() {
 Fishman::Fishman(int id) : Monster(id) {
     type = Monster_Type::Fishman;
     SetType(Object_Type::monster);
+    WeaponName = "spear_lp";
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
-        TRACK_FISHMAN_ATTACK1,
+       // TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
         TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
@@ -163,6 +160,13 @@ Fishman::Fishman(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
+    SetScale(10.0f, 10.0f, 10.0f);
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.8f, 0.0f),    
+        XMFLOAT3(0.4f, 0.8f, 0.4f),   
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) 
+    );
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Anubis ----------------
@@ -170,6 +174,7 @@ Fishman::Fishman(int id) : Monster(id) {
 Anubis::Anubis(int id) : Monster(id) {
     type = Monster_Type::Anubis;
     SetType(Object_Type::monster);
+    WeaponName = "Staff_LP";
     RootMotionTrackSet = {
         TRACK_ANUBIS_IDLE,
         TRACK_ANUBIS_IDLE_BREAK,
@@ -195,6 +200,13 @@ Anubis::Anubis(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
+    SetScale(15.0f, 15.0f, 15.0f);
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.9f, 0.0f),
+        XMFLOAT3(0.3f, 0.9f, 0.3f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Dragon ----------------
@@ -202,6 +214,7 @@ Anubis::Anubis(int id) : Monster(id) {
 Dragon::Dragon(int id) : Monster(id) {
     type = Monster_Type::Dragon;
     SetType(Object_Type::monster);
+    WeaponName = "HeadA_LP";
     RootMotionTrackSet = {
         TRACK_DRAGON_ATTACK1,
         TRACK_DRAGON_RUN,
@@ -213,6 +226,8 @@ Dragon::Dragon(int id) : Monster(id) {
 
     std::unordered_set<int> OnceType = {
         TRACK_DRAGON_ATTACK1,
+        TRACK_DRAGON_GOT_HIT1,
+        TRACK_DRAGON_GOT_HIT2,
         TRACK_DRAGON_DEAD
     };
 
@@ -220,6 +235,13 @@ Dragon::Dragon(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
+
+   /* auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.8f, 0.0f),
+        XMFLOAT3(0.4f, 0.8f, 0.4f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);*/
 }
 
 // ---------------- Test ----------------
