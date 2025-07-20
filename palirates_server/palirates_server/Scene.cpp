@@ -250,7 +250,14 @@ Scene_Type Board_Scene::CheckSceneTransition()
 
     if (Change_Scene_Trigger)
     {
-        return Scene_Type::Stage_1;
+        if (selected_stage_index == 0)        return Scene_Type::Stage_1;
+        else if (selected_stage_index == 1)        return Scene_Type::Stage_2;
+        else if (selected_stage_index == 2)        return Scene_Type::Stage_3;
+        else if (selected_stage_index == 3)        return Scene_Type::Stage_4;
+        else if (selected_stage_index == 4)        return Scene_Type::Stage_5;
+        else if (selected_stage_index == 5)        return Scene_Type::Stage_6;
+        else if (selected_stage_index == 6)        return Scene_Type::Stage_7;
+        else return Scene_Type::None;
     }
 
     return Scene_Type::None;
@@ -300,13 +307,8 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 
 //======================================================
 
-Stage_Scene::Stage_Scene() : Scene (Stage_1)
+Stage_Scene::Stage_Scene(Scene_Type scene_type) : Scene (scene_type)
 {
-    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
-
-    scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
-    game_world.Load_Scene_Data(scene);
-    Init();
 }
 
 
@@ -578,4 +580,180 @@ std::vector<int> Stage_Scene::FlushDespawnQueue()
     std::vector<int> temp = monster_despawn_queue;
     monster_despawn_queue.clear();
     return temp;
+}
+
+//=========================================================
+
+
+Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_1_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
+}
+
+//=========================================================
+
+Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    scene->SetPosition(1300.0f, +34.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_2_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
+}
+
+//=========================================================
+
+Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_3_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
+}
+
+//=========================================================
+
+Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    scene->SetPosition(1300.0f, +34.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_4_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
+}
+
+//=========================================================
+
+Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_5_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
+}
+
+//=========================================================
+
+Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    scene->SetPosition(1300.0f, +34.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_6_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
+}
+
+//=========================================================
+
+Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
+{
+    std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
+
+    scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetScale(10, 10, 10, true);
+    scene->UpdateTransform(NULL);
+    game_world.Load_Scene_Data(scene);
+
+    Init();
+}
+
+
+void Stage_7_Scene::Init()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    for (shared_ptr<Player> player_ptr : player_list)
+        player_ptr.reset();
+
 }

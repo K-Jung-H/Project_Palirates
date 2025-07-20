@@ -4142,7 +4142,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("test_scene");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 43.0f, 800.0f);
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 34.0f, 800.0f);
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 #endif
@@ -4164,8 +4164,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 #endif
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
-
-
 }
 
 

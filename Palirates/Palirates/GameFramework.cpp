@@ -612,12 +612,12 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal;
 	if (isRunning) // 멀티인 경우에만 동작
 	{
-		if (Change_Call_By_Server != -1)
+		if (Change_Call_By_Server != None)
 		{
 			std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
 			c_signal = change_signal;
 
-			Change_Call_By_Server = -1;
+			Change_Call_By_Server = None;
 			change_signal.change = false;
 
 		}
@@ -1327,6 +1327,12 @@ void CGameFramework::SendPacket()
 
 
 	case Scene_Type::Stage_1:
+	case Scene_Type::Stage_2:
+	case Scene_Type::Stage_3:
+	case Scene_Type::Stage_4:
+	case Scene_Type::Stage_5:
+	case Scene_Type::Stage_6:
+	case Scene_Type::Stage_7:
 	{
 		XMFLOAT3 pos = m_pPlayer->GetPosition();
 		XMFLOAT3 look = m_pPlayer->GetLookVector();
@@ -1354,9 +1360,6 @@ void CGameFramework::SendPacket()
 
 		break;
 	}
-
-	case Scene_Type::Stage_2:
-		break;
 
 
 	default:
@@ -1455,6 +1458,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	break;
 
 	case Scene_Type::Stage_1:
+	case Scene_Type::Stage_2:
+	case Scene_Type::Stage_3:
+	case Scene_Type::Stage_4:
+	case Scene_Type::Stage_5:
+	case Scene_Type::Stage_6:
+	case Scene_Type::Stage_7:
 	{
 		shared_ptr<CScene>stage_scene = std::dynamic_pointer_cast<CScene>(active_scene);
 		if (!stage_scene)
@@ -1481,10 +1490,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	}
 	break;
 
-	case Scene_Type::Stage_2:
-	{
-	}
-	break;
 
 	default:
 		return;
@@ -1760,43 +1765,68 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 	}
 
 	std::string change_scene_type = tokens[1];
-	Change_Call_By_Server = std::stoi(change_scene_type);
-
+	Change_Call_By_Server = static_cast<Scene_Type>(std::stoi(tokens[1]));
 	change_signal = { false,Scene_Type::etc, "" };
 
 	switch (Change_Call_By_Server)
 	{
-	case -1:		// 변경 없음
+	case None:		// 변경 없음
 		break;
 
-	case 0:		//로비
+	case Lobby:		//로비
 		change_signal.change = true;
 		change_signal.scene_name = "Character_Select";
 		change_signal.type = Scene_Type::Lobby;
 		break;
 		
-	case 1:		// 스태이지 선택
+	case Board:		// 스태이지 선택
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_Select";
 		change_signal.type = Scene_Type::Board;
 		break;
 
-	case 2:		// 스테이지 1
+	case Stage_1:		// 스테이지 1
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_1";
-		change_signal.type = Scene_Type::Stage_1;
+		change_signal.type = Change_Call_By_Server;
 		break;
 
-	case 3:
-		// 스테이지 2
+	case Stage_2:		// 스테이지 2
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_2";
-		change_signal.type = Scene_Type::Stage_2;
+		change_signal.type = Change_Call_By_Server;
 		break;
 
-	case 4:
-	case 5:
-	case 6:
+	case Stage_3:		// 스테이지 3
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_3";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_4:		// 스테이지 4
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_4";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_5:		// 스테이지 5
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_5";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_6:		// 스테이지 6
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_6";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_7:		// 스테이지 7
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_7";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
 	default:
 		// 추가 예정
 		break;

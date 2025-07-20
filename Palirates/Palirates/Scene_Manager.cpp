@@ -190,6 +190,9 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     }
     break;
 
+    case Stage_3:
+    case Stage_5:
+    case Stage_7:
     case Stage_1:
     {
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_1_Scene>();
@@ -210,6 +213,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     }
     break;
 
+    case Stage_6:
+    case Stage_4:
     case Stage_2:
     {
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_2_Scene>();
@@ -230,35 +235,35 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     }
     break;
 
-    case Stage_3:
-    {
+    //case Stage_3:
+    //{
 
-    }
-    break;
+    //}
+    //break;
 
-    case Stage_4:
-    {
+    //case Stage_4:
+    //{
 
-    }
-    break;
+    //}
+    //break;
 
-    case Stage_5:
-    {
+    //case Stage_5:
+    //{
 
-    }
-    break;
+    //}
+    //break;
 
-    case Stage_6:
-    {
+    //case Stage_6:
+    //{
 
-    }
-    break;
+    //}
+    //break;
 
-    case Stage_7:
-    {
+    //case Stage_7:
+    //{
 
-    }
-    break;
+    //}
+    //break;
 
     case Test:
     {
