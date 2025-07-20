@@ -3927,9 +3927,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
-	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
-
 	if (Object_Manager::trail_shader == NULL)
 	{
 		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
@@ -3961,6 +3958,16 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
+	//==================================
+	// 나중에 시도할 것
+	//xmf3Scale.x = 5;
+	//xmf3Scale.y = 5;
+	//xmf3Scale.z = 5;
+	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
+	
+	//m_pTerrain->Set_Child(test_Terrain);
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 	//===============================================================================
@@ -4064,8 +4071,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
-	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
 
 	if (Object_Manager::trail_shader == NULL)
 	{

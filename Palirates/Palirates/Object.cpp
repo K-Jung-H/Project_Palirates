@@ -3531,107 +3531,78 @@ void CGameObject::RestoreWeapon(const char* targetName) {
 	}
 }
 
-
-shared_ptr<CTexture> CHeightMapTerrain::pTerrainBaseTexture = nullptr;
-shared_ptr<CTexture> CHeightMapTerrain::pTerrainDetailTexture = nullptr;
-Deferred_CTerrainShader* CHeightMapTerrain::pTerrainShader = nullptr;
-CMaterial* CHeightMapTerrain::pTerrainMaterial = nullptr;
-CHeightMapImage* CHeightMapTerrain::m_pHeightMapImage = nullptr;
-
 CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
-	int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap, int nMaxDepth) : CGameObject(1)
+	int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap, int nMaxDepth, shared_ptr<CHeightMapImage> sharedHeightMapImage)	: CGameObject(1)
 {
 	static int tile_map_number = 0;
+	bool isRoot = (sharedHeightMapImage == nullptr);
+	m_pHeightMapImage = isRoot ? make_shared<CHeightMapImage>(pFileName, nWidth, nLength, xmf3Scale) : sharedHeightMapImage;
 
-	if (pTerrainBaseTexture == nullptr)
+	if (isRoot) 
 	{
-		CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		m_TerrainBaseTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+		m_TerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds", RESOURCE_TEXTURE2D, 0);
+		m_TerrainDetailTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
+		m_TerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_8.dds", RESOURCE_TEXTURE2D, 0);
 
-		pTerrainBaseTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-		pTerrainBaseTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Sand_Base.dds", RESOURCE_TEXTURE2D, 0);
+		m_TerrainShader = new Deferred_CTerrainShader();
+		m_TerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
+		m_TerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-		pTerrainDetailTexture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
-		pTerrainDetailTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"Terrain/Detail_Texture_8.dds", RESOURCE_TEXTURE2D, 0);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, m_TerrainBaseTexture.get(), 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
+		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, m_TerrainDetailTexture.get(), 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
 
-		pTerrainShader = new Deferred_CTerrainShader();
-		pTerrainShader->CreateShader(pd3dDevice, pd3dGraphicsRootSignature, RenderTarget_Config::RTV_FORMAT_num, RenderTarget_Config::RTV_FORMATS, RenderTarget_Config::DSV_FORMAT);
-		pTerrainShader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-
-		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainBaseTexture.get(), 0, ROOT_PARAMETER_TERRAIN_BASE_TEXTURE_SRV_INDEX);
-		CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, pTerrainDetailTexture.get(), 0, ROOT_PARAMETER_TERRAIN_DETAIL_TEXTURE_SRV_INDEX);
-
-		pTerrainMaterial = new CMaterial(2);
-		pTerrainMaterial->SetTexture(pTerrainBaseTexture, 0);
-		pTerrainMaterial->SetTexture(pTerrainDetailTexture, 1);
-		pTerrainMaterial->SetShader(pTerrainShader);
+		m_TerrainMaterial = new CMaterial(2);
+		m_TerrainMaterial->SetTexture(m_TerrainBaseTexture, 0);
+		m_TerrainMaterial->SetTexture(m_TerrainDetailTexture, 1);
+		m_TerrainMaterial->SetShader(m_TerrainShader);
 
 		Light_Material_Info light_info;
 		light_info.gSpecular = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.5f);
-		pTerrainMaterial->m_Material_ID = Light_Material_Manager::Add_Material(light_info);
-
-		m_pHeightMapImage = new CHeightMapImage(pFileName, nWidth, nLength, xmf3Scale);
-
-		tile_map_number = 0;
-		Set_Name("Root_Tile_Map");
+		m_TerrainMaterial->m_Material_ID = Light_Material_Manager::Add_Material(light_info);
 	}
-	else
-	{
-		Set_Tile(tile_map_number++);
-	}
+
+	(tile_map_number == 0) ? Set_Name("Root_Tile_Map") : Set_Tile(tile_map_number++);
 
 	Vertex_gap = (Vertex_gap % 2) ? Vertex_gap + 1 : Vertex_gap;
-
-	m_nWidth = nWidth;
-	m_nLength = nLength;
-	m_xmf3Scale = xmf3Scale;
-	m_nDepth = nMaxDepth;
-
-	Area_LT.x = start_x_pos * xmf3Scale.x;
-	Area_LT.y = start_z_pos * xmf3Scale.z;
-	Area_RB.x = (start_x_pos + m_nWidth) * xmf3Scale.x;
-	Area_RB.y = (start_z_pos + m_nLength) * xmf3Scale.z;
-
+	m_nWidth = nWidth; m_nLength = nLength; m_xmf3Scale = xmf3Scale; m_nDepth = nMaxDepth;
+	Area_LT = { start_x_pos * xmf3Scale.x, start_z_pos * xmf3Scale.z };
+	Area_RB = { (start_x_pos + m_nWidth) * xmf3Scale.x, (start_z_pos + m_nLength) * xmf3Scale.z };
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
-	bool bIsRoot = (tile_map_number == 0);
-
-	if (bIsRoot) // Root node
+	if (isRoot) 
 	{
-		CHeightMapGridMesh* full = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, 0, 0, 
-			m_pHeightMapImage->GetHeightMapWidth(), m_pHeightMapImage->GetHeightMapLength(), xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
-		Set_FullMesh(full);  // Only used for rendering
-		SetMesh(nullptr);    
+		m_pFullMesh = make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, 0, 0,
+			m_pHeightMapImage->GetHeightMapWidth(), m_pHeightMapImage->GetHeightMapLength(),
+			xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage.get());
+		SetMesh(nullptr);
 	}
-	else if (m_nDepth == 0) // Leaf node: used for height/normal
+	else if (m_nDepth == 0) 
 	{
-		shared_ptr<CHeightMapGridMesh> part_mesh = make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos,
-			nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
-		SetMesh(part_mesh);  // local terrain 
+		auto partMesh = make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos,
+			nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage.get());
+		SetMesh(partMesh);
 	}
-	else
-	{
-		SetMesh(nullptr);    
-	}
+	else SetMesh(nullptr);
 }
 
 void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap)
 {
 	if (m_nDepth <= 0) return;
-
 	int Cell_num = 2;
 	long blocks_x_size[2] = { m_nWidth / 2, m_nWidth - m_nWidth / 2 };
 	long blocks_z_size[2] = { m_nLength / 2, m_nLength - m_nLength / 2 };
 
-	for (int z = 0; z < Cell_num; ++z)
+	for (int z = 0; z < Cell_num; ++z) 
 	{
-		for (int x = 0; x < Cell_num; ++x)
+		for (int x = 0; x < Cell_num; ++x) 
 		{
 			XMFLOAT4 tile_color = Get_Random_Color(1.0f);
 			int xStart = (int)Tile_Start_Pos.x + x * blocks_x_size[0];
 			int zStart = (int)Tile_Start_Pos.y + z * blocks_z_size[0];
 
-			std::shared_ptr<CHeightMapTerrain> child = std::make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, 
-				xStart, zStart, blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1);
+			auto child = std::make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xStart, zStart,
+				blocks_x_size[x], blocks_z_size[z], xmf3Scale, tile_color, Vertex_gap, m_nDepth - 1, m_pHeightMapImage);
 
 			Set_Child(child);
 			child->DivideIntoChildren(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, pFileName, xmf3Scale, Vertex_gap);
@@ -3639,12 +3610,27 @@ void CHeightMapTerrain::DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12Graph
 	}
 }
 
+
 CHeightMapTerrain::~CHeightMapTerrain(void)
 {
-	if (m_pHeightMapImage != NULL)
-		delete m_pHeightMapImage;
+	if (m_TerrainShader)
+	{
+		m_TerrainShader->ReleaseShaderVariables();
+		delete m_TerrainShader;
+		m_TerrainShader = nullptr;
+	}
 
-	m_pHeightMapImage = NULL;
+	if (m_TerrainMaterial)
+	{
+		m_TerrainMaterial->ReleaseUploadBuffers();
+		delete m_TerrainMaterial;
+		m_TerrainMaterial = nullptr;
+	}
+
+	m_TerrainBaseTexture.reset();
+	m_TerrainDetailTexture.reset();
+	m_pFullMesh.reset();
+	m_pHeightMapImage.reset();
 }
 
 void CHeightMapTerrain::Set_Tile(int n)
@@ -3689,34 +3675,36 @@ float CHeightMapTerrain::Get_Mesh_Height(float x, float z, bool bReverseQuad, CH
 			return last_tile_ptr->Get_Mesh_Height(x, z, bReverseQuad);
 		}
 	}
+	else
+	{
+		last_tile_ptr = nullptr;
+	}
 
-	x -= m_xmf4x4World._41;
-	z -= m_xmf4x4World._43;
+	if (Get_Child())
+	{
+		CGameObject* child_ptr = Get_Child().get();
+		float h = ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
+		if (h != -1) return h;
+	}
 
+	float world_x = x - m_xmf4x4World._41;
+	float world_z = z - m_xmf4x4World._43;
 
 	if (x >= Area_LT.x && x < Area_RB.x && z >= Area_LT.y && z < Area_RB.y)
 	{
-		if (Get_Child())
-		{
-			CGameObject* child_ptr = Get_Child().get();
-			return ((CHeightMapTerrain*)child_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
-		}
-		else
-		{
-			last_tile_ptr = this;
-			return m_pMesh->Get_Height(x, z);
-		}
-	}
-	else
-	{
-		if (Get_Sibling())
-		{
-			CGameObject* sibling_ptr = Get_Sibling().get();
-			return ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
-		}
+		last_tile_ptr = this;
+		return m_pMesh ? m_pMesh->Get_Height(world_x, world_z) : -1;
 	}
 
-	return -1;
+	if (Get_Sibling())
+	{
+		CGameObject* sibling_ptr = Get_Sibling().get();
+		float h = ((CHeightMapTerrain*)sibling_ptr)->Get_Mesh_Height(x, z, bReverseQuad, last_tile_ptr);
+		if (h != -1) return h;
+	}
+
+	return -1.0f;
+
 }
 
 XMFLOAT3 CHeightMapTerrain::Get_Mesh_Normal(float x, float z)
@@ -3885,36 +3873,34 @@ void CHeightMapTerrain::Check_Culling(CCamera* pCamera)
 
 void CHeightMapTerrain::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (Get_Active() && full_mesh != NULL)
+	if (!Get_Active()) return;
+
+	if (m_pFullMesh && m_TerrainMaterial && m_TerrainMaterial->m_pShader)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
-		{
-			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
-
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0); // 첫 번째 PSO
-			
-			full_mesh->Render(pd3dCommandList, 0);
-
-		}
+		m_TerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+		m_TerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 0);
+		m_pFullMesh->Render(pd3dCommandList, 0);
 	}
 
+	if (Get_Child())    Get_Child()->Render(pd3dCommandList, pCamera);
+	if (Get_Sibling())  Get_Sibling()->Render(pd3dCommandList, pCamera);
 }
+
 
 void CHeightMapTerrain::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (Get_Active() && full_mesh != NULL)
+	if (Get_Active() && m_pFullMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
 
-		if (pTerrainMaterial && pTerrainMaterial->m_pShader)
+		if (m_TerrainMaterial && m_TerrainMaterial->m_pShader)
 		{
-			pTerrainMaterial->UpdateShaderVariable(pd3dCommandList);
+			m_TerrainMaterial->UpdateShaderVariable(pd3dCommandList);
 
-			pTerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1); 
+			m_TerrainMaterial->m_pShader->Setting_Render(pd3dCommandList, 1);
 
-			full_mesh->Render(pd3dCommandList, 0);
+			m_pFullMesh->Render(pd3dCommandList, 0);
 
 		}
 	}
