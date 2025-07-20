@@ -387,6 +387,60 @@ private:
 	bool is_stage_select = false;
 };
 
+class Stage_Scene : public CScene
+{
+private:
+	virtual void BuildDefaultLightsAndMaterials() {}
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
+
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+
+	//=============================================================
+	// Server Sync Func
+
+	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	void Remove_Multi_Player(int player_id);
+	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+
+
+	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
+
+	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
+	virtual void DespawnMonster(int id);
+};
+
+class Stage_1_Scene : public Stage_Scene
+{
+
+private:
+	virtual void BuildDefaultLightsAndMaterials();
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+};
+
+class Stage_2_Scene : public Stage_Scene
+{
+private:
+	virtual void BuildDefaultLightsAndMaterials();
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+};
+
+//===========================================================================
+
 class Test_Scene : public CScene
 {
 public:

@@ -28,10 +28,6 @@ void GameWorld::Init()
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
 {
-    scene_obj->SetPosition(1300.0f, -27.0f, 800.0f);
-    scene_obj->SetScale(10, 10, 10, true);
-    scene_obj->UpdateTransform(NULL);
-
     fixed_object_list.clear();
 	FlattenGameObjectHierarchy(scene_obj, fixed_object_list);
     AssignToUniformCells();

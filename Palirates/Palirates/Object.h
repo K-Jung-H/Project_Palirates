@@ -872,13 +872,12 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 private:
-    static shared_ptr<CTexture> pTerrainBaseTexture;
-    static shared_ptr<CTexture> pTerrainDetailTexture;
-    static Deferred_CTerrainShader* pTerrainShader;
-    static CMaterial* pTerrainMaterial;
-
-    static CHeightMapImage* m_pHeightMapImage;  // link height map image for each terrain tile object
-
+    shared_ptr<CTexture> m_TerrainBaseTexture;
+    shared_ptr<CTexture> m_TerrainDetailTexture;
+    Deferred_CTerrainShader* m_TerrainShader = nullptr;
+    CMaterial* m_TerrainMaterial = nullptr;
+    shared_ptr<CHeightMapImage> m_pHeightMapImage = nullptr;
+    shared_ptr<CMesh> m_pFullMesh = NULL;
 private:
     int                     m_nWidth;
     int                     m_nLength;
@@ -891,15 +890,15 @@ private:
     XMFLOAT2 Area_LT{};
     XMFLOAT2 Area_RB{};
 
-    CMesh* full_mesh = NULL;
-    void Set_FullMesh(CMesh* new_mesh) { full_mesh = new_mesh; }
+
+    void Set_FullMesh(shared_ptr<CMesh> new_mesh) { m_pFullMesh = new_mesh; }
 public:
-    CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
-        int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1);
+    CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
+        int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1, shared_ptr<CHeightMapImage> sharedHeightMapImage = NULL);
     virtual ~CHeightMapTerrain();
 
-    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature,
-        LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
+    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
+
     void Set_Tile(int n);
 
     float Get_Height(float x, float z, bool bReverseQuad = false);
