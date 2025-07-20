@@ -192,7 +192,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
     case Stage_1:
     {
-        std::shared_ptr<CScene> in_stage_scene = std::make_shared<CScene>();
+        std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_1_Scene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
         in_stage_scene->scene_type = scene_type;
 
@@ -212,6 +212,51 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
     case Stage_2:
     {
+        std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_2_Scene>();
+        in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
+
+        Register_Scene(scene_name, in_stage_scene);
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
+        pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
+
+
+        pPlayer->SetupWeaponCollider();
+        pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
+        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
+        in_stage_scene->Bind_Player_UI_Callback();
+    }
+    break;
+
+    case Stage_3:
+    {
+
+    }
+    break;
+
+    case Stage_4:
+    {
+
+    }
+    break;
+
+    case Stage_5:
+    {
+
+    }
+    break;
+
+    case Stage_6:
+    {
+
+    }
+    break;
+
+    case Stage_7:
+    {
+
     }
     break;
 

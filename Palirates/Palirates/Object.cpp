@@ -3604,8 +3604,6 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	}
 	else if (m_nDepth == 0) // Leaf node: used for height/normal
 	{
-		//CHeightMapGridMesh* part_mesh = new CHeightMapGridMesh(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos, 
-		//	nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		shared_ptr<CHeightMapGridMesh> part_mesh = make_shared<CHeightMapGridMesh>(pd3dDevice, pd3dCommandList, start_x_pos, start_z_pos,
 			nWidth + 1, nLength + 1, xmf3Scale, xmf4Color, Vertex_gap, m_pHeightMapImage);
 		SetMesh(part_mesh);  // local terrain 
