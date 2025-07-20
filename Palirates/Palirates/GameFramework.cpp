@@ -1350,6 +1350,7 @@ void CGameFramework::SendPacket()
 		}
 
 		oss << "," << (sync_Data.bStateChange ? "1" : "0");
+		oss << "," << sync_Data.changedStateNum;
 
 		break;
 	}
@@ -1603,7 +1604,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		int stateFlagIndex = trackStart + expectedTrackTokenCount;
 		if (stateFlagIndex >= tokens.size()) break;
 
-		bool stateChanged = (tokens[stateFlagIndex] == "1");
+		bool stateChanged = (tokens[stateFlagIndex++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
@@ -1612,6 +1613,8 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
+		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
+		syncData.changedStateNum = changedStateNum;
 		HandlePlayerSync(playerId, modelId, syncData);
 
 		startIndex = stateFlagIndex + 1;
@@ -1813,6 +1816,11 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
+
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
+			if (!m_pPlayer->bIsInvincible)
+				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+		}
 		return;
 	}
 	else
@@ -1826,6 +1834,20 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
 			Connected_Player_List[player_ID] = true;
+			XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f };
+			XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
+			shared_ptr<CGameObject> trail_target = newPlayer->Weapon_ptr;
+			if (!trail_target) return;
+			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
+			trail_obj->Set_Main_Color(test_main_color);
+			trail_obj->Set_SubColor(test_sub_color);
+
+			trail_obj->Set_Trail_Target(trail_target, false);
+			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+			scene_manager->Get_Active_Scene()->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+			newPlayer->SetTrailObj(trail_obj);
+			newPlayer->bTrailOff();
+			newPlayer->GetTrailObj()->Set_Active(false);
 		}
 
 	}

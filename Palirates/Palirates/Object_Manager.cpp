@@ -1373,8 +1373,32 @@ void Object_Manager::Post_Update(Object_Type type)
 
 void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
-	if (player_map[player_id])
+	if (player_map[player_id]) {
 		player_map[player_id]->ApplySyncData(syncData);
+
+
+		if (syncData.changedStateNum == int(State::Attack1)) {
+			std::cout << "Attack State" << "\n";
+			player_map[player_id]->bTrailOn();
+			if (player_map[player_id]->GetTrailStart())
+			{
+				std::cout << "Trail Start" << "\n";
+				player_map[player_id]->GetTrailObj()->Set_Active(true);
+				player_map[player_id]->Trail_Start();
+			}
+
+			if (!player_map[player_id]->GetTrailObj()->Get_Active())
+			{
+				std::cout << "Reset Trail" << "\n";
+				player_map[player_id]->GetTrailObj()->GetTrailMesh()->ResetTrail();
+				player_map[player_id]->GetTrailObj()->Set_Active(true);
+			}
+		}
+		else {
+			player_map[player_id]->bTrailOff();
+			player_map[player_id]->GetTrailObj()->Set_Active(false);
+		}
+	}
 
 }
 

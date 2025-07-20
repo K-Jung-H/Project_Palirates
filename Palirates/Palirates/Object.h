@@ -48,6 +48,7 @@ struct ServerSyncData
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
     bool bStateChange = false;
+    int changedStateNum = -1;
 };
 
 class CTexture
@@ -647,6 +648,9 @@ public:
     WeaponObject* pWeapon;
 
     bool bIsControllable{ true };
+    bool bIsInvincible = false;
+    float invincibleTimeRemaining = 0.0f;
+    float invincibleDuration = 2.0f;
 
     std::unordered_set<int> RootMotionTrackSet;
 
@@ -854,7 +858,12 @@ public:
     void SetID(int id) { m_nPlayerId = id; }
     int GetID() const { return m_nPlayerId; }
 
+protected:
+    bool bCanCollide = true;
 
+public:
+    void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
+    bool CanCollide() const { return bCanCollide; }
 };
 
 //==================================================================================

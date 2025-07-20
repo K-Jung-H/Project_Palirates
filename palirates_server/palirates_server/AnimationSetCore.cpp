@@ -305,3 +305,38 @@ std::vector<Animation_Sync> CAnimationController::MakeSyncData()
 	}
 	return data;
 }
+
+void CAnimationController::ResetWeight()
+{
+	for (int i = 0; i < m_nAnimationTracks; ++i) {
+		m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+}
+
+void CAnimationController::OnRootMotion(GameObject* pRootGameObject)
+{
+	if (pRootGameObject->GetType() != Object_Type::monster) return;
+
+	XMFLOAT3 deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
+	if (pRootGameObject->GetID() == 0) {
+		std::cout << "move : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
+	}
+	if (Vector3::LengthSquared(deltaMove) > 0.000001f) 
+	{
+		XMFLOAT3 look = pRootGameObject->GetLook();
+		float yaw = XMConvertToDegrees(atan2f(look.x, look.z));
+		XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(yaw));
+
+		XMVECTOR deltaVec = XMLoadFloat3(&deltaMove);
+		deltaVec = XMVector3TransformCoord(deltaVec, rot);
+
+		XMVECTOR pos = XMLoadFloat3(&pRootGameObject->GetPosition());
+		pos += deltaVec;
+		XMFLOAT3 newPos;
+		XMStoreFloat3(&newPos, pos);
+
+		pRootGameObject->SetPosition(newPos); 
+	}
+
+	m_xmf3PrevHipsPosition = HipsPosition; 
+}
