@@ -27,7 +27,7 @@ void PlayerNormalState::Exit(Player* player) {
 
 void PlayerAttackState::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
-	//std::cout << "PlayerAttackState Enter" << std::endl;
+	std::cout << "PlayerAttackState Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
@@ -71,6 +71,6 @@ void PlayerGetHitState::Update(Player* player, float deltaTime, PlayerStateMachi
 
 void PlayerGetHitState::Exit(Player* player) {
 	player->SetCanCollide(true);
-	//std::cout << "PlayerGetHitState Exit" << std::endl;
+	std::cout << "PlayerGetHitState Exit" << std::endl;
 }
 

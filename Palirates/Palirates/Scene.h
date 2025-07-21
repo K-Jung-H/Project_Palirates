@@ -292,6 +292,8 @@ public:
 	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
 	virtual void DespawnMonster(int id);
 
+	virtual void DamageMonster(int id, float damage);
+
 };
 
 class Character_Select_Scene : public CScene
