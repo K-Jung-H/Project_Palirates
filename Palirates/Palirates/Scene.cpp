@@ -2335,6 +2335,21 @@ void CScene::DespawnMonster(int id)
 	mMap.erase(it);
 }
 
+void CScene::DamageMonster(int id, float damage)
+{
+	auto* mlist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!mlist) return;
+
+	auto& mMap = obj_manager->Get_Monster_Map();
+
+	auto it = mMap.find(id);
+	if (it == mMap.end()) return;
+
+	size_t idx = it->second;
+
+	(*mlist)[idx]->currentHP -= damage;
+}
+
 void CScene::Create_Particle_Object(const Particle_Sync_Data& syncData)
 {
 	if (particle_manager)
