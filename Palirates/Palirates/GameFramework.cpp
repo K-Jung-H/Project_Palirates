@@ -1899,7 +1899,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	{
 		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
 
-		XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+		XMFLOAT3 player_color = GetColorById(playerId + 1);
 
 		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
 		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
