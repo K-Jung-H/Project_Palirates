@@ -134,6 +134,8 @@ public:
 
     void SetIsInvincible(bool IsInvincible) { bIsInvincible = IsInvincible; }
     bool IsInvincible() const { return bIsInvincible; }
+
+    void RotateTowardsDirection(const XMFLOAT3& direction, float deltaTime);
 };
 
 

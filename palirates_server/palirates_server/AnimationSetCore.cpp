@@ -252,9 +252,13 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 			}
 		}
 		if (totalWeight == 0.0f) return;
-
+	
 		float fPrevPos = 0.0f;
 		bool bTrackLooped = false;
+		if (maxWeight <= 0.8f) {
+			dominantTrackIndex = -1;
+			bTrackLooped = true;
+		}
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
 			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
@@ -339,6 +343,11 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 	deltaMove = XMFLOAT3(deltaMove.x * multiplier, deltaMove.y * multiplier, deltaMove.z * multiplier);
 	if (Vector3::LengthSquared(deltaMove) > 0.000001f) 
 	{
+		float length = Vector3::Length(deltaMove);
+		if (length >= 1.0f) {
+			std::cout << "[RootMotion] deltaMove: (" << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z
+				<< "), Length: " << length << " - " << HipsPosition.z << ", " << m_xmf3PrevHipsPosition.z << std::endl;
+		}
 		XMFLOAT3 look = pRootGameObject->GetLook();
 		float yaw = XMConvertToDegrees(atan2f(look.x, look.z));
 		XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(yaw));

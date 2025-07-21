@@ -782,6 +782,28 @@ void GameObject::UpdateWorldOBB()
 	}
 }
 
+void GameObject::RotateTowardsDirection(const XMFLOAT3& direction, float deltaTime)
+{
+	if (Vector3::LengthSquared(direction) < 0.00001f)
+		return;
+
+	float targetYaw = XMConvertToDegrees(atan2f(direction.x, direction.z));
+
+	XMVECTOR scale, rotQuat, trans;
+	XMMATRIX parent = XMLoadFloat4x4(&m_xmf4x4Parent);
+	XMMatrixDecompose(&scale, &rotQuat, &trans, parent);
+	XMMATRIX rotMatrix = XMMatrixRotationQuaternion(rotQuat);
+	float currentYaw = XMConvertToDegrees(atan2f(rotMatrix.r[0].m128_f32[2], rotMatrix.r[2].m128_f32[2]));
+
+	float deltaYaw = targetYaw - currentYaw;
+	if (deltaYaw > 180.0f) deltaYaw -= 360.0f;
+	if (deltaYaw < -180.0f) deltaYaw += 360.0f;
+
+	float rotationStep = deltaYaw * deltaTime * 0.5f;
+
+	Rotate(0.0f, rotationStep, 0.0f);
+}
+
 //===================================================================
 
 Boat_Object::Boat_Object()

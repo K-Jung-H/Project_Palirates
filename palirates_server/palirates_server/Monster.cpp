@@ -45,8 +45,8 @@ void Monster::PlayAnimation(State state) {
         auto& animTrack = m_pSkinnedAnimationController->m_pAnimationTracks[track];
         if (animTrack.m_nType == ANIMATION_TYPE_ONCE) {
             animTrack.m_bFinished = false;
-            animTrack.m_fPosition = 0.0f;  
         }
+        animTrack.m_fPosition = 0.0f;
     }
     stateElapsedTime = 0.0f;
 }
@@ -61,8 +61,8 @@ ServerSyncData Monster::MakeSyncData() {
     return data;
 }
 
-GameObject* Monster::FindNearestPlayerInRange(float range) {
-    if (!pPlayerList) return nullptr;
+std::optional<XMFLOAT3> Monster::FindNearestPlayerInRange(float range) {
+    if (!pPlayerList) return std::nullopt;
 
     const float rangeSq = range * range;
     float minDistSq = rangeSq;
@@ -70,14 +70,13 @@ GameObject* Monster::FindNearestPlayerInRange(float range) {
     const XMFLOAT3 myPos = GetPosition();
 
     for (const auto& player : *pPlayerList) {
-        if (!player || !player->Get_Active()) continue; 
+        if (!player || !player->Get_Active()) continue;
 
         const XMFLOAT3 pPos = player->GetPosition();
-
-        const float dx = pPos.x - myPos.x;
-        const float dy = pPos.y - myPos.y;
-        const float dz = pPos.z - myPos.z;
-        const float distSq = dx * dx + dy * dy + dz * dz;
+        float dx = pPos.x - myPos.x;
+        float dy = pPos.y - myPos.y;
+        float dz = pPos.z - myPos.z;
+        float distSq = dx * dx + dy * dy + dz * dz;
 
         if (distSq < minDistSq) {
             minDistSq = distSq;
@@ -85,10 +84,13 @@ GameObject* Monster::FindNearestPlayerInRange(float range) {
         }
     }
 
-    return nearest;
+    if (!nearest) return std::nullopt;
+    return nearest->GetPosition();
 }
 
-void Monster::SetTarget(GameObject* target) {
+void Monster::SetTarget(const XMFLOAT3& targetPos) {
+    m_targetLookDir = targetPos;
+    m_shouldRotate = true;
 }
 
 void Monster::StartAttackCooldown() {
