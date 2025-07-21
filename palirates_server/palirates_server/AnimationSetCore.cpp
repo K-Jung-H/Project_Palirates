@@ -2,6 +2,7 @@
 #include "AnimationSetCore.h"
 #include "ServerAnimLoader.h"
 #include "GameObject.h"
+#include "Monster.h"
 
 using std::shared_ptr;
 using std::string;
@@ -124,7 +125,7 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 	{
 	case ANIMATION_TYPE_LOOP:
 	{
-		if (m_fPosition < 0.0f)
+		/*if (m_fPosition < 0.0f)
 			m_fPosition = 0.0f;
 		else
 		{
@@ -134,7 +135,9 @@ float CAnimationTrack::UpdatePosition(float fTrackPosition, float fElapsedTime, 
 				m_fPosition = 0;
 				return(fAnimationLength);
 			}
-		}
+		}*/
+		float newPosition = m_fPosition + fTrackElapsedTime;
+		m_fPosition = fmod(newPosition, fAnimationLength);
 		break;
 	}
 	case ANIMATION_TYPE_ONCE:
@@ -235,24 +238,39 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 		}
 
 		float totalWeight = 0.0f;
+		int dominantTrackIndex = -1;
+		float maxWeight = -1.0f;
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
 			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 			{
 				totalWeight += m_pAnimationTracks[k].m_fWeight;
+				if (m_pAnimationTracks[k].m_fWeight > maxWeight) {
+					maxWeight = m_pAnimationTracks[k].m_fWeight;
+					dominantTrackIndex = k;
+				}
 			}
 		}
 		if (totalWeight == 0.0f) return;
-
-
+	
+		float fPrevPos = 0.0f;
+		bool bTrackLooped = false;
+		if (maxWeight <= 0.8f) {
+			dominantTrackIndex = -1;
+			bTrackLooped = true;
+		}
 		for (int k = 0; k < m_nAnimationTracks; k++)
 		{
 			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
 			{
 				CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
-
+				if (dominantTrackIndex == k) {
+					fPrevPos = m_pAnimationTracks[k].m_fPosition;
+				}
 				float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
-
+				if (dominantTrackIndex == k) {
+					bTrackLooped = fPrevPos > fPosition;
+				}
 				for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
 				{
 					XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
@@ -283,7 +301,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 
 		pRootGameObject->UpdateTransform(NULL);
 
-		OnRootMotion(pRootGameObject);
+		OnRootMotion(pRootGameObject, bTrackLooped);
 		OnAnimationIK(pRootGameObject);
 	}
 }
@@ -301,7 +319,7 @@ std::vector<Animation_Sync> CAnimationController::MakeSyncData()
 		}
 	}
 	if (data.size() >= 2) {
-		//std::cout << "블랜딩 중" << std::endl;
+		
 	}
 	return data;
 }
@@ -313,16 +331,23 @@ void CAnimationController::ResetWeight()
 	}
 }
 
-void CAnimationController::OnRootMotion(GameObject* pRootGameObject)
+void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped)
 {
 	if (pRootGameObject->GetType() != Object_Type::monster) return;
-
-	XMFLOAT3 deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
-	if (pRootGameObject->GetID() == 0) {
-		std::cout << "move : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
-	}
+	const float multiplier = pRootGameObject->m_fScale;
+	XMFLOAT3 deltaMove;
+	if (bTrackLooped)
+		deltaMove = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	else
+		deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
+	deltaMove = XMFLOAT3(deltaMove.x * multiplier, deltaMove.y * multiplier, deltaMove.z * multiplier);
 	if (Vector3::LengthSquared(deltaMove) > 0.000001f) 
 	{
+		float length = Vector3::Length(deltaMove);
+		if (length >= 1.0f) {
+			std::cout << "[RootMotion] deltaMove: (" << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z
+				<< "), Length: " << length << " - " << HipsPosition.z << ", " << m_xmf3PrevHipsPosition.z << std::endl;
+		}
 		XMFLOAT3 look = pRootGameObject->GetLook();
 		float yaw = XMConvertToDegrees(atan2f(look.x, look.z));
 		XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(yaw));

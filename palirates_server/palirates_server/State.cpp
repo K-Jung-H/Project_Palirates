@@ -28,16 +28,16 @@ void IdleState::Enter(Monster* monster, MonsterStateMachine* sm) {
 void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
 
-    auto target = monster->FindNearestPlayerInRange(10.0f);
-    if (target) {
-        monster->SetTarget(target);
+    auto nearestPos = monster->FindNearestPlayerInRange(10.0f);
+    if (nearestPos) {
+        monster->SetTarget(*nearestPos);
         sm->ChangeState(std::make_unique<AttackState>());
     }
     monster->stateElapsedTime += deltaTime;
-    if (monster->stateElapsedTime > 3.0f) {
+    if (monster->stateElapsedTime > 1.0f) {
         monster->stateElapsedTime = 0.0f;
 
-        if (RandomFloat() < 0.3f) {
+        if (RandomFloat() < 1.0f) {
             sm->ChangeState(std::make_unique<WalkState>());
         }
     }
@@ -55,25 +55,36 @@ void WalkState::Enter(Monster* monster, MonsterStateMachine* sm) {
         return;
     }
     monster->PlayAnimation(State::Run);
-
+    if (auto controller = monster->GetSkinnedAnimationController()) {
+        controller->AdvanceTime(0.0f, monster);
+        controller->m_xmf3PrevHipsPosition = controller->HipsPosition;
+    }
+    std::cout << "WalkState Enter" << std::endl;
 }
 
 void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
-
-    auto target = monster->FindNearestPlayerInRange(10.0f);
-    if (target) {
-        monster->SetTarget(target);
-        sm->ChangeState(std::make_unique<AttackState>());
-    }
-    //monster->Move();
-    //if (monster->GetID() == 0)
-        //std::cout << sm->animController->HipsPosition.x << ", " << sm->animController->HipsPosition.y << ", " << sm->animController->HipsPosition.z << "\n";
     monster->stateElapsedTime += deltaTime;
-    if (monster->stateElapsedTime > 3.0f) {
+    if (monster->stateElapsedTime > 1.0f) {
         monster->stateElapsedTime = 0.0f;
         if (RandomFloat() < 0.3f) {
-            sm->ChangeState(std::make_unique<IdleState>());
+            XMFLOAT3 targetPos = (RandomFloat() < 0.5f) ? monster->GetRight() : XMFLOAT3{
+     -monster->GetRight().x,
+     -monster->GetRight().y,
+     -monster->GetRight().z
+            };
+            monster->SetTarget(targetPos);
+        }
+    }
+
+    if (monster->m_shouldRotate) {
+        monster->RotateTowardsDirection(monster->m_targetLookDir, deltaTime);
+        XMFLOAT3 curLook = monster->GetLook();
+        XMFLOAT3 tgtLook = monster->m_targetLookDir;
+
+        float dot = Vector3::DotProduct(Vector3::Normalize(curLook), Vector3::Normalize(tgtLook));
+        if (dot > 0.999f) { 
+            monster->m_shouldRotate = false;
         }
     }
 }

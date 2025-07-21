@@ -43,7 +43,8 @@ protected:
 public:
     float stateElapsedTime = 0.0f;
     float stateChangeInterval = 2.0f;
-
+    XMFLOAT3 m_targetLookDir = { 0, 0, 0 };
+    bool m_shouldRotate = false;
 public:
     Monster(int id);
     Monster() = default;
@@ -57,8 +58,8 @@ public:
     virtual ServerSyncData MakeSyncData();
 
     void SetPlayerListPtr(const std::array<std::shared_ptr<Player>, MaxPlayer>* ptr) { pPlayerList = ptr; }
-    virtual GameObject* FindNearestPlayerInRange(float range);
-    virtual void SetTarget(GameObject* target);
+    virtual std::optional<XMFLOAT3> FindNearestPlayerInRange(float range);
+    virtual void SetTarget(const XMFLOAT3& targetPos);
     virtual void StartAttackCooldown();
     virtual bool IsAttackCooldownOver() const;
 

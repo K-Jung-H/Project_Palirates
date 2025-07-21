@@ -45,8 +45,8 @@ void Monster::PlayAnimation(State state) {
         auto& animTrack = m_pSkinnedAnimationController->m_pAnimationTracks[track];
         if (animTrack.m_nType == ANIMATION_TYPE_ONCE) {
             animTrack.m_bFinished = false;
-            animTrack.m_fPosition = 0.0f;  
         }
+        animTrack.m_fPosition = 0.0f;
     }
     stateElapsedTime = 0.0f;
 }
@@ -61,8 +61,8 @@ ServerSyncData Monster::MakeSyncData() {
     return data;
 }
 
-GameObject* Monster::FindNearestPlayerInRange(float range) {
-    if (!pPlayerList) return nullptr;
+std::optional<XMFLOAT3> Monster::FindNearestPlayerInRange(float range) {
+    if (!pPlayerList) return std::nullopt;
 
     const float rangeSq = range * range;
     float minDistSq = rangeSq;
@@ -70,14 +70,13 @@ GameObject* Monster::FindNearestPlayerInRange(float range) {
     const XMFLOAT3 myPos = GetPosition();
 
     for (const auto& player : *pPlayerList) {
-        if (!player || !player->Get_Active()) continue; 
+        if (!player || !player->Get_Active()) continue;
 
         const XMFLOAT3 pPos = player->GetPosition();
-
-        const float dx = pPos.x - myPos.x;
-        const float dy = pPos.y - myPos.y;
-        const float dz = pPos.z - myPos.z;
-        const float distSq = dx * dx + dy * dy + dz * dz;
+        float dx = pPos.x - myPos.x;
+        float dy = pPos.y - myPos.y;
+        float dz = pPos.z - myPos.z;
+        float distSq = dx * dx + dy * dy + dz * dz;
 
         if (distSq < minDistSq) {
             minDistSq = distSq;
@@ -85,10 +84,13 @@ GameObject* Monster::FindNearestPlayerInRange(float range) {
         }
     }
 
-    return nearest;
+    if (!nearest) return std::nullopt;
+    return nearest->GetPosition();
 }
 
-void Monster::SetTarget(GameObject* target) {
+void Monster::SetTarget(const XMFLOAT3& targetPos) {
+    m_targetLookDir = targetPos;
+    m_shouldRotate = true;
 }
 
 void Monster::StartAttackCooldown() {
@@ -161,7 +163,8 @@ Fishman::Fishman(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-    SetScale(10.0f, 10.0f, 10.0f);
+    m_fScale = 10.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.8f, 0.0f),    
         XMFLOAT3(0.4f, 0.8f, 0.4f),   
@@ -201,7 +204,8 @@ Anubis::Anubis(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-    SetScale(15.0f, 15.0f, 15.0f);
+    m_fScale = 15.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.9f, 0.0f),
         XMFLOAT3(0.3f, 0.9f, 0.3f),
@@ -259,7 +263,8 @@ TestPlayer::TestPlayer(int id) : Monster(id) {
     };
 
     InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    SetScale(10.0f, 10.0f, 10.0f);
+    m_fScale = 10.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
 }

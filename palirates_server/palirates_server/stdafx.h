@@ -20,6 +20,7 @@
 #include <tchar.h>
 #include <unordered_set>
 #include <unordered_map>
+#include <optional>
 //#include <DirectXMath.h>
 #include "DX_Setter.h"
 
