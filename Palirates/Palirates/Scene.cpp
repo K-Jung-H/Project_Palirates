@@ -1961,11 +1961,13 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #ifdef USING_OBB
 //	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
 //	obj_manager->Check_Player_Collision(m_pPlayer);
+#endif
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 	Object_Manager::Reserve_Update();
 
-#endif
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+
 
 	//obj_manager->Check_Player_Collision(m_pPlayer);
 	
@@ -2081,9 +2083,6 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 			break;
 		}
 	}
-
-	obj_manager->Prepare_ShadowMap_Render(pd3dDevice, pd3dCommandList);
-
 }
 
 void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
@@ -2112,9 +2111,6 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
-
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
@@ -4016,6 +4012,7 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
 
 #ifdef USING_OBB
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
@@ -4151,6 +4148,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
 
 #ifdef USING_OBB
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);

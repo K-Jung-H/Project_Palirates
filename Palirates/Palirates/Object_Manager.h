@@ -30,16 +30,28 @@ struct Fixed_Object_Info
 	std::vector<std::shared_ptr<CGameObject>> fixed_obj_list;
 	std::shared_ptr<CMesh> obj_mesh;
 
-	int rendering_num = 0;
 	int instance_buffer_max_num = DEFAULT_INSTANCE_NUM;
+
 	ID3D12Resource* Instance_info = NULL;
 	Instance_Info* Mapped_Instance_info = NULL;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dInstancingBufferView;
+	int rendering_num = 0;
+
+
+	ID3D12Resource* Shadow_Instance_info = nullptr;
+	Instance_Info* Mapped_Shadow_Instance_info = nullptr;
+	D3D12_VERTEX_BUFFER_VIEW m_d3dShadowInstancingBufferView;
+	int shadow_instance_num = 0;
 
 	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-	void Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList); // For Shadow-Map Render
+//	void Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList); // For Shadow-Map Render
 	void Release_Instance_Data_ShaderVariables();
+
+	void Create_Shadow_Instance_Buffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void Update_Shadow_Instance_Data(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
+	void Release_Shadow_Instance_Buffer();
+
 
 };
 
@@ -251,7 +263,7 @@ public:
 	// Animation and logic update
 	void Animate_Objects_All(float fTimeElapsed);
 	void Animate_Objects(Object_Type type, float fTimeElapsed);
-	void Prepare_ShadowMap_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_ShadowMap_Fixed_Instance(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Post_Update(Object_Type type);
 	void Post_Update_All();
