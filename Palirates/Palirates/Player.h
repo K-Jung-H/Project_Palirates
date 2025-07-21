@@ -68,7 +68,7 @@ protected:
 	int id;  
 	int state;
 
-private:
+protected:
 	std::unique_ptr<StateMachine> m_StateMachine;
 
 public:
