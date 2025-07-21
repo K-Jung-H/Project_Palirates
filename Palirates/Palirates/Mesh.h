@@ -386,7 +386,10 @@ public:
 	void SetSegmentThreshold(float fThreshold);
 	void SetTrailLifespan(float fSeconds);
 
-	void Set_MainColor(XMFLOAT4 new_color) { Main_Color = new_color; }
+	void Set_MainColor(XMFLOAT4 new_color) 
+	{
+		Main_Color = new_color; 
+	}
 	void Set_SubColor(XMFLOAT4 new_color) { Sub_Color = new_color; }
 
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext = nullptr) override;

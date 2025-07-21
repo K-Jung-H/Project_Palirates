@@ -1286,7 +1286,6 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 			if (obj_ptr != NULL)
 				if (obj_ptr->Get_Active())
 				{
-//					obj_ptr->UpdateTransform(NULL);
 					obj_ptr->Render(pd3dCommandList, pCamera);
 				}
 		}

@@ -1864,20 +1864,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
 			Connected_Player_List[player_ID] = true;
-			XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f };
-			XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
-			shared_ptr<CGameObject> trail_target = newPlayer->Weapon_ptr;
-			if (!trail_target) return;
-			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
-			trail_obj->Set_Main_Color(test_main_color);
-			trail_obj->Set_SubColor(test_sub_color);
 
-			trail_obj->Set_Trail_Target(trail_target, false);
-			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-			scene_manager->Get_Active_Scene()->obj_manager->Add_Object(trail_obj, Object_Type::trail);
-			newPlayer->SetTrailObj(trail_obj);
-			newPlayer->bTrailOff();
-			newPlayer->GetTrailObj()->Set_Active(false);
 		}
 
 	}
@@ -1904,6 +1891,29 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->SetupWeaponCollider();
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	new_Player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
+
+
+
+	shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
+	if (trail_target)
+	{
+		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
+
+		XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+
+		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		trail_obj->Set_Main_Color(trail_main_color);
+		trail_obj->Set_SubColor(trail_sub_color);
+
+		trail_obj->Set_Trail_Target(trail_target, false);
+		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+		scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+		new_Player->SetTrailObj(trail_obj);
+		new_Player->bTrailOff();
+		new_Player->GetTrailObj()->Set_Active(false);
+	}
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 
