@@ -1499,6 +1499,11 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					stage_scene->DespawnMonster(id);
 				}
+				else if (cmdType == "DAMAGE") {
+					int id = std::stoi(tokens[idx++]);
+					float damage = std::stoi(tokens[idx++]);
+					stage_scene->DamageMonster(id, damage);
+				}
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
@@ -1876,7 +1881,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		{
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 		}
-		else // 플레이어 데이터 없음, 추가 필요
+		else 
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);

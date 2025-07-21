@@ -1393,7 +1393,7 @@ void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 		player_map[player_id]->ApplySyncData(syncData);
 
 
-		if (syncData.changedStateNum == int(State::Attack1)) {
+		if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
 			std::cout << "Attack State" << "\n";
 			player_map[player_id]->bTrailOn();
 			if (player_map[player_id]->GetTrailStart())

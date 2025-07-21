@@ -75,6 +75,12 @@ enum InputFlags : uint32_t
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };
 
+struct MonsterDamageInfo
+{
+    int monsterID;
+    float damage;
+};
+
 extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
 extern int ReadIntegerFromFile(FILE* pInFile);
 extern float ReadFloatFromFile(FILE* pInFile);

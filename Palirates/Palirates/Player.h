@@ -179,6 +179,7 @@ public:
 	void bTrailOff() { TrailOn = false; }
 	bool GetTrailOn() { return TrailOn; }
 	void Trail_Start() { TrailStart = true; }
+	void Trail_End() { TrailStart = false; }
 	bool GetTrailStart() { return TrailStart; }
 
 	void MultiModeOn() { MultiMode = true; }
