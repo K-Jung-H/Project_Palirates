@@ -20,6 +20,7 @@
 #include <tchar.h>
 #include <unordered_set>
 #include <unordered_map>
+#include <optional>
 //#include <DirectXMath.h>
 #include "DX_Setter.h"
 
@@ -37,8 +38,8 @@ enum Scene_Type
 {
 	Lobby,
 	Board,
-	Stage_1,
-	Stage_2,
+    Stage_1,
+    Stage_2,
     Stage_3,
     Stage_4,
     Stage_5,
@@ -73,6 +74,12 @@ enum InputFlags : uint32_t
     INPUT_E = 1 << KEY_INDEX_E,
     INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
+};
+
+struct MonsterDamageInfo
+{
+    int monsterID;
+    float damage;
 };
 
 extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);

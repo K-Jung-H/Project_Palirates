@@ -32,10 +32,6 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 	float aspect = ASPECT_RATIO;
 	XMMATRIX proj = XMMatrixPerspectiveFovLH(fov, aspect, nearZ, farZ);
 
-	//XMMATRIX view = XMLoadFloat4x4(&mainCamera->GetViewMatrix());
-	//XMMATRIX proj = XMLoadFloat4x4(&mainCamera->GetProjectionMatrix());
-	
-
 
 	XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
 
@@ -58,46 +54,58 @@ std::vector<XMFLOAT3> Shadow_Camera::CalcFrustumCornersWorld(CCamera* mainCamera
 	return corners;
 }
 
+
 void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std::vector<float>& splitDepths, CCamera* mainCamera)
 {
 	m_CascadeView.clear();
 	m_CascadeProj.clear();
 	m_light_direction = light_direction;
 
-	constexpr float SHADOW_Z_MARGIN = 1.0f;
-	constexpr float LIGHT_DIST = 5000.0f;
+	constexpr float LIGHT_DIST = 3000.0f; // Not Use
 	constexpr int SHADOWMAP_RESOLUTION = 2048;
+	constexpr float SHADOW_Z_MARGIN = 500.0f;
 
 	for (int i = 0; i < NUM_CASCADES; ++i)
 	{
 		float nearZ = splitDepths[i];
 		float farZ = splitDepths[i + 1];
-		std::vector<XMFLOAT3> frustumCorners = CalcFrustumCornersWorld(mainCamera, nearZ, farZ);
+		std::vector<XMFLOAT3> corners = CalcFrustumCornersWorld(mainCamera, nearZ, farZ);
 
-		XMFLOAT3 frustumCenter = { 0.f, 0.f, 0.f };
-		for (const auto& c : frustumCorners)
+		// Step 1. Compute frustum center
+		XMFLOAT3 center = { 0.f, 0.f, 0.f };
+		for (const auto& c : corners)
 		{
-			frustumCenter.x += c.x;
-			frustumCenter.y += c.y;
-			frustumCenter.z += c.z;
+			center.x += c.x;
+			center.y += c.y;
+			center.z += c.z;
 		}
-		frustumCenter.x /= 8.0f;
-		frustumCenter.y /= 8.0f;
-		frustumCenter.z /= 8.0f;
+		center.x /= 8.0f;
+		center.y /= 8.0f;
+		center.z /= 8.0f;
 
-
+		// Step 2. Build stable lightView (fixed lightDir)
 		XMVECTOR lightDir = XMVector3Normalize(XMLoadFloat3(&light_direction));
-		XMVECTOR frustumCenterV = XMLoadFloat3(&frustumCenter);
-		XMVECTOR lightPos = frustumCenterV - lightDir * LIGHT_DIST;
-		XMMATRIX lightView = XMMatrixLookAtLH(lightPos, frustumCenterV, XMVectorSet(0, 1, 0, 0));
+		XMVECTOR centerV = XMLoadFloat3(&center);
+		XMVECTOR lightPos = centerV - lightDir * LIGHT_DIST;
 
+		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+		if (abs(XMVectorGetX(XMVector3Dot(lightDir, up))) > 0.99f)
+			up = XMVectorSet(0, 0, 1, 0);
+
+		XMVECTOR right = XMVector3Normalize(XMVector3Cross(up, lightDir));
+		up = XMVector3Cross(lightDir, right);
+
+		XMMATRIX lightView = XMMatrixLookToLH(lightPos, lightDir, up);
+
+		// Step 3. Transform corners to light space and compute AABB
 		XMFLOAT3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
 		XMFLOAT3 max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-		for (const auto& c : frustumCorners)
+
+		for (const auto& c : corners)
 		{
-			XMVECTOR lightSpace = XMVector3TransformCoord(XMLoadFloat3(&c), lightView);
+			XMVECTOR pLS = XMVector3TransformCoord(XMLoadFloat3(&c), lightView);
 			XMFLOAT3 p;
-			XMStoreFloat3(&p, lightSpace);
+			XMStoreFloat3(&p, pLS);
 			min.x = std::min(min.x, p.x);
 			min.y = std::min(min.y, p.y);
 			min.z = std::min(min.z, p.z);
@@ -106,43 +114,40 @@ void Shadow_Camera::SetupCSMCascades(const XMFLOAT3& light_direction, const std:
 			max.z = std::max(max.z, p.z);
 		}
 
-		min.z -= SHADOW_Z_MARGIN;
-		max.z += SHADOW_Z_MARGIN;
-
+		// Step 4. Texel snap + stable projection center
 		float width = max.x - min.x;
 		float height = max.y - min.y;
 		float maxSize = std::max(width, height);
-		float texelSize = (2.0f * maxSize) / static_cast<float>(SHADOWMAP_RESOLUTION);
+		float texelSize = maxSize / static_cast<float>(SHADOWMAP_RESOLUTION);
 
 		float cx = (min.x + max.x) * 0.5f;
 		float cy = (min.y + max.y) * 0.5f;
 
-		constexpr float SNAP_UNIT = 32.0f;
-
-		cx = floor(cx / SNAP_UNIT) * SNAP_UNIT;
-		cy = floor(cy / SNAP_UNIT) * SNAP_UNIT;
-
-		//  Snap to texel grid (world-grid 기준 정렬)
+		// Snap projection center to texel grid
 		cx = floorf(cx / texelSize) * texelSize;
 		cy = floorf(cy / texelSize) * texelSize;
 
-		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(
-			cx - maxSize * 0.5f, cx + maxSize * 0.5f,
-			cy - maxSize * 0.5f, cy + maxSize * 0.5f,
-			min.z, max.z
-		);
+		float left = cx - maxSize * 0.5f;
+		float right2 = cx + maxSize * 0.5f;
+		float bottom = cy - maxSize * 0.5f;
+		float top = cy + maxSize * 0.5f;
 
+		// Add depth margin
+		float nearPlane = min.z - SHADOW_Z_MARGIN;
+		float farPlane = max.z + SHADOW_Z_MARGIN;
 
+		XMMATRIX lightProj = XMMatrixOrthographicOffCenterLH(left, right2, bottom, top, nearPlane, farPlane);
 
+		// Store result
 		XMFLOAT4X4 viewMat, projMat;
 		XMStoreFloat4x4(&viewMat, lightView);
 		XMStoreFloat4x4(&projMat, lightProj);
 		m_CascadeView.push_back(viewMat);
 		m_CascadeProj.push_back(projMat);
 		m_CascadeSplits[i] = farZ;
-
 	}
 }
+
 
 std::vector<float> Shadow_Camera::GenerateCSMSplitDepths(float nearZ, float farZ, int numCascades, float lambda)
 {
@@ -1124,7 +1129,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 #ifdef LOAD_SCENE
 
 
-		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map1.bin", NULL);
+		CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map2.bin", NULL);
 
 		std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 		test_scene->Set_Name("test_scene");
@@ -1956,34 +1961,42 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #ifdef USING_OBB
 //	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
 //	obj_manager->Check_Player_Collision(m_pPlayer);
+#endif
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 	Object_Manager::Reserve_Update();
 
-#endif
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+
 
 	//obj_manager->Check_Player_Collision(m_pPlayer);
-	
-	if (m_pPlayer->GetTrailOn())
-	{
-		if (!m_pPlayer->GetTrailStart()) 
-		{
-			shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-			trail_obj->Set_Trail_Target(trail_target, false);
-			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-			obj_manager->Add_Object(trail_obj, Object_Type::trail);
-			m_pPlayer->SetTrailObj(trail_obj);
-			m_pPlayer->GetTrailObj()->Set_Active(true);
-			m_pPlayer->Trail_Start();
-		}
+	//
+	//if (m_pPlayer->GetTrailOn())
+	//{
+	//	if (!m_pPlayer->GetTrailStart()) 
+	//	{
+	//		XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f};
+	//		XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
 
-		if (!m_pPlayer->GetTrailObj()->Get_Active()) 
-		{
-			m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
-			m_pPlayer->GetTrailObj()->Set_Active(true);
-		}
-	}
+	//		shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+	//		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+	//		trail_obj->Set_Main_Color(test_main_color);
+	//		trail_obj->Set_SubColor(test_sub_color);
+
+	//		trail_obj->Set_Trail_Target(trail_target, false);
+	//		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//		obj_manager->Add_Object(trail_obj, Object_Type::trail);
+	//		m_pPlayer->SetTrailObj(trail_obj);
+	//		m_pPlayer->GetTrailObj()->Set_Active(true);
+	//		m_pPlayer->Trail_Start();
+	//	}
+
+	//	if (!m_pPlayer->GetTrailObj()->Get_Active()) 
+	//	{
+	//		m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
+	//		m_pPlayer->GetTrailObj()->Set_Active(true);
+	//	}
+	//}
 
 
 
@@ -2062,17 +2075,14 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
 			int numCascades = NUM_CASCADES;
-			float lambda = 0.7f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, CAMERA_FAR, numCascades, lambda);
+			float lambda = 0.9f;
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, 6000, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
 			shadow_camera->update_shadow = true;
 			break;
 		}
 	}
-
-	obj_manager->Prepare_ShadowMap_Render(pd3dDevice, pd3dCommandList);
-
 }
 
 void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
@@ -2101,9 +2111,6 @@ void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
-
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
@@ -2326,6 +2333,21 @@ void CScene::DespawnMonster(int id)
 
 	plist->pop_back();
 	mMap.erase(it);
+}
+
+void CScene::DamageMonster(int id, float damage)
+{
+	auto* mlist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!mlist) return;
+
+	auto& mMap = obj_manager->Get_Monster_Map();
+
+	auto it = mMap.find(id);
+	if (it == mMap.end()) return;
+
+	size_t idx = it->second;
+
+	(*mlist)[idx]->currentHP -= damage;
 }
 
 void CScene::Create_Particle_Object(const Particle_Sync_Data& syncData)
@@ -2703,8 +2725,8 @@ bool Character_Select_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessag
 		case VK_CONTROL:
 		{
 			c_signal.change = true;
-			c_signal.scene_name = "Stage_1";
-			c_signal.type = Scene_Type::Stage_1;
+			c_signal.scene_name = "Stage_2";
+			c_signal.type = Scene_Type::Stage_2;
 
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
@@ -2892,6 +2914,8 @@ void Character_Select_Scene::SetEnableCharactorSelectButton(bool Enable)
 	}
 }
 //==========================================================================================
+int Board_Scene::nearest_stage_index = -1;
+bool Board_Scene::is_stage_select = false;
 
 void Board_Scene::BuildDefaultLightsAndMaterials()
 {
@@ -3262,10 +3286,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, true);
 			}
 
-			if (isRunning)
-			{
-				nearest_stage_index = is_nearby;
-			}
+			nearest_stage_index = is_nearby;
+
 		}
 		else
 		{
@@ -3273,9 +3295,10 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 			bClosedByUser = false;
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 
+			nearest_stage_index = -1;
+
 			if (isRunning)
 			{
-				nearest_stage_index = -1;
 				is_stage_select = false;
 			}
 		}
@@ -3568,9 +3591,21 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->onClick = [this]()
 		{
 			c_signal.change = true;
+			
+			if (nearest_stage_index == 0 || nearest_stage_index == 2 || nearest_stage_index == 4 || nearest_stage_index == 6)
+			{
 			c_signal.scene_name = "Stage_1";
 			c_signal.type = Scene_Type::Stage_1;
+			}
+			else if (nearest_stage_index == 1 || nearest_stage_index == 3 || nearest_stage_index == 5)
+			{
+				c_signal.scene_name = "Stage_2";
+				c_signal.type = Scene_Type::Stage_2;
+			}
+			std::cout << c_signal.scene_name << "\n";
 			is_stage_select = true;
+			
+			
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
@@ -3697,8 +3732,466 @@ pair<int, bool> Board_Scene::Get_Sail_Status()
 	return { nearest_stage_index, is_stage_select };
 }
 
+void Board_Scene::Reset_Sail_Status()
+{
+	nearest_stage_index = -1, is_stage_select = false;
+}
+
+
+//==========================================================================================
+bool Stage_Scene::Change_Scene_Signal = false;
+
+
+void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
+{
+	fog_info->time += fTimeElapsed;
+
+	obj_manager->Animate_Objects_All(fTimeElapsed);
+
+#ifdef RENDER_WAVE
+
+	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;
+	CS_Wave_Shader::update_wave_info->g_WaveMax = 0.75f;
+	CS_Wave_Shader::update_wave_info->g_HeightDamping = 0.1f;
+
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+	{
+		Plane_Shader::Update(fTimeElapsed);
+		wave_obj->Animate(pd3dCommandList, fTimeElapsed);
+	}
+#endif
+
+
+}
+void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+#ifdef RENDER_WAVE
+	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
+	if (wave_obj)
+		wave_obj->Copy_Buffer_Data(pd3dCommandList);
+#endif
+
+#ifdef USING_OBB
+
+	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
+
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+#endif
+
+	//if (m_pPlayer->GetTrailOn())
+	//{
+	//	if (!m_pPlayer->GetTrailStart())
+	//	{
+	//		XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f };
+	//		XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
+
+	//		shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
+	//		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+	//		trail_obj->Set_Main_Color(test_main_color);
+	//		trail_obj->Set_SubColor(test_sub_color);
+
+	//		trail_obj->Set_Trail_Target(trail_target, false);
+	//		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+	//		obj_manager->Add_Object(trail_obj, Object_Type::trail);
+	//		m_pPlayer->SetTrailObj(trail_obj);
+	//		m_pPlayer->GetTrailObj()->Set_Active(true);
+	//		m_pPlayer->Trail_Start();
+	//	}
+
+	//	if (!m_pPlayer->GetTrailObj()->Get_Active())
+	//	{
+	//		m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
+	//		m_pPlayer->GetTrailObj()->Set_Active(true);
+	//	}
+	//}
+
+}
+void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
+}
+
+
+void Stage_Scene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
+{
+	obj_manager->Add_Player(new_player_ptr);
+}
+void Stage_Scene::Remove_Multi_Player(int player_id)
+{
+	obj_manager->Remove_Player(player_id);
+}
+void Stage_Scene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+{
+	obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+
+void Stage_Scene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
+{
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	if (id2idx.find(id) != id2idx.end())
+		return;
+
+	int mType = GET_MONSTER_TYPE(id);
+	std::shared_ptr<CGameObject> m;
+
+	if (mType == static_cast<int>(Monster_Type::Fishman)) {
+		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
+		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
+		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::ETC)) {
+		m = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		m->type = EObjectType::Monster;
+		m->SetScale(10.0f, 10.0f, 10.0f);
+	}
+	else {
+		return;
+	}
+
+	m->SetID(id);
+	m->Set_Child(m->m_pRootModel);
+	m->SetObject_Type_ID(MATERIAL_Object_Type_ID_Monster);
+	m->SetupWeaponCollider();
+	m->SetPosition(pos.x, pos.y, pos.z);
+	id2idx[id] = obj_manager->Get_Object_List(Object_Type::skinned)->size();
+	obj_manager->Add_Object(m, Object_Type::skinned);
+}
+void Stage_Scene::DespawnMonster(int id)
+{
+	auto* plist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!plist) return;
+
+	auto& mMap = obj_manager->Get_Monster_Map();
+
+	auto it = mMap.find(id);
+	if (it == mMap.end()) return;
+
+	size_t idx = it->second;
+	size_t last = plist->size() - 1;
+
+	if (idx != last)
+	{
+		std::swap((*plist)[idx], (*plist)[last]);
+
+		if ((*plist)[idx])
+		{
+			int newId = (*plist)[idx]->GetID();
+			mMap[newId] = idx;
+		}
+	}
+
+	plist->pop_back();
+	mMap.erase(it);
+}
+void Stage_Scene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
+{
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	auto found = id2idx.find(monsterID);
+
+	if (found != id2idx.end())
+	{
+		size_t idx = found->second;
+		auto* Monster_List = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (idx < Monster_List->size())
+		{
+			auto& monster = (*Monster_List)[idx];
+			if (monster) {
+				monster->ApplySyncData(syncData);
+				return;
+			}
+		}
+	}
+	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
+	if (monsterID == 50331651) std::cout << "testplayer spawn" << std::endl;
+
+}
+
 //==========================================================================================
 
+void Stage_1_Scene::BuildDefaultLightsAndMaterials()
+{
+	m_nLights = 1;
+	m_pLights = new LIGHT[m_nLights];
+	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
+
+	m_xmf4GlobalAmbient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+
+}
+
+void Stage_1_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	CScene::Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
+	fog_info->fogColor = { 1.0f, 0.0f, 0.0f };
+}
+
+
+void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) 
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	if (Object_Manager::trail_shader == NULL)
+	{
+		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	//===============================================================================
+
+#ifdef RENDER_WAVE
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	wave_obj->Set_Name("in_game_wave");
+	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	obj_manager->Set_Wave_Object(wave_obj);
+#endif
+
+	//===============================================================================
+
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	//==================================
+	// 나중에 시도할 것
+	//xmf3Scale.x = 5;
+	//xmf3Scale.y = 5;
+	//xmf3Scale.z = 5;
+	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
+	
+	//m_pTerrain->Set_Child(test_Terrain);
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+	//===============================================================================
+
+#ifdef RENDER_PARTICLE
+
+	Particle_Format bleeding_info;
+	{
+		bleeding_info.shader_type = Particle_Shader_Type::interval;
+		bleeding_info.particle_type = Particle_Type::bleed;
+		bleeding_info.max_particles = 30;
+		bleeding_info.MaxLifetime = 3.0f;
+
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+		bleeding_info.EmitFaceIndex = 5;
+
+		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		bleeding_info.init_velocity_value = 50.0f;
+		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
+
+		bleeding_info.size = 0.3f;
+		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	}
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
+	test_bleeding->Set_World_Coordinate();
+
+	//===============================================================================
+
+#ifdef LOAD_SCENE
+
+
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map1.bin", NULL);
+
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("test_scene");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 213.0f, 800.0f);
+	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+#endif
+
+	//===============================================================================
+
+	Object_Manager::Reserve_Update();
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
+
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
+
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+
+#endif
+
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+
+
+}
+
+
+//==========================================================================================
+
+
+void Stage_2_Scene::BuildDefaultLightsAndMaterials()
+{
+	m_nLights = 1;
+	m_pLights = new LIGHT[m_nLights];
+	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
+
+	m_xmf4GlobalAmbient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+
+}
+
+void Stage_2_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	CScene::Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
+	fog_info->fogColor = { 1.0f, 0.5f, 0.0f };
+}
+
+
+void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+
+	if (Object_Manager::trail_shader == NULL)
+	{
+		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	//===============================================================================
+
+#ifdef RENDER_WAVE
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	wave_obj->Set_Name("in_game_wave");
+	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	obj_manager->Set_Wave_Object(wave_obj);
+#endif
+
+	//===============================================================================
+
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+	//===============================================================================
+
+#ifdef RENDER_PARTICLE
+
+	Particle_Format bleeding_info;
+	{
+		bleeding_info.shader_type = Particle_Shader_Type::interval;
+		bleeding_info.particle_type = Particle_Type::bleed;
+		bleeding_info.max_particles = 30;
+		bleeding_info.MaxLifetime = 3.0f;
+
+		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
+		bleeding_info.EmitFaceIndex = 5;
+
+		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		bleeding_info.init_velocity_value = 50.0f;
+		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
+
+		bleeding_info.size = 0.3f;
+		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+	}
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
+	test_bleeding->Set_World_Coordinate();
+
+	//===============================================================================
+
+#ifdef LOAD_SCENE
+
+
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map2.bin", NULL);
+
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("test_scene");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 34.0f, 800.0f);
+	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+#endif
+
+	//===============================================================================
+
+	Object_Manager::Reserve_Update();
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
+
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
+
+	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+
+#endif
+
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+}
+
+
+//===============================================================================
 
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -3748,6 +4241,3 @@ void Test_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 }
-
-
-//==========================================================================================

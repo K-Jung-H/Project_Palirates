@@ -32,20 +32,17 @@
 *.out
 *.app
 
-<<<<<<< Server---KJH
-=======
-/palirates_server/.vs
-/palirates_server/palirates_server/x64
-/palirates_server/x64
 
->>>>>>> main
+
 /Palirates/.vs
 /Palirates/Palirates/x64
 /Palirates/x64
-/Palirates/Palirates/Scene/Havana.bin
-/Palirates/Palirates/Scene/**/*.txt
+
 /Palirates/Palirates/CONERR$
 
 /palirates_server/.vs
 /palirates_server/palirates_server/x64
 /palirates_server/x64
+
+
+/Palirates/Palirates/Scene/**/*.txt

@@ -377,7 +377,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 				case VK_SPACE:
-					test_button = !test_button;
+//					test_button = !test_button;
+					Stage_Scene::Change_Scene_Signal = true;
 					break;
 
 				case VK_RETURN:
@@ -612,12 +613,12 @@ bool CGameFramework::Change_Scene()
 	Change_Signal c_signal;
 	if (isRunning) // 멀티인 경우에만 동작
 	{
-		if (Change_Call_By_Server != -1)
+		if (Change_Call_By_Server != None)
 		{
 			std::cout << "[DEBUG] 서버 패킷에 의한 씬전환 분기 진입" << std::endl;
 			c_signal = change_signal;
 
-			Change_Call_By_Server = -1;
+			Change_Call_By_Server = None;
 			change_signal.change = false;
 
 		}
@@ -632,7 +633,8 @@ bool CGameFramework::Change_Scene()
 	if (!c_signal.change)
 		return false;
 
-
+	if (c_signal.type == Scene_Type::Board)
+		Board_Scene::Reset_Sail_Status();
 	if (scene_manager->Find_Scene(c_signal.scene_name))
 	{
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
@@ -1289,9 +1291,24 @@ void CGameFramework::SendPacket()
 
 	if (!active_scene || !bClientIdAssigned || serverSocket == INVALID_SOCKET || !m_pPlayer) return;
 
-
 	std::ostringstream oss;
-	oss << "PLAYER_UPDATE," << static_cast<int>(active_scene->scene_type) << "," << Client_ID;
+
+
+
+	if (Stage_Scene::Change_Scene_Signal)
+	{
+		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
+		{
+			oss << "CHANGE_SCENE," << to_string(static_cast<int>(Scene_Type::Board));
+			std::string packet = oss.str() + "\n";
+			SendPacket_String(packet);
+			return;
+		}
+		else
+			Stage_Scene::Change_Scene_Signal = false;
+	}
+
+	oss << "PLAYER_UPDATE," << to_string(static_cast<int>(active_scene->scene_type)) << "," << Client_ID;
 
 	switch (active_scene->scene_type)
 	{
@@ -1327,6 +1344,12 @@ void CGameFramework::SendPacket()
 
 
 	case Scene_Type::Stage_1:
+	case Scene_Type::Stage_2:
+	case Scene_Type::Stage_3:
+	case Scene_Type::Stage_4:
+	case Scene_Type::Stage_5:
+	case Scene_Type::Stage_6:
+	case Scene_Type::Stage_7:
 	{
 		XMFLOAT3 pos = m_pPlayer->GetPosition();
 		XMFLOAT3 look = m_pPlayer->GetLookVector();
@@ -1350,12 +1373,10 @@ void CGameFramework::SendPacket()
 		}
 
 		oss << "," << (sync_Data.bStateChange ? "1" : "0");
+		oss << "," << sync_Data.changedStateNum;
 
 		break;
 	}
-
-	case Scene_Type::Stage_2:
-		break;
 
 
 	default:
@@ -1454,6 +1475,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	break;
 
 	case Scene_Type::Stage_1:
+	case Scene_Type::Stage_2:
+	case Scene_Type::Stage_3:
+	case Scene_Type::Stage_4:
+	case Scene_Type::Stage_5:
+	case Scene_Type::Stage_6:
+	case Scene_Type::Stage_7:
 	{
 		shared_ptr<CScene>stage_scene = std::dynamic_pointer_cast<CScene>(active_scene);
 		if (!stage_scene)
@@ -1472,6 +1499,11 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					stage_scene->DespawnMonster(id);
 				}
+				else if (cmdType == "DAMAGE") {
+					int id = std::stoi(tokens[idx++]);
+					float damage = std::stoi(tokens[idx++]);
+					stage_scene->DamageMonster(id, damage);
+				}
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
@@ -1480,10 +1512,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 	}
 	break;
 
-	case Scene_Type::Stage_2:
-	{
-	}
-	break;
 
 	default:
 		return;
@@ -1603,7 +1631,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		int stateFlagIndex = trackStart + expectedTrackTokenCount;
 		if (stateFlagIndex >= tokens.size()) break;
 
-		bool stateChanged = (tokens[stateFlagIndex] == "1");
+		bool stateChanged = (tokens[stateFlagIndex++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
@@ -1612,6 +1640,8 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
+		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
+		syncData.changedStateNum = changedStateNum;
 		HandlePlayerSync(playerId, modelId, syncData);
 
 		startIndex = stateFlagIndex + 1;
@@ -1757,43 +1787,68 @@ void CGameFramework::HandleChangeScene(const std::vector<std::string>& tokens)
 	}
 
 	std::string change_scene_type = tokens[1];
-	Change_Call_By_Server = std::stoi(change_scene_type);
-
+	Change_Call_By_Server = static_cast<Scene_Type>(std::stoi(tokens[1]));
 	change_signal = { false,Scene_Type::etc, "" };
 
 	switch (Change_Call_By_Server)
 	{
-	case -1:		// 변경 없음
+	case None:		// 변경 없음
 		break;
 
-	case 0:		//로비
+	case Lobby:		//로비
 		change_signal.change = true;
 		change_signal.scene_name = "Character_Select";
 		change_signal.type = Scene_Type::Lobby;
 		break;
 		
-	case 1:		// 스태이지 선택
+	case Board:		// 스태이지 선택
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_Select";
 		change_signal.type = Scene_Type::Board;
 		break;
 
-	case 2:		// 스테이지 1
+	case Stage_1:		// 스테이지 1
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_1";
-		change_signal.type = Scene_Type::Stage_1;
+		change_signal.type = Change_Call_By_Server;
 		break;
 
-	case 3:
-		// 스테이지 2
+	case Stage_2:		// 스테이지 2
 		change_signal.change = true;
 		change_signal.scene_name = "Stage_2";
-		change_signal.type = Scene_Type::Stage_2;
+		change_signal.type = Change_Call_By_Server;
 		break;
 
-	case 4:
-	case 5:
-	case 6:
+	case Stage_3:		// 스테이지 3
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_3";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_4:		// 스테이지 4
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_4";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_5:		// 스테이지 5
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_5";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_6:		// 스테이지 6
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_6";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
+	case Stage_7:		// 스테이지 7
+		change_signal.change = true;
+		change_signal.scene_name = "Stage_7";
+		change_signal.type = Change_Call_By_Server;
+		break;
+
 	default:
 		// 추가 예정
 		break;
@@ -1813,6 +1868,11 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
+
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
+			if (!m_pPlayer->bIsInvincible)
+				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+		}
 		return;
 	}
 	else
@@ -1821,11 +1881,12 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		{
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 		}
-		else // 플레이어 데이터 없음, 추가 필요
+		else 
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);
 			Connected_Player_List[player_ID] = true;
+
 		}
 
 	}
@@ -1852,6 +1913,29 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->SetupWeaponCollider();
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	new_Player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
+
+
+
+	shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
+	if (trail_target)
+	{
+		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
+
+		XMFLOAT3 player_color = GetColorById(playerId + 1);
+
+		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		trail_obj->Set_Main_Color(trail_main_color);
+		trail_obj->Set_SubColor(trail_sub_color);
+
+		trail_obj->Set_Trail_Target(trail_target, false);
+		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+		scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+		new_Player->SetTrailObj(trail_obj);
+		new_Player->bTrailOff();
+		new_Player->GetTrailObj()->Set_Active(false);
+	}
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 

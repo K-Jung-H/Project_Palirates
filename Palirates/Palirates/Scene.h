@@ -69,7 +69,7 @@ struct Fog_Info
 
 
 
-#define NUM_CASCADES 4
+#define NUM_CASCADES 3
 
 struct alignas(16) LightCamera_Info
 {
@@ -292,6 +292,8 @@ public:
 	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
 	virtual void DespawnMonster(int id);
 
+	virtual void DamageMonster(int id, float damage);
+
 };
 
 class Character_Select_Scene : public CScene
@@ -380,12 +382,69 @@ private:
 	void SetcameraYOffset(float offset) { cameraYOffset = offset; }
 
 public: // For Server Sync
+	static void Reset_Sail_Status();
 	void Sync_Boat_Server(XMFLOAT3 pos, XMFLOAT3 look);
 	pair<int, bool> Get_Sail_Status();
 private:
-	int nearest_stage_index = -1;
-	bool is_stage_select = false;
+	static int nearest_stage_index;
+	static bool is_stage_select;
 };
+
+class Stage_Scene : public CScene
+{
+public:
+	static bool Change_Scene_Signal; // For send server
+private:
+	virtual void BuildDefaultLightsAndMaterials() {}
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
+
+	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+
+	//=============================================================
+	// Server Sync Func
+
+	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	void Remove_Multi_Player(int player_id);
+	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+
+
+	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
+
+	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
+	virtual void DespawnMonster(int id);
+};
+
+class Stage_1_Scene : public Stage_Scene
+{
+
+private:
+	virtual void BuildDefaultLightsAndMaterials();
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+};
+
+class Stage_2_Scene : public Stage_Scene
+{
+private:
+	virtual void BuildDefaultLightsAndMaterials();
+	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+public:
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+
+};
+
+//===========================================================================
 
 class Test_Scene : public CScene
 {

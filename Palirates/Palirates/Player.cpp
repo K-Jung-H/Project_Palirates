@@ -594,6 +594,7 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
 ServerSyncData CTerrainPlayer::MakeSyncData()
 {
 	ServerSyncData data = CGameObject::MakeSyncData();
+	data.changedStateNum = GetStateMachine()->GetCurrentStateAsInt();
 
 	return data;
 }
@@ -613,7 +614,6 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
-
 	controller->ApplyCurrentAnimationPose(this);
 }
 //º¸·ù

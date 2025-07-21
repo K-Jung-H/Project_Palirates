@@ -19,6 +19,7 @@ struct ServerSyncData
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
     bool stateChanged = false;
+    int changedStateNum = -1;
 };
 
 class CAnimationSet
@@ -135,7 +136,7 @@ public:
 public:
     std::shared_ptr<GameObject>            m_pModelRootObject = NULL;
 
-    virtual void OnRootMotion(GameObject* pRootGameObject) {}
+    virtual void OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped);
     virtual void OnAnimationIK(GameObject* pRootGameObject) {}
 
     XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };

@@ -52,8 +52,8 @@ public:
     void Start();
     void AcceptClients();
     void ProcessClientPackets(SOCKET clientSocket, int clientId);
-    void HandlePacket(int clientId, const std::string& packet);
-    void ProcessQueuedPackets();
+ //   void HandlePacket(int clientId, const std::string& packet);
+//    void ProcessQueuedPackets();
     void Broadcast_Scene_State_All();
     
     void Server_Update();
@@ -103,14 +103,13 @@ private:
 
     std::string Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby);
     std::string Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& board);
-    std::string Build_Stage_1_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
-    std::string Build_Stage_2_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
+    std::string Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>& stage);
 
     void HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleChangeScenePacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleLobbyPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
     void HandleBoardPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
-    void HandleStage1Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
-    void HandleStage2Packet(int clientId, const std::string& command, const std::vector<std::string>& tokens);
+    void HandleStagePacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 
     void FlushSendQueues();
 };

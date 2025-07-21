@@ -48,6 +48,7 @@ struct ServerSyncData
     XMFLOAT3 lookVector;
     std::vector<Animation_Sync> track_info_list;
     bool bStateChange = false;
+    int changedStateNum = -1;
 };
 
 class CTexture
@@ -647,6 +648,9 @@ public:
     WeaponObject* pWeapon;
 
     bool bIsControllable{ true };
+    bool bIsInvincible = false;
+    float invincibleTimeRemaining = 0.0f;
+    float invincibleDuration = 2.0f;
 
     std::unordered_set<int> RootMotionTrackSet;
 
@@ -854,7 +858,12 @@ public:
     void SetID(int id) { m_nPlayerId = id; }
     int GetID() const { return m_nPlayerId; }
 
+protected:
+    bool bCanCollide = true;
 
+public:
+    void SetCanCollide(bool canCollide) { bCanCollide = canCollide; }
+    bool CanCollide() const { return bCanCollide; }
 };
 
 //==================================================================================
@@ -863,13 +872,12 @@ public:
 class CHeightMapTerrain : public CGameObject
 {
 private:
-    static shared_ptr<CTexture> pTerrainBaseTexture;
-    static shared_ptr<CTexture> pTerrainDetailTexture;
-    static Deferred_CTerrainShader* pTerrainShader;
-    static CMaterial* pTerrainMaterial;
-
-    static CHeightMapImage* m_pHeightMapImage;  // link height map image for each terrain tile object
-
+    shared_ptr<CTexture> m_TerrainBaseTexture;
+    shared_ptr<CTexture> m_TerrainDetailTexture;
+    Deferred_CTerrainShader* m_TerrainShader = nullptr;
+    CMaterial* m_TerrainMaterial = nullptr;
+    shared_ptr<CHeightMapImage> m_pHeightMapImage = nullptr;
+    shared_ptr<CMesh> m_pFullMesh = NULL;
 private:
     int                     m_nWidth;
     int                     m_nLength;
@@ -882,15 +890,15 @@ private:
     XMFLOAT2 Area_LT{};
     XMFLOAT2 Area_RB{};
 
-    CMesh* full_mesh = NULL;
-    void Set_FullMesh(CMesh* new_mesh) { full_mesh = new_mesh; }
+
+    void Set_FullMesh(shared_ptr<CMesh> new_mesh) { m_pFullMesh = new_mesh; }
 public:
-    CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
-        int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1);
+    CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
+        int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1, shared_ptr<CHeightMapImage> sharedHeightMapImage = NULL);
     virtual ~CHeightMapTerrain();
 
-    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature,
-        LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
+    void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
+
     void Set_Tile(int n);
 
     float Get_Height(float x, float z, bool bReverseQuad = false);
@@ -1079,11 +1087,13 @@ private:
     float m_fSegmentTimer = 0.0f;
 
 public:
-    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    Trail_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, XMFLOAT4 main_color = {1.0f,1.0f, 1.0f, 1.0f});
     virtual ~Trail_Object();
 
     void Set_Trail_Target(shared_ptr<CGameObject> target, bool bUseScale = true) { m_pTargetObject = target;  m_bUseTargetScale = bUseScale; }
     void Set_Trail_LocalOffset(const XMFLOAT3& top, const XMFLOAT3& bottom) { m_vLocalTop = top; m_vLocalBottom = bottom; }
+    void Set_Main_Color(XMFLOAT4 new_color) { if (trail_mesh) trail_mesh->Set_MainColor(new_color); }
+    void Set_SubColor(XMFLOAT4 new_color) { if (trail_mesh) trail_mesh->Set_SubColor(new_color); }
 
     virtual void Animate(float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);

@@ -243,7 +243,7 @@ public:
     int charecter_select_state = 0;
 
 
-    int Change_Call_By_Server = -1;
+    Scene_Type Change_Call_By_Server = None;
     Change_Signal change_signal;
 
  

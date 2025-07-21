@@ -183,6 +183,11 @@ enum Scene_Type
 	Board,
 	Stage_1,
 	Stage_2,
+	Stage_3,
+	Stage_4,
+	Stage_5,
+	Stage_6,
+	Stage_7,
 	Test,
 	etc,
 	None
@@ -209,6 +214,10 @@ struct GPU_OBB
 
 	XMFLOAT4 Rotation;
 };
+
+
+
+extern XMFLOAT3 GetColorById(float objId);
 
 
 extern void SynchronizeResourceTransition(ID3D12GraphicsCommandList* pd3dCommandList, ID3D12Resource* pd3dResource, D3D12_RESOURCE_STATES d3dStateBefore, D3D12_RESOURCE_STATES d3dStateAfter);

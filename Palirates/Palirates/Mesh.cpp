@@ -964,6 +964,7 @@ CStandardMesh::CStandardMesh(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList
 CStandardMesh::~CStandardMesh()
 {
 	if (m_pd3dTextureCoord0Buffer) m_pd3dTextureCoord0Buffer->Release();
+	if (m_pd3dColorBuffer) m_pd3dColorBuffer->Release();
 	if (m_pd3dNormalBuffer) m_pd3dNormalBuffer->Release();
 	if (m_pd3dTangentBuffer) m_pd3dTangentBuffer->Release();
 	if (m_pd3dBiTangentBuffer) m_pd3dBiTangentBuffer->Release();
@@ -982,6 +983,9 @@ void CStandardMesh::ReleaseUploadBuffers()
 
 	if (m_pd3dTextureCoord0UploadBuffer) m_pd3dTextureCoord0UploadBuffer->Release();
 	m_pd3dTextureCoord0UploadBuffer = NULL;
+
+	if (m_pd3dColorUploadBuffer) m_pd3dColorUploadBuffer->Release();
+	m_pd3dColorUploadBuffer = NULL;
 
 	if (m_pd3dNormalUploadBuffer) m_pd3dNormalUploadBuffer->Release();
 	m_pd3dNormalUploadBuffer = NULL;
@@ -1687,13 +1691,18 @@ BoundingOrientedBox CSkinnedMesh::Get_WorldOBB_FromSkinnedVertices()
 
 	return obb;
 };
+
 //===============================================================
-Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, int nMaxTrailSegments)
+
+Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCmdList, XMFLOAT4 new_main_color, int nMaxTrailSegments)
 	: CStandardMesh(pd3dDevice, pd3dCmdList), m_nMaxTrailSegments(nMaxTrailSegments)
 {
+	Main_Color = new_main_color;
 	m_nVertices = m_nMaxTrailSegments * 2;
 
 	m_pxmf3Positions = new XMFLOAT3[m_nVertices]{};
+	m_pxmf4Colors = new XMFLOAT4[m_nVertices]{};
+
 	m_pxmf2TextureCoords0 = new XMFLOAT2[m_nVertices]{};
 	m_pTrailSideData = new TrailVertexSide[m_nVertices]{};
 
@@ -1713,6 +1722,13 @@ Trail_Mesh::Trail_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3d
 	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
 	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
 	m_d3dPositionBufferView.SizeInBytes = static_cast<UINT>(vbSize);
+
+	size_t colorbSize = sizeof(XMFLOAT4) * m_nVertices;
+	m_pd3dColorBuffer = CreateBufferResource(pd3dDevice, pd3dCmdList, m_pxmf4Colors, colorbSize,
+		D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, &m_pd3dColorUploadBuffer);
+	m_d3dColorBufferView.BufferLocation = m_pd3dColorBuffer->GetGPUVirtualAddress();
+	m_d3dColorBufferView.StrideInBytes = sizeof(XMFLOAT4);
+	m_d3dColorBufferView.SizeInBytes = static_cast<UINT>(colorbSize);
 
 	size_t uvSize = sizeof(XMFLOAT2) * m_nVertices;
 	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCmdList, m_pxmf2TextureCoords0, uvSize,
@@ -1752,6 +1768,7 @@ void Trail_Mesh::ResetTrail()
 	m_nCurrentIndex = 0;
 	m_nActiveSegments = 0;
 	memset(m_pxmf3Positions, 0, sizeof(XMFLOAT3) * m_nVertices);
+	memset(m_pxmf4Colors, 0, sizeof(XMFLOAT4) * m_nVertices);
 	memset(m_pxmf2TextureCoords0, 0, sizeof(XMFLOAT2) * m_nVertices);
 	memset(m_pTrailSideData, 0, sizeof(TrailVertexSide) * m_nVertices);
 	memset(m_ppnSubSetIndices[0], 0, sizeof(UINT) * (m_nMaxTrailSegments - 1) * 6);
@@ -1782,6 +1799,9 @@ void Trail_Mesh::AddSegment(const XMFLOAT3& top, const XMFLOAT3& bottom, float f
 
 	m_pxmf3Positions[i0] = top;
 	m_pxmf3Positions[i1] = bottom;
+
+	m_pxmf4Colors[i0] = Main_Color;
+	m_pxmf4Colors[i1] = Sub_Color;
 
 	m_pTrailSideData[i0] = { +1.0f, fTime, centerY, +offsetY, 1.0f };
 	m_pTrailSideData[i1] = { -1.0f, fTime, centerY, -offsetY, 1.0f };
@@ -1872,6 +1892,10 @@ void Trail_Mesh::UpdateVertexBuffer()
 	memcpy(pData, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices);
 	m_pd3dPositionBuffer->Unmap(0, nullptr);
 
+	m_pd3dColorBuffer->Map(0, &readRange, &pData);
+	memcpy(pData, m_pxmf4Colors, sizeof(XMFLOAT4) * m_nVertices);
+	m_pd3dColorBuffer->Unmap(0, nullptr);
+
 	m_pd3dTextureCoord0Buffer->Map(0, &readRange, &pData);
 	memcpy(pData, m_pxmf2TextureCoords0, sizeof(XMFLOAT2) * m_nVertices);
 	m_pd3dTextureCoord0Buffer->Unmap(0, nullptr);
@@ -1885,6 +1909,7 @@ void Trail_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* p
 {
 	D3D12_VERTEX_BUFFER_VIEW views[] = {
 		m_d3dPositionBufferView,
+		m_d3dColorBufferView,
 		m_d3dTextureCoord0BufferView,
 		m_d3dTrailSideBufferView
 	};
