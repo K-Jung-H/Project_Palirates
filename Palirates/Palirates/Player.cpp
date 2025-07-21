@@ -554,31 +554,6 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 		}
 	}
 
-	if (m_StateMachine->Get_State() == State::Attack1)
-	{
-		std::cout << "Attack State" << "\n";
-		bTrailOn();
-		if (GetTrailStart())
-		{
-			std::cout << "Trail Start" << "\n";
-			GetTrailObj()->Set_Active(true);
-			Trail_Start();
-		}
-
-		if (!GetTrailObj()->Get_Active())
-		{
-			std::cout << "Reset Trail" << "\n";
-			GetTrailObj()->GetTrailMesh()->ResetTrail();
-			GetTrailObj()->Set_Active(true);
-		}
-	}
-	//else {
-	//	bTrailOff();
-	//	GetTrailObj()->Set_Active(false);
-	//}
-
-
-
 	if (On_Ground)
 	{
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
