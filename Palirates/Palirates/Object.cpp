@@ -539,12 +539,6 @@ void CMaterial::PrepareShaders(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		Object_Manager::instance_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	if (!Object_Manager::trail_shader)
-	{
-		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	}
 }
 
 void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList* pd3dCommandList)
