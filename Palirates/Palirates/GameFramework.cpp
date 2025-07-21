@@ -1859,7 +1859,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		{
 			scene_manager->Sync_Player_Data(player_ID, syncData);
 		}
-		else // 플레이어 데이터 없음, 추가 필요
+		else 
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
 			scene_manager->Add_Player(newPlayer);

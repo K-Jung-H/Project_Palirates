@@ -1078,8 +1078,8 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	{
 		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
 		{
-			if (obj_ptr->Get_Active())
-				obj_ptr->Animate(fTimeElapsed);
+			//if (obj_ptr->Get_Active())
+			//	obj_ptr->Animate(fTimeElapsed);
 		}
 	}
 	break;

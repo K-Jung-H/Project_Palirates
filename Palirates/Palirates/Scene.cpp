@@ -3585,7 +3585,7 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 				c_signal.scene_name = "Stage_2";
 				c_signal.type = Scene_Type::Stage_2;
 			}
-
+			std::cout << c_signal.scene_name << "\n";
 			is_stage_select = true;
 			
 			

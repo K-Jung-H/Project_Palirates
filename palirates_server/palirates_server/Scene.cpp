@@ -320,7 +320,7 @@ void Stage_Scene::Init()
         player_ptr.reset();
 
     int id;
-    for (int i = 0; i < 40; ++i) {
+    for (int i = 0; i < 1; ++i) {
         if (i % 4 == 0)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 4 == 1)
@@ -331,6 +331,7 @@ void Stage_Scene::Init()
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
         else continue;
         SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
+        std::cout << "m spawn" << "\n";
     }
 }
 
@@ -496,7 +497,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
         if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
-            if (stateNum == int(State::Attack1) && !player_list[clientId]->IsInvincible()) {
+            if (stateNum == int(State::Attack1)/* && !player_list[clientId]->IsInvincible()*/) {
                 player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttackState>());
                 player_list[clientId]->SetStateChangeNum(stateNum);
             }
@@ -631,6 +632,20 @@ void Stage_2_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    int id;
+    for (int i = 0; i < 1; ++i) {
+        if (i % 4 == 0)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
+        else if (i % 4 == 1)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
+        else if (i % 4 == 2)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 3)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
+        std::cout << "m spawn s2" << "\n";
+    }
 }
 
 //=========================================================
@@ -681,6 +696,20 @@ void Stage_4_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    int id;
+    for (int i = 0; i < 1; ++i) {
+        if (i % 4 == 0)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
+        else if (i % 4 == 1)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
+        else if (i % 4 == 2)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 3)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
+        std::cout << "m spawn s4 " << "\n";
+    }
 }
 
 //=========================================================
@@ -756,4 +785,18 @@ void Stage_7_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    int id;
+    for (int i = 0; i < 1; ++i) {
+        if (i % 4 == 0)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
+        else if (i % 4 == 1)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
+        else if (i % 4 == 2)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 3)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
+        std::cout << "m spawn s7" << "\n";
+    }
 }
