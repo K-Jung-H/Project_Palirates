@@ -377,7 +377,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 			switch (wParam)
 			{
 				case VK_SPACE:
-					test_button = !test_button;
+//					test_button = !test_button;
+					Stage_Scene::Change_Scene_Signal = true;
 					break;
 
 				case VK_RETURN:
@@ -632,7 +633,8 @@ bool CGameFramework::Change_Scene()
 	if (!c_signal.change)
 		return false;
 
-
+	if (c_signal.type == Scene_Type::Board)
+		Board_Scene::Reset_Sail_Status();
 	if (scene_manager->Find_Scene(c_signal.scene_name))
 	{
 		scene_manager->Set_Active_Scene(c_signal.scene_name);
@@ -1289,9 +1291,24 @@ void CGameFramework::SendPacket()
 
 	if (!active_scene || !bClientIdAssigned || serverSocket == INVALID_SOCKET || !m_pPlayer) return;
 
-
 	std::ostringstream oss;
-	oss << "PLAYER_UPDATE," << static_cast<int>(active_scene->scene_type) << "," << Client_ID;
+
+
+
+	if (Stage_Scene::Change_Scene_Signal)
+	{
+		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
+		{
+			oss << "CHANGE_SCENE," << to_string(static_cast<int>(Scene_Type::Board));
+			std::string packet = oss.str() + "\n";
+			SendPacket_String(packet);
+			return;
+		}
+		else
+			Stage_Scene::Change_Scene_Signal = false;
+	}
+
+	oss << "PLAYER_UPDATE," << to_string(static_cast<int>(active_scene->scene_type)) << "," << Client_ID;
 
 	switch (active_scene->scene_type)
 	{
