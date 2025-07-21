@@ -51,7 +51,8 @@ void Player::animate(float Elapsedtime)
 
 void Player::update(float deltaTime)
 {
-    if (m_StateMachine) {
+    if (m_StateMachine) 
+    {
         // m_StateMachine->OnPrepareUpdate(deltaTime);
         m_StateMachine->update(deltaTime);
         //m_StateMachine->SetWeight(deltaTime);

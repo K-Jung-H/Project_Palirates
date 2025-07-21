@@ -382,15 +382,18 @@ private:
 	void SetcameraYOffset(float offset) { cameraYOffset = offset; }
 
 public: // For Server Sync
+	static void Reset_Sail_Status();
 	void Sync_Boat_Server(XMFLOAT3 pos, XMFLOAT3 look);
 	pair<int, bool> Get_Sail_Status();
 private:
-	int nearest_stage_index = -1;
-	bool is_stage_select = false;
+	static int nearest_stage_index;
+	static bool is_stage_select;
 };
 
 class Stage_Scene : public CScene
 {
+public:
+	static bool Change_Scene_Signal; // For send server
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}

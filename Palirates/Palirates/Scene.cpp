@@ -2914,6 +2914,8 @@ void Character_Select_Scene::SetEnableCharactorSelectButton(bool Enable)
 	}
 }
 //==========================================================================================
+int Board_Scene::nearest_stage_index = -1;
+bool Board_Scene::is_stage_select = false;
 
 void Board_Scene::BuildDefaultLightsAndMaterials()
 {
@@ -3730,7 +3732,15 @@ pair<int, bool> Board_Scene::Get_Sail_Status()
 	return { nearest_stage_index, is_stage_select };
 }
 
+void Board_Scene::Reset_Sail_Status()
+{
+	nearest_stage_index = -1, is_stage_select = false;
+}
+
+
 //==========================================================================================
+bool Stage_Scene::Change_Scene_Signal = false;
+
 
 void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
