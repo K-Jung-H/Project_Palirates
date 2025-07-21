@@ -46,6 +46,7 @@ public:
     std::shared_ptr<GameObject> m_pRootModel = NULL;
 
     XMMATRIX WeaponCustomRotation = XMMatrixIdentity();
+    float m_fScale = 1.0f;
 public:
     GameObject()
         : obj_type(Object_Type::etc)

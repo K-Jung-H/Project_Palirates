@@ -45,7 +45,7 @@ void MonsterStateMachine::SetWeight(float deltaTime)
        
     }
 
- /*   if (m_pOwner->GetType() == Monster_Type::Fishman) {
+    /*if (m_pOwner->GetType() == Monster_Type::Fishman) {
         std::cout << "set weight - ";
         for (int i = 0; i < n_Ani; i++) {
             std::cout << animController->m_pAnimationTracks[i].m_fWeight << ", ";
@@ -60,7 +60,11 @@ void MonsterStateMachine::OnPrepareUpdate(float deltaTime)
     for (int i = 0; i < n_Ani; i++) {
         m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
     }
-    
+    /*std::cout << "OnPrepareUpdate - ";
+    for (int i = 0; i < n_Ani; i++) {
+        std::cout << animController->m_pAnimationTracks[i].m_fWeight << ", ";
+    }
+    std::cout << std::endl;*/
   //  std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
 }
 //

@@ -34,10 +34,10 @@ void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
         sm->ChangeState(std::make_unique<AttackState>());
     }
     monster->stateElapsedTime += deltaTime;
-    if (monster->stateElapsedTime > 3.0f) {
+    if (monster->stateElapsedTime > 1.0f) {
         monster->stateElapsedTime = 0.0f;
 
-        if (RandomFloat() < 0.3f) {
+        if (RandomFloat() < 1.0f) {
             sm->ChangeState(std::make_unique<WalkState>());
         }
     }
@@ -55,27 +55,27 @@ void WalkState::Enter(Monster* monster, MonsterStateMachine* sm) {
         return;
     }
     monster->PlayAnimation(State::Run);
-
+    std::cout << "WalkState Enter" << std::endl;
 }
 
 void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
 
-    auto target = monster->FindNearestPlayerInRange(10.0f);
+    /*auto target = monster->FindNearestPlayerInRange(10.0f);
     if (target) {
         monster->SetTarget(target);
         sm->ChangeState(std::make_unique<AttackState>());
-    }
+    }*/
     //monster->Move();
     //if (monster->GetID() == 0)
         //std::cout << sm->animController->HipsPosition.x << ", " << sm->animController->HipsPosition.y << ", " << sm->animController->HipsPosition.z << "\n";
-    monster->stateElapsedTime += deltaTime;
+ /*   monster->stateElapsedTime += deltaTime;
     if (monster->stateElapsedTime > 3.0f) {
         monster->stateElapsedTime = 0.0f;
         if (RandomFloat() < 0.3f) {
             sm->ChangeState(std::make_unique<IdleState>());
         }
-    }
+    }*/
 }
 
 void WalkState::Exit(Monster* monster) {

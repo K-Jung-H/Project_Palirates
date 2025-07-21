@@ -161,7 +161,8 @@ Fishman::Fishman(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-    SetScale(10.0f, 10.0f, 10.0f);
+    m_fScale = 10.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.8f, 0.0f),    
         XMFLOAT3(0.4f, 0.8f, 0.4f),   
@@ -201,7 +202,8 @@ Anubis::Anubis(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-    SetScale(15.0f, 15.0f, 15.0f);
+    m_fScale = 15.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.9f, 0.0f),
         XMFLOAT3(0.3f, 0.9f, 0.3f),
@@ -259,7 +261,8 @@ TestPlayer::TestPlayer(int id) : Monster(id) {
     };
 
     InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    SetScale(10.0f, 10.0f, 10.0f);
+    m_fScale = 10.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
 }
