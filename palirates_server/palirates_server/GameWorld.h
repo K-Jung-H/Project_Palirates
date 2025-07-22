@@ -51,7 +51,7 @@ public:
 	FrameParticleChanges Get_Particle_Sync_Data();
 
 private:
-	void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
+	void FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
 	void AssignToUniformCells();
 
 	XMINT3 Get_CellIndexFromPosition(const XMFLOAT3& pos) const;
