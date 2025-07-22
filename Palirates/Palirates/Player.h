@@ -126,6 +126,8 @@ public:
 	void Move(const XMFLOAT3& xmf3Shift, bool bVelocity = false);
 	virtual void Move(ULONG nDirection, float fDistance, bool bVelocity = false);
 	void Move(float fxOffset = 0.0f, float fyOffset = 0.0f, float fzOffset = 0.0f);
+	void ClampPositionToTerrainBounds(CHeightMapTerrain* terrain_obj) {};
+
 
 	void Rotate(float x, float y, float z);
 
@@ -231,6 +233,8 @@ public:
 	virtual void OnCameraUpdateCallback(float fTimeElapsed);
 
 	virtual void Move(DWORD nDirection, float fDistance, bool bVelocity = false);
+	virtual void ClampPositionToTerrainBounds(CHeightMapTerrain* terrain_obj);
+
 
 	virtual void Animate(float fTimeElapsed);
 	virtual void Update(float fTimeElapsed);

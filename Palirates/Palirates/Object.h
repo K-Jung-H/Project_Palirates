@@ -890,8 +890,7 @@ private:
     XMFLOAT2 Area_LT{};
     XMFLOAT2 Area_RB{};
 
-
-    void Set_FullMesh(shared_ptr<CMesh> new_mesh) { m_pFullMesh = new_mesh; }
+    
 public:
     CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName,
         int start_x_pos, int start_z_pos, int nWidth, int nLength, XMFLOAT3 xmf3Scale, XMFLOAT4 xmf4Color, int Vertex_gap = 1, int nMaxDepth = 1, shared_ptr<CHeightMapImage> sharedHeightMapImage = NULL);
@@ -900,6 +899,11 @@ public:
     void DivideIntoChildren(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, LPCTSTR pFileName, XMFLOAT3 xmf3Scale, int Vertex_gap);
 
     void Set_Tile(int n);
+    void Set_FullMesh(shared_ptr<CMesh> new_mesh) { m_pFullMesh = new_mesh; }
+
+    shared_ptr<CMesh> Get_FullMesh() { return m_pFullMesh; }
+    XMFLOAT2 Get_Terrain_LT() const { return Area_LT; }
+    XMFLOAT2 Get_Terrain_RB() const { return Area_RB; }
 
     float Get_Height(float x, float z, bool bReverseQuad = false);
     float Get_Height(float x, float z, bool bReverseQuad, CHeightMapTerrain*& last_tile_ptr);
