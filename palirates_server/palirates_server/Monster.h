@@ -51,6 +51,7 @@ public:
     virtual ~Monster() = default;
 
     virtual void update(float deltaTime) override;
+    void update_collision(float deltaTime, std::vector<BoundingOrientedBox> obblist);
 
     MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 

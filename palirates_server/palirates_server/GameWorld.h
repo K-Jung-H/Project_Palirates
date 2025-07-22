@@ -49,6 +49,7 @@ public:
 	void Update_Monster(float elapsed_time);
 	void Update_Particle(float elapsed_time);
 	FrameParticleChanges Get_Particle_Sync_Data();
+	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);
 
 private:
 	void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);

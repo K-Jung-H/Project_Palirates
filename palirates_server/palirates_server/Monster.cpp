@@ -18,9 +18,9 @@ void Monster::update(float deltaTime) {
             m_StateMachine->SetWeight(deltaTime);
         //}
     }
-    if (m_pSkinnedAnimationController) {
-        m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
-    }
+    //if (m_pSkinnedAnimationController) {
+    //    m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
+    //}
 
     if (bIsInvincible) {
         invincibleTimeRemaining += deltaTime;
@@ -28,6 +28,12 @@ void Monster::update(float deltaTime) {
             bIsInvincible = false;
             invincibleTimeRemaining = 0.0f;
         }
+    }
+}
+
+void Monster::update_collision(float deltaTime, std::vector<BoundingOrientedBox> obblist) {
+    if (m_pSkinnedAnimationController) {
+        m_pSkinnedAnimationController->AdvanceTime(deltaTime, this, &obblist);
     }
 }
 

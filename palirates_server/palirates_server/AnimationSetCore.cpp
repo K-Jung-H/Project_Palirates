@@ -226,7 +226,7 @@ void CAnimationController::SetTrackWeight(int nAnimationTrack, float fWeight)
 	if (m_pAnimationTracks) m_pAnimationTracks[nAnimationTrack].SetWeight(fWeight);
 }
 
-void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGameObject)
+void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGameObject, const std::vector<BoundingOrientedBox>* obblist)
 {
 	m_fTime += fTimeElapsed;
 
@@ -301,7 +301,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 
 		pRootGameObject->UpdateTransform(NULL);
 
-		OnRootMotion(pRootGameObject, bTrackLooped);
+		OnRootMotion(pRootGameObject, bTrackLooped, obblist);
 		OnAnimationIK(pRootGameObject);
 	}
 }
@@ -331,16 +331,20 @@ void CAnimationController::ResetWeight()
 	}
 }
 
-void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped)
+void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped, const std::vector<BoundingOrientedBox>* obblist)
 {
 	if (pRootGameObject->GetType() != Object_Type::monster) return;
-	const float multiplier = pRootGameObject->m_fScale;
+	const float multiplier = pRootGameObject->m_fScale * 1;
 	XMFLOAT3 deltaMove;
 	if (bTrackLooped)
 		deltaMove = XMFLOAT3(0.0f, 0.0f, 0.0f);
 	else
 		deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
 	deltaMove = XMFLOAT3(deltaMove.x * multiplier, deltaMove.y * multiplier, deltaMove.z * multiplier);
+	if (deltaMove.x == 0.0f && deltaMove.y == 0.0f && deltaMove.z == 0.0f) {
+		m_xmf3PrevHipsPosition = HipsPosition;
+		return;
+	}
 	if (Vector3::LengthSquared(deltaMove) > 0.000001f) 
 	{
 		float length = Vector3::Length(deltaMove);
@@ -352,15 +356,97 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 		float yaw = XMConvertToDegrees(atan2f(look.x, look.z));
 		XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(yaw));
 
-		XMVECTOR deltaVec = XMLoadFloat3(&deltaMove);
-		deltaVec = XMVector3TransformCoord(deltaVec, rot);
+		XMVECTOR deltaVec_full = XMLoadFloat3(&deltaMove);
+		deltaVec_full = XMVector3TransformCoord(deltaVec_full, rot);
 
+		XMVECTOR deltaVec_flat = XMVectorSet(
+			XMVectorGetX(deltaVec_full),
+			0.0f,
+			XMVectorGetZ(deltaVec_full),
+			0.0f
+		);
+		constexpr float rayLength = 4.0f;
+		constexpr float offsetX = 0.0f;
+		constexpr float offsetY = 4.0f;
+		constexpr float offsetZ = 0.0f;
+
+	
+		XMVECTOR worldOffset = XMVectorSet(offsetX, offsetY, offsetZ, 0.0f);
 		XMVECTOR pos = XMLoadFloat3(&pRootGameObject->GetPosition());
-		pos += deltaVec;
-		XMFLOAT3 newPos;
-		XMStoreFloat3(&newPos, pos);
+		XMVECTOR rayDir = XMVector3Normalize(deltaVec_flat);
+		//XMVECTOR end = pos + rayDir * rayLength;
 
-		pRootGameObject->SetPosition(newPos); 
+		constexpr float lateralOffset = 4.0f;
+		std::vector<XMVECTOR> rayOrigins = {
+			pos + XMVectorSet(0.0f, offsetY, 0.0f, 0.0f),
+			pos + XMVectorSet(-lateralOffset, offsetY, 0.0f, 0.0f),
+			pos + XMVectorSet(lateralOffset, offsetY, 0.0f, 0.0f)
+		};
+
+		bool blocked = false;
+		
+		if (obblist) 
+		{
+			for (const XMVECTOR& rayOrigin : rayOrigins) {
+				for (const auto& obb : *obblist)
+				{
+					float distance = 0.0f;
+					if (obb.Intersects(rayOrigin, rayDir, distance)) {
+						if (distance <= rayLength) {
+							blocked = true;
+
+							XMVECTOR obbCenter = XMLoadFloat3(&obb.Center);
+							XMVECTOR toRay = XMVector3Normalize(rayOrigin - obbCenter);
+
+							XMVECTOR axisX = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), XMLoadFloat4(&obb.Orientation));
+							XMVECTOR axisY = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), XMLoadFloat4(&obb.Orientation));
+							XMVECTOR axisZ = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), XMLoadFloat4(&obb.Orientation));
+
+							float dotX = fabsf(XMVectorGetX(XMVector3Dot(toRay, axisX)));
+							float dotY = fabsf(XMVectorGetX(XMVector3Dot(toRay, axisY)));
+							float dotZ = fabsf(XMVectorGetX(XMVector3Dot(toRay, axisZ)));
+
+							XMVECTOR normal;
+							if (dotX > dotY && dotX > dotZ)
+								normal = axisX;
+							else if (dotY > dotZ)
+								normal = axisY;
+							else
+								normal = axisZ;
+
+							normal = XMVectorSet(XMVectorGetX(normal), 0.0f, XMVectorGetZ(normal), 0.0f);
+							normal = XMVector3Normalize(normal);
+
+							XMVECTOR slideVec = deltaVec_flat - XMVector3Dot(deltaVec_flat, normal) * normal;
+							std::cout << "Ãæµ¹" << ")\n";
+							if (XMVectorGetX(XMVector3LengthSq(slideVec)) > 0.0001f) {
+								pos += slideVec;
+								XMFLOAT3 deltaVec_fulld;
+								XMStoreFloat3(&deltaVec_fulld, deltaVec_full);
+								std::cout << "deltaMove = (" << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << ")\n";
+								std::cout << "deltaVec_full = (" << deltaVec_fulld.x << ", " << deltaVec_fulld.y << ", " << deltaVec_fulld.z << ")\n";
+								XMFLOAT3 slideVecd;
+								XMStoreFloat3(&slideVecd, slideVec);
+								std::cout << "slideVec = (" << slideVecd.x << ", " << slideVecd.y << ", " << slideVecd.z << ")\n";
+								XMFLOAT3 newPos;
+								XMStoreFloat3(&newPos, pos);
+								pRootGameObject->SetPosition(newPos);
+							}
+							deltaVec_full = XMVectorZero();
+							break;
+						}
+					}
+				}
+			}
+		}
+
+		if (!blocked) {
+			pos += deltaVec_full;
+			XMFLOAT3 newPos;
+			XMStoreFloat3(&newPos, pos);
+
+			pRootGameObject->SetPosition(newPos);
+		}
 	}
 
 	m_xmf3PrevHipsPosition = HipsPosition; 
