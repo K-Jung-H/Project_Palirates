@@ -14,26 +14,26 @@ GameWorld::~GameWorld()
 
 void GameWorld::Init()
 {
-    Particle_Format p;
-    p.area_xyz = XMFLOAT3{ 1000,2000,3000 };
-    p.lifetime = 300;
-    p.main_direction = XMFLOAT3{ 0,0,1 };
-    p.particle_type = Particle_Type::dragon_breath;
+    //Particle_Format p;
+    //p.area_xyz = XMFLOAT3{ 1000,2000,3000 };
+    //p.lifetime = 300;
+    //p.main_direction = XMFLOAT3{ 0,0,1 };
+    //p.particle_type = Particle_Type::dragon_breath;
 
-    shared_ptr<Particle_Object> p_obj = particle_manager.Create_Particle_Object(p);
-    p_obj->SetNeedSyncType(true);
-    p_obj->SetPosition(1500, 50, 800);
-    p_obj->SetLook(XMFLOAT3{ 0,0,-1 });
+    //shared_ptr<Particle_Object> p_obj = particle_manager.Create_Particle_Object(p);
+    //p_obj->SetNeedSyncType(true);
+    //p_obj->SetPosition(1500, 50, 800);
+    //p_obj->SetLook(XMFLOAT3{ 0,0,-1 });
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
 {
     fixed_object_list.clear();
-	FlattenGameObjectHierarchy(scene_obj, fixed_object_list);
+	FlattenGameObjectHierarchy_Filter(scene_obj, fixed_object_list);
     AssignToUniformCells();
 }
 
-void GameWorld::FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList)
+void GameWorld::FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList)
 {
     if (!node) return;
 
@@ -44,12 +44,16 @@ void GameWorld::FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std
     {
         outList.push_back(node);
     }
+    else if (std::find(kExcludedNames.begin(), kExcludedNames.end(), name) != kExcludedNames.end())
+    {
+        outList.push_back(node);
+    }
 
 
     std::shared_ptr<GameObject> child = node->Get_Child();
     while (child)
     {
-        FlattenGameObjectHierarchy(child, outList);
+        FlattenGameObjectHierarchy_Filter(child, outList);
         child = child->Get_Sibling();
     }
 }
