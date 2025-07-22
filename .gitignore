@@ -46,3 +46,13 @@
 
 
 /Palirates/Palirates/Scene/**/*.txt
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/abf9787d44ad88a7/PLAYER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/c53beebde611ab40/SCENE.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/dbc2f1fe817c9dbf/LOBBYMANAGER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/e15cc43d407d5680/LOGGER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/e2e0e330b9e6ae58/MONSTERMANAGER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/ea8905ceb7b672a2/LOGGER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/f65de8b46070efca/LOGGER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/f716f9b661b7a746/OBJECTMANAGER.ipch
+palirates_server/palirates_server/.vs/palirates_server/v17/ipch/AutoPCH/ff2e0913de543042/MONSTERMANAGER.ipch
+palirates_server/palirates_server/Scene/Meshes/txt.meta
