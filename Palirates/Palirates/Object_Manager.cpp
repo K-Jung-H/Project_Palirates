@@ -1106,7 +1106,7 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 
 }
 
-void Object_Manager::Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Object_Manager::ReBuild_Fixed_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (do_instance_update == false)
 		return;

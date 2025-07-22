@@ -281,7 +281,7 @@ public:
 	// Visibility / culling
 	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
 	void Check_Culling_All(CCamera* pCamera);
-	void Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReBuild_Fixed_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// ShadowMapping
 	void Render_Terrain_Shadow(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);

@@ -1151,7 +1151,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
@@ -1966,7 +1966,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 	Object_Manager::Reserve_Update();
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
 
 	//obj_manager->Check_Player_Collision(m_pPlayer);
@@ -2590,7 +2590,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 	UpdatePlayerSelection();
 }
 
@@ -3231,7 +3231,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -3786,35 +3786,10 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 	Object_Manager::Reserve_Update();
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+//	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
-	//if (m_pPlayer->GetTrailOn())
-	//{
-	//	if (!m_pPlayer->GetTrailStart())
-	//	{
-	//		XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f };
-	//		XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
 
-	//		shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-	//		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-	//		trail_obj->Set_Main_Color(test_main_color);
-	//		trail_obj->Set_SubColor(test_sub_color);
-
-	//		trail_obj->Set_Trail_Target(trail_target, false);
-	//		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-	//		m_pPlayer->SetTrailObj(trail_obj);
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//		m_pPlayer->Trail_Start();
-	//	}
-
-	//	if (!m_pPlayer->GetTrailObj()->Get_Active())
-	//	{
-	//		m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//	}
-	//}
 
 }
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -4065,7 +4040,7 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 #endif
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 
@@ -4227,7 +4202,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 #endif
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 
@@ -4261,7 +4236,7 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
