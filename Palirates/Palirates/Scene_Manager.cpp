@@ -82,10 +82,6 @@ ID3D12RootSignature* Scene_Manager::Create_EmptyRootSignature(ID3D12Device* pd3d
     return pRootSignature;
 }
 
-void Build_Scene(Scene_Type scene_type, string scene_name)
-{
-
-}
 
 bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene)
 {
@@ -234,6 +230,11 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
+
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
     }
     break;
 
@@ -280,6 +281,10 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
     }
     break;
     case Stage_2:
@@ -324,6 +329,10 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
     }
     break;
 
