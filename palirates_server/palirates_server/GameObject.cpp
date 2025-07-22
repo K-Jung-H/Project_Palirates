@@ -67,20 +67,25 @@ void GameObject::Set_Name(std::string_view name)
 
 void GameObject::Set_Child(std::shared_ptr<GameObject> pChild)
 {
-	if (pChild)
-		pChild->m_pParent = shared_from_this();
+	if (!pChild) return;
 
+	pChild->m_pParent = shared_from_this();
 
-	if (child_obj)
+	if (!child_obj)
 	{
-		if (pChild)
-			pChild->sibling_obj = child_obj->sibling_obj;
-
-		child_obj->sibling_obj = pChild;
+		child_obj = pChild;
 	}
 	else
-		child_obj = pChild;
+	{
+		std::shared_ptr<GameObject> current = child_obj;
+		while (current->sibling_obj)
+		{
+			current = current->sibling_obj;
+		}
+		current->sibling_obj = pChild;
+	}
 }
+
 
 std::shared_ptr<GameObject> GameObject::Get_Child()
 {
@@ -637,6 +642,9 @@ std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::s
 			nFrame = ::ReadIntegerFromFile(pInFile);
 			nTextures = ::ReadIntegerFromFile(pInFile);
 			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+
+			pGameObject->Set_Name(pGameObject->m_pstrFrameName);
+
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
@@ -692,6 +700,27 @@ std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::s
 	}
 
 	return pGameObject;
+}
+
+void GameObject::FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList)
+{
+	if (!node) return;
+
+	const std::string& name = node->Get_Name();
+
+
+	if (!name.empty())
+	{
+		outList.push_back(node);
+	}
+
+
+	std::shared_ptr<GameObject> child = node->Get_Child();
+	while (child)
+	{
+		FlattenGameObjectHierarchy(child, outList);
+		child = child->Get_Sibling();
+	}
 }
 
 

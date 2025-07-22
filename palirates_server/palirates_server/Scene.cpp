@@ -149,7 +149,7 @@ void Board_Scene::Init()
     selected_stage_index = -1;
 
     if(pirate_ship)
-        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+        pirate_ship->SetPosition(0.0f, 0.0f, 1200.0f);
 
     for (int i = 0; i < MaxPlayer; i++)
     {
@@ -512,6 +512,37 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     }
 }
 
+void Stage_Scene::SpawnMonster_By_Scene_Data()
+{
+    int index{}, m_id{};
+
+    for (std::shared_ptr<GameObject>monster_frame : monster_init_spawn_frame_list)
+    {
+        string name = monster_frame->Get_Name();
+        XMFLOAT3 pos = monster_frame->GetPosition();
+        pos.y = 0;
+        if (name.find("Fishman") != string::npos)
+        {
+            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
+            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+        }
+        else if (name.find("Anubis") != string::npos)
+        {
+            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
+            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+        }
+        else if (name.find("Dragon") != string::npos)
+        {
+            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
+            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+        }
+        else if (name.find("Monster") != string::npos)
+            continue;
+        else
+            continue;
+    }
+}
+
 void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 {
     if (id2idx.find(id) != id2idx.end())
@@ -610,6 +641,14 @@ Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+    scene->UpdateTransform(NULL);
+
     Init();
 }
 
@@ -621,6 +660,10 @@ void Stage_1_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 //=========================================================
@@ -635,6 +678,14 @@ Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+    scene->UpdateTransform(NULL);
+
     Init();
 }
 
@@ -646,20 +697,10 @@ void Stage_2_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    //int id;
-    //for (int i = 0; i < 1; ++i) {
-    //    if (i % 4 == 0)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
-    //    else if (i % 4 == 1)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-    //    else if (i % 4 == 2)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-    //    else if (i % 4 == 3)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-    //    else continue;
-    //    SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
-    //    std::cout << "m spawn s2" << "\n";
-    //}
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 //=========================================================
@@ -674,6 +715,14 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+    scene->UpdateTransform(NULL);
+
     Init();
 }
 
@@ -685,6 +734,10 @@ void Stage_3_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 //=========================================================
@@ -694,10 +747,23 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+
     scene->SetPosition(1300.0f, +34.0f, 800.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
+
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
+    std::shared_ptr<GameObject> player_hierarchy_list = scene->FindFrame("Players");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+
+    GameObject::FlattenGameObjectHierarchy(player_hierarchy_list, player_init_spawn_frame_list);
+
+    scene->UpdateTransform(NULL);
 
     Init();
 }
@@ -710,20 +776,11 @@ void Stage_4_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    int id;
-    for (int i = 0; i < 1; ++i) {
-        if (i % 4 == 0)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
-        else if (i % 4 == 1)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-        else if (i % 4 == 2)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-        else if (i % 4 == 3)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-        else continue;
-        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
-        std::cout << "m spawn s4 " << "\n";
-    }
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
+
 }
 
 //=========================================================
@@ -738,6 +795,14 @@ Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+    scene->UpdateTransform(NULL);
+
     Init();
 }
 
@@ -749,6 +814,10 @@ void Stage_5_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 //=========================================================
@@ -763,6 +832,14 @@ Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+    scene->UpdateTransform(NULL);
+
     Init();
 }
 
@@ -774,6 +851,10 @@ void Stage_6_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 //=========================================================
@@ -788,6 +869,14 @@ Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
+    //=========================================================
+
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+
+    monster_init_spawn_frame_list.clear();
+    GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
+    scene->UpdateTransform(NULL);
+
     Init();
 }
 
@@ -799,18 +888,8 @@ void Stage_7_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    //int id;
-    //for (int i = 0; i < 1; ++i) {
-    //    if (i % 4 == 0)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
-    //    else if (i % 4 == 1)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-    //    else if (i % 4 == 2)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-    //    else if (i % 4 == 3)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-    //    else continue;
-    //    SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 700), 100);
-    //    std::cout << "m spawn s7" << "\n";
-    //}
+    //======================================================
+
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }

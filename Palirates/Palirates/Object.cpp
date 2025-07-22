@@ -1839,22 +1839,28 @@ void CGameObject::Set_Name(std::string_view name)
 	m_pstrFrameName[sizeof(m_pstrFrameName) - 1] = '\0';
 }
 
+
 void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild)
 {
-	if (pChild)
-		pChild->m_pParent = shared_from_this();
+	if (!pChild) return;
 
+	pChild->m_pParent = shared_from_this();
 
-	if (m_pChild)
+	if (!m_pChild)
 	{
-		if (pChild)
-			pChild->m_pSibling = m_pChild->m_pSibling;
-
-		m_pChild->m_pSibling = pChild;
+		m_pChild = pChild;
 	}
 	else
-		m_pChild = pChild;
+	{
+		std::shared_ptr<CGameObject> current = m_pChild;
+		while (current->m_pSibling)
+		{
+			current = current->m_pSibling;
+		}
+		current->m_pSibling = pChild;
+	}
 }
+
 
 void CGameObject::Set_Active(bool active, bool IsRoot)
 {
