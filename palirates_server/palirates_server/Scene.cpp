@@ -514,6 +514,8 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
+//    return;
+
     int index{}, m_id{};
 
     for (std::shared_ptr<GameObject>monster_frame : monster_init_spawn_frame_list)
@@ -636,14 +638,15 @@ Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
-    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetPosition(1250.0f, -35.0f, -1200.0f);
+   // scene->SetPosition(1300.0f, +213.0f, 800.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
     //=========================================================
 
-    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
 
     monster_init_spawn_frame_list.clear();
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
@@ -673,14 +676,14 @@ Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
-    scene->SetPosition(1300.0f, +34.0f, 800.0f);
+    scene->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
     //=========================================================
 
-    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
 
     monster_init_spawn_frame_list.clear();
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
@@ -710,14 +713,14 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
-    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
     //=========================================================
 
-    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
 
     monster_init_spawn_frame_list.clear();
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
@@ -747,8 +750,8 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    scene->SetPosition(2000.0f, 35.0f, 2000.0f);
 
-    scene->SetPosition(1300.0f, +34.0f, 800.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
@@ -790,14 +793,14 @@ Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
-    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
     //=========================================================
 
-    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
 
     monster_init_spawn_frame_list.clear();
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
@@ -827,14 +830,15 @@ Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
-    scene->SetPosition(1300.0f, +34.0f, 800.0f);
+    scene->SetPosition(2000.0f, 35.0f, 2000.0f);
+
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
     //=========================================================
 
-    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
 
     monster_init_spawn_frame_list.clear();
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
@@ -864,14 +868,14 @@ Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
     std::shared_ptr<GameObject>scene = std::make_shared<GameObject>();
 
     scene = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
-    scene->SetPosition(1300.0f, +213.0f, 800.0f);
+    scene->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene->SetScale(10, 10, 10, true);
     scene->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene);
 
     //=========================================================
 
-    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monster");
+    std::shared_ptr<GameObject> monster_hierarchy_list = scene->FindFrame("Monsters");
 
     monster_init_spawn_frame_list.clear();
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);

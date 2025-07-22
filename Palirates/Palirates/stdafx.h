@@ -151,7 +151,7 @@ extern bool isRunning;
 #define RENDER_PARTICLE
 //#define RENDER_WAVE
 
-//#define DEBUG_MESSAGE
+///#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
 //#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
 //#define DEBUG_MESSAGE_TILE_MAP
