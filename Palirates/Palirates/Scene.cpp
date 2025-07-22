@@ -2234,6 +2234,7 @@ Change_Signal CScene::Get_Change_Signal()
 
 void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
+
 	obj_manager->Add_Player(new_player_ptr);
 }
 
@@ -2246,6 +2247,14 @@ void CScene::Remove_Multi_Player(int player_id)
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	return obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
+{
+	if (player_id < 0 || player_id >= MaxPlayer)
+		return player_start_position_list[0]->GetPosition();
+
+	return player_start_position_list[player_id]->GetPosition();
 }
 
 void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
@@ -3317,7 +3326,7 @@ int Board_Scene::Get_Closest_Island_Index(float range)
 
 
 	int closest_index = -1;
-	float min_distance = range + 1.0f;  // √ ±‚∞™: range∫∏¥Ÿ æ‡∞£ ≈≠
+	float min_distance = range + 1.0f;  // Ï¥àÍ∏∞Í∞í: rangeÎ≥¥Îã§ ÏïΩÍ∞Ñ ÌÅº
 
 	for (int i = 0; i < island_points.size(); ++i)
 	{
@@ -4010,7 +4019,7 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
 	//==================================
-	// ≥™¡ﬂø° Ω√µµ«“ ∞Õ
+	// ÎÇòÏ§ëÏóê ÏãúÎèÑÌï† Í≤É
 	//xmf3Scale.x = 5;
 	//xmf3Scale.y = 5;
 	//xmf3Scale.z = 5;
@@ -4032,7 +4041,17 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	test_scene->SetPosition(1250.0f, -35.0f, -1200.0f);
 
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->UpdateTransform(NULL);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
+	{
+		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
+			it = player_start_position_list.erase(it);
+		else
+			++it;
+	}
+
 #endif
 
 	//===============================================================================
@@ -4149,14 +4168,16 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	XMFLOAT3 xmf3Scale(12.0f, 0.0f, 12.0f); // y = 0 -> flat
+
+	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
+
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
 	//==================================
-	// ≥™¡ﬂø° Ω√µµ«“ ∞Õ
+	// ÎÇòÏ§ëÏóê ÏãúÎèÑÌï† Í≤É
 	//xmf3Scale.x = 5;
 	//xmf3Scale.y = 5;
 	//xmf3Scale.z = 5;
@@ -4169,16 +4190,30 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
+
 #ifdef LOAD_SCENE
 	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map2.bin", NULL);
 
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
+	test_scene->Set_Name("map2");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
 	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
-
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->UpdateTransform(NULL);
+
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	std::shared_ptr<CGameObject> player_start_position = test_scene->FindFrame("Players");
+	CGameObject::FlattenGameObjectHierarchy(player_start_position, player_start_position_list);
+
+	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
+	{
+		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
+			it = player_start_position_list.erase(it); 
+		else
+			++it;
+	}
+
 #endif
 
 	//===============================================================================
