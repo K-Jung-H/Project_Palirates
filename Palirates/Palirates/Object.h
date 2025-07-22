@@ -814,6 +814,7 @@ public:
 
     static std::shared_ptr<CGameObject> Load_Scene_HierarchyFromFile(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, std::shared_ptr<CGameObject> pParent, FILE* pInFile, CShader* pShader);
     static CLoadedModelInfo* Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, char* pstrFileName, CShader* pShader);
+    static void FlattenGameObjectHierarchy(std::shared_ptr<CGameObject> node, std::vector<shared_ptr<CGameObject>>& outList);
 
     static void PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent);
 

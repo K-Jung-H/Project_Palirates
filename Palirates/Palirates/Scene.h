@@ -228,6 +228,8 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_UI_GraphicsRootSignature;
 
 protected:
+	vector<std::shared_ptr<CGameObject>> player_start_position_list;
+
 	std::shared_ptr<CPlayer> m_pPlayer = NULL;
 	std::shared_ptr<CCamera> main_Camera = NULL;
 	std::shared_ptr<Shadow_Camera> shadow_camera = NULL;
@@ -281,6 +283,7 @@ public:
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+	XMFLOAT3 Get_Start_Position_List(int player_id);
 
 
 	void Create_Particle_Object(const Particle_Sync_Data& syncData);

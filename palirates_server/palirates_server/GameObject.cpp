@@ -885,8 +885,11 @@ void Boat_Object::Animate(float fTimeElapsed)
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
 	//m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+#ifdef _DEBUG
 	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
-
+#else
+	m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+#endif
 	// --- 감속 처리 ---
 	float decel = m_fFriction * fTimeElapsed;
 	if (decel > velocityFull) decel = velocityFull;

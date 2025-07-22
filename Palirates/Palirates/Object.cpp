@@ -3204,6 +3204,26 @@ CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12G
 	return(pLoadedModel);
 }
 
+void CGameObject::FlattenGameObjectHierarchy(std::shared_ptr<CGameObject> node, std::vector<shared_ptr<CGameObject>>& outList)
+{
+	if (!node) return;
+
+	const std::string& name = node->Get_Name();
+
+
+	if (!name.empty())
+	{
+		outList.push_back(node);
+	}
+
+
+	std::shared_ptr<CGameObject> child = node->Get_Child();
+	while (child)
+	{
+		FlattenGameObjectHierarchy(child, outList);
+		child = child->Get_Sibling();
+	}
+}
 
 void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent)
 {
@@ -3565,9 +3585,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	(tile_map_number == 0) ? Set_Name("Root_Tile_Map") : Set_Tile(tile_map_number++);
 
 	Vertex_gap = (Vertex_gap % 2) ? Vertex_gap + 1 : Vertex_gap;
-	m_nWidth = nWidth; m_nLength = nLength; m_xmf3Scale = xmf3Scale; m_nDepth = nMaxDepth;
+	m_nWidth = nWidth; 
+	m_nLength = nLength; 
+	m_xmf3Scale = xmf3Scale; 
+	m_nDepth = nMaxDepth;
 	Area_LT = { start_x_pos * xmf3Scale.x, start_z_pos * xmf3Scale.z };
-	Area_RB = { (start_x_pos + m_nWidth) * xmf3Scale.x, (start_z_pos + m_nLength) * xmf3Scale.z };
+	Area_RB = { (start_x_pos + m_nWidth-1) * xmf3Scale.x, (start_z_pos + m_nLength-1) * xmf3Scale.z };
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
 	if (isRoot) 
