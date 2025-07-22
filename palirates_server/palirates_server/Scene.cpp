@@ -641,8 +641,8 @@ std::vector<MonsterDamageInfo> Stage_Scene::FlushDamageQueue()
 
 Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
 {
-    scene_obj = std::make_shared<GameObject>();
 
+    scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -663,7 +663,6 @@ void Stage_1_Scene::Init()
 Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
 {
     scene_obj = std::make_shared<GameObject>();
-
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -683,13 +682,14 @@ void Stage_2_Scene::Init()
 
 Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
 {
-    scene_obj = std::make_shared<GameObject>();
 
+    scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
     game_world.Load_Scene_Data(scene_obj);
+
 
     Init();
 }
@@ -704,8 +704,8 @@ void Stage_3_Scene::Init()
 
 Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
 {
-    scene_obj = std::make_shared<GameObject>();
 
+    scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -726,8 +726,8 @@ void Stage_4_Scene::Init()
 
 Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
 {
-    scene_obj = std::make_shared<GameObject>();
 
+    scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -747,8 +747,8 @@ void Stage_5_Scene::Init()
 
 Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
 {
-    scene_obj = std::make_shared<GameObject>();
 
+    scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -769,7 +769,6 @@ void Stage_6_Scene::Init()
 Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
 {
     scene_obj = std::make_shared<GameObject>();
-
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);

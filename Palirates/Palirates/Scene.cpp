@@ -3326,7 +3326,7 @@ int Board_Scene::Get_Closest_Island_Index(float range)
 
 
 	int closest_index = -1;
-	float min_distance = range + 1.0f;  // √ ±‚∞™: range∫∏¥Ÿ æ‡∞£ ≈≠
+	float min_distance = range + 1.0f;  // Ï¥àÍ∏∞Í∞í: rangeÎ≥¥Îã§ ÏïΩÍ∞Ñ ÌÅº
 
 	for (int i = 0; i < island_points.size(); ++i)
 	{
@@ -4019,7 +4019,7 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
 	//==================================
-	// ≥™¡ﬂø° Ω√µµ«“ ∞Õ
+	// ÎÇòÏ§ëÏóê ÏãúÎèÑÌï† Í≤É
 	//xmf3Scale.x = 5;
 	//xmf3Scale.y = 5;
 	//xmf3Scale.z = 5;
@@ -4168,14 +4168,16 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
+
 	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
+
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
 	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
 	//==================================
-	// ≥™¡ﬂø° Ω√µµ«“ ∞Õ
+	// ÎÇòÏ§ëÏóê ÏãúÎèÑÌï† Í≤É
 	//xmf3Scale.x = 5;
 	//xmf3Scale.y = 5;
 	//xmf3Scale.z = 5;
@@ -4187,6 +4189,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 	//===============================================================================
+
 
 #ifdef LOAD_SCENE
 	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map2.bin", NULL);
