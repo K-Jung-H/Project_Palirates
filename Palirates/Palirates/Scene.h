@@ -280,7 +280,7 @@ public:
 
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
-	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
 
 
 	void Create_Particle_Object(const Particle_Sync_Data& syncData);

@@ -2243,9 +2243,9 @@ void CScene::Remove_Multi_Player(int player_id)
 }
 
 
-void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
-	obj_manager->Sync_Player_Data(player_id, syncData);
+	return obj_manager->Sync_Player_Data(player_id, syncData);
 }
 
 void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)

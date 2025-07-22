@@ -1877,9 +1877,15 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	}
 	else
 	{
-		if (Connected_Player_List[player_ID]) // 이미 플레이어 데이터 존재
+		if (Connected_Player_List[player_ID]) // 이미 플레이어 생성됨
 		{
-			scene_manager->Sync_Player_Data(player_ID, syncData);
+			bool player_exist = scene_manager->Sync_Player_Data(player_ID, syncData);
+
+			if (player_exist == false) // 다른 씬으로 이동한 경우
+			{
+				auto newPlayer = Create_Player(player_ID, character_model_ID);
+				scene_manager->Add_Player(newPlayer);
+			}
 		}
 		else 
 		{
