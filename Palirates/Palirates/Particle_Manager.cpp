@@ -575,6 +575,8 @@ void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12Graph
 	particle_mesh_map["billboard"] = make_shared<Billboard_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
 	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+	particle_mesh_map["chip"] = make_shared<Cube_Chip_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f);
+
 }
 
 

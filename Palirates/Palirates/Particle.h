@@ -227,6 +227,15 @@ public:
 	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 };
 
+class Cube_Chip_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Cube_Chip_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize = 2.0f, float fHeight = 0.5f);
+	virtual ~Cube_Chip_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
 class Sphere_Shape_Mesh : public Particle_Shape_Mesh
 {
 public:

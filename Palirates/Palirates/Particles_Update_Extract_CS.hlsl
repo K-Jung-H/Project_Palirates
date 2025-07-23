@@ -288,7 +288,7 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
 
         case PARTICLE_TYPE_PARTY:
         {
-                p.Velocity = float3(0, 0, 0);
+                p.Velocity = float3(0, 0, 0.0001f);
                 if (p.Lifetime < p.MaxLifetime - 5.0f)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }

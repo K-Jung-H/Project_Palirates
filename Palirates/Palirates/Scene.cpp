@@ -4165,8 +4165,9 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		test_dragon_fire_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 	}
 
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	particle_mesh = particle_manager->Get_Particle_Mesh("chip");
 	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
+	test_dragonfire->Set_World_Coordinate();
 
 
 #endif

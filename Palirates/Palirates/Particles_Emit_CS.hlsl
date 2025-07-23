@@ -259,7 +259,7 @@ void Emit_Party(inout Particle_Info p, uint index)
     p.Color = GetPartyColorByIndex(index);
 
     p.Size = 1.0f;
-    p.Rotate_Value = 0;
+    p.Rotate_Value = frac(sin(index * 73.37f) * 43758.5453f);
 }
 
 
