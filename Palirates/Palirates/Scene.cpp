@@ -2061,7 +2061,7 @@ void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
-
+	m_pPlayer->Render_Depth(pd3dCommandList, main_Camera.get());
 	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get());	
 }
 
