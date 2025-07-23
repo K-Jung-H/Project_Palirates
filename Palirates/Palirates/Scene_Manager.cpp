@@ -226,7 +226,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             pPlayer->GetTrailObj()->Set_Active(false);
         }
 
-        pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
+        pPlayer->SetPosition(XMFLOAT3(200.0f, 0.0f, 692.0f));
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
@@ -252,7 +252,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         pPlayer->SetOutlineColor(Client_ID + 1);
         pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
        XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
-       pPlayer->SetPosition(new_position);
+       //pPlayer->SetPosition(new_position);
+       pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 192.0f));
         
        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);

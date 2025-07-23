@@ -37,9 +37,7 @@ void Monster::update_collision(float deltaTime, std::vector<BoundingOrientedBox>
     }
 }
 
-void Monster::PlayAnimation(State state) {
-    //if (!m_pSkinnedAnimationController) return;
-
+int Monster::PlayAnimation(State state) {
     int track = AnimationRegistry::GetMonsterAnimationTrack(type, state);
 
     if (track >= 0 && track < n_Animation) {
@@ -55,6 +53,8 @@ void Monster::PlayAnimation(State state) {
         animTrack.m_fPosition = 0.0f;
     }
     stateElapsedTime = 0.0f;
+
+    return track;
 }
 
 ServerSyncData Monster::MakeSyncData() {
@@ -146,6 +146,8 @@ void Monster::InitStateMachine() {
 // ---------------- Fishman ----------------
 
 Fishman::Fishman(int id) : Monster(id) {
+    detectionRange = 50.0f;
+    attackRange = 20.0f;
     type = Monster_Type::Fishman;
     SetType(Object_Type::monster);
     WeaponName = "spear_lp";
@@ -182,6 +184,8 @@ Fishman::Fishman(int id) : Monster(id) {
 // ---------------- Anubis ----------------
 
 Anubis::Anubis(int id) : Monster(id) {
+    detectionRange = 50.0f;
+    attackRange = 20.0f;
     type = Monster_Type::Anubis;
     SetType(Object_Type::monster);
     WeaponName = "Staff_LP";
@@ -223,6 +227,8 @@ Anubis::Anubis(int id) : Monster(id) {
 // ---------------- Dragon ----------------
 
 Dragon::Dragon(int id) : Monster(id) {
+    detectionRange = 100.0f;
+    attackRange = 50.0f;
     type = Monster_Type::Dragon;
     SetType(Object_Type::monster);
     WeaponName = "HeadA_LP";
@@ -237,6 +243,7 @@ Dragon::Dragon(int id) : Monster(id) {
 
     std::unordered_set<int> OnceType = {
         TRACK_DRAGON_ATTACK1,
+        TRACK_DRAGON_BREATHE,
         TRACK_DRAGON_GOT_HIT1,
         TRACK_DRAGON_GOT_HIT2,
         TRACK_DRAGON_DEAD
@@ -246,7 +253,8 @@ Dragon::Dragon(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-
+    m_fScale = 15.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
    /* auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.8f, 0.0f),
         XMFLOAT3(0.4f, 0.8f, 0.4f),
