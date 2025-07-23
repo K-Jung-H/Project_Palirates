@@ -335,8 +335,8 @@ void Stage_Scene::Init()
 
     scene_obj->UpdateTransform(NULL);
 
-    if (monster_init_spawn_frame_list.size())
-        SpawnMonster_By_Scene_Data();
+    //if (monster_init_spawn_frame_list.size())
+        //SpawnMonster_By_Scene_Data();
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)

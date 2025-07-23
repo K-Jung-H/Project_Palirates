@@ -1691,8 +1691,16 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
 
+		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
+		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
 
-		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
+		float zView = XMVectorGetZ(viewSpacePos);
+
+		if (zView >= -50.0f)
+		{
+			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		}
 
 		startIndex = stateFlagIndex + 1;
 	}

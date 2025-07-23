@@ -33,8 +33,11 @@ void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
         monster->SetTarget(*nearestPos);
         if (GET_MONSTER_TYPE(monster->GetID()) != int(Monster_Type::Dragon))
             sm->ChangeState(std::make_unique<WalkState>());
-        else
-            sm->ChangeState(std::make_unique<DragonBreatheState>());
+        else {
+            if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange)
+                sm->ChangeState(std::make_unique<AttackState>());
+            else sm->ChangeState(std::make_unique<DragonBreatheState>());
+        }
     }
 
     if (GET_MONSTER_TYPE(monster->GetID()) != int(Monster_Type::Dragon)) {
@@ -101,9 +104,9 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
         }
 
         if (monster->m_shouldRotate) {
-            monster->RotateTowardsDirection(monster->m_targetLookDir, deltaTime);
+            monster->RotateTowardsDirection(monster->m_targetPos, deltaTime);
             XMFLOAT3 curLook = monster->GetLook();
-            XMFLOAT3 tgtLook = monster->m_targetLookDir;
+            XMFLOAT3 tgtLook = monster->m_targetPos;
 
             float dot = Vector3::DotProduct(Vector3::Normalize(curLook), Vector3::Normalize(tgtLook));
             if (dot > 0.98f) {
@@ -199,11 +202,16 @@ void GetHitState::Exit(Monster* monster) {
 
 void DragonBreatheState::Enter(Monster* monster, MonsterStateMachine* sm) {
     if (!monster) return;
+    monster->attackPhase = 1;
+  /*  XMFLOAT3 dir = Vector3::Subtract(monster->GetPosition(), monster->m_targetPos);
+    dir = Vector3::Normalize(dir);
+    monster->m_faketargetPos = Vector3::Add(monster->GetPosition(), Vector3::Scale(dir, 10.0f));
 
-    else currentTrackIdx = monster->PlayAnimation(State::Attack2);
-    monster->StartAttackCooldown();
-    if (monster->Weapon_ptr)
-        monster->Weapon_ptr->SetCanCollide(true);
+    currentTrackIdx = monster->PlayAnimation(State::Run);*/
+    currentTrackIdx = monster->PlayAnimation(State::Attack2);
+    //monster->StartAttackCooldown();
+    //if (monster->Weapon_ptr)
+    //    monster->Weapon_ptr->SetCanCollide(true);
 }
 
 void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {

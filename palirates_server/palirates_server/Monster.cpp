@@ -95,7 +95,7 @@ std::optional<XMFLOAT3> Monster::FindNearestPlayerInRange(float range) {
 }
 
 void Monster::SetTarget(const XMFLOAT3& targetPos) {
-    m_targetLookDir = targetPos;
+    m_targetPos = targetPos;
     m_shouldRotate = true;
 }
 
