@@ -26,7 +26,7 @@ struct XMINT3Hasher
 class GameWorld
 {
 private:
-	bool Stage_Clear = false;
+
 
 
 private:
@@ -42,10 +42,12 @@ private:
 	vector<shared_ptr<Monster>> monster_list;
 
 public:
+	bool Stage_Clear = false;
 	GameWorld();
 	~GameWorld();
 
 	void Init();
+	bool Get_Clear_State() { return Stage_Clear; }
 
 	void Load_Scene_Data(shared_ptr<GameObject> scene_obj);
 	void Update_Collision(shared_ptr<Player> player_obj);

@@ -3749,6 +3749,8 @@ void Board_Scene::Reset_Sail_Status()
 
 //==========================================================================================
 bool Stage_Scene::Change_Scene_Signal = false;
+bool Stage_Scene::Stage_Clear_Signal = false;
+
 
 
 void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -3798,11 +3800,60 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 
 }
+
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 }
 
+bool Stage_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	CScene::OnProcessingMouseMessage(hWnd, nMessageID, wParam, lParam);
+
+	switch (nMessageID)
+	{
+	case WM_LBUTTONDOWN:
+	{
+	}	break;
+
+	case WM_MOUSEWHEEL:
+	{
+	}	break;
+
+	default:
+		break;
+	}
+
+	return false;
+}
+
+bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
+{
+	CScene::OnProcessingKeyboardMessage(hWnd, nMessageID, wParam, lParam);
+
+	switch (nMessageID)
+	{
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case VK_ESCAPE:
+		{
+		}
+		break;
+
+		case 'P':
+		{
+			Stage_Clear_Signal = true;
+		}
+		break;
+
+		default:
+			break;
+		}
+	}
+
+	return(false);
+}
 
 void Stage_Scene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {

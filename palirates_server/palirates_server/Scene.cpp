@@ -322,8 +322,15 @@ void Stage_Scene::Init()
     for (shared_ptr<Player> player_ptr : player_list)
         player_ptr.reset();
 
-    //======================================================
+    Monster_List.clear();
 
+    std::fill(check_clear_state.begin(), check_clear_state.end(), false);
+
+    if (game_world.Get_Clear_State())
+        return;
+
+    //======================================================
+    
     std::shared_ptr<GameObject> monster_hierarchy_list = scene_obj->FindFrame("Monsters");
     std::shared_ptr<GameObject> player_hierarchy_list = scene_obj->FindFrame("Players");
 
@@ -342,6 +349,10 @@ void Stage_Scene::Init()
 void Stage_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+
+    if (active_client_num >= 2)
+        game_world.Stage_Clear = true;
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
@@ -414,14 +425,53 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             }
     }
     game_world.Update_Particle(elapsedTime);
+
+}
+
+void Stage_Scene::Update_Clear_State(int playerid, bool state)
+{
+    if (playerid < 0 || playerid >= MaxPlayer)
+        return;
+
+    if (game_world.Get_Clear_State())
+        check_clear_state[playerid] = state;
+}
+
+bool Stage_Scene::Check_Clear_Scene()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    if (active_client_num == 0) 
+        return false;
+
+    int readyCount = 0;
+
+    for (int i = 0; i < MaxPlayer; ++i)
+    {
+       bool change_ready = check_clear_state[i];
+
+        if (!change_ready)
+            continue;
+
+
+        ++readyCount;
+    }
+
+    if (readyCount == active_client_num)
+        return true;
+
+    return false;
 }
 
 Scene_Type Stage_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
+    if (game_world.Get_Clear_State())
+        Change_Scene_Trigger = Check_Clear_Scene();
+    
     if (Change_Scene_Trigger)
-        return Scene_Type::Stage_1;
+        return Scene_Type::Board;
     else
         return Scene_Type::None;
 
