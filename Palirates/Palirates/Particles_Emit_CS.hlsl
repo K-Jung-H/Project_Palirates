@@ -295,7 +295,7 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
 {
     float seed = frac(sin(index * 97.13f + ElapsedTime * 33.33f) * 31415.9265f);
 
-    if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
+    if (p.Type == PARTICLE_TYPE_DRAGON_FIRE || p.Type == PARTICLE_TYPE_PARTY)
     {
         float delay = seed * 1.5f; 
         p.Lifetime = -delay;

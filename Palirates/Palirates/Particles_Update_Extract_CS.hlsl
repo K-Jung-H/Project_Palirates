@@ -221,7 +221,7 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
         case PARTICLE_TYPE_SNOW:
             if (CheckCollisionWithGridOBBs(world_pos))
             {
-                p.Velocity = float3(0, 0, 0);
+                p.Velocity = float3(0, -1, 0);
                 p.Color = float3(1, 1, 1);
             }
             break;
@@ -237,8 +237,9 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
         case PARTICLE_TYPE_PARTY:
             if (CheckCollisionWithGridOBBs(world_pos))
             {
-                p.Velocity = float3(0, 0, 0);
-                p.Color = float3(1, 1, 0);
+                p.Velocity = float3(0, -1, 0);
+                if (p.Lifetime < p.MaxLifetime - 5.0f)
+                    p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
 
@@ -263,40 +264,41 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
         {
                 float3 normal = float3(0, 1, 0);
                 float speed = length(p.Velocity);
-                float3 incident = normalize(p.Velocity); 
+                float3 incident = normalize(p.Velocity);
 
                 p.Velocity = reflect(incident, normal) * speed;
-                p.Position += 3.0f;
+                p.Position += 3.5f;
                 p.Color = float3(1.0f, 0.3f, 0.0f);
-                break;
             }
+            break;
 
         case PARTICLE_TYPE_SNOW:
         {
                 p.Velocity = float3(0, 0, 0);
                 p.Color = float3(1, 1, 1);
-                break;
             }
+            break;
 
         case PARTICLE_TYPE_SPLASH:
         {
                 p.Velocity *= 0.2f;
                 p.Color = float3(0.2f, 0.2f, 1.0f);
-                break;
             }
+            break;
 
         case PARTICLE_TYPE_PARTY:
         {
                 p.Velocity = float3(0, 0, 0);
-                p.Color = float3(1, 1, 0);
-                break;
+                if (p.Lifetime < p.MaxLifetime - 5.0f)
+                    p.Lifetime = p.MaxLifetime - 5.0f;
             }
+            break;
 
         default:
         {
                 p.Active = 0;
-                break;
             }
+            break;
     }
 
     return true;
@@ -452,14 +454,13 @@ void Update_DragonFire(inout Particle_Info p, uint index)
 
 void Update_Party(inout Particle_Info p, uint index)
 {
+    
     p.Velocity += p.Acceleration * ElapsedTime;
-
-    float drag = pow(0.98f, ElapsedTime); 
-    p.Velocity *= drag;
-
+    p.Velocity += RandomSpreadDirection(index, p.Acceleration, 2.0f);
     p.Position += p.Velocity * ElapsedTime;
-
+    
     p.Rotate_Value += 2.5f * ElapsedTime;
+    
 }
 
 //===============================================================
@@ -473,9 +474,18 @@ void Extract_Instance(in Particle_Info p)
     inst.Position_and_Scale = float4(p.Position.xyz, safeScale);
     inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
 
-    float normalizedLife = saturate(p.Lifetime / p.MaxLifetime);
-    float alpha = 1.0f - normalizedLife;
-    inst.Color = float4(p.Color, alpha);
+    float alpha = 1.0f;
+
+    if(p.Type == PARTICLE_TYPE_PARTY)
+    {
+        inst.Color = float4(p.Color, alpha);
+    }
+    else // fade
+    {
+        float normalizedLife = saturate(p.Lifetime / p.MaxLifetime);
+        alpha = 1.0f - normalizedLife; 
+        inst.Color = float4(p.Color, alpha);
+    }
 
     InterlockedAdd(debug_buffer[3], 1);
     RenderInstanceBuffer.Append(inst);
