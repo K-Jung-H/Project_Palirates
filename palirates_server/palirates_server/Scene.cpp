@@ -396,7 +396,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     // Collision detection between monster weapons and players
     for (auto m : Monster_List) {
         if (!m) continue;
+		auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
+        m->update_collision(elapsedTime, obbList);
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
         //if (!m || !m->Weapon_ptr || (GET_MONSTER_TYPE(m->GetID()) != int(Monster_Type::Fishman))) continue;
@@ -770,6 +772,20 @@ void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
 
+    int id;
+    for (int i = 0; i < 1; ++i) {
+        if (i % 4 == 0)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 1)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
+        else if (i % 4 == 2)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 3)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 150), 100);
+        std::cout << "m spawn s4 " << "\n";
+    }
 }
 
 //=========================================================

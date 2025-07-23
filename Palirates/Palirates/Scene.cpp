@@ -3088,7 +3088,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 
 		pirate_ship->Set_Name("player's pirate_ship");
-		pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+		pirate_ship->SetPosition(0.0f, 0.0f, 1200.0f);
 
 
 		pirate_ship->SetScale({ 3.0f, 3.0f, 3.0f }, true);

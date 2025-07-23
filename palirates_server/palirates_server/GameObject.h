@@ -79,6 +79,7 @@ public:
     void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
+    void RotateTowardsTarget(const XMFLOAT3& targetPos, float deltaTime, float rotationSpeed);
 
     void SetScale(float x, float y, float z, bool keepPosition = false);
 
