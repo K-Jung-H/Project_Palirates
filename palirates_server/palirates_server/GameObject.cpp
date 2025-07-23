@@ -183,6 +183,38 @@ void GameObject::Rotate(XMFLOAT4* pxmf4Quaternion)
 	UpdateTransform(NULL);
 }
 
+void GameObject::RotateTowardsTarget(const XMFLOAT3& targetPos, float deltaTime, float rotationSpeed)
+{
+	// 1. 현재 위치와 타겟 방향 계산
+	XMVECTOR selfPos = XMLoadFloat3(&GetPosition());
+	XMVECTOR targetVec = XMLoadFloat3(&targetPos);
+	XMVECTOR toTarget = XMVector3Normalize(XMVectorSubtract(targetVec, selfPos));
+
+	// 2. 현재 Look 방향 벡터 (Z축 기준)
+	XMVECTOR lookVec = XMLoadFloat3(&GetLook());  // 이미 정규화되어 있기를 가정
+
+	// 3. 내적을 통해 각도 계산
+	float dot = XMVectorGetX(XMVector3Dot(lookVec, toTarget));
+	dot = std::clamp(dot, -1.0f, 1.0f); // acos 안정화
+
+	float angle = acosf(dot); // 라디안
+	if (angle < 0.01f) return; // 거의 정면이면 회전 안 함
+
+	// 4. 회전 축 (두 벡터를 잇는 법선벡터)
+	XMVECTOR rotationAxis = XMVector3Normalize(XMVector3Cross(lookVec, toTarget));
+	if (XMVector3Equal(rotationAxis, XMVectorZero())) return; // 축이 0이면 의미 없음
+
+	// 5. 보간 각도 (시간과 속도 기반)
+	float rotateAngle = rotationSpeed * deltaTime;
+	rotateAngle = std::min(rotateAngle, angle); // 최대 각도 초과 금지
+
+	// 6. 회전 행렬 생성 및 적용
+	XMMATRIX rotMat = XMMatrixRotationAxis(rotationAxis, rotateAngle);
+	m_xmf4x4Parent = Matrix4x4::Multiply(rotMat, m_xmf4x4Parent);
+
+	UpdateTransform(nullptr);
+}
+
 void GameObject::SetScale(float x, float y, float z, bool keepPosition)
 {
 	XMVECTOR worldPosBefore;

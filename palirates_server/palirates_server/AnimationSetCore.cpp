@@ -348,10 +348,10 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 	if (Vector3::LengthSquared(deltaMove) > 0.000001f) 
 	{
 		float length = Vector3::Length(deltaMove);
-		if (length >= 1.0f) {
+		/*if (length >= 1.0f) {
 			std::cout << "[RootMotion] deltaMove: (" << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z
 				<< "), Length: " << length << " - " << HipsPosition.z << ", " << m_xmf3PrevHipsPosition.z << std::endl;
-		}
+		}*/
 		XMFLOAT3 look = pRootGameObject->GetLook();
 		float yaw = XMConvertToDegrees(atan2f(look.x, look.z));
 		XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(yaw));

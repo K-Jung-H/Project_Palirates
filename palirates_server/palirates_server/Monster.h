@@ -45,6 +45,10 @@ public:
     float stateChangeInterval = 2.0f;
     XMFLOAT3 m_targetLookDir = { 0, 0, 0 };
     bool m_shouldRotate = false;
+    float detectionRange = 0.0f;
+    float attackRange = 0.0f;
+    int attackPhase = 1;
+    
 public:
     Monster(int id);
     Monster() = default;
@@ -55,7 +59,7 @@ public:
 
     MonsterStateMachine* GetStateMachine() { return m_StateMachine.get(); }
 
-    virtual void PlayAnimation(State state);
+    virtual int PlayAnimation(State state);
     virtual ServerSyncData MakeSyncData();
 
     void SetPlayerListPtr(const std::array<std::shared_ptr<Player>, MaxPlayer>* ptr) { pPlayerList = ptr; }
