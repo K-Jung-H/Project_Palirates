@@ -418,16 +418,16 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 							normal = XMVector3Normalize(normal);
 
 							XMVECTOR slideVec = deltaVec_flat - XMVector3Dot(deltaVec_flat, normal) * normal;
-							std::cout << "Ãæµ¹" << ")\n";
+
 							if (XMVectorGetX(XMVector3LengthSq(slideVec)) > 0.0001f) {
 								pos += slideVec;
 								XMFLOAT3 deltaVec_fulld;
 								XMStoreFloat3(&deltaVec_fulld, deltaVec_full);
-								std::cout << "deltaMove = (" << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << ")\n";
-								std::cout << "deltaVec_full = (" << deltaVec_fulld.x << ", " << deltaVec_fulld.y << ", " << deltaVec_fulld.z << ")\n";
+								//std::cout << "deltaMove = (" << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << ")\n";
+								//std::cout << "deltaVec_full = (" << deltaVec_fulld.x << ", " << deltaVec_fulld.y << ", " << deltaVec_fulld.z << ")\n";
 								XMFLOAT3 slideVecd;
 								XMStoreFloat3(&slideVecd, slideVec);
-								std::cout << "slideVec = (" << slideVecd.x << ", " << slideVecd.y << ", " << slideVecd.z << ")\n";
+								//std::cout << "slideVec = (" << slideVecd.x << ", " << slideVecd.y << ", " << slideVecd.z << ")\n";
 								XMFLOAT3 newPos;
 								XMStoreFloat3(&newPos, pos);
 								pRootGameObject->SetPosition(newPos);

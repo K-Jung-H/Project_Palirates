@@ -149,7 +149,7 @@ void Board_Scene::Init()
     selected_stage_index = -1;
 
     if(pirate_ship)
-        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+        pirate_ship->SetPosition(0.0f, 0.0f, 1200.0f);
 
     for (int i = 0; i < MaxPlayer; i++)
     {
