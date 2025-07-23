@@ -1018,6 +1018,21 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.size = 1.0f;
 			mesh = particle_mesh_map["cube"];
 			break;
+			
+		case Particle_Type::party:
+			format.shader_type = Particle_Shader_Type::continuous;
+			format.particle_type = Particle_Type::party;
+			format.max_particles = 5000;
+			format.MaxLifetime = 100.0f;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 100;
+			format.acceleration = XMFLOAT3(0, 10.0f, 0);
+			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.size = 1.0f;
+			mesh = particle_mesh_map["cube"];
+			break;
 
 		default:
 			createQueue.pop(); // skip unknown type

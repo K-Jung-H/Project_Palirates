@@ -3789,7 +3789,11 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 //	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
-
+	if (test_dragonfire)
+	{
+		test_dragonfire->Set_Main_Direction(m_pPlayer->GetLookVector());
+		test_dragonfire->SetPosition(m_pPlayer->GetPosition());
+	}
 
 }
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -4036,7 +4040,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
 
 #ifdef USING_OBB
-	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 #endif
 
@@ -4139,6 +4142,31 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
+
+	Particle_Format test_dragon_fire_info;
+	{
+		test_dragon_fire_info.shader_type = Particle_Shader_Type::continuous;
+		test_dragon_fire_info.particle_type = Particle_Type::dragon_breath;
+		test_dragon_fire_info.max_particles = 3000;
+		test_dragon_fire_info.MaxLifetime = 1.0f;
+
+		test_dragon_fire_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
+		test_dragon_fire_info.EmitFaceIndex = 0;
+
+
+
+		test_dragon_fire_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		test_dragon_fire_info.init_velocity_value = 100.0f;
+		test_dragon_fire_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+
+		test_dragon_fire_info.size = 1.0f;
+		test_dragon_fire_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
+	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
+
+
 #endif
 
 	//===============================================================================
@@ -4198,7 +4226,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
 
 #ifdef USING_OBB
-	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 #endif
 

@@ -7,8 +7,9 @@ enum class Particle_Type
     snow = 0,
     splash = 1,
     dragon_breath = 2,
-    sand = 3,
-    sand_storm = 4,
+    party = 3,
+    sand = 4,
+    sand_storm = 5,
     //=======================
     bleed = 10,
     etc = -1
