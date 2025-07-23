@@ -1387,34 +1387,46 @@ void Object_Manager::Post_Update(Object_Type type)
 
 }
 
-bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData, CCamera* camera)
 {
 	if (player_map[player_id])
 	{
-		player_map[player_id]->ApplySyncData(syncData);
+		if (camera) {
+			XMMATRIX view = XMLoadFloat4x4(&camera->GetViewMatrix());
+			XMVECTOR playerWorldPos = XMLoadFloat3(&syncData.position);
 
-
-		if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
-			std::cout << "Attack State" << "\n";
-			player_map[player_id]->bTrailOn();
-			if (player_map[player_id]->GetTrailStart())
+			XMVECTOR viewSpacePos = XMVector3TransformCoord(playerWorldPos, view);
+			float zView = XMVectorGetZ(viewSpacePos);
+			if (zView > 0.0f)
 			{
-				std::cout << "Trail Start" << "\n";
-				player_map[player_id]->GetTrailObj()->Set_Active(true);
-				player_map[player_id]->Trail_Start();
-			}
+				player_map[player_id]->ApplySyncData(syncData);
 
-			if (!player_map[player_id]->GetTrailObj()->Get_Active())
-			{
-				std::cout << "Reset Trail" << "\n";
-				player_map[player_id]->GetTrailObj()->GetTrailMesh()->ResetTrail();
-				player_map[player_id]->GetTrailObj()->Set_Active(true);
+
+				if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
+					std::cout << "Attack State" << "\n";
+					player_map[player_id]->bTrailOn();
+					if (player_map[player_id]->GetTrailStart())
+					{
+						std::cout << "Trail Start" << "\n";
+						player_map[player_id]->GetTrailObj()->Set_Active(true);
+						player_map[player_id]->Trail_Start();
+					}
+
+					if (!player_map[player_id]->GetTrailObj()->Get_Active())
+					{
+						std::cout << "Reset Trail" << "\n";
+						player_map[player_id]->GetTrailObj()->GetTrailMesh()->ResetTrail();
+						player_map[player_id]->GetTrailObj()->Set_Active(true);
+					}
+				}
+				else {
+					player_map[player_id]->bTrailOff();
+					player_map[player_id]->GetTrailObj()->Set_Active(false);
+				}
 			}
 		}
-		else {
-			player_map[player_id]->bTrailOff();
-			player_map[player_id]->GetTrailObj()->Set_Active(false);
-		}
+
+		
 	}
 	else
 		return false;

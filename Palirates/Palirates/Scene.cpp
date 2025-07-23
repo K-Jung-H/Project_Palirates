@@ -2246,7 +2246,7 @@ void CScene::Remove_Multi_Player(int player_id)
 
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
-	return obj_manager->Sync_Player_Data(player_id, syncData);
+	return obj_manager->Sync_Player_Data(player_id, syncData, main_Camera.get());
 }
 
 XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
