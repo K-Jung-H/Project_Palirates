@@ -65,25 +65,67 @@ void WalkState::Enter(Monster* monster, MonsterStateMachine* sm) {
 void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
     monster->stateElapsedTime += deltaTime;
-    if (monster->stateElapsedTime > 1.0f) {
-        monster->stateElapsedTime = 0.0f;
-        if (RandomFloat() < 0.3f) {
-            XMFLOAT3 targetPos = (RandomFloat() < 0.5f) ? monster->GetRight() : XMFLOAT3{
-     -monster->GetRight().x,
-     -monster->GetRight().y,
-     -monster->GetRight().z
-            };
-            monster->SetTarget(targetPos);
-        }
-    }
+    //if (monster->stateElapsedTime > 1.0f) {
+    //    monster->stateElapsedTime = 0.0f;
+    //    if (RandomFloat() < 0.3f) {
+    //        /*XMFLOAT3 targetPos = (RandomFloat() < 0.5f) ? monster->GetRight() : XMFLOAT3{
+    // -monster->GetRight().x,
+    // -monster->GetRight().y,
+    // -monster->GetRight().z
+    //        };
+    //        monster->SetTarget(targetPos);*/
 
+    //        float angle = (RandomFloat() * 1.0f + 10.0f) * (RandomFloat() < 0.5f ? -1.0f : 1.0f);
+    //        float radians = XMConvertToRadians(angle);
+    //        XMMATRIX rot = XMMatrixRotationY(radians);
+    //        XMVECTOR vec = XMLoadFloat3(&monster->GetLook());
+    //        vec = XMVector3TransformNormal(vec, rot); 
+
+    //        XMFLOAT3 rotatedDir;
+    //        XMStoreFloat3(&rotatedDir, vec);
+    //        monster->SetTarget(rotatedDir);
+    //    }
+    //}
+
+    //auto nearestPos = monster->FindNearestPlayerInRange(100.0f);
+    //if (nearestPos) {
+    //    XMFLOAT3 myPos = monster->GetPosition();
+    //    XMFLOAT3 toAway = Vector3::Subtract(myPos, *nearestPos);
+    //    XMFLOAT3 awayDir = Vector3::Normalize(toAway);
+
+    //    monster->SetTarget(awayDir); // 방향 지정
+
+    //    // 회전 바로 수행
+    //    XMFLOAT3 curLook = monster->GetLook();
+    //    float dot = Vector3::DotProduct(Vector3::Normalize(curLook), awayDir);
+
+    //    while (dot < 0.999f) {
+    //        monster->RotateTowardsDirection(awayDir, deltaTime); // deltaTime은 외부에서 주입
+    //        curLook = monster->GetLook();
+    //        dot = Vector3::DotProduct(Vector3::Normalize(curLook), awayDir);
+    //    }
+
+    //    // 회전 완료
+    //    monster->m_shouldRotate = false;
+    //}
+    static bool test = true;
+    if (test) {
+        XMVECTOR vec = XMLoadFloat3(&monster->GetLook());
+        XMMATRIX rot = XMMatrixRotationY(XMConvertToRadians(20.0f));
+        vec = XMVector3TransformNormal(vec, rot);;
+
+        XMFLOAT3 rotatedDir;
+        XMStoreFloat3(&rotatedDir, vec);
+        monster->SetTarget(rotatedDir);
+        test = false;
+    }
     if (monster->m_shouldRotate) {
         monster->RotateTowardsDirection(monster->m_targetLookDir, deltaTime);
         XMFLOAT3 curLook = monster->GetLook();
         XMFLOAT3 tgtLook = monster->m_targetLookDir;
 
         float dot = Vector3::DotProduct(Vector3::Normalize(curLook), Vector3::Normalize(tgtLook));
-        if (dot > 0.999f) { 
+        if (dot > 0.98f) { 
             monster->m_shouldRotate = false;
         }
     }

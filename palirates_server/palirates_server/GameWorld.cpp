@@ -204,3 +204,22 @@ FrameParticleChanges GameWorld::Get_Particle_Sync_Data()
 {
     return particle_manager.FlushFrameChanges();
 }
+
+std::vector<BoundingOrientedBox> GameWorld::Get_Cell_OBBs(const XMFLOAT3& Pos)
+{
+    std::vector<BoundingOrientedBox> obbs;
+    XMINT3 cellPos = Get_CellIndexFromPosition(Pos);
+    auto it = uniform_cell_map.find(cellPos);
+    if (it == uniform_cell_map.end()) return obbs;
+
+    for (int objIndex : it->second)
+    {
+        auto obj = fixed_object_list[objIndex];
+        if (!obj || !obj->Get_Collider_OBB()) continue;
+
+        obj->UpdateWorldOBB();
+        obbs.push_back(*obj->Get_Collider_OBB());
+    }
+
+    return obbs;
+}
