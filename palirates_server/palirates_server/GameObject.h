@@ -102,6 +102,9 @@ public:
     static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);
     static std::shared_ptr<GameObject> Load_Scene_FrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile);
 
+    static void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
+
+
     void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
     void SetMesh(std::shared_ptr<CStandardMesh> pMesh);

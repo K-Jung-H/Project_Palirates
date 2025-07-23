@@ -82,10 +82,6 @@ ID3D12RootSignature* Scene_Manager::Create_EmptyRootSignature(ID3D12Device* pd3d
     return pRootSignature;
 }
 
-void Build_Scene(Scene_Type scene_type, string scene_name)
-{
-
-}
 
 bool Scene_Manager::Register_Scene(std::string_view sceneName, std::shared_ptr<CScene> scene)
 {
@@ -234,6 +230,11 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
+
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
     }
     break;
 
@@ -243,15 +244,18 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_2_Scene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
         in_stage_scene->scene_type = scene_type;
-
         Register_Scene(scene_name, in_stage_scene);
+
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
         pPlayer->SetID(Client_ID);
         pPlayer->SetOutlineColor(Client_ID + 1);
-
         pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
-
+       XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
+       pPlayer->SetPosition(new_position);
+        
+       in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
 
         pPlayer->SetupWeaponCollider();
 
@@ -276,10 +280,11 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             pPlayer->GetTrailObj()->Set_Active(false);
         }
 
-        pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
-        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
-        Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
     }
     break;
     case Stage_2:
@@ -287,15 +292,18 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_2_Scene>();
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
         in_stage_scene->scene_type = scene_type;
-
         Register_Scene(scene_name, in_stage_scene);
+
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
         pPlayer->SetID(Client_ID);
         pPlayer->SetOutlineColor(Client_ID + 1);
-
         pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
+        XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
+        pPlayer->SetPosition(new_position);
 
+        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
 
         pPlayer->SetupWeaponCollider();
 
@@ -320,10 +328,11 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             pPlayer->GetTrailObj()->Set_Active(false);
         }
 
-        pPlayer->SetPosition(XMFLOAT3(1500.0f, 0.0f, 692.0f));
-        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
-        Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
     }
     break;
 
@@ -786,11 +795,12 @@ void Scene_Manager::Remove_Player(int player_id)
 
 }
 
-void Scene_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+bool Scene_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
     if (activeScene)
-        activeScene->Sync_Player_Data(player_id, syncData);
+        return activeScene->Sync_Player_Data(player_id, syncData);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
+    return false;
 }

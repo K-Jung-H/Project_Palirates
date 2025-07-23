@@ -1106,7 +1106,7 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 
 }
 
-void Object_Manager::Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Object_Manager::ReBuild_Fixed_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (do_instance_update == false)
 		return;
@@ -1387,9 +1387,10 @@ void Object_Manager::Post_Update(Object_Type type)
 
 }
 
-void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
-	if (player_map[player_id]) {
+	if (player_map[player_id])
+	{
 		player_map[player_id]->ApplySyncData(syncData);
 
 
@@ -1415,7 +1416,10 @@ void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 			player_map[player_id]->GetTrailObj()->Set_Active(false);
 		}
 	}
+	else
+		return false;
 
+	return true;
 }
 
 void Object_Manager::Post_Update_All()

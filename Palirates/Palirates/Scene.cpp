@@ -1151,7 +1151,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif
@@ -1966,7 +1966,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 	Object_Manager::Reserve_Update();
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
 
 	//obj_manager->Check_Player_Collision(m_pPlayer);
@@ -2234,6 +2234,7 @@ Change_Signal CScene::Get_Change_Signal()
 
 void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
+
 	obj_manager->Add_Player(new_player_ptr);
 }
 
@@ -2243,9 +2244,17 @@ void CScene::Remove_Multi_Player(int player_id)
 }
 
 
-void CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
-	obj_manager->Sync_Player_Data(player_id, syncData);
+	return obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
+{
+	if (player_id < 0 || player_id >= MaxPlayer)
+		return player_start_position_list[0]->GetPosition();
+
+	return player_start_position_list[player_id]->GetPosition();
 }
 
 void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
@@ -2581,7 +2590,7 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 	UpdatePlayerSelection();
 }
 
@@ -3222,7 +3231,7 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
 	bool isShipMoving = pirate_ship->Is_Moving(); 
 	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
@@ -3317,7 +3326,7 @@ int Board_Scene::Get_Closest_Island_Index(float range)
 
 
 	int closest_index = -1;
-	float min_distance = range + 1.0f;  // √ ±‚∞™: range∫∏¥Ÿ æ‡∞£ ≈≠
+	float min_distance = range + 1.0f;  // Ï¥àÍ∏∞Í∞í: rangeÎ≥¥Îã§ ÏïΩÍ∞Ñ ÌÅº
 
 	for (int i = 0; i < island_points.size(); ++i)
 	{
@@ -3777,35 +3786,10 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
 	Object_Manager::Reserve_Update();
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
+//	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
-	//if (m_pPlayer->GetTrailOn())
-	//{
-	//	if (!m_pPlayer->GetTrailStart())
-	//	{
-	//		XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f };
-	//		XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
 
-	//		shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-	//		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-	//		trail_obj->Set_Main_Color(test_main_color);
-	//		trail_obj->Set_SubColor(test_sub_color);
-
-	//		trail_obj->Set_Trail_Target(trail_target, false);
-	//		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-	//		m_pPlayer->SetTrailObj(trail_obj);
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//		m_pPlayer->Trail_Start();
-	//	}
-
-	//	if (!m_pPlayer->GetTrailObj()->Get_Active())
-	//	{
-	//		m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//	}
-	//}
 
 }
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -3973,26 +3957,7 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 #ifdef USING_OBB
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
-
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
-	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
-	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
-	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
-	//==================================
-	// ≥™¡ﬂø° Ω√µµ«“ ∞Õ
-	//xmf3Scale.x = 5;
-	//xmf3Scale.y = 5;
-	//xmf3Scale.z = 5;
-	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
-	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
-	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
 	
-	//m_pTerrain->Set_Child(test_Terrain);
-	obj_manager->Set_Terrain_Object(m_pTerrain);
-
-	//===============================================================================
 
 #ifdef RENDER_PARTICLE
 
@@ -4018,20 +3983,50 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
+#endif
+
+	//===============================================================================
+
+	XMFLOAT3 xmf3Scale(15.0f, 0.0f, 11.0f); // y = 0 -> flat
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	//==================================
+	// ÎÇòÏ§ëÏóê ÏãúÎèÑÌï† Í≤É
+	//xmf3Scale.x = 5;
+	//xmf3Scale.y = 5;
+	//xmf3Scale.z = 5;
+	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
+
+	//m_pTerrain->Set_Child(test_Terrain);
+	obj_manager->Set_Terrain_Object(m_pTerrain);
 
 	//===============================================================================
 
 #ifdef LOAD_SCENE
-
-
 	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map1.bin", NULL);
 
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("test_scene");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 213.0f, 800.0f);
+	test_scene->SetPosition(1250.0f, -35.0f, -1200.0f);
+
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->UpdateTransform(NULL);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
+	{
+		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
+			it = player_start_position_list.erase(it);
+		else
+			++it;
+	}
+
 #endif
 
 	//===============================================================================
@@ -4045,15 +4040,15 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 #endif
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 
-#endif
+
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
-
+	
 }
 
 
@@ -4094,7 +4089,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-
 	if (Object_Manager::trail_shader == NULL)
 	{
 		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
@@ -4120,15 +4114,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
 #endif
 
-	XMFLOAT3 xmf3Scale(10.0f, 0.0f, 10.0f); // y = 0 -> flat
-	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
-	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
-	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
-	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
-	obj_manager->Set_Terrain_Object(m_pTerrain);
-
-	//===============================================================================
 
 #ifdef RENDER_PARTICLE
 
@@ -4154,20 +4139,56 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
+#endif
 
 	//===============================================================================
 
+
+	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
+
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	//==================================
+	// ÎÇòÏ§ëÏóê ÏãúÎèÑÌï† Í≤É
+	//xmf3Scale.x = 5;
+	//xmf3Scale.y = 5;
+	//xmf3Scale.z = 5;
+	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
+
+	//m_pTerrain->Set_Child(test_Terrain);
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+	//===============================================================================
+
+
 #ifdef LOAD_SCENE
-
-
 	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map2.bin", NULL);
 
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
-	test_scene->Set_Name("test_scene");
+	test_scene->Set_Name("map2");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(1300.0f, m_pTerrain->Get_Mesh_Height(1300.0f, 800.0f) + 34.0f, 800.0f);
+	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->UpdateTransform(NULL);
+
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	std::shared_ptr<CGameObject> player_start_position = test_scene->FindFrame("Players");
+	CGameObject::FlattenGameObjectHierarchy(player_start_position, player_start_position_list);
+
+	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
+	{
+		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
+			it = player_start_position_list.erase(it); 
+		else
+			++it;
+	}
+
 #endif
 
 	//===============================================================================
@@ -4181,13 +4202,15 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
 #endif
 
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 
-#endif
+
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+
+
 }
 
 
@@ -4213,7 +4236,7 @@ void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 
 
 #ifdef RENDER_PARTICLE
-	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
 	obj_manager->Update_Fixed_OBBs();
 	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
 #endif

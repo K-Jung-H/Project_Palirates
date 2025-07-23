@@ -52,7 +52,7 @@ public:
 	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);
 
 private:
-	void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
+	void FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
 	void AssignToUniformCells();
 
 	XMINT3 Get_CellIndexFromPosition(const XMFLOAT3& pos) const;

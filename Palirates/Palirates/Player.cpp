@@ -479,7 +479,9 @@ void CTerrainPlayer::OnPlayerUpdateCallback(float fTimeElapsed)
 		bool bReverseQuad = ((z % 2) != 0);
 
 		float fHeight = pTerrain->Get_Height(xmf3PlayerPosition.x, xmf3PlayerPosition.z, bReverseQuad, last_tile_ptr);
+		ClampPositionToTerrainBounds(pTerrain);
 
+		xmf3PlayerPosition = GetPosition();
 		if (xmf3PlayerPosition.y < fHeight)
 		{
 			XMFLOAT3 xmf3PlayerVelocity = GetVelocity();
@@ -538,6 +540,23 @@ void CTerrainPlayer::Move(DWORD dwDirection, float fDistance, bool bUpdateVeloci
 	CPlayer::Move(dwDirection, fDistance, bUpdateVelocity);
 }
 
+void CTerrainPlayer::ClampPositionToTerrainBounds(CHeightMapTerrain*  terrain_obj)
+{
+	shared_ptr<CMesh> full_mesh = terrain_obj->Get_FullMesh();
+	if (full_mesh)
+	{
+		XMFLOAT2 areaLT = terrain_obj->Get_Terrain_LT();
+		XMFLOAT2 areaRB = terrain_obj->Get_Terrain_RB();
+		XMFLOAT3 player_pos = GetPosition();
+
+		player_pos.x = std::clamp(player_pos.x, areaLT.x, areaRB.x);
+		player_pos.z = std::clamp(player_pos.z, areaLT.y, areaRB.y);
+		SetPosition(player_pos);
+		UpdateTransform(NULL);
+	}
+}
+
+
 void CTerrainPlayer::Animate(float fTimeElapsed)
 {
 	OnPrepareAnimate();
@@ -557,7 +576,8 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 	if (On_Ground)
 	{
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
-		if (pTerrain) {
+		if (pTerrain) 
+		{
 			XMFLOAT3 xmf3PlayerPosition = GetPosition();
 			XMFLOAT3 world_normal = pTerrain->Get_Mesh_Normal(xmf3PlayerPosition.x, xmf3PlayerPosition.z, last_tile_ptr);
 			AlignWithNormal(world_normal);
