@@ -26,6 +26,10 @@ struct XMINT3Hasher
 class GameWorld
 {
 private:
+	bool Stage_Clear = false;
+
+
+private:
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
 	ParticleManager particle_manager;
 
