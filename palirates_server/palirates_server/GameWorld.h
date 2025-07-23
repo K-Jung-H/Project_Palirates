@@ -59,3 +59,18 @@ private:
 	void Compute_CellBounds_From_OBB(const std::shared_ptr<BoundingOrientedBox>& obb, XMINT3& out_min_cell, XMINT3& out_max_cell) const;
 };
 
+const std::unordered_set<std::string> kExcludedNames =
+{
+	"SM_Env_Rock_02.bin",
+	"SM_Env_Rock_03.bin",
+	"SM_Env_Rock_Huge_03.bin",
+	"SM_Env_Rock_Huge_04.bin",
+	"SM_Env_Rock_Large_02.bin",
+	"SM_Env_Rock_Large_03.bin",
+	"SM_Env_Rock_Large_04.bin",
+	"SM_Env_Rock_Large_05.bin",
+	"SM_Env_Rock_Large_06.bin",
+	"SM_Env_Rock_Large_07.bin",
+	"SM_Env_Rock_Large_08.bin",
+	"SM_Env_Rock_Skull_01.bin"
+};

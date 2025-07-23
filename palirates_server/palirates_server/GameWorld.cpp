@@ -45,6 +45,11 @@ void GameWorld::FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> no
         outList.push_back(node);
     }
 
+    else if (std::find(kExcludedNames.begin(), kExcludedNames.end(), name) != kExcludedNames.end())
+    {
+        outList.push_back(node);
+    }
+
 
     std::shared_ptr<GameObject> child = node->Get_Child();
     while (child)
