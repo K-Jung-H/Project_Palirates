@@ -1809,10 +1809,20 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 
 	post_effect_sync_data.zoom_w_position =
 	{
-		static_cast<float>(std::stoi(tokens[9])),
-		static_cast<float>(std::stoi(tokens[10])),
-		static_cast<float>(std::stoi(tokens[11]))
+		(std::stof(tokens[9])),
+		(std::stof(tokens[10])),
+		(std::stof(tokens[11]))
 	};
+
+	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
+
+	Fog_Info server_fog_info;
+	server_fog_info.Fog_Trigger = std::stoi(tokens[13]);
+	server_fog_info.fogStart = std::stof(tokens[14]);
+	server_fog_info.fogEnd = std::stof(tokens[15]);
+	server_fog_info.fogDensity = std::stof(tokens[16]);
+
+	stage_scene->Fog_Sync(server_fog_info);
 }
 
 
@@ -2077,36 +2087,6 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 
-	//while (isRunning)
-	//{
-	//	char buffer[1024 + 1];
-	//	int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-	//	//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
-
-	//	if (bytesReceived > 0)
-	//	{
-	//		buffer[bytesReceived] = '\0';
-	//		std::string receivedData(buffer);
-
-	//		{
-	//			std::lock_guard<std::mutex> lock(recvQueueMutex);
-	//			recvQueue.push(receivedData);
-	//			//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
-	//		}
-	//	}
-
-	//	else if (bytesReceived == SOCKET_ERROR)
-	//	{
-	//		std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
-	//	}
-	//	else if (bytesReceived == 0)
-	//	{
-	//		std::cerr << "[INFO] Connection with server closed" << std::endl;
-	//		isRunning = false;
-	//		break;
-	//	}
-
-	//}
 }
 
 bool CGameFramework::IsServerConnected()

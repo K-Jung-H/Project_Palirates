@@ -89,6 +89,13 @@ struct Effect_Sync_Data
 
     bool zoom_blur_active;
     XMFLOAT3 zoom_w_position;
+
+    bool monster_x_ray;
+
+    bool fog_trigger;
+    float fogStart;
+    float fogEnd;
+    float fogDensity;
 };
 
 

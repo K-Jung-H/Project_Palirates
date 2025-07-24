@@ -525,6 +525,47 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
         effect_data.zoom_w_position = XMFLOAT3(0, 0, 0);
     }
 
+    int total_monster_count = static_cast<int>(monster_init_spawn_frame_list.size() - 1); // frame  헤더 제외
+    int normal_monster_count = total_monster_count - 1; 
+    int alive_monster_count = static_cast<int>(Monster_List.size());
+
+    int defeated_monsters = normal_monster_count - alive_monster_count;
+
+    int clear_value_1 = 50 * (1 - game_world.Get_Boss_Monster()->Get_Active());
+    int clear_value_2 = 50 * defeated_monsters / normal_monster_count;
+
+    int total_value = clear_value_1 + clear_value_2;
+
+    if (total_value < 30)
+    {
+        effect_data.monster_x_ray = false;
+        effect_data.fog_trigger = true;
+        effect_data.fogStart = 1.0f;
+        effect_data.fogEnd = 500.0f;
+        effect_data.fogDensity = 0.5f;
+    }
+    else if (total_value < 50)
+    {
+        effect_data.monster_x_ray = false;
+        effect_data.fog_trigger = true;
+        effect_data.fogStart = 1.0f;
+        effect_data.fogEnd = 500.0f;
+        effect_data.fogDensity = 3.0f;
+    }
+    else if (total_value < 70)
+    {
+        effect_data.monster_x_ray = true;
+        effect_data.fog_trigger = true;
+        effect_data.fogStart = 1.0f;
+        effect_data.fogEnd = 1500.0f;
+        effect_data.fogDensity = 3.0f;
+    }
+    else if (total_value >= 100)
+    {
+        effect_data.monster_x_ray = false;
+        effect_data.fog_trigger = false;
+    }
+
     return effect_data;
 }
 

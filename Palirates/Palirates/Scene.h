@@ -298,6 +298,8 @@ public:
 
 	virtual void DamageMonster(int id, float damage);
 
+	void Fog_Sync(Fog_Info fog_info);
+
 };
 
 class Character_Select_Scene : public CScene
@@ -399,7 +401,7 @@ class Stage_Scene : public CScene
 public:
 	static bool Change_Scene_Signal; // For send server
 	static bool Stage_Clear_Signal; // For Get server
-
+	static bool Monster_Depth_Render; // For Get server
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -410,6 +412,7 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual void Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);

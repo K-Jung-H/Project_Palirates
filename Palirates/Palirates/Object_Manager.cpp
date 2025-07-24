@@ -1342,25 +1342,45 @@ void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* p
 }
 
 
-void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Object_Type type)
 {
-	for (auto& [id, obj_ptr] : player_map)
+	switch (type)
 	{
-		if (obj_ptr != NULL)
-			if (obj_ptr->Get_Active())
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
+		{
+			if (skinned_obj_ptr->Get_Active())
 			{
-				obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+				skinned_obj_ptr->UpdateTransform(NULL);
+				skinned_obj_ptr->Render_Depth(pd3dCommandList, pCamera);
 			}
+		}
+	}
+		break;
+
+	case Object_Type::player:
+	{
+		for (auto& [id, obj_ptr] : player_map)
+		{
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+				{
+					obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+				}
+		}
+	}
+		break;
+
+	case Object_Type::non_skinned:
+	case Object_Type::fixed:
+	case Object_Type::trail:
+	case Object_Type::etc:
+	default:
+		break;
 	}
 
-	//for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
-	//{
-	//	if (skinned_obj_ptr->Get_Active())
-	//	{
-	//		skinned_obj_ptr->UpdateTransform(NULL);
-	//		skinned_obj_ptr->Render(pd3dCommandList, pCamera);
-	//	}
-	//}
+
 }
 
 void Object_Manager::Post_Update(Object_Type type)
