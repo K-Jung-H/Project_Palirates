@@ -65,7 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 200, 400, 50);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 400, 400, 50);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
@@ -307,7 +307,6 @@ void CGameFramework::ChangeSwapChainState()
 	m_nWndClientWidth = rcClient.right - rcClient.left;
 	m_nWndClientHeight = rcClient.bottom - rcClient.top;
 
-	WaitForGpuComplete(GPU_Stage::Render);
 
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
@@ -334,6 +333,16 @@ void CGameFramework::ChangeSwapChainState()
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
+
+	//=========================================
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
+
+	if (MRT_shader)
+		MRT_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvHandle);
+
+	CreateDepthStencilView();
 
 	for (UINT i = 0; i < N_SwapChainBuffers; ++i)
 	{
@@ -394,7 +403,15 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 
 				case VK_F9:
-					ChangeSwapChainState();
+				{
+					if (!Change_Screen)
+						Change_Screen = true;
+					//WaitForGpuComplete(GPU_Stage::Compute);
+					//WaitForGpuComplete(GPU_Stage::Render);
+					//WaitForGpuComplete(GPU_Stage::Post);
+
+					//ChangeSwapChainState();
+				}
 					break;
 				default:
 					break;
@@ -577,7 +594,8 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
-//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_2, "Stage_2");
 
 
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
@@ -918,7 +936,13 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	if (m_pd3dFence->GetCompletedValue() < fenceValue)
 	{
 		m_pd3dFence->SetEventOnCompletion(fenceValue, m_hFenceEvent);
-		WaitForSingleObject(m_hFenceEvent, INFINITE);
+		//WaitForSingleObject(m_hFenceEvent, INFINITE);
+		DWORD waitResult = WaitForSingleObject(m_hFenceEvent, 5000); // 최대 5초
+		if (waitResult == WAIT_TIMEOUT)
+		{
+			std::cerr << "[ERROR] GPU Timeout during fullscreen switch. Device might be lost.\n";
+			return; // or trigger recovery
+		}
 	}
 }
 
@@ -981,6 +1005,12 @@ void CGameFramework::FrameAdvance()
 	WaitForGpuComplete(GPU_Stage::Compute);
 	WaitForGpuComplete(GPU_Stage::Render);
 	WaitForGpuComplete(GPU_Stage::Post);
+	if (Change_Screen)
+	{
+		Change_Screen = false;
+		ChangeSwapChainState();
+	}
+
 	Change_Scene();
 
 
@@ -990,19 +1020,26 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-//		std::lock_guard<std::mutex> lock(recvQueueMutex);
+		const size_t maxQueueSize = 500;
+		if (recvQueue.size() > maxQueueSize)
+		{
+			size_t toDiscard = recvQueue.size() - maxQueueSize;
+			for (size_t i = 0; i < toDiscard; ++i)
+			{
+				recvQueue.pop();
+			}
+
+			std::cout << "[WARN] recvQueue overflow. Discarded " << toDiscard << " old packets.\n";
+		}
+
 		while (!recvQueue.empty())
 		{
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-//			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
-
-
-
 
 	EndGPUStage(GPU_Stage::Compute, true);
 
@@ -1086,6 +1123,8 @@ void CGameFramework::FrameAdvance()
 	{
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+
 
 		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &dsvHandle);
 
