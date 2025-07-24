@@ -76,9 +76,9 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
     auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
     if (nearestPos) {
         monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 80.0f);
-       /* if (GetDistance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
+        if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
             sm->ChangeState(std::make_unique<AttackState>());
-        }*/
+        }
     }
     else {
         if (monster->stateElapsedTime > 1.0f) {
@@ -122,7 +122,11 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
 
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
-
+    auto nearestPos = monster->FindNearestPlayerInRange(monster->attackRange);
+    if (nearestPos) {
+        monster->SetTarget(*nearestPos);
+        monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
+    }
     if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
         sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
         sm->ChangeState(std::make_unique<IdleState>());
