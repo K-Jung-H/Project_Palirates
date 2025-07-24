@@ -39,7 +39,7 @@ void Monster::update_collision(float deltaTime, std::vector<BoundingOrientedBox>
 
 int Monster::PlayAnimation(State state) {
     int track = AnimationRegistry::GetMonsterAnimationTrack(type, state);
-
+	currStateTrackIdx = track;
     if (track >= 0 && track < n_Animation) {
         for (int i = 0; i < n_Animation; ++i) {
             targetWeights[i] = 0.0f;
@@ -154,7 +154,7 @@ Fishman::Fishman(int id) : Monster(id) {
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
-       // TRACK_FISHMAN_ATTACK1,
+        TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
         TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
@@ -190,12 +190,12 @@ Anubis::Anubis(int id) : Monster(id) {
     SetType(Object_Type::monster);
     WeaponName = "Staff_LP";
     RootMotionTrackSet = {
-        TRACK_ANUBIS_IDLE,
-        TRACK_ANUBIS_IDLE_BREAK,
+        //TRACK_ANUBIS_IDLE,
+        //TRACK_ANUBIS_IDLE_BREAK,
         TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
         TRACK_ANUBIS_WALK,
         TRACK_ANUBIS_BACK_WALK,
-        //TRACK_ANUBIS_ATTACK1,
+        TRACK_ANUBIS_ATTACK1,
         TRACK_ANUBIS_ATTACK2,
         TRACK_ANUBIS_SKILL,
         TRACK_ANUBIS_GET_HIT,
