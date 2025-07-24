@@ -436,6 +436,20 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 }
             }
     }
+
+    int attackPhase = 1;
+    for (auto m : Monster_List)
+    {
+        auto dragon_ptr = dynamic_pointer_cast<Dragon>(m);
+        if (dragon_ptr)
+        {
+            if (dragon_ptr->attackPhase == 1)
+                zoomObject = m->Weapon_ptr;
+            else
+                zoomObject = NULL;
+            
+        }
+    }
     game_world.Update_Particle(elapsedTime);
 }
 
