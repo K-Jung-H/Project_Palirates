@@ -29,6 +29,8 @@ int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) 
         case State::Idle:        return TRACK_DRAGON_IDLE;
         case State::Attack1:     return TRACK_DRAGON_ATTACK1;
         case State::Attack2:     return TRACK_DRAGON_BREATHE;
+        case State::Attack3:     return TRACK_DRAGON_FLY_BREATHE;
+        case State::Jump:        return TRACK_DRAGON_FLY_IDLE;
         case State::Get_Hit:     return TRACK_DRAGON_GOT_HIT1;
         case State::Run:         return TRACK_DRAGON_RUN;
         case State::Knock_Down:  return TRACK_DRAGON_DEAD;
