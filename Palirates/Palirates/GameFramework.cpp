@@ -1130,24 +1130,36 @@ void CGameFramework::FrameAdvance()
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
 
 
-		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
 
 		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-		Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
 
 		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
 
-		if (test_button)
+		if (post_effect_sync_data.motion_blur_active)
 		{
+			Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+			Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+			post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
+			post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
+		}
+
+		if (post_effect_sync_data.zoom_blur_active)
+		{
+			Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 
-			post_effect_manager->Set_Zoom_Focus_and_Time({ 0.5, 0.3 }, m_GameTimer.GetTimeElapsed());
+			XMFLOAT2 screenPos = scene_camera->WorldToNormalizedScreen(
+				post_effect_sync_data.zoom_w_position,
+				scene_camera->GetViewMatrix(),
+				scene_camera->GetProjectionMatrix(),
+				scene_camera->GetViewport());
+
+			post_effect_manager->Set_Zoom_Focus_and_Time(screenPos, m_GameTimer.GetTimeElapsed());
 			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
 		}
+
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
@@ -1173,10 +1185,7 @@ void CGameFramework::FrameAdvance()
 
 		// Record moving Object's Last Pos to use motion blur
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList);
-		if (m_pPlayer)
-		{
-			m_pPlayer->Record_Last_Pos();
-		}
+
 
 		// Check MouseLock & FadeEffect
 		scene_manager->Render_ScreenFade(m_pd3dDevice, Active_CommandList);
@@ -1499,7 +1508,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 		if (cmd == "STAGE_1")
-			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
 		else if (cmd == "MONSTER_COMMAND") {
@@ -1522,6 +1531,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
+		else if (cmd == "POST_EFFECT")
+			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+
 	}
 	break;
 
@@ -1764,7 +1776,30 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 	}
 }
 
+void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+{
+	if (tokens.size() < 12) return;
 
+
+	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
+
+	for (int player_id = 0; player_id < MaxPlayer && player_id < 6; ++player_id)
+	{
+		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
+		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
+		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
+	}
+	
+
+	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
+
+	post_effect_sync_data.zoom_w_position =
+	{
+		static_cast<float>(std::stoi(tokens[9])),
+		static_cast<float>(std::stoi(tokens[10])),
+		static_cast<float>(std::stoi(tokens[11]))
+	};
+}
 
 
 void CGameFramework::HandleClientIdAssignment()
@@ -1878,7 +1913,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
 

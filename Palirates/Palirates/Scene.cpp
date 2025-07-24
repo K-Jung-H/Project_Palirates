@@ -2050,7 +2050,6 @@ void CScene::After_Update_Objects()
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
 		wave_obj->Readback_Buffer_Data();
-
 #endif
 
 }
@@ -2176,6 +2175,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	m_pPlayer->Record_Last_Pos();	
 	obj_manager->Post_Update_All();
 }
 
@@ -2235,8 +2235,9 @@ Change_Signal CScene::Get_Change_Signal()
 
 void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
-
 	obj_manager->Add_Player(new_player_ptr);
+	new_player_ptr->SetBlurMask(true);
+
 }
 
 void CScene::Remove_Multi_Player(int player_id)
@@ -2248,6 +2249,11 @@ void CScene::Remove_Multi_Player(int player_id)
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	return obj_manager->Sync_Player_Data(player_id, syncData);
+}
+
+bool CScene::Sync_Player_Blur(int player_id, bool motion_blur_active)
+{
+	return obj_manager->Sync_Player_Blur(player_id, motion_blur_active); 
 }
 
 XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
@@ -3857,6 +3863,7 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 void Stage_Scene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
 	obj_manager->Add_Player(new_player_ptr);
+	new_player_ptr->SetBlurMask(true);
 }
 void Stage_Scene::Remove_Multi_Player(int player_id)
 {
@@ -4217,9 +4224,9 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		test_party_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 	}
 
-	particle_mesh = particle_manager->Get_Particle_Mesh("chip");
-	test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
-	test_particle->Set_World_Coordinate();
+	//particle_mesh = particle_manager->Get_Particle_Mesh("chip");
+	//test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
+	//test_particle->Set_World_Coordinate();
 
 #endif
 

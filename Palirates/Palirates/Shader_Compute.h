@@ -157,6 +157,15 @@ enum class Effect_Type
 	 etc,
 };
 
+struct Effect_Sync_Data
+{
+	bool motion_blur_active;
+	std::array<bool, MaxPlayer> motion_blur_apply;
+	
+	bool zoom_blur_active;
+	XMFLOAT3 zoom_w_position;
+};
+
 
 struct Resource_Bind_Set
 {
