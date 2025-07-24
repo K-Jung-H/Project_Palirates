@@ -26,6 +26,8 @@ struct XMINT3Hasher
 class GameWorld
 {
 private:
+	bool Stage_Clear = false;
+
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
 	ParticleManager particle_manager;
 
@@ -42,6 +44,8 @@ public:
 	~GameWorld();
 
 	void Init();
+	bool Get_Clear_State() { return Stage_Clear; }
+	void Set_Clear_State(bool stage_clear) { Stage_Clear = stage_clear; }
 
 	void Load_Scene_Data(shared_ptr<GameObject> scene_obj);
 	void Update_Collision(shared_ptr<Player> player_obj);
