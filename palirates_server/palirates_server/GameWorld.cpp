@@ -20,10 +20,10 @@ void GameWorld::Init()
     //p.main_direction = XMFLOAT3{ 0,0,1 };
     //p.particle_type = Particle_Type::dragon_breath;
 
-    //shared_ptr<Particle_Object> p_obj = particle_manager.Create_Particle_Object(p);
-    //p_obj->SetNeedSyncType(true);
-    //p_obj->SetPosition(1500, 50, 800);
-    //p_obj->SetLook(XMFLOAT3{ 0,0,-1 });
+    //dragon_fire = particle_manager.Create_Particle_Object(p);
+    //dragon_fire->SetNeedSyncType(true);
+    //dragon_fire->SetPosition(1500, 50, 800);
+    //dragon_fire->SetLook(XMFLOAT3{ 0,0,-1 });
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
@@ -196,9 +196,6 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
     player_obj->Set_Collider_OBB_Center(player_worldOBB.Center);
 }
 
-void GameWorld::Update_Monster(float elapsed_time)
-{
-}
 
 void GameWorld::Update_Particle(float elapsed_time)
 {
@@ -227,4 +224,80 @@ std::vector<BoundingOrientedBox> GameWorld::Get_Cell_OBBs(const XMFLOAT3& Pos)
     }
 
     return obbs;
+}
+
+
+void GameWorld::Boss_Update()
+{
+    if (!boss_monster)
+        return;
+
+    auto boss_weapon = boss_monster->Weapon_ptr;
+
+
+    if (boss_monster->attackPhase == 1)
+        if (boss_weapon)
+            zoom_object = boss_weapon;
+        else
+            zoom_object = NULL;
+
+    //==========================
+
+
+    auto dragon = dynamic_pointer_cast<Dragon>(boss_monster);
+    if (dragon)
+    {
+        Particle_Format p;
+        p.area_xyz = XMFLOAT3{ 1000,1000,1000 };
+        p.lifetime = 300;
+        p.main_direction = XMFLOAT3{ 1,0,0 };
+        p.particle_type = Particle_Type::dragon_breath;
+
+        if (boss_monster->attackPhase == 2)
+        {
+            if (!dragon_fire)
+            {
+                dragon_fire = particle_manager.Create_Particle_Object(p);
+                dragon_fire->SetNeedSyncType(true);
+            }
+            dragon_fire->SetActive(true);
+
+        }
+        else
+        {
+            if (dragon_fire)
+            {
+                dragon_fire->SetActive(false);
+                dragon_fire.reset();
+            }
+        }
+
+        if (boss_weapon)
+        {
+            if (!dragon_fire || !dragon_fire->Get_Active())
+                return;
+
+            XMMATRIX worldMatrix = XMLoadFloat4x4(&boss_weapon->m_xmf4x4World);
+
+            XMVECTOR scale, rotQuat, trans;
+            XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix);
+
+            XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
+
+            float forwardOffset = 10.0f;
+            float heightOffset = -5.0f;
+
+            XMVECTOR offsetVec = forward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
+
+            XMVECTOR finalPos = trans + offsetVec;
+
+            XMFLOAT3 position;
+            XMStoreFloat3(&position, finalPos);
+            dragon_fire->SetPosition(position);
+
+            XMFLOAT3 look;
+            XMStoreFloat3(&look, forward);
+            dragon_fire->SetLook(dragon->GetLook());
+        }
+    }
 }

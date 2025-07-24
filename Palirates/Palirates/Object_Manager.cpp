@@ -1352,6 +1352,15 @@ void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3d
 				obj_ptr->Render_Depth(pd3dCommandList, pCamera);
 			}
 	}
+
+	//for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
+	//{
+	//	if (skinned_obj_ptr->Get_Active())
+	//	{
+	//		skinned_obj_ptr->UpdateTransform(NULL);
+	//		skinned_obj_ptr->Render(pd3dCommandList, pCamera);
+	//	}
+	//}
 }
 
 void Object_Manager::Post_Update(Object_Type type)

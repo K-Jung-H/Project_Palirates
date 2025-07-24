@@ -361,8 +361,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (active_client_num >= 2)
-        game_world.Set_Clear_State(true);
+    if (game_world.Get_Boss_Monster() == NULL && Boss_Monster != NULL)
+        game_world.Set_Boss_Moster(Boss_Monster);
+
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
@@ -436,6 +437,8 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 }
             }
     }
+
+    game_world.Boss_Update();
     game_world.Update_Particle(elapsedTime);
 }
 
@@ -485,7 +488,6 @@ Scene_Type Stage_Scene::CheckSceneTransition()
         return Scene_Type::Board;
     else
         return Scene_Type::None;
-
 }
 
 
@@ -510,6 +512,8 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
         ++Player_ID;
     }
 
+
+    game_world.Get_ZoomObject();
     if (zoomObject != NULL)
     {
         effect_data.zoom_blur_active = true;
@@ -620,26 +624,34 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
 //    return;
 
     int index{}, m_id{};
+    std::shared_ptr<Monster> moster_ptr = NULL;
 
     for (std::shared_ptr<GameObject>monster_frame : monster_init_spawn_frame_list)
     {
+
         string name = monster_frame->Get_Name();
         XMFLOAT3 pos = monster_frame->GetPosition();
         pos.y = 0;
         if (name.find("Fishman") != string::npos)
         {
             m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
-            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
         }
         else if (name.find("Anubis") != string::npos)
         {
             m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
-            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+
+            if (!Boss_Monster)
+                Boss_Monster = moster_ptr;
         }
         else if (name.find("Dragon") != string::npos)
         {
             m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
-            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+
+            if (!Boss_Monster)
+                Boss_Monster = moster_ptr;
         }
         else if (name.find("Monster") != string::npos)
             continue;
@@ -648,10 +660,10 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
     }
 }
 
-void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
+std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 {
     if (id2idx.find(id) != id2idx.end())
-        return;                            
+        return NULL;                            
 
     int mType = GET_MONSTER_TYPE(id);
     std::shared_ptr<Monster> m;
@@ -669,7 +681,7 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
         m = std::make_shared<TestPlayer>(1);
     }
     else {
-        return;
+        return NULL;
     }
 
     m->Set_Child(m->m_pRootModel);
@@ -680,6 +692,7 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 
     id2idx[id] = Monster_List.size();       
     Monster_List.emplace_back(std::move(m));
+    return Monster_List.back();
 }
 
 void Stage_Scene::DespawnMonster(int id)
@@ -818,19 +831,10 @@ void Stage_4_Scene::Init()
     Stage_Scene::Init();
 
     int id;
-    for (int i = 0; i < 1; ++i) {
-        if (i % 4 == 0)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-        else if (i % 4 == 1)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-        else if (i % 4 == 2)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-        else if (i % 4 == 3)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-        else continue;
-        SpawnMonster(id, XMFLOAT3(3450 + i * 10, 0, 1650), 100);
-        std::cout << "m spawn s4 " << "\n";
-    }
+    id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
+    Boss_Monster = SpawnMonster(id, XMFLOAT3(3450 + 1 * 10, 0, 1650), 100);
+    std::cout << "m spawn s4 " << "\n";
+    
 }
 
 //=========================================================
