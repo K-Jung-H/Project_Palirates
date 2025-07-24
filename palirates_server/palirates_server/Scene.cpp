@@ -513,7 +513,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     }
 
 
-    game_world.Get_ZoomObject();
+    zoomObject = game_world.Get_ZoomObject();
     if (zoomObject != NULL)
     {
         effect_data.zoom_blur_active = true;
@@ -531,7 +531,10 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
 
     int defeated_monsters = normal_monster_count - alive_monster_count;
 
-    int clear_value_1 = 50 * (1 - game_world.Get_Boss_Monster()->Get_Active());
+    int clear_value_1 = 50;
+    if (game_world.Get_Boss_Monster())
+        clear_value_1 = 50 * (1 - game_world.Get_Boss_Monster()->Get_Active());
+
     int clear_value_2 = 50 * defeated_monsters / normal_monster_count;
 
     int total_value = clear_value_1 + clear_value_2;
@@ -662,7 +665,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-//    return;
+    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;

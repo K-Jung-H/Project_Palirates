@@ -2473,6 +2473,11 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
+
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -2566,7 +2571,11 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
+
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
+
 	UpdatePlayerSelection();
 }
 
@@ -3135,7 +3144,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
-
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -3206,6 +3218,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	if (wave_obj)
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
+
+	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
 
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 

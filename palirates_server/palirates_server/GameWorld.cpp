@@ -236,10 +236,14 @@ void GameWorld::Boss_Update()
 
 
     if (boss_monster->attackPhase == 1)
+    {
         if (boss_weapon)
             zoom_object = boss_weapon;
         else
             zoom_object = NULL;
+    }
+    else
+        zoom_object = NULL;
 
     //==========================
 
