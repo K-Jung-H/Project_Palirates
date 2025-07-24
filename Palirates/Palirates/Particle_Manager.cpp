@@ -575,6 +575,8 @@ void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12Graph
 	particle_mesh_map["billboard"] = make_shared<Billboard_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
 	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+	particle_mesh_map["chip"] = make_shared<Cube_Chip_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f);
+
 }
 
 
@@ -1019,6 +1021,20 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			mesh = particle_mesh_map["cube"];
 			break;
 
+		case Particle_Type::party:
+			format.shader_type = Particle_Shader_Type::continuous;
+			format.particle_type = Particle_Type::party;
+			format.max_particles = 3000;
+			format.MaxLifetime = 100.0f;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 150;
+			format.acceleration = XMFLOAT3(0, -10.0f, 0);
+			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.size = 1.0f;
+			mesh = particle_mesh_map["chip"];
+			break;
 		default:
 			createQueue.pop(); // skip unknown type
 			continue;

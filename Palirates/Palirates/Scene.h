@@ -238,7 +238,7 @@ public:
 	std::shared_ptr<Particle_Manager>particle_manager = NULL;
 
 	std::shared_ptr<ParticleObject> test_sand = NULL;
-	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
+	std::shared_ptr<ParticleObject> test_particle = NULL;
 	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
 

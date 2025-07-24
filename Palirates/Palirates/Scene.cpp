@@ -1035,8 +1035,8 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
-	test_dragonfire = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
-	test_dragonfire->Set_Active(false);
+	test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
+	test_particle->Set_Active(false);
 
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("billboard");
@@ -1716,10 +1716,10 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		case 'E':
 		{
 			particle_test_button = !particle_test_button;
-			if (test_dragonfire == NULL)
+			if (test_particle == NULL)
 				break;
 
-			test_dragonfire->Set_Active(particle_test_button);
+			test_particle->Set_Active(particle_test_button);
 			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
 			if (mon)
 			{
@@ -1918,11 +1918,11 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						test_dragonfire->SetPosition(position);
+						test_particle->SetPosition(position);
 
 						XMFLOAT3 look;
 						XMStoreFloat3(&look, forward);
-						test_dragonfire->Set_Main_Direction(look);
+						test_particle->Set_Main_Direction(look);
 					}
 				}
 			}
@@ -3789,7 +3789,13 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 //	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
-
+	if (test_particle)
+	{
+		XMFLOAT3 p_pos = m_pPlayer->GetPosition();
+		p_pos.y += 30.0f;
+		test_particle->Set_Main_Direction(m_pPlayer->GetLookVector());
+		test_particle->SetPosition(p_pos);
+	}
 
 }
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -4139,6 +4145,32 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
+
+
+	Particle_Format test_party_info;
+	{
+		test_party_info.shader_type = Particle_Shader_Type::continuous;
+		test_party_info.particle_type = Particle_Type::party;
+		test_party_info.max_particles = 3000;
+		test_party_info.MaxLifetime = 100.0f;
+
+		test_party_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
+		test_party_info.EmitFaceIndex = 0;
+
+
+
+		test_party_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
+		test_party_info.init_velocity_value = 150.0f;
+		test_party_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
+
+		test_party_info.size = 1.0f;
+		test_party_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("chip");
+	test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
+	test_particle->Set_World_Coordinate();
+
 #endif
 
 	//===============================================================================
