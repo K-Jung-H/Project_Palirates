@@ -1693,13 +1693,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}
 		break;
 
-		case 'Q':
-			{
-			blur_effect = !blur_effect;
-			m_pPlayer->SetBlurMask(blur_effect);
-			}		break;
-
-
 		case 'R':
 		{
 			test_button = !test_button;

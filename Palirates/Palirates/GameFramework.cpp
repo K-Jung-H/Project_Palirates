@@ -1792,11 +1792,16 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 
 	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
 
-	for (int player_id = 0; player_id < MaxPlayer && player_id < 6; ++player_id)
+	for (int player_id = 0; player_id < MaxPlayer; ++player_id)
 	{
 		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
 		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
 		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
+
+		if (player_id == Client_ID)
+		{
+			m_pPlayer->SetBlurMask(player_motion_blur_active);
+		}
 	}
 	
 

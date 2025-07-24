@@ -32,6 +32,16 @@ void Scene::Update_Scene(float elapsedTime)
 
 }
 
+Effect_Sync_Data Scene::Get_Effect_Status()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    Effect_Sync_Data effect_data{};
+    effect_data.motion_blur_active = true;
+    effect_data.zoom_blur_active = true;
+    return effect_data;
+}
+
+
 //======================================================
 void Lobby_Scene::Init()
 {
@@ -478,6 +488,43 @@ Scene_Type Stage_Scene::CheckSceneTransition()
 
 }
 
+
+Effect_Sync_Data Stage_Scene::Get_Effect_Status()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    Effect_Sync_Data effect_data;
+    
+    effect_data.motion_blur_active = false;
+
+    int Player_ID = 0;
+    for (std::shared_ptr<Player> player_ptr : player_list)
+    {
+        effect_data.motion_blur_apply[Player_ID] = false;
+
+        if (player_ptr)
+        {
+            effect_data.motion_blur_apply[Player_ID] = player_ptr->motion_blur;
+            effect_data.motion_blur_active = true;
+        }
+
+        ++Player_ID;
+    }
+
+    if (zoomObject != NULL)
+    {
+        effect_data.zoom_blur_active = true;
+        effect_data.zoom_w_position = zoomObject->GetPosition();
+    }
+    else
+    {
+        effect_data.zoom_blur_active = false;
+        effect_data.zoom_w_position = XMFLOAT3(0, 0, 0);
+    }
+
+    return effect_data;
+}
+
+
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -553,7 +600,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     player_list[clientId]->SetPosition(position);
     player_list[clientId]->SetLook(lookDirection);
     
-    //    player_list[clientId]->key_input(inputFlags);
+    player_list[clientId]->key_input(inputFlags);
 
     if (!tracks.empty())
     {
