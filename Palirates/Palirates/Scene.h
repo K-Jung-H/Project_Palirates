@@ -238,7 +238,7 @@ public:
 	std::shared_ptr<Particle_Manager>particle_manager = NULL;
 
 	std::shared_ptr<ParticleObject> test_sand = NULL;
-	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
+	std::shared_ptr<ParticleObject> test_particle = NULL;
 	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
 
@@ -397,6 +397,8 @@ class Stage_Scene : public CScene
 {
 public:
 	static bool Change_Scene_Signal; // For send server
+	static bool Stage_Clear_Signal; // For Get server
+
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -409,6 +411,8 @@ public:
 
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	//=============================================================
 	// Server Sync Func

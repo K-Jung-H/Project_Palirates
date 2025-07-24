@@ -1295,17 +1295,30 @@ void CGameFramework::SendPacket()
 
 
 
-	if (Stage_Scene::Change_Scene_Signal)
+	if (Stage_Scene::Change_Scene_Signal) // Leader's Ability
 	{
 		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
 		{
-			oss << "CHANGE_SCENE," << to_string(static_cast<int>(Scene_Type::Board));
+			oss << "FORCE_TO_CHANGE_SCENE," << to_string(static_cast<int>(Scene_Type::Board));
 			std::string packet = oss.str() + "\n";
 			SendPacket_String(packet);
 			return;
 		}
 		else
 			Stage_Scene::Change_Scene_Signal = false;
+	}
+
+	if (Stage_Scene::Stage_Clear_Signal) // Stage Clear 
+	{
+		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
+		{
+			oss << "CHANGE_SCENE_READY," << to_string(static_cast<int>(Scene_Type::Board));
+			std::string packet = oss.str() + "\n";
+			SendPacket_String(packet);
+			return;
+		}
+		else
+			Stage_Scene::Stage_Clear_Signal = false;
 	}
 
 	oss << "PLAYER_UPDATE," << to_string(static_cast<int>(active_scene->scene_type)) << "," << Client_ID;
