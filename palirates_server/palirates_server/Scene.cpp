@@ -343,8 +343,8 @@ void Stage_Scene::Init()
 
     scene_obj->UpdateTransform(NULL);
 
-    if (monster_init_spawn_frame_list.size())
-        SpawnMonster_By_Scene_Data();
+    //if (monster_init_spawn_frame_list.size())
+        //SpawnMonster_By_Scene_Data();
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -379,6 +379,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 BoundingOrientedBox worldMonsterOBB;
                 monsterOBB->Transform(worldMonsterOBB,
                     XMLoadFloat4x4(&m->m_xmf4x4World));
+               
                 //std::cout << "p weapon obb x" << player_ptr->Weapon_ptr->GetPosition().x << ", m obb x" << worldMonsterOBB.Center.x << "\n";
                 //std::cout << "p weapon obb z" << worldWeaponOBB.Center.z << ", m obb z" << worldMonsterOBB.Center.z << "\n";
                 //std::cout << "p pos x : " << player_ptr->GetPosition().x << "\n";
@@ -412,6 +413,14 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!player_ptr) continue;
 			if (!player_ptr->CanCollide()) continue;
 			if (player_ptr->IsInvincible()) continue;
+
+            /*player_ptr->UpdateTransform();
+            auto playerOBB = player_ptr->Get_Collider_OBB();
+            if (!playerOBB) continue;
+
+            BoundingOrientedBox worldPlayerOBB;
+            playerOBB->Transform(worldPlayerOBB,
+                XMLoadFloat4x4(&player_ptr->m_xmf4x4World));*/
 
             player_ptr->UpdateTransform();
             auto playerOBB = player_ptr->Get_Collider_OBB();
@@ -771,9 +780,9 @@ void Stage_4_Scene::Init()
     Stage_Scene::Init();
 
     int id;
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < 3; ++i) {
         if (i % 4 == 0)
-            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
         else if (i % 4 == 1)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
         else if (i % 4 == 2)
@@ -781,7 +790,7 @@ void Stage_4_Scene::Init()
         else if (i % 4 == 3)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
         else continue;
-        SpawnMonster(id, XMFLOAT3(3450 + i * 10, 0, 1650), 100);
+        SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
         std::cout << "m spawn s4 " << "\n";
     }
 }

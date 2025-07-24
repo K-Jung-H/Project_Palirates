@@ -46,6 +46,7 @@ public:
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
+    std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB_T() { return m_OBB; }
     void Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter);
 
     void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;

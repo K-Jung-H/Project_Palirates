@@ -836,10 +836,28 @@ void GameObject::UpdateWorldOBB()
 		XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
 
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+		if (m_pstrFrameName && strcmp(m_pstrFrameName, "SM_Wep_Cutlass_01") == 0)
+		{
+			XMVECTOR dummyScale, rotQuat, transVec;
+			XMMatrixDecompose(&dummyScale, &rotQuat, &transVec, worldMatrix);
+
+			XMVECTOR scaleVec = XMVectorSet(10.0f, 10.0f, 10.0f, 0.0f);
+			worldMatrix = XMMatrixScalingFromVector(scaleVec) *
+				XMMatrixRotationQuaternion(rotQuat) *
+				XMMatrixTranslationFromVector(transVec);
+
+			//std::cout << "플레이어 칼 스케일 x10" << ")\n";
+			//std::cout << "Scale = (" << scale.x << ", " << scale.y << ", " << scale.z << ")\n";
+		}
 		worldMatrix = WeaponCustomRotation * worldMatrix;
 		auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
 
 		obb->Transform(*obb, worldMatrix);
+		XMVECTOR scaleVec, rotQuat, transVec;
+		XMMatrixDecompose(&scaleVec, &rotQuat, &transVec, XMLoadFloat4x4(&m_xmf4x4World));
+
+		XMFLOAT3 scale;
+		XMStoreFloat3(&scale, scaleVec);
 
 		m_OBB = obb;
 	}
@@ -964,7 +982,9 @@ void Skinned_GameObject::SetupWeaponCollider()
 	}
 
 	model->SetType(Object_Type::weapon);
-
+	if (WeaponName == "SM_Wep_Cutlass_01") {
+		model->SetScale(10.0f, 10.0f, 10.0f, true);
+	}
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
 	XMVECTOR scale, rotationQuat, translation;
 	XMFLOAT4 quaternion;
@@ -997,6 +1017,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 			XMConvertToRadians(30.0f),
 			XMConvertToRadians(0.0f));
 	}
+
 	Weapon_ptr = model;
 	//std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
 	//std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;

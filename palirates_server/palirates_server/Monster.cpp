@@ -195,7 +195,7 @@ Anubis::Anubis(int id) : Monster(id) {
         TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
         TRACK_ANUBIS_WALK,
         TRACK_ANUBIS_BACK_WALK,
-        TRACK_ANUBIS_ATTACK1,
+        //TRACK_ANUBIS_ATTACK1,
         TRACK_ANUBIS_ATTACK2,
         TRACK_ANUBIS_SKILL,
         TRACK_ANUBIS_GET_HIT,
@@ -257,12 +257,12 @@ Dragon::Dragon(int id) : Monster(id) {
     InitStateMachine();
     m_fScale = 15.0f;
     SetScale(m_fScale, m_fScale, m_fScale);
-   /* auto body = std::make_shared<BoundingOrientedBox>(
-        XMFLOAT3(0.0f, 0.8f, 0.0f),
-        XMFLOAT3(0.4f, 0.8f, 0.4f),
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 1.0f, -1.6f),
+        XMFLOAT3(0.8f, 1.0f, 2.8f),
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
     );
-    Set_Collider_OBB(body);*/
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Test ----------------
