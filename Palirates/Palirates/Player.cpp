@@ -455,7 +455,7 @@ shared_ptr<CCamera> CTerrainPlayer::ChangeCamera(DWORD nNewCameraMode, float fTi
 			SetMaxVelocityY(400.0f);
 			m_pCamera = OnChangeCamera(THIRD_PERSON_CAMERA, nCurrentCameraMode);
 			m_pCamera->SetTimeLag(0.25f);
-			m_pCamera->SetOffset(XMFLOAT3(0.0f, 20.0f, -50.0f));
+			m_pCamera->SetOffset(XMFLOAT3(0.0f, 10.0f, -50.0f));
 			m_pCamera->GenerateProjectionMatrix(CAMERA_NEAR, CAMERA_FAR, ASPECT_RATIO, 60.0f);
 			m_pCamera->SetViewport(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT, 0.0f, 1.0f);
 			m_pCamera->SetScissorRect(0, 0, FRAME_BUFFER_WIDTH, FRAME_BUFFER_HEIGHT);

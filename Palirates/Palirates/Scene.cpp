@@ -927,12 +927,12 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		fog_info->fogColor = XMFLOAT3(0.8f, 0.6f, 0.3f);
 		fog_info->Fog_Trigger = false;
 
-		fog_info->fogStart = 5.0f;
-		fog_info->fogEnd = 200.0f;
-		fog_info->fogDensity = 2.0f;
-		fog_info->noiseScale = 0.001f;
+		fog_info->fogStart = 1.0f;
+		fog_info->fogEnd = 1500.0f;
+		fog_info->fogDensity = 3.0f;
+		fog_info->noiseScale = 0.01f;
 
-		fog_info->noiseStrength = 0.5f;
+		fog_info->noiseStrength = 1.0f;
 		fog_info->time = 0.0f;
 		fog_info->padding0 = XMFLOAT2(0.0f, 0.0f);
 	}
@@ -1962,37 +1962,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
 
-	//obj_manager->Check_Player_Collision(m_pPlayer);
-	//
-	//if (m_pPlayer->GetTrailOn())
-	//{
-	//	if (!m_pPlayer->GetTrailStart()) 
-	//	{
-	//		XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f};
-	//		XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
-
-	//		shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-	//		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-	//		trail_obj->Set_Main_Color(test_main_color);
-	//		trail_obj->Set_SubColor(test_sub_color);
-
-	//		trail_obj->Set_Trail_Target(trail_target, false);
-	//		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-	//		m_pPlayer->SetTrailObj(trail_obj);
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//		m_pPlayer->Trail_Start();
-	//	}
-
-	//	if (!m_pPlayer->GetTrailObj()->Get_Active()) 
-	//	{
-	//		m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//	}
-	//}
-
-
-
 	if (test_sand && test_sand->Get_Particle_State() == 1)
 	{
 		auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
@@ -2055,7 +2024,7 @@ void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 
 	m_pPlayer->Render_Depth(pd3dCommandList, main_Camera.get());
-	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get());	
+	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get(), Object_Type::player);	
 }
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -2378,6 +2347,13 @@ void CScene::Remove_Particle_Object(UINT p_obj_id)
 		particle_manager->Enqueue_Delete(p_obj_id);
 }
 
+void CScene::Fog_Sync(Fog_Info fog_info_data)
+{
+	fog_info->Fog_Trigger = fog_info_data.Fog_Trigger;
+	fog_info->fogStart = fog_info_data.fogStart;
+	fog_info->fogEnd = fog_info_data.fogEnd;
+	fog_info->fogDensity = fog_info_data.fogDensity;
+}
 //==========================================================================================
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
@@ -3750,7 +3726,7 @@ void Board_Scene::Reset_Sail_Status()
 //==========================================================================================
 bool Stage_Scene::Change_Scene_Signal = false;
 bool Stage_Scene::Stage_Clear_Signal = false;
-
+bool Stage_Scene::Monster_Depth_Render = false;
 
 void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
@@ -3800,6 +3776,22 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 
 }
+
+void Stage_Scene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_MRT_GraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
+
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+
+	m_pPlayer->Render_Depth(pd3dCommandList, main_Camera.get());
+
+	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get(), Object_Type::player);
+
+	if (Monster_Depth_Render)
+		obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get(), Object_Type::skinned);	
+}
+
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
