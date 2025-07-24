@@ -146,7 +146,7 @@ void Monster::InitStateMachine() {
 // ---------------- Fishman ----------------
 
 Fishman::Fishman(int id) : Monster(id) {
-    detectionRange = 50.0f;
+    detectionRange = 100.0f;
     attackRange = 20.0f;
     type = Monster_Type::Fishman;
     SetType(Object_Type::monster);
@@ -184,7 +184,7 @@ Fishman::Fishman(int id) : Monster(id) {
 // ---------------- Anubis ----------------
 
 Anubis::Anubis(int id) : Monster(id) {
-    detectionRange = 50.0f;
+    detectionRange = 100.0f;
     attackRange = 20.0f;
     type = Monster_Type::Anubis;
     SetType(Object_Type::monster);
@@ -234,6 +234,7 @@ Dragon::Dragon(int id) : Monster(id) {
     WeaponName = "HeadA_LP";
     RootMotionTrackSet = {
         TRACK_DRAGON_ATTACK1,
+        //TRACK_DRAGON_FLY_BREATHE,
         TRACK_DRAGON_RUN,
         TRACK_DRAGON_GOT_HIT1,
         TRACK_DRAGON_GOT_HIT2,
@@ -243,6 +244,7 @@ Dragon::Dragon(int id) : Monster(id) {
 
     std::unordered_set<int> OnceType = {
         TRACK_DRAGON_ATTACK1,
+        TRACK_DRAGON_FLY_BREATHE,
         TRACK_DRAGON_BREATHE,
         TRACK_DRAGON_GOT_HIT1,
         TRACK_DRAGON_GOT_HIT2,

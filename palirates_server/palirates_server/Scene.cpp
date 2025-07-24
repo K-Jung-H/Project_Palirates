@@ -335,8 +335,8 @@ void Stage_Scene::Init()
 
     scene_obj->UpdateTransform(NULL);
 
-    //if (monster_init_spawn_frame_list.size())
-        //SpawnMonster_By_Scene_Data();
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -733,7 +733,7 @@ void Stage_4_Scene::Init()
         else if (i % 4 == 3)
             id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
         else continue;
-        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 150), 100);
+        SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 350), 100);
         std::cout << "m spawn s4 " << "\n";
     }
 }
