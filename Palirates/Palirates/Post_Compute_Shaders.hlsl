@@ -137,28 +137,23 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         return;
 
     float4 baseColor = gtxtInput[gid.xy];
-
-    float2 velocity = gtxtVelocity[gid.xy].xy;
+    float2 velocity = gtxtVelocity[gid.xy];
     float mask = gtxtBlur_Info[gid.xy].x;
 
-    // If mask is 0, skip blur
+    // Skip if mask is 0
     if (mask == 0.0f)
     {
         gtxtRWOutput[gid.xy] = baseColor;
         return;
     }
 
-    // Apply blur sensitivity
     velocity *= BlurScale;
-
-    // Invert Y axis of velocity
     velocity.y *= -1.0f;
-    
-    // Limit the length
+
     float len = length(velocity);
     if (len < VelocityThreshold)
     {
-        gtxtRWOutput[gid.xy] = baseColor; // Skip blur if velocity is too low
+        gtxtRWOutput[gid.xy] = baseColor;
         return;
     }
     if (len > MaxBlurLength)
@@ -166,25 +161,34 @@ void CS_MotionBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID
         velocity = normalize(velocity) * MaxBlurLength;
     }
 
-    // Blur sampling
-    const int samples = 5;
-    float3 accum = baseColor.rgb;
+    // Echo-style blur
+    const int samples = 16;
+    float3 accum = float3(0, 0, 0);
+    float decay = 1.0f; // how fast the trails fade
+    float weightSum = 0.0;
 
-    for (int i = 1; i <= samples; ++i)
+    for (int i = 0; i < samples; ++i)
     {
-        float2 offset = -velocity * (float(i) / samples);
+        float t = float(i) / (samples - 1);
+        float2 offset = -velocity * t;
         float2 sampleUV = (float2) gid.xy + offset * texSize;
 
         int2 sampleCoord = int2(sampleUV);
         sampleCoord = clamp(sampleCoord, int2(0, 0), int2(texSize - 1));
 
         float3 sampleColor = gtxtInput[sampleCoord].rgb;
-        accum += sampleColor;
+
+        // 에코 느낌 강조: weight 없이 누적하거나 점점 감소
+        float w = pow(1.0 - t, decay); // slow fade
+        accum += sampleColor * w;
+        weightSum += w;
     }
 
-    float3 finalColor = accum / (samples + 1);
+    float3 finalColor = weightSum > 0.0001f ? accum / weightSum : baseColor.rgb;
+
     gtxtRWOutput[gid.xy] = float4(finalColor, 1.0f);
 }
+
 
 //========================================================================================
 
