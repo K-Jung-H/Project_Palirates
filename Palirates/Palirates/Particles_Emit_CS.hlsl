@@ -158,6 +158,21 @@ float3 ConeEmitDirection(uint id, float3 baseDir, float coneAngle)
     );
 }
 
+static const float3 PARTY_COLORS[6] =
+{
+    float3(1.0f, 0.0f, 0.0f), // Red
+    float3(0.0f, 1.0f, 0.0f), // Green
+    float3(0.0f, 0.0f, 1.0f), // Blue
+    float3(1.0f, 1.0f, 0.0f), // Yellow
+    float3(1.0f, 0.0f, 1.0f), // Magenta
+    float3(0.0f, 1.0f, 1.0f) // Cyan
+};
+
+float3 GetPartyColorByIndex(uint index)
+{
+    return PARTY_COLORS[index % 6];
+}
+
 //===============================================================
 // Loop
 void Emit_Snow(inout Particle_Info p, uint index)
@@ -228,6 +243,26 @@ void Emit_DragonFire(inout Particle_Info p, uint index)
     p.Size = 0.1f; // start small
 }
 
+void Emit_Party(inout Particle_Info p, uint index)
+{
+    p.Position = (EmitRegionMin + EmitRegionMax) * 0.5f;
+
+    float coneAngle = radians(20.0f);
+    float3 dir = ConeEmitDirection(index, Main_Direction, coneAngle);
+
+    float angle_from_center = acos(dot(normalize(dir), normalize(Main_Direction)));
+    float t = saturate(angle_from_center / coneAngle);
+    float speedMultiplier = lerp(1.5f, 0.7f, t); 
+
+    p.Velocity = normalize(dir) * Init_Velocity_Value * speedMultiplier;
+
+    p.Color = GetPartyColorByIndex(index);
+
+    p.Size = 1.0f;
+    p.Rotate_Value = frac(sin(index * 73.37f) * 43758.5453f);
+}
+
+
 //===============================================================
 // Interval
 void Emit_Bleeding(inout Particle_Info p, uint index)
@@ -247,8 +282,10 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
 #define PARTICLE_TYPE_SNOW     0
 #define PARTICLE_TYPE_SPLASH    1
 #define PARTICLE_TYPE_DRAGON_FIRE 2
-#define PARTICLE_TYPE_SAND      3
-#define PARTICLE_TYPE_SAND_STORM 4
+#define PARTICLE_TYPE_PARTY      3
+
+#define PARTICLE_TYPE_SAND      4
+#define PARTICLE_TYPE_SAND_STORM 5
 
 #define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
@@ -258,7 +295,7 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
 {
     float seed = frac(sin(index * 97.13f + ElapsedTime * 33.33f) * 31415.9265f);
 
-    if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
+    if (p.Type == PARTICLE_TYPE_DRAGON_FIRE || p.Type == PARTICLE_TYPE_PARTY)
     {
         float delay = seed * 1.5f; 
         p.Lifetime = -delay;
@@ -314,6 +351,9 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Sand_Storm(p, index);
     else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
         Emit_DragonFire(p, index);
+    else if (p.Type == PARTICLE_TYPE_PARTY)
+        Emit_Party(p, index);
+
     else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
     {
         Emit_Bleeding(p, index);
