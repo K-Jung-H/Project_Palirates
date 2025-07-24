@@ -770,20 +770,20 @@ void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
 
-    //int id;
-    //for (int i = 0; i < 1; ++i) {
-    //    if (i % 4 == 0)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-    //    else if (i % 4 == 1)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-    //    else if (i % 4 == 2)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-    //    else if (i % 4 == 3)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-    //    else continue;
-    //    SpawnMonster(id, XMFLOAT3(1450 + i * 10, 0, 150), 100);
-    //    std::cout << "m spawn s4 " << "\n";
-    //}
+    int id;
+    for (int i = 0; i < 1; ++i) {
+        if (i % 4 == 0)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 1)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
+        else if (i % 4 == 2)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
+        else if (i % 4 == 3)
+            id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
+        else continue;
+        SpawnMonster(id, XMFLOAT3(3450 + i * 10, 0, 1650), 100);
+        std::cout << "m spawn s4 " << "\n";
+    }
 }
 
 //=========================================================

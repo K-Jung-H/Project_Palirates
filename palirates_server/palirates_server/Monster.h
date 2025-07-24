@@ -43,12 +43,13 @@ protected:
 public:
     float stateElapsedTime = 0.0f;
     float stateChangeInterval = 2.0f;
-    XMFLOAT3 m_targetLookDir = { 0, 0, 0 };
+    XMFLOAT3 m_targetPos = { 0, 0, 0 };
     bool m_shouldRotate = false;
     float detectionRange = 0.0f;
     float attackRange = 0.0f;
     int attackPhase = 1;
-    
+    XMFLOAT3 m_faketargetPos = { 0, 0, 0 };
+
 public:
     Monster(int id);
     Monster() = default;

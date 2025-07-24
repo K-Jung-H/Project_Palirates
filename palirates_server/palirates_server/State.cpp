@@ -33,8 +33,11 @@ void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
         monster->SetTarget(*nearestPos);
         if (GET_MONSTER_TYPE(monster->GetID()) != int(Monster_Type::Dragon))
             sm->ChangeState(std::make_unique<WalkState>());
-        else
-            sm->ChangeState(std::make_unique<DragonBreatheState>());
+        else {
+            if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange)
+                sm->ChangeState(std::make_unique<AttackState>());
+            else sm->ChangeState(std::make_unique<DragonBreatheState>());
+        }
     }
 
     if (GET_MONSTER_TYPE(monster->GetID()) != int(Monster_Type::Dragon)) {
@@ -70,12 +73,12 @@ void WalkState::Enter(Monster* monster, MonsterStateMachine* sm) {
 void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
     monster->stateElapsedTime += deltaTime;
-    auto nearestPos = monster->FindNearestPlayerInRange(100.0f);
+    auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
     if (nearestPos) {
-        monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 1.0f);
-       /* if (GetDistance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
+        monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 80.0f);
+        if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
             sm->ChangeState(std::make_unique<AttackState>());
-        }*/
+        }
     }
     else {
         if (monster->stateElapsedTime > 1.0f) {
@@ -87,23 +90,13 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
          -monster->GetRight().z
                 };
                 monster->SetTarget(targetPos);
-
-                /*float angle = (RandomFloat() * 1.0f + 10.0f) * (RandomFloat() < 0.5f ? -1.0f : 1.0f);
-                float radians = XMConvertToRadians(angle);
-                XMMATRIX rot = XMMatrixRotationY(radians);
-                XMVECTOR vec = XMLoadFloat3(&monster->GetLook());
-                vec = XMVector3TransformNormal(vec, rot);
-
-                XMFLOAT3 rotatedDir;
-                XMStoreFloat3(&rotatedDir, vec);
-                monster->SetTarget(rotatedDir);*/
             }
         }
 
         if (monster->m_shouldRotate) {
-            monster->RotateTowardsDirection(monster->m_targetLookDir, deltaTime);
+            monster->RotateTowardsDirection(monster->m_targetPos, deltaTime);
             XMFLOAT3 curLook = monster->GetLook();
-            XMFLOAT3 tgtLook = monster->m_targetLookDir;
+            XMFLOAT3 tgtLook = monster->m_targetPos;
 
             float dot = Vector3::DotProduct(Vector3::Normalize(curLook), Vector3::Normalize(tgtLook));
             if (dot > 0.98f) {
@@ -121,48 +114,23 @@ void WalkState::Exit(Monster* monster) {
 // -------------------------
 void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
     if (!monster) return;
-    if (GET_MONSTER_TYPE(monster->GetID()) == int(Monster_Type::Dragon)) {
-        if (RandomFloat() < 1.0f) {
-            currentTrackIdx = monster->PlayAnimation(State::Attack2);
-        }
-    }
-    else currentTrackIdx = monster->PlayAnimation(State::Attack1);
+    currentTrackIdx = monster->PlayAnimation(State::Attack1);
     monster->StartAttackCooldown();
     if (monster->Weapon_ptr)
         monster->Weapon_ptr->SetCanCollide(true);
 }
-#include <iomanip> 
+
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
-
+    auto nearestPos = monster->FindNearestPlayerInRange(monster->attackRange);
+    if (nearestPos) {
+        monster->SetTarget(*nearestPos);
+        monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
+    }
     if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
         sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
         sm->ChangeState(std::make_unique<IdleState>());
     }
-   // if (monster->Weapon_ptr && monster->GetID() == 50331651) {
-   //     const XMFLOAT3& pos = monster->Weapon_ptr->GetPosition();
-   //     std::cout << std::fixed << std::setprecision(3);
-   //    // std::cout << "weapon got - " << pos.x << " " << pos.y << " " << pos.z << std::endl;
-   // }
-   // if (monster->Weapon_ptr && monster->GetID() == 16777217) {
-   //     const XMFLOAT3& pos = monster->Weapon_ptr->GetPosition();
-   //     std::cout << std::fixed << std::setprecision(3);
-   //     //std::cout << "weapon got - " << pos.x << " " << pos.y << " " << pos.z << std::endl;
-   // }
-   //
-   // if (monster->Weapon_ptr && monster->GetID() == 0) {
-   //     const XMFLOAT3& pos = monster->Weapon_ptr->GetPosition();
-   //     std::cout << std::fixed << std::setprecision(3);
-   ////     std::cout << "weapon got - " << pos.x << " " << pos.y << " " << pos.z << std::endl;
-   // }
-
-   // if (track >= 0 && track < sm->n_Ani) {
-   //     const auto& animTrack = sm->animController->m_pAnimationTracks[track];
-
-   //     if (animTrack.m_nType == ANIMATION_TYPE_ONCE && animTrack.m_bFinished) {
-   //         sm->ChangeState(std::make_unique<IdleState>());
-   //     }
-   // }
 }
 
 void AttackState::Exit(Monster* monster) {
@@ -199,20 +167,53 @@ void GetHitState::Exit(Monster* monster) {
 
 void DragonBreatheState::Enter(Monster* monster, MonsterStateMachine* sm) {
     if (!monster) return;
-
-    else currentTrackIdx = monster->PlayAnimation(State::Attack2);
-    monster->StartAttackCooldown();
-    if (monster->Weapon_ptr)
-        monster->Weapon_ptr->SetCanCollide(true);
+    monster->attackPhase = 1;
+    currentTrackIdx = monster->PlayAnimation(State::Jump);
 }
 
 void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
 
-    if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
-        sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
-        sm->ChangeState(std::make_unique<IdleState>());
+    if (monster->attackPhase == 1) {
+		XMFLOAT3 pos = monster->GetPosition();
+        pos.y += deltaTime * 30.0f;
+		monster->SetPosition(pos);
+        auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
+        if (nearestPos) {
+            monster->SetTarget(*nearestPos);
+            monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
+        }
+
+        if (pos.y > 60.0f) {
+            monster->attackPhase = 2;
+            currentTrackIdx = monster->PlayAnimation(State::Attack3);
+            if (monster->Weapon_ptr)
+                monster->Weapon_ptr->SetCanCollide(true);
+		}
     }
+    else if (monster->attackPhase == 2) {
+        auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
+        if (nearestPos) {
+            monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
+        }
+        if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+            monster->attackPhase = 3;
+            sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
+            currentTrackIdx = monster->PlayAnimation(State::Jump);
+        }
+    }
+    else if (monster->attackPhase == 3) {
+        XMFLOAT3 pos = monster->GetPosition();
+        pos.y -= deltaTime * 30.0f;
+        monster->SetPosition(pos);
+        if (pos.y <= 0.0f) {
+            monster->attackPhase = 1;
+			pos.y = 0.0f;
+            monster->SetPosition(pos);
+            sm->ChangeState(std::make_unique<IdleState>());
+        }
+	}
+
 
 }
 

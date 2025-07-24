@@ -85,11 +85,3 @@ struct MonsterDamageInfo
 extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
 extern int ReadIntegerFromFile(FILE* pInFile);
 extern float ReadFloatFromFile(FILE* pInFile);
-
-float GetDistance(const XMFLOAT3& a, const XMFLOAT3& b)
-{
-    XMVECTOR va = XMLoadFloat3(&a);
-    XMVECTOR vb = XMLoadFloat3(&b);
-    XMVECTOR diff = XMVectorSubtract(va, vb);
-    return XMVectorGetX(XMVector3Length(diff));
-}

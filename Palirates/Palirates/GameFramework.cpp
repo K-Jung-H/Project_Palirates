@@ -1667,8 +1667,9 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
 		syncData.changedStateNum = changedStateNum;
-		HandlePlayerSync(playerId, modelId, syncData);
 
+		HandlePlayerSync(playerId, modelId, syncData);
+		
 		startIndex = stateFlagIndex + 1;
 	}
 }
@@ -1716,8 +1717,16 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
 
+		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
+		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
 
-		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
+		float zView = XMVectorGetZ(viewSpacePos);
+
+		if (zView >= -50.0f)
+		{
+			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		}
 
 		startIndex = stateFlagIndex + 1;
 	}
@@ -1924,7 +1933,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	}
 	else
 	{
-		if (Connected_Player_List[player_ID]) // 이미 플레이어 생성됨
+		if (Connected_Player_List[player_ID])
 		{
 			bool player_exist = scene_manager->Sync_Player_Data(player_ID, syncData);
 
