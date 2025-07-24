@@ -33,12 +33,13 @@ private:
 
 	std::unordered_map<XMINT3, std::vector<UINT>, XMINT3Hasher> uniform_cell_map;
 
-
 	float grid_cell_size = 100.0f;
 	//=======================
+	shared_ptr<Monster> boss_monster = NULL;
+	shared_ptr<GameObject> zoom_object = NULL;
 
-	vector<shared_ptr<Monster>> monster_list;
-
+	shared_ptr<Particle_Object> dragon_fire;
+	shared_ptr<Particle_Object> sand;
 public:
 	GameWorld();
 	~GameWorld();
@@ -47,10 +48,15 @@ public:
 	bool Get_Clear_State() { return Stage_Clear; }
 	void Set_Clear_State(bool stage_clear) { Stage_Clear = stage_clear; }
 
+	shared_ptr<Monster> Get_Boss_Monster() { return boss_monster; }
+	void Set_Boss_Moster(shared_ptr<Monster> boss_ptr) { boss_monster = boss_ptr; }
+	void Boss_Update();
+
+	shared_ptr<GameObject> Get_ZoomObject() { return zoom_object; }
+
 	void Load_Scene_Data(shared_ptr<GameObject> scene_obj);
 	void Update_Collision(shared_ptr<Player> player_obj);
 
-	void Update_Monster(float elapsed_time);
 	void Update_Particle(float elapsed_time);
 	FrameParticleChanges Get_Particle_Sync_Data();
 	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);

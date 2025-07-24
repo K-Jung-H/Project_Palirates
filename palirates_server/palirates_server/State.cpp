@@ -219,6 +219,9 @@ void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateM
 
 void DragonBreatheState::Exit(Monster* monster) {
     if (monster->Weapon_ptr)
+    {
         monster->Weapon_ptr->SetCanCollide(false);
+        monster->attackPhase = -1;
+    }
 }
 
