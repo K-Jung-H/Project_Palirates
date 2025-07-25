@@ -3837,6 +3837,7 @@ void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 
 }
+
 void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_WAVE
@@ -4097,6 +4098,32 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	
 
 #ifdef RENDER_PARTICLE
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	Particle_Format test_ash_info;
+	{
+		test_ash_info.shader_type = Particle_Shader_Type::continuous;
+		test_ash_info.particle_type = Particle_Type::snow;
+		test_ash_info.max_particles = 20000;
+		test_ash_info.MaxLifetime = 100.0f;
+
+		test_ash_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+		test_ash_info.EmitFaceIndex = FACE_TOP;
+
+		test_ash_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		test_ash_info.init_velocity_value = 10.0f;
+		test_ash_info.acceleration = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+		test_ash_info.size = 0.5f;
+		test_ash_info.color = XMFLOAT3(0.3f, 0.3f, 0.3f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	ash_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_ash_info);
+	ash_particle->Set_World_Coordinate();
+	ash_particle->SetPosition(1920.0f, 400.0f, 1408.0f);
+	ash_particle->Set_Area(XMFLOAT3(3840.0f, 800.0f, 2816.0f));
+
 
 	Particle_Format bleeding_info;
 	{
@@ -4115,7 +4142,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		bleeding_info.size = 0.3f;
 		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 	}
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);

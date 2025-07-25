@@ -435,8 +435,9 @@ public:
 
 class Stage_1_Scene : public Stage_Scene
 {
-
 private:
+	shared_ptr<ParticleObject> ash_particle = NULL;
+
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
