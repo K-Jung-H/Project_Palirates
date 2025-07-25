@@ -219,6 +219,11 @@ void DragonBreatheState::Enter(Monster* monster, MonsterStateMachine* sm) {
     if (!monster) return;
     monster->attackPhase = 1;
     currentTrackIdx = monster->PlayAnimation(State::Jump);
+    for (const auto& player : *(monster->GetPlayerListPtr())) {
+        if (!player) continue;
+        player->BreathHit = true;
+    }
+    //monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(100.0f, 100.0f, 100.0f);
 }
 
 void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
@@ -246,6 +251,9 @@ void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateM
         if (nearestPos) {
             monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
         }
+        std::cout << "Weapon obb Extents : " << monster->Weapon_ptr->Get_Collider_OBB()->Extents.x << ", "
+            << monster->Weapon_ptr->Get_Collider_OBB()->Extents.y << ", "
+            << monster->Weapon_ptr->Get_Collider_OBB()->Extents.z << "\n";
         if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
             monster->attackPhase = 3;
             sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
@@ -273,5 +281,10 @@ void DragonBreatheState::Exit(Monster* monster) {
         monster->Weapon_ptr->SetCanCollide(false);
         monster->attackPhase = -1;
     }
+    for (const auto& player : *(monster->GetPlayerListPtr())) {
+        if (!player) continue;
+        player->BreathHit = false;
+    }
+    //monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
 }
 

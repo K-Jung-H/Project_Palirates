@@ -1497,10 +1497,8 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 				data.dist = normDist;
 			}
 			else if (std::string(obj->Get_Name()) == "Anubis") {
-				data.yOffset = 30.0f;
-				data.position = obj->GetPosition();
+				data.bBossHP = true;
 				data.hp = float(obj->currentHP) / obj->maxHP;
-				data.dist = normDist;
 			}
 			else if (std::string(obj->Get_Name()) == "Dragon") {
 				data.bBossHP = true;

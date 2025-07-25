@@ -102,7 +102,8 @@ void PlayerAttack3State::Exit(Player* player) {
 
 void PlayerGetHitState::Enter(Player* player, PlayerStateMachine* sm) {
 	player->SetCanCollide(false);
-	player->SetIsInvincible(true);
+	if (!player->BreathHit)
+		player->SetIsInvincible(true);
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;

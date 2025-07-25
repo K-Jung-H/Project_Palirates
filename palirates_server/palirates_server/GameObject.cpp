@@ -818,8 +818,14 @@ void GameObject::UpdateWorldOBB()
 		if (XMVector3Equal(XMLoadFloat3(&skinnedMesh->m_xmf3AABBExtents), XMVectorZero())) {
 			return;
 		}
-
+		
 		auto localOBB = std::make_shared<DirectX::BoundingOrientedBox>(XMFLOAT3(0.0f, 0.0f, 0.0f), skinnedMesh->m_xmf3AABBExtents, XMFLOAT4(0, 0, 0, 1));
+		
+		if (CustomOBBScale.x != 1.0f || CustomOBBScale.y != 1.0f || CustomOBBScale.z != 1.0f) {
+			localOBB->Extents.x *= CustomOBBScale.x;
+			localOBB->Extents.y *= CustomOBBScale.y;
+			localOBB->Extents.z *= CustomOBBScale.z;
+		}
 
 		if (skinnedMesh->m_ppSkinningBoneFrameCaches.empty() || !skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]) {
 			return;

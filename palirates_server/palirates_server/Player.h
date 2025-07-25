@@ -31,7 +31,7 @@ private:
 public:
     bool need_to_client_sync = false;
     bool motion_blur = false;
-
+    bool BreathHit = false;
     Player(int model_index);
     virtual ~Player() {}
 

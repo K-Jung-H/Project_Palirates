@@ -65,6 +65,7 @@ public:
     virtual ServerSyncData MakeSyncData();
 
     void SetPlayerListPtr(const std::array<std::shared_ptr<Player>, MaxPlayer>* ptr) { pPlayerList = ptr; }
+    const std::array<std::shared_ptr<Player>, MaxPlayer>* GetPlayerListPtr() const { return pPlayerList; }
     virtual std::optional<XMFLOAT3> FindNearestPlayerInRange(float range);
     virtual void SetTarget(const XMFLOAT3& targetPos);
     virtual void StartAttackCooldown();
