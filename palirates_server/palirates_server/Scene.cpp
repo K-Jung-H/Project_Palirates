@@ -400,7 +400,11 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                     data.damage = 30.0f;
                     data.monsterID = m->GetID();
                     QueueDamageCommand(data);
-                    m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
+                    m->HitDamage(data.damage);
+                    float hp = m->GetHP();
+                    if (hp <= 0.0f)
+                        m->GetStateMachine()->ChangeState(std::make_unique<DeadState>());
+                    else  m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
                 }
             }
         }
@@ -411,6 +415,10 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 		auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
         m->update_collision(elapsedTime, obbList);
+        if (m->bDead) {
+            DespawnMonster(m->GetID());
+            continue;
+        }
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
         //if (!m || !m->Weapon_ptr || (GET_MONSTER_TYPE(m->GetID()) != int(Monster_Type::Fishman))) continue;
