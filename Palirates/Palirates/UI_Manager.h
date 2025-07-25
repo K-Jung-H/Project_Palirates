@@ -13,6 +13,7 @@ struct MonsterUIData
     float hp;
     float dist;
     float yOffset;
+    bool bBossHP{ false };
 };
 
 inline D2D1_RECT_F MakeNormalizedRect(
@@ -190,7 +191,8 @@ struct TextureBlock
     float start_time = 0.0f;
 
     bool bPendingActivation = false;
-
+    bool wasActive{ false };
+    bool firstActive{ false };
     UILayer layer = UILayer::Default;
 
     XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
@@ -260,7 +262,15 @@ public:
     {
         for (auto& block : monsterHPBlocks)
         {
-            if (block) block->bActive = false;
+            if (block) {
+                block->bActive = false;
+                if (!block->wasActive) {
+                    block->firstActive = true;
+                }
+                if (!block->firstActive) {
+                    block->wasActive = false;
+                }
+            }
         }
     }
     std::vector<std::shared_ptr<TextureBlock>> GetMugBlocks() { return mugBlocks; }

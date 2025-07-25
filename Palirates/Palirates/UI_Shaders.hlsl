@@ -84,6 +84,8 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 // HP CUT
     if ((type & UI_EFFECT_CUT_HP) != 0)
     {
+        float alpha = saturate(elapsed / 1.0f);
+        result.a *= alpha;
         if (uv.x > g_hp)
             discard;
     }

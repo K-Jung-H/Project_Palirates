@@ -1565,6 +1565,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					float damage = std::stoi(tokens[idx++]);
 					stage_scene->DamageMonster(id, damage);
+					std::cout << "Damage : " << id << ", " << damage << "\n";
 				}
 			}
 		}
@@ -2005,7 +2006,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;
 		}
-		std::cout << "syncData.changedStateNum : " << syncData.changedStateNum << "\n";
 		return;
 	}
 	else

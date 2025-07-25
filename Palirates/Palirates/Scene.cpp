@@ -1291,6 +1291,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
 		TextureBlock* HBblock = new TextureBlock(HpBack, HBscreenRect, mesh);
 		HBblock->bActive = false;
+		HBblock->ui_type = UI_EFFECT_FADE_IN;
 		texture_ui_manager->AddMonsterHPBlock(HBblock);
 
 		D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
@@ -1461,7 +1462,7 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 			}
 		}
 	}
-	Update_Monster_HP_bar(currentTime, elapsedTime, 100.0f);
+	Update_Monster_HP_bar(currentTime, elapsedTime, 300.0f);
 }
 
 std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(float maxDistance)
@@ -1489,12 +1490,24 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 		if (distSq <= maxDistance * maxDistance)
 		{
 			MonsterUIData data;
-			data.position = obj->GetPosition();
-			data.hp = float(obj->currentHP) / obj->maxHP;
-			data.dist = normDist;
 			if (std::string(obj->Get_Name()) == "FishMan") {
 				data.yOffset = 20.0f;
+				data.position = obj->GetPosition();
+				data.hp = float(obj->currentHP) / obj->maxHP;
+				data.dist = normDist;
 			}
+			else if (std::string(obj->Get_Name()) == "Anubis") {
+				data.yOffset = 30.0f;
+				data.position = obj->GetPosition();
+				data.hp = float(obj->currentHP) / obj->maxHP;
+				data.dist = normDist;
+			}
+			else if (std::string(obj->Get_Name()) == "Dragon") {
+				data.bBossHP = true;
+				data.hp = float(obj->currentHP) / obj->maxHP;
+			}
+			
+			
 			
 			filtered->emplace_back(data);
 		}
@@ -1517,34 +1530,76 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 	{
 		if (blockIndex + 1 >= hpBlocks.size()) break;
 
-		XMFLOAT3 headWorldPos = monster.position;
-		headWorldPos.y += monster.yOffset;
+		if (monster.bBossHP) {
+			XMFLOAT2 screenPos = XMFLOAT2(0.5f, 0.1f); 
 
-		XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
-			headWorldPos,
-			main_Camera->GetViewMatrix(),
-			main_Camera->GetProjectionMatrix(),
-			main_Camera->GetViewport());
+			float scale = 1.5f; 
 
-		if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
-			continue; 
+			TextureBlock* back = hpBlocks[blockIndex++];
+			back->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 1.0f); 
+			back->wasActive = true;
+			if (back->firstActive) {
+				back->firstActive = false;
+				back->start_time = currentTime;
+			}
+			back->bActive = true;
 
-		float scale = 0.25f + 0.75f * monster.dist;
+			TextureBlock* front = hpBlocks[blockIndex++];
+			front->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 1.0f);
+			float targetHP = monster.hp;
+			float speed = 15.0f; 
+			front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
 
-		TextureBlock* back = hpBlocks[blockIndex++];
-		back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
-		back->bActive = true;
-
-		TextureBlock* front = hpBlocks[blockIndex++];
-		front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
-		float targetHP = monster.hp;
-		float speed = 15.0f;
-		front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
-
-		if (abs(front->hp - targetHP) < 0.001f) {
-			front->hp = targetHP;
+			if (abs(front->hp - targetHP) < 0.001f) {
+				front->hp = targetHP;
+			}
+			front->wasActive = true;
+			if (front->firstActive) {
+				front->firstActive = false;
+				front->start_time = currentTime;
+			}
+			front->bActive = true;
 		}
-		front->bActive = true;
+		else {
+			XMFLOAT3 headWorldPos = monster.position;
+			headWorldPos.y += monster.yOffset;
+
+			XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
+				headWorldPos,
+				main_Camera->GetViewMatrix(),
+				main_Camera->GetProjectionMatrix(),
+				main_Camera->GetViewport());
+
+			if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
+				continue;
+
+			float scale = 0.25f + 0.75f * monster.dist;
+
+			TextureBlock* back = hpBlocks[blockIndex++];
+			back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+			back->wasActive = true;
+			if (back->firstActive) {
+				back->firstActive = false;
+				back->start_time = currentTime;
+			}
+			back->bActive = true;
+
+			TextureBlock* front = hpBlocks[blockIndex++];
+			front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+			float targetHP = monster.hp;
+			float speed = 15.0f;
+			front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+
+			if (abs(front->hp - targetHP) < 0.001f) {
+				front->hp = targetHP;
+			}
+			front->wasActive = true;
+			if (front->firstActive) {
+				front->firstActive = false;
+				front->start_time = currentTime;
+			}
+			front->bActive = true;
+		}
 	}
 }
 
