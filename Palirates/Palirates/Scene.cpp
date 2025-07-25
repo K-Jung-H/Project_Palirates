@@ -1859,11 +1859,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
-		case 'C':
-		{
-			obj_manager->Clear_Object_List(Object_Type::skinned);
 
-		}		break;
 		case 'O':
 		{
 			bOBBRender = !bOBBRender;
@@ -3837,6 +3833,7 @@ void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 
 }
+
 void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_WAVE
@@ -4097,6 +4094,32 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	
 
 #ifdef RENDER_PARTICLE
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	Particle_Format env_ash_info;
+	{
+		env_ash_info.shader_type = Particle_Shader_Type::continuous;
+		env_ash_info.particle_type = Particle_Type::snow;
+		env_ash_info.max_particles = 20000;
+		env_ash_info.MaxLifetime = 100.0f;
+
+		env_ash_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+		env_ash_info.EmitFaceIndex = FACE_TOP;
+
+		env_ash_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		env_ash_info.init_velocity_value = 10.0f;
+		env_ash_info.acceleration = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+		env_ash_info.size = 0.5f;
+		env_ash_info.color = XMFLOAT3(0.3f, 0.3f, 0.3f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	env_ash_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_ash_info);
+	env_ash_particle->Set_World_Coordinate();
+	env_ash_particle->SetPosition(1920.0f, 400.0f, 1408.0f);
+	env_ash_particle->Set_Area(XMFLOAT3(3840.0f, 800.0f, 2816.0f));
+
 
 	Particle_Format bleeding_info;
 	{
@@ -4115,7 +4138,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		bleeding_info.size = 0.3f;
 		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 	}
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
@@ -4253,6 +4275,31 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 
 #ifdef RENDER_PARTICLE
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	Particle_Format env_sand_info;
+	{
+		env_sand_info.shader_type = Particle_Shader_Type::continuous;
+		env_sand_info.particle_type = Particle_Type::snow;
+		env_sand_info.max_particles = 20000;
+		env_sand_info.MaxLifetime = 100.0f;
+
+		env_sand_info.area_xyz = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+		env_sand_info.EmitFaceIndex = FACE_TOP;
+
+		env_sand_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		env_sand_info.init_velocity_value = 10.0f;
+		env_sand_info.acceleration = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+		env_sand_info.size = 0.3f;
+		env_sand_info.color = XMFLOAT3(0.75f, 0.7f, 0.45f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
+	env_sand_particle->Set_World_Coordinate();
+	env_sand_particle->SetPosition(2276.0f, 500.0f, 1536.0f);
+	env_sand_particle->Set_Area(XMFLOAT3(4352.0f, 1000.0f, 3072.0f));
 
 	Particle_Format bleeding_info;
 	{
@@ -4271,36 +4318,11 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		bleeding_info.size = 0.3f;
 		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 	}
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
 
-
-	Particle_Format test_party_info;
-	{
-		test_party_info.shader_type = Particle_Shader_Type::continuous;
-		test_party_info.particle_type = Particle_Type::party;
-		test_party_info.max_particles = 3000;
-		test_party_info.MaxLifetime = 100.0f;
-
-		test_party_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
-		test_party_info.EmitFaceIndex = 0;
-
-
-
-		test_party_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-		test_party_info.init_velocity_value = 150.0f;
-		test_party_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
-
-		test_party_info.size = 1.0f;
-		test_party_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
-	}
-
-	//particle_mesh = particle_manager->Get_Particle_Mesh("chip");
-	//test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
-	//test_particle->Set_World_Coordinate();
 
 #endif
 
