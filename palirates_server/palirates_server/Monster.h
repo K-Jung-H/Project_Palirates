@@ -76,6 +76,9 @@ public:
 
     void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;
     void InitStateMachine();
+
+    void HitDamage(float damage);
+    float GetHP() { return hp; }
 };
 
 class Fishman : public Monster {

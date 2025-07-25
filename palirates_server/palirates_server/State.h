@@ -51,6 +51,14 @@ public:
     State GetStateEnum() const override { return State::Get_Hit; }
 };
 
+class DeadState : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Knock_Down; }
+};
+
 class DragonBreatheState : public MonsterState {
 public:
     void Enter(Monster* monster, MonsterStateMachine* sm) override;

@@ -143,6 +143,11 @@ void Monster::InitStateMachine() {
         state->Enter(this, m_StateMachine.get());
 }
 
+void Monster::HitDamage(float damage) {
+    if (hp - damage < 0.0f)
+        hp = 0.0f;
+    else hp -= damage;
+}
 // ---------------- Fishman ----------------
 
 Fishman::Fishman(int id) : Monster(id) {
