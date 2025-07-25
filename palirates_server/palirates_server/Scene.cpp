@@ -442,7 +442,11 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
             if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
                 std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-				player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+                player_ptr->HitDamage(30.0f);
+                float hp = player_ptr->GetHP();
+                if (hp <= 0.0f)
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+                else  player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
                 }
             }
     }
@@ -673,8 +677,16 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
         if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
-            if (stateNum == int(State::Attack1) || stateNum == int(State::Attack2) || stateNum == int(State::Attack3)) {
-                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttackState>());
+            if (stateNum == int(State::Attack1)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Attack2)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Attack3)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
                 player_list[clientId]->SetStateChangeNum(stateNum);
             }
         }

@@ -27,7 +27,7 @@ private:
     std::shared_ptr<BoundingOrientedBox> m_worldOBB;  
 
     std::unique_ptr<PlayerStateMachine> m_StateMachine;
-
+    float hp = 100.0f;
 public:
     bool need_to_client_sync = false;
     bool motion_blur = false;
@@ -54,4 +54,7 @@ public:
     void InitStateMachine();
 
     PlayerStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+    float GetHP() { return hp; }
+    void SetHP(float setHP) { hp = setHP; }
+    void HitDamage(float damage);
 };

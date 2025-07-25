@@ -4154,7 +4154,7 @@ XMFLOAT3 Wave_Object::Readback_Buffer_Data()
 		return XMFLOAT3{ 0.0f,0.0f,0.0f };
 
 	float* pReadData = nullptr;
-	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; // 4개의 float (16바이트)
+	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; 
 
 	if (SUCCEEDED(Pos_Normal_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&pReadData))) && pReadData)
 	{

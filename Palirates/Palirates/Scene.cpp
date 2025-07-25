@@ -3919,7 +3919,7 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'O':
+		case 'P':
 		{
 			Stage_Clear_Signal = true;
 		}

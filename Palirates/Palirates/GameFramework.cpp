@@ -1985,11 +1985,27 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	{
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
-
+		
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
-			if (!m_pPlayer->bIsInvincible)
+			if (!m_pPlayer->bIsInvincible) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+			}
 		}
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
+			if (!m_pPlayer->bIsInvincible) {
+				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+			}
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack2 && syncData.changedStateNum == int(State::Attack2)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		std::cout << "syncData.changedStateNum : " << syncData.changedStateNum << "\n";
 		return;
 	}
 	else
