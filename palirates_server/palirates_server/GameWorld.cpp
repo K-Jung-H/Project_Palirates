@@ -14,16 +14,7 @@ GameWorld::~GameWorld()
 
 void GameWorld::Init()
 {
-    //Particle_Format p;
-    //p.area_xyz = XMFLOAT3{ 1000,2000,3000 };
-    //p.lifetime = 300;
-    //p.main_direction = XMFLOAT3{ 0,0,1 };
-    //p.particle_type = Particle_Type::dragon_breath;
-
-    //dragon_fire = particle_manager.Create_Particle_Object(p);
-    //dragon_fire->SetNeedSyncType(true);
-    //dragon_fire->SetPosition(1500, 50, 800);
-    //dragon_fire->SetLook(XMFLOAT3{ 0,0,-1 });
+    
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
@@ -200,6 +191,37 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 void GameWorld::Update_Particle(float elapsed_time)
 {
     particle_manager.Update_Particle(elapsed_time);
+
+}
+
+void GameWorld::Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, MaxPlayer> player_list)
+{
+    for (int id = 0; id < MaxPlayer; ++id)
+    {
+        if (player_list[id])
+        {
+            XMFLOAT3 player_pos = player_list[id]->GetPosition();
+            player_pos.y += 20.0f;
+            if (party_effect[id])
+            {
+                party_effect[id]->SetPosition(player_pos);
+            }
+            else
+            {
+                Particle_Format p;
+                p.area_xyz = XMFLOAT3{ 1000,1000,1000 }; 
+                p.lifetime = 300;
+                p.main_direction = XMFLOAT3{ 0,1,0 };
+                p.particle_type = Particle_Type::party; 
+
+                party_effect[id] = particle_manager.Create_Particle_Object(p);
+                party_effect[id]->SetNeedSyncType(true);
+                party_effect[id]->SetPosition(player_pos);
+                party_effect[id]->SetLook(XMFLOAT3{ 0,1,0 });
+
+            }
+        }
+    }
 }
 
 FrameParticleChanges GameWorld::Get_Particle_Sync_Data()

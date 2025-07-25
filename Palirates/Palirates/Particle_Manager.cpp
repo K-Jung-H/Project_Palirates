@@ -1056,6 +1056,11 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			obj->Set_Local_Coordinate();
 		}
 
+		if (format.particle_type == Particle_Type::party)
+		{
+			obj->Set_World_Coordinate();
+		}
+
 		particle_id_map[data.particle_ID] = obj;
 
 		createQueue.pop();
