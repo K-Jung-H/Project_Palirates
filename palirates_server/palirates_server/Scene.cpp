@@ -550,7 +550,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
 
     if (total_value < 30)
     {
-        effect_data.monster_x_ray = false;
+        effect_data.monster_x_ray = true;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -558,7 +558,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     }
     else if (total_value < 50)
     {
-        effect_data.monster_x_ray = false;
+        effect_data.monster_x_ray = true;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -674,7 +674,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    //return;
+//    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;
@@ -799,6 +799,28 @@ std::vector<MonsterDamageInfo> Stage_Scene::FlushDamageQueue()
     return temp;
 }
 
+void Stage_Scene::server_DespawnMonster()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    int delete_id = Monster_List.back()->GetID();
+    DespawnMonster(delete_id);
+}
+
+void Stage_Scene::server_DespawnMonster_For_Clear()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    std::vector<int> ids_to_delete;
+    for (auto& m_ptr : Monster_List)
+        ids_to_delete.push_back(m_ptr->GetID());
+
+    for (int id : ids_to_delete)
+
+        DespawnMonster(id); 
+}
+
+
+
 //=========================================================
 
 
@@ -882,30 +904,6 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
 void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
-
-    //int id;
-    //for (int i = 0; i < 3; ++i) {
-    //    if (i % 4 == 0)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
-    //    else if (i % 4 == 1)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-    //    else if (i % 4 == 2)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-    //    else if (i % 4 == 3)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-    //    else continue;
-    //    if (GET_MONSTER_TYPE(i) == int(Monster_Type::Dragon) || GET_MONSTER_TYPE(i) == int(Monster_Type::Anubis)) {
-    //        if (!Boss_Monster) {
-    //            {
-    //                Boss_Monster = SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
-    //            }
-    //        }
-    //        else SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
-    //    }
-    //   
-    //    SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
-    //    std::cout << "m spawn s4 " << "\n";
-    //}
 
     int id;
     id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
