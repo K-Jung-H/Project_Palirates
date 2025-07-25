@@ -281,27 +281,27 @@ void GameWorld::Boss_Update()
             if (!dragon_fire || !dragon_fire->Get_Active())
                 return;
 
-            XMMATRIX worldMatrix = XMLoadFloat4x4(&boss_weapon->m_xmf4x4World);
+            std::shared_ptr<BoundingOrientedBox> obb = boss_weapon->Get_Collider_OBB();
+            if (!obb) return;
 
-            XMVECTOR scale, rotQuat, trans;
-            XMMatrixDecompose(&scale, &rotQuat, &trans, worldMatrix);
+            XMVECTOR obbCenter = XMLoadFloat3(&obb->Center);
 
-            XMVECTOR forward = XMVector3Normalize(worldMatrix.r[2]);
+            XMVECTOR obbRotationQuat = XMLoadFloat4(&obb->Orientation);
+
+            XMVECTOR defaultForward = XMVectorSet(0, 0, 1, 0);
+            XMVECTOR rotatedForward = XMVector3Rotate(defaultForward, obbRotationQuat);
 
             float forwardOffset = 10.0f;
             float heightOffset = -5.0f;
+            XMVECTOR offsetVec = rotatedForward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
+            XMVECTOR finalPosition = obbCenter + offsetVec;
 
-            XMVECTOR offsetVec = forward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
+            XMFLOAT3 position, forward;
+            XMStoreFloat3(&position, finalPosition);
+            XMStoreFloat3(&forward, rotatedForward);
 
-            XMVECTOR finalPos = trans + offsetVec;
-
-            XMFLOAT3 position;
-            XMStoreFloat3(&position, finalPos);
             dragon_fire->SetPosition(position);
-
-            XMFLOAT3 look;
-            XMStoreFloat3(&look, forward);
-            dragon_fire->SetLook(dragon->GetLook());
+            dragon_fire->SetLook(forward);
         }
     }
 }

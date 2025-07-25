@@ -2239,6 +2239,7 @@ void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		{
 			auto& monster = (*Monster_List)[idx];
 			if (monster) {
+				monster->Set_Active(true);
 				monster->ApplySyncData(syncData);
 				return;
 			}
@@ -2247,6 +2248,26 @@ void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
 	if (monsterID == 50331651) std::cout << "testplayer spawn" << std::endl;
 
+}
+
+void CScene::Monster_Set_Active_False(int monsterID)
+{
+	auto& id2idx = obj_manager->Get_Monster_Map();
+	auto found = id2idx.find(monsterID);
+
+	if (found != id2idx.end())
+	{
+		size_t idx = found->second;
+		auto* Monster_List = obj_manager->Get_Object_List(Object_Type::skinned);
+		if (idx < Monster_List->size())
+		{
+			auto& monster = (*Monster_List)[idx];
+			if (monster) {
+				monster->Set_Active(false);
+				return;
+			}
+		}
+	}
 }
 
 void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos)
@@ -3951,6 +3972,7 @@ void Stage_Scene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		{
 			auto& monster = (*Monster_List)[idx];
 			if (monster) {
+				monster->Set_Active(true);
 				monster->ApplySyncData(syncData);
 				return;
 			}

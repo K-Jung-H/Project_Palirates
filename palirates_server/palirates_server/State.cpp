@@ -27,7 +27,13 @@ void IdleState::Enter(Monster* monster, MonsterStateMachine* sm) {
 
 void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
-
+    XMFLOAT3 pos = monster->GetPosition();
+    if (pos.y > 0.0f) {
+        pos.y -= deltaTime * 30.0f;
+        if (pos.y < 0.0f)
+            pos.y = 0.0f;
+        monster->SetPosition(pos);
+    }
     auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
     if (nearestPos) {
         monster->SetTarget(*nearestPos);
@@ -72,6 +78,13 @@ void WalkState::Enter(Monster* monster, MonsterStateMachine* sm) {
 
 void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm) return;
+    XMFLOAT3 pos = monster->GetPosition();
+    if (pos.y > 0.0f) {
+        pos.y -= deltaTime * 30.0f;
+        if (pos.y < 0.0f)
+            pos.y = 0.0f;
+        monster->SetPosition(pos);
+    }
     monster->stateElapsedTime += deltaTime;
     auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
     if (nearestPos) {
@@ -122,6 +135,13 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
 
 void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
+    XMFLOAT3 pos = monster->GetPosition();
+    if (pos.y > 0.0f) {
+        pos.y -= deltaTime * 30.0f;
+        if (pos.y < 0.0f)
+            pos.y = 0.0f;
+        monster->SetPosition(pos);
+    }
     auto nearestPos = monster->FindNearestPlayerInRange(monster->attackRange);
     if (nearestPos) {
         monster->SetTarget(*nearestPos);
@@ -158,6 +178,36 @@ void GetHitState::Update(Monster* monster, float deltaTime, MonsterStateMachine*
 }
 
 void GetHitState::Exit(Monster* monster) {
+    monster->SetCanCollide(true);
+}
+
+/////////////////////////// Dead ///////////////////////////////
+
+void DeadState::Enter(Monster* monster, MonsterStateMachine* sm) {
+    monster->SetCanCollide(false);
+    monster->SetIsInvincible(true);
+    for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+        sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+    }
+    sm->animController->m_pAnimationTracks[AnimationRegistry::GetMonsterAnimationTrack(monster->GetType(), State::Knock_Down)].m_fPosition = 0.0f;
+    currentTrackIdx = monster->PlayAnimation(State::Knock_Down);
+    monster->stateElapsedTime = 0.0f;
+}
+
+void DeadState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    constexpr float DeadTime = 5.0f;
+    monster->stateElapsedTime += deltaTime;
+    if (monster->stateElapsedTime >= DeadTime) {
+        monster->bDead = true;
+        monster->stateElapsedTime = 0.0f;
+    }
+    /*if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+        sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
+        sm->ChangeState(std::make_unique<IdleState>());
+    }*/
+}
+
+void DeadState::Exit(Monster* monster) {
     monster->SetCanCollide(true);
 }
 

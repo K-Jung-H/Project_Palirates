@@ -197,6 +197,8 @@ public:
     char* WeaponName = "";
     std::shared_ptr<GameObject> Weapon_ptr = nullptr;
 
+    bool bDead = false;
+
     virtual void update(float deltaTime) override {};
     void SetupWeaponCollider();
 

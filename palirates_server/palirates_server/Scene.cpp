@@ -375,7 +375,6 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!player_ptr->Weapon_ptr) continue;
             if (!player_ptr->Weapon_ptr->CanCollide()) continue;
 
-            std::lock_guard<std::recursive_mutex> lock(sceneMutex);
             player_ptr->UpdateTransform();
             player_ptr->Weapon_ptr->UpdateWorldOBB();
             auto worldWeaponOBB = *player_ptr->Weapon_ptr->Get_Collider_OBB();
@@ -383,6 +382,11 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 if (!m) continue;
                 if (!m->CanCollide()) continue;
                 if (m->IsInvincible()) continue;
+
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
+                    continue;
+                }
+
                 m->UpdateTransform();
                 auto monsterOBB = m->Get_Collider_OBB();
                 if (!monsterOBB) continue;
@@ -390,17 +394,18 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 BoundingOrientedBox worldMonsterOBB;
                 monsterOBB->Transform(worldMonsterOBB,
                     XMLoadFloat4x4(&m->m_xmf4x4World));
-               
-                //std::cout << "p weapon obb x" << player_ptr->Weapon_ptr->GetPosition().x << ", m obb x" << worldMonsterOBB.Center.x << "\n";
-                //std::cout << "p weapon obb z" << worldWeaponOBB.Center.z << ", m obb z" << worldMonsterOBB.Center.z << "\n";
-                //std::cout << "p pos x : " << player_ptr->GetPosition().x << "\n";
+
                 if (worldWeaponOBB.Intersects(worldMonsterOBB)) {
                     std::cout << "Collision detected! Player Weapon and Monster ID" << m->GetID() << "\n";
                     MonsterDamageInfo data;
                     data.damage = 30.0f;
                     data.monsterID = m->GetID();
                     QueueDamageCommand(data);
-                    m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
+                    m->HitDamage(data.damage);
+                    float hp = m->GetHP();
+                    if (hp <= 0.0f)
+                        m->GetStateMachine()->ChangeState(std::make_unique<DeadState>());
+                    else  m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
                 }
             }
         }
@@ -411,11 +416,12 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 		auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
         m->update_collision(elapsedTime, obbList);
+        if (m->bDead) {
+            DespawnMonster(m->GetID());
+            continue;
+        }
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
-        //if (!m || !m->Weapon_ptr || (GET_MONSTER_TYPE(m->GetID()) != int(Monster_Type::Fishman))) continue;
-
-        std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
         m->UpdateTransform();
         m->Weapon_ptr->UpdateWorldOBB();
@@ -424,15 +430,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!player_ptr) continue;
 			if (!player_ptr->CanCollide()) continue;
 			if (player_ptr->IsInvincible()) continue;
-
-            /*player_ptr->UpdateTransform();
-            auto playerOBB = player_ptr->Get_Collider_OBB();
-            if (!playerOBB) continue;
-
-            BoundingOrientedBox worldPlayerOBB;
-            playerOBB->Transform(worldPlayerOBB,
-                XMLoadFloat4x4(&player_ptr->m_xmf4x4World));*/
-
+            if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
+                continue;
+            }
             player_ptr->UpdateTransform();
             auto playerOBB = player_ptr->Get_Collider_OBB();
             if (!playerOBB) continue;
@@ -577,7 +577,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
         effect_data.monster_x_ray = false;
         effect_data.fog_trigger = false;
     }
-
+    effect_data.fog_trigger = false;
     return effect_data;
 }
 
@@ -904,30 +904,6 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
 void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
-
-    //int id;
-    //for (int i = 0; i < 3; ++i) {
-    //    if (i % 4 == 0)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), i);
-    //    else if (i % 4 == 1)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), i);
-    //    else if (i % 4 == 2)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), i);
-    //    else if (i % 4 == 3)
-    //        id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::ETC), i);
-    //    else continue;
-    //    if (GET_MONSTER_TYPE(i) == int(Monster_Type::Dragon) || GET_MONSTER_TYPE(i) == int(Monster_Type::Anubis)) {
-    //        if (!Boss_Monster) {
-    //            {
-    //                Boss_Monster = SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
-    //            }
-    //        }
-    //        else SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
-    //    }
-    //   
-    //    SpawnMonster(id, XMFLOAT3(3450 + i * 50, 0, 1650), 100);
-    //    std::cout << "m spawn s4 " << "\n";
-    //}
 
     int id;
     id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);

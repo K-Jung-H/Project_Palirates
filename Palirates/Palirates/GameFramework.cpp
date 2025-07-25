@@ -1020,7 +1020,7 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-		const size_t maxQueueSize = 500;
+		const size_t maxQueueSize = 10000;
 		if (recvQueue.size() > maxQueueSize)
 		{
 			size_t toDiscard = recvQueue.size() - maxQueueSize;
@@ -1761,8 +1761,11 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 
 		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
 		float zView = XMVectorGetZ(viewSpacePos);
-
-		if (zView >= -50.0f)
+		//std::cout << zView << "\n";
+		if (zView >= 800.0f) {
+			stage_scene->Monster_Set_Active_False(monsterId);
+		}
+		else if (zView >= -50.0f)
 		{
 			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
 		}
