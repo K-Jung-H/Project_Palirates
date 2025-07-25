@@ -1,5 +1,5 @@
 #pragma once
-
+#include "stdafx.h"
 #include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
@@ -27,6 +27,7 @@ class GameWorld
 {
 private:
 	bool Stage_Clear = false;
+	bool Party_Start = false;
 
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
 	ParticleManager particle_manager;
@@ -38,8 +39,11 @@ private:
 	shared_ptr<Monster> boss_monster = NULL;
 	shared_ptr<GameObject> zoom_object = NULL;
 
+
+	std::array< shared_ptr<Particle_Object>, MaxPlayer> party_effect;
 	shared_ptr<Particle_Object> dragon_fire;
 	shared_ptr<Particle_Object> sand;
+
 public:
 	GameWorld();
 	~GameWorld();
@@ -58,6 +62,8 @@ public:
 	void Update_Collision(shared_ptr<Player> player_obj);
 
 	void Update_Particle(float elapsed_time);
+	void Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, MaxPlayer> player_list);
+
 	FrameParticleChanges Get_Particle_Sync_Data();
 	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);
 

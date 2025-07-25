@@ -100,16 +100,14 @@ void Server::Start()
         {
             while (true)
             {
-                if (GetAsyncKeyState('1') & 0x8000)
+                auto stage_scene = dynamic_pointer_cast<Stage_Scene>(activeScene);
+                if (stage_scene)
                 {
+                    if (GetAsyncKeyState('J') & 0x8000)
+                        stage_scene->server_DespawnMonster();
+                    else if (GetAsyncKeyState('K') & 0x8000)
+                        stage_scene->server_DespawnMonster_For_Clear();
                 }
-                else if (GetAsyncKeyState('2') & 0x8000)
-                {
-                }
-                else if (GetAsyncKeyState('0') & 0x8000)
-                {
-                }
-
                 std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
             }
         }).detach();
