@@ -353,8 +353,8 @@ void Stage_Scene::Init()
 
     scene_obj->UpdateTransform(NULL);
 
-    if (monster_init_spawn_frame_list.size())
-        SpawnMonster_By_Scene_Data();
+    //if (monster_init_spawn_frame_list.size())
+        //SpawnMonster_By_Scene_Data();
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -577,7 +577,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
         effect_data.monster_x_ray = false;
         effect_data.fog_trigger = false;
     }
-
+    effect_data.fog_trigger = false;
     return effect_data;
 }
 

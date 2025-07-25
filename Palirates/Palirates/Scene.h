@@ -292,6 +292,7 @@ public:
 	void Remove_Particle_Object(UINT p_obj_id);
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
+	void Monster_Set_Active_False(int monsterID);
 
 	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
 	virtual void DespawnMonster(int id);
