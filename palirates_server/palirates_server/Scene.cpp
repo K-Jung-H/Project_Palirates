@@ -353,8 +353,8 @@ void Stage_Scene::Init()
 
     scene_obj->UpdateTransform(NULL);
 
-    //if (monster_init_spawn_frame_list.size())
-        //SpawnMonster_By_Scene_Data();
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -375,7 +375,6 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!player_ptr->Weapon_ptr) continue;
             if (!player_ptr->Weapon_ptr->CanCollide()) continue;
 
-            std::lock_guard<std::recursive_mutex> lock(sceneMutex);
             player_ptr->UpdateTransform();
             player_ptr->Weapon_ptr->UpdateWorldOBB();
             auto worldWeaponOBB = *player_ptr->Weapon_ptr->Get_Collider_OBB();
@@ -383,6 +382,11 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 if (!m) continue;
                 if (!m->CanCollide()) continue;
                 if (m->IsInvincible()) continue;
+
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
+                    continue;
+                }
+
                 m->UpdateTransform();
                 auto monsterOBB = m->Get_Collider_OBB();
                 if (!monsterOBB) continue;
@@ -390,10 +394,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 BoundingOrientedBox worldMonsterOBB;
                 monsterOBB->Transform(worldMonsterOBB,
                     XMLoadFloat4x4(&m->m_xmf4x4World));
-               
-                //std::cout << "p weapon obb x" << player_ptr->Weapon_ptr->GetPosition().x << ", m obb x" << worldMonsterOBB.Center.x << "\n";
-                //std::cout << "p weapon obb z" << worldWeaponOBB.Center.z << ", m obb z" << worldMonsterOBB.Center.z << "\n";
-                //std::cout << "p pos x : " << player_ptr->GetPosition().x << "\n";
+
                 if (worldWeaponOBB.Intersects(worldMonsterOBB)) {
                     std::cout << "Collision detected! Player Weapon and Monster ID" << m->GetID() << "\n";
                     MonsterDamageInfo data;
@@ -421,9 +422,6 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         }
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
-        //if (!m || !m->Weapon_ptr || (GET_MONSTER_TYPE(m->GetID()) != int(Monster_Type::Fishman))) continue;
-
-        std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
         m->UpdateTransform();
         m->Weapon_ptr->UpdateWorldOBB();
@@ -432,15 +430,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!player_ptr) continue;
 			if (!player_ptr->CanCollide()) continue;
 			if (player_ptr->IsInvincible()) continue;
-
-            /*player_ptr->UpdateTransform();
-            auto playerOBB = player_ptr->Get_Collider_OBB();
-            if (!playerOBB) continue;
-
-            BoundingOrientedBox worldPlayerOBB;
-            playerOBB->Transform(worldPlayerOBB,
-                XMLoadFloat4x4(&player_ptr->m_xmf4x4World));*/
-
+            if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
+                continue;
+            }
             player_ptr->UpdateTransform();
             auto playerOBB = player_ptr->Get_Collider_OBB();
             if (!playerOBB) continue;
@@ -682,7 +674,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    return;
+    //return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;

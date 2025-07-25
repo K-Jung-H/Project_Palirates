@@ -1462,7 +1462,6 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 					player_map[player_id]->GetTrailObj()->Set_Active(false);
 				}
 			}
-			else std::cout << "컬링" << "\n";
 		}
 
 		
