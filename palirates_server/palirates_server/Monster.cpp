@@ -39,7 +39,7 @@ void Monster::update_collision(float deltaTime, std::vector<BoundingOrientedBox>
 
 int Monster::PlayAnimation(State state) {
     int track = AnimationRegistry::GetMonsterAnimationTrack(type, state);
-
+	currStateTrackIdx = track;
     if (track >= 0 && track < n_Animation) {
         for (int i = 0; i < n_Animation; ++i) {
             targetWeights[i] = 0.0f;
@@ -154,7 +154,7 @@ Fishman::Fishman(int id) : Monster(id) {
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
-       // TRACK_FISHMAN_ATTACK1,
+        TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
         TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
@@ -190,8 +190,8 @@ Anubis::Anubis(int id) : Monster(id) {
     SetType(Object_Type::monster);
     WeaponName = "Staff_LP";
     RootMotionTrackSet = {
-        TRACK_ANUBIS_IDLE,
-        TRACK_ANUBIS_IDLE_BREAK,
+        //TRACK_ANUBIS_IDLE,
+        //TRACK_ANUBIS_IDLE_BREAK,
         TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
         TRACK_ANUBIS_WALK,
         TRACK_ANUBIS_BACK_WALK,
@@ -257,12 +257,12 @@ Dragon::Dragon(int id) : Monster(id) {
     InitStateMachine();
     m_fScale = 15.0f;
     SetScale(m_fScale, m_fScale, m_fScale);
-   /* auto body = std::make_shared<BoundingOrientedBox>(
-        XMFLOAT3(0.0f, 0.8f, 0.0f),
-        XMFLOAT3(0.4f, 0.8f, 0.4f),
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 1.0f, -1.6f),
+        XMFLOAT3(0.8f, 1.0f, 2.8f),
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
     );
-    Set_Collider_OBB(body);*/
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Test ----------------

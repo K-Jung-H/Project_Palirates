@@ -34,9 +34,17 @@ Player::Player(int playerId) : Skinned_GameObject()
     }
 
     InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    //SetScale(10.0f, 10.0f, 10.0f);
+   
     m_StateMachine = std::make_unique<PlayerStateMachine>(this);
     InitStateMachine();
+    m_fScale = 10.0f;
+    //SetScale(m_fScale, m_fScale, m_fScale);
+ /*   auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 8.0f, 0.0f),
+        XMFLOAT3(4.0f, 8.0f, 4.0f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);*/
 }
 
 void Player::key_input(uint32_t keyState)

@@ -49,6 +49,7 @@ public:
     float attackRange = 0.0f;
     int attackPhase = -1;
     XMFLOAT3 m_faketargetPos = { 0, 0, 0 };
+    int currStateTrackIdx = 0;
 
 public:
     Monster(int id);

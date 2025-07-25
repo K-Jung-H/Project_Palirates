@@ -4965,6 +4965,13 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	}
 	SetScale(15.0f, 15.0f, 15.0f);
 
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 1.0f, -1.6f),
+		XMFLOAT3(0.8f, 1.0f, 2.8f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
+
 	Set_Name("Dragon");
 
 	WeaponName = "HeadA_LP";
