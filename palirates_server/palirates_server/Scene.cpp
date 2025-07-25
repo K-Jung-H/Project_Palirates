@@ -550,7 +550,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
 
     if (total_value < 30)
     {
-        effect_data.monster_x_ray = false;
+        effect_data.monster_x_ray = true;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -558,7 +558,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     }
     else if (total_value < 50)
     {
-        effect_data.monster_x_ray = false;
+        effect_data.monster_x_ray = true;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -674,7 +674,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    return;
+//    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;
@@ -798,6 +798,28 @@ std::vector<MonsterDamageInfo> Stage_Scene::FlushDamageQueue()
     monster_damage_queue.clear();
     return temp;
 }
+
+void Stage_Scene::server_DespawnMonster()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    int delete_id = Monster_List.back()->GetID();
+    DespawnMonster(delete_id);
+}
+
+void Stage_Scene::server_DespawnMonster_For_Clear()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    std::vector<int> ids_to_delete;
+    for (auto& m_ptr : Monster_List)
+        ids_to_delete.push_back(m_ptr->GetID());
+
+    for (int id : ids_to_delete)
+
+        DespawnMonster(id); 
+}
+
+
 
 //=========================================================
 
