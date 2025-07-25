@@ -454,9 +454,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     game_world.Update_Particle(elapsedTime);
 
     if (Monster_List.size() == 0)
-        Stage_Clear = true;
+        bStageClear = true;
 
-    if (Stage_Clear)
+    if (bStageClear)
         game_world.Stage_Clear_Particle_Update(player_list);
 }
 
