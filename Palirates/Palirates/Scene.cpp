@@ -4060,7 +4060,7 @@ void Stage_1_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12Graph
 	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
 	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
 
-	fog_info->fogColor = { 1.0f, 0.0f, 0.0f };
+	fog_info->fogColor = { 0.9f, 0.15f, 0.35f };
 }
 
 
@@ -4216,7 +4216,7 @@ void Stage_2_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12Graph
 	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
 	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
 
-	fog_info->fogColor = { 1.0f, 0.5f, 0.0f };
+	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
 }
 
 
