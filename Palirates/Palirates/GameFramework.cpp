@@ -65,7 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 200, 400, 50);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 400, 400, 50);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
@@ -307,7 +307,6 @@ void CGameFramework::ChangeSwapChainState()
 	m_nWndClientWidth = rcClient.right - rcClient.left;
 	m_nWndClientHeight = rcClient.bottom - rcClient.top;
 
-	WaitForGpuComplete(GPU_Stage::Render);
 
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
@@ -334,6 +333,16 @@ void CGameFramework::ChangeSwapChainState()
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
+
+	//=========================================
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
+
+	if (MRT_shader)
+		MRT_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvHandle);
+
+	CreateDepthStencilView();
 
 	for (UINT i = 0; i < N_SwapChainBuffers; ++i)
 	{
@@ -394,7 +403,15 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 
 				case VK_F9:
-					ChangeSwapChainState();
+				{
+					if (!Change_Screen)
+						Change_Screen = true;
+					//WaitForGpuComplete(GPU_Stage::Compute);
+					//WaitForGpuComplete(GPU_Stage::Render);
+					//WaitForGpuComplete(GPU_Stage::Post);
+
+					//ChangeSwapChainState();
+				}
 					break;
 				default:
 					break;
@@ -577,7 +594,8 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
-//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_2, "Stage_2");
 
 
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
@@ -918,7 +936,13 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	if (m_pd3dFence->GetCompletedValue() < fenceValue)
 	{
 		m_pd3dFence->SetEventOnCompletion(fenceValue, m_hFenceEvent);
-		WaitForSingleObject(m_hFenceEvent, INFINITE);
+		//WaitForSingleObject(m_hFenceEvent, INFINITE);
+		DWORD waitResult = WaitForSingleObject(m_hFenceEvent, 5000); // 최대 5초
+		if (waitResult == WAIT_TIMEOUT)
+		{
+			std::cerr << "[ERROR] GPU Timeout during fullscreen switch. Device might be lost.\n";
+			return; // or trigger recovery
+		}
 	}
 }
 
@@ -981,6 +1005,12 @@ void CGameFramework::FrameAdvance()
 	WaitForGpuComplete(GPU_Stage::Compute);
 	WaitForGpuComplete(GPU_Stage::Render);
 	WaitForGpuComplete(GPU_Stage::Post);
+	if (Change_Screen)
+	{
+		Change_Screen = false;
+		ChangeSwapChainState();
+	}
+
 	Change_Scene();
 
 
@@ -990,19 +1020,26 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-//		std::lock_guard<std::mutex> lock(recvQueueMutex);
+		const size_t maxQueueSize = 500;
+		if (recvQueue.size() > maxQueueSize)
+		{
+			size_t toDiscard = recvQueue.size() - maxQueueSize;
+			for (size_t i = 0; i < toDiscard; ++i)
+			{
+				recvQueue.pop();
+			}
+
+			std::cout << "[WARN] recvQueue overflow. Discarded " << toDiscard << " old packets.\n";
+		}
+
 		while (!recvQueue.empty())
 		{
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-//			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
-
-
-
 
 	EndGPUStage(GPU_Stage::Compute, true);
 
@@ -1087,6 +1124,8 @@ void CGameFramework::FrameAdvance()
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
+
+
 		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &dsvHandle);
 
 		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList);
@@ -1130,24 +1169,36 @@ void CGameFramework::FrameAdvance()
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
 
 
-		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
 
 		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-		Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
 
 		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
 
-		if (test_button)
+		if (post_effect_sync_data.motion_blur_active)
 		{
+			Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+			Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+			post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
+			post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
+		}
+
+		if (post_effect_sync_data.zoom_blur_active)
+		{
+			Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 
-			post_effect_manager->Set_Zoom_Focus_and_Time({ 0.5, 0.3 }, m_GameTimer.GetTimeElapsed());
+			XMFLOAT2 screenPos = scene_camera->WorldToNormalizedScreen(
+				post_effect_sync_data.zoom_w_position,
+				scene_camera->GetViewMatrix(),
+				scene_camera->GetProjectionMatrix(),
+				scene_camera->GetViewport());
+
+			post_effect_manager->Set_Zoom_Focus_and_Time(screenPos, m_GameTimer.GetTimeElapsed());
 			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
 		}
+
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
 		post_effect_manager->Clear_Reserved_Effect();
@@ -1173,10 +1224,7 @@ void CGameFramework::FrameAdvance()
 
 		// Record moving Object's Last Pos to use motion blur
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList);
-		if (m_pPlayer)
-		{
-			m_pPlayer->Record_Last_Pos();
-		}
+
 
 		// Check MouseLock & FadeEffect
 		scene_manager->Render_ScreenFade(m_pd3dDevice, Active_CommandList);
@@ -1499,7 +1547,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 		if (cmd == "STAGE_1")
-			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
 		else if (cmd == "MONSTER_COMMAND") {
@@ -1522,6 +1570,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
+		else if (cmd == "POST_EFFECT")
+			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+
 	}
 	break;
 
@@ -1773,7 +1824,45 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 	}
 }
 
+void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+{
+	if (tokens.size() < 12) return;
 
+
+	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
+
+	for (int player_id = 0; player_id < MaxPlayer; ++player_id)
+	{
+		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
+		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
+		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
+
+		if (player_id == Client_ID)
+		{
+			m_pPlayer->SetBlurMask(player_motion_blur_active);
+		}
+	}
+	
+
+	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
+
+	post_effect_sync_data.zoom_w_position =
+	{
+		(std::stof(tokens[9])),
+		(std::stof(tokens[10])),
+		(std::stof(tokens[11]))
+	};
+
+	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
+
+	Fog_Info server_fog_info;
+	server_fog_info.Fog_Trigger = std::stoi(tokens[13]);
+	server_fog_info.fogStart = std::stof(tokens[14]);
+	server_fog_info.fogEnd = std::stof(tokens[15]);
+	server_fog_info.fogDensity = std::stof(tokens[16]);
+
+	stage_scene->Fog_Sync(server_fog_info);
+}
 
 
 void CGameFramework::HandleClientIdAssignment()
@@ -1887,7 +1976,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
 
@@ -2038,36 +2126,6 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 
-	//while (isRunning)
-	//{
-	//	char buffer[1024 + 1];
-	//	int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-	//	//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
-
-	//	if (bytesReceived > 0)
-	//	{
-	//		buffer[bytesReceived] = '\0';
-	//		std::string receivedData(buffer);
-
-	//		{
-	//			std::lock_guard<std::mutex> lock(recvQueueMutex);
-	//			recvQueue.push(receivedData);
-	//			//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
-	//		}
-	//	}
-
-	//	else if (bytesReceived == SOCKET_ERROR)
-	//	{
-	//		std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
-	//	}
-	//	else if (bytesReceived == 0)
-	//	{
-	//		std::cerr << "[INFO] Connection with server closed" << std::endl;
-	//		isRunning = false;
-	//		break;
-	//	}
-
-	//}
 }
 
 bool CGameFramework::IsServerConnected()

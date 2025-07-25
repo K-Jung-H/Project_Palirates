@@ -47,7 +47,7 @@ public:
     bool m_shouldRotate = false;
     float detectionRange = 0.0f;
     float attackRange = 0.0f;
-    int attackPhase = 1;
+    int attackPhase = -1;
     XMFLOAT3 m_faketargetPos = { 0, 0, 0 };
     int currStateTrackIdx = 0;
 

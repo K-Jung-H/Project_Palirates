@@ -49,7 +49,10 @@ Player::Player(int playerId) : Skinned_GameObject()
 
 void Player::key_input(uint32_t keyState)
 {
-
+    if (keyState & INPUT_Q)
+    {
+        motion_blur = !motion_blur;
+    }
 }
 
 void Player::animate(float Elapsedtime)

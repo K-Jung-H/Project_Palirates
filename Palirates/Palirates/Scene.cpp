@@ -927,12 +927,12 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		fog_info->fogColor = XMFLOAT3(0.8f, 0.6f, 0.3f);
 		fog_info->Fog_Trigger = false;
 
-		fog_info->fogStart = 5.0f;
-		fog_info->fogEnd = 200.0f;
-		fog_info->fogDensity = 2.0f;
-		fog_info->noiseScale = 0.001f;
+		fog_info->fogStart = 1.0f;
+		fog_info->fogEnd = 1500.0f;
+		fog_info->fogDensity = 3.0f;
+		fog_info->noiseScale = 0.01f;
 
-		fog_info->noiseStrength = 0.5f;
+		fog_info->noiseStrength = 1.0f;
 		fog_info->time = 0.0f;
 		fog_info->padding0 = XMFLOAT2(0.0f, 0.0f);
 	}
@@ -1693,13 +1693,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 		}
 		break;
 
-		case 'Q':
-			{
-			blur_effect = !blur_effect;
-			m_pPlayer->SetBlurMask(blur_effect);
-			}		break;
-
-
 		case 'R':
 		{
 			test_button = !test_button;
@@ -1959,7 +1952,7 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 #endif
 
 #ifdef USING_OBB
-//	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);	// Update every frame
 //	obj_manager->Check_Player_Collision(m_pPlayer);
 #endif
 
@@ -1967,37 +1960,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	Object_Manager::Reserve_Update();
 
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
-
-
-	//obj_manager->Check_Player_Collision(m_pPlayer);
-	//
-	//if (m_pPlayer->GetTrailOn())
-	//{
-	//	if (!m_pPlayer->GetTrailStart()) 
-	//	{
-	//		XMFLOAT4 test_main_color = { 1.0f, 0.0f, 0.5f ,1.0f};
-	//		XMFLOAT4 test_sub_color = { 1.0f, 0.5f, 0.0f ,1.0f };
-
-	//		shared_ptr<CGameObject> trail_target = m_pPlayer->FindFrame("SM_Wep_Cutlass_01");
-	//		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-	//		trail_obj->Set_Main_Color(test_main_color);
-	//		trail_obj->Set_SubColor(test_sub_color);
-
-	//		trail_obj->Set_Trail_Target(trail_target, false);
-	//		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-	//		obj_manager->Add_Object(trail_obj, Object_Type::trail);
-	//		m_pPlayer->SetTrailObj(trail_obj);
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//		m_pPlayer->Trail_Start();
-	//	}
-
-	//	if (!m_pPlayer->GetTrailObj()->Get_Active()) 
-	//	{
-	//		m_pPlayer->GetTrailObj()->GetTrailMesh()->ResetTrail();
-	//		m_pPlayer->GetTrailObj()->Set_Active(true);
-	//	}
-	//}
-
 
 
 	if (test_sand && test_sand->Get_Particle_State() == 1)
@@ -2050,7 +2012,6 @@ void CScene::After_Update_Objects()
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
 		wave_obj->Readback_Buffer_Data();
-
 #endif
 
 }
@@ -2063,7 +2024,7 @@ void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 
 	m_pPlayer->Render_Depth(pd3dCommandList, main_Camera.get());
-	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get());	
+	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get(), Object_Type::player);	
 }
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -2176,6 +2137,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 void CScene::Post_Update(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	m_pPlayer->Record_Last_Pos();	
 	obj_manager->Post_Update_All();
 }
 
@@ -2235,8 +2197,9 @@ Change_Signal CScene::Get_Change_Signal()
 
 void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
-
 	obj_manager->Add_Player(new_player_ptr);
+	new_player_ptr->SetBlurMask(true);
+
 }
 
 void CScene::Remove_Multi_Player(int player_id)
@@ -2248,6 +2211,11 @@ void CScene::Remove_Multi_Player(int player_id)
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	return obj_manager->Sync_Player_Data(player_id, syncData, main_Camera.get());
+}
+
+bool CScene::Sync_Player_Blur(int player_id, bool motion_blur_active)
+{
+	return obj_manager->Sync_Player_Blur(player_id, motion_blur_active); 
 }
 
 XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
@@ -2379,6 +2347,13 @@ void CScene::Remove_Particle_Object(UINT p_obj_id)
 		particle_manager->Enqueue_Delete(p_obj_id);
 }
 
+void CScene::Fog_Sync(Fog_Info fog_info_data)
+{
+	fog_info->Fog_Trigger = fog_info_data.Fog_Trigger;
+	fog_info->fogStart = fog_info_data.fogStart;
+	fog_info->fogEnd = fog_info_data.fogEnd;
+	fog_info->fogDensity = fog_info_data.fogDensity;
+}
 //==========================================================================================
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
@@ -2498,6 +2473,11 @@ void Character_Select_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Graphi
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
+
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
@@ -2591,7 +2571,11 @@ void Character_Select_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dComm
 
 void Character_Select_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
+	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
+
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
+
 	UpdatePlayerSelection();
 }
 
@@ -3160,7 +3144,10 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
-
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -3231,6 +3218,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	if (wave_obj)
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
 #endif
+
+	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
+	Object_Manager::Reserve_Update();
 
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
@@ -3751,7 +3741,7 @@ void Board_Scene::Reset_Sail_Status()
 //==========================================================================================
 bool Stage_Scene::Change_Scene_Signal = false;
 bool Stage_Scene::Stage_Clear_Signal = false;
-
+bool Stage_Scene::Monster_Depth_Render = false;
 
 void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
@@ -3801,6 +3791,22 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 
 }
+
+void Stage_Scene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (m_MRT_GraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
+
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
+
+	m_pPlayer->Render_Depth(pd3dCommandList, main_Camera.get());
+
+	obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get(), Object_Type::player);
+
+	if (Monster_Depth_Render)
+		obj_manager->Render_Depth_and_Outline_ID(pd3dCommandList, main_Camera.get(), Object_Type::skinned);	
+}
+
 void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
@@ -3841,7 +3847,7 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'P':
+		case 'O':
 		{
 			Stage_Clear_Signal = true;
 		}
@@ -3858,6 +3864,7 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 void Stage_Scene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
 {
 	obj_manager->Add_Player(new_player_ptr);
+	new_player_ptr->SetBlurMask(true);
 }
 void Stage_Scene::Remove_Multi_Player(int player_id)
 {
@@ -4218,9 +4225,9 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		test_party_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 	}
 
-	particle_mesh = particle_manager->Get_Particle_Mesh("chip");
-	test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
-	test_particle->Set_World_Coordinate();
+	//particle_mesh = particle_manager->Get_Particle_Mesh("chip");
+	//test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
+	//test_particle->Set_World_Coordinate();
 
 #endif
 

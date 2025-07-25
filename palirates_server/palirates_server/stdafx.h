@@ -19,7 +19,7 @@
 #include <random>
 #include <tchar.h>
 #include <unordered_set>
-#include <unordered_map>
+#include <array>
 #include <optional>
 //#include <DirectXMath.h>
 #include "DX_Setter.h"
@@ -81,6 +81,23 @@ struct MonsterDamageInfo
     int monsterID;
     float damage;
 };
+
+struct Effect_Sync_Data
+{
+    bool motion_blur_active;
+    std::array<bool, MaxPlayer> motion_blur_apply;
+
+    bool zoom_blur_active;
+    XMFLOAT3 zoom_w_position;
+
+    bool monster_x_ray;
+
+    bool fog_trigger;
+    float fogStart;
+    float fogEnd;
+    float fogDensity;
+};
+
 
 extern BYTE ReadStringFromFile(FILE* pInFile, char* pstrToken);
 extern int ReadIntegerFromFile(FILE* pInFile);

@@ -2233,12 +2233,6 @@ void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
 
 void CGameObject::Record_Last_Pos()
 {
-	//CGameObject* root_obj_ptr = Get_Root_Object();
-	//XMFLOAT3 world_pos = root_obj_ptr->GetPosition();
-
-	//root_obj_ptr->previous_position.x = world_pos.x;
-	//root_obj_ptr->previous_position.y = world_pos.y;
-	//root_obj_ptr->previous_position.z = world_pos.z;
 	if (m_pMesh)
 	{
 		XMFLOAT3 world_pos = GetPosition();

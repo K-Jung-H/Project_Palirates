@@ -260,7 +260,6 @@ public:
 	shared_ptr<CMaterial>fog_noise = NULL;
 
 	bool test_button = false;
-	bool blur_effect = false;
 	bool particle_test_button = false;
 
 #ifdef WRITE_TEXT_UI
@@ -283,6 +282,8 @@ public:
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
+
 	XMFLOAT3 Get_Start_Position_List(int player_id);
 
 
@@ -296,6 +297,8 @@ public:
 	virtual void DespawnMonster(int id);
 
 	virtual void DamageMonster(int id, float damage);
+
+	void Fog_Sync(Fog_Info fog_info);
 
 };
 
@@ -398,7 +401,7 @@ class Stage_Scene : public CScene
 public:
 	static bool Change_Scene_Signal; // For send server
 	static bool Stage_Clear_Signal; // For Get server
-
+	static bool Monster_Depth_Render; // For Get server
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -409,6 +412,7 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual void Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);

@@ -32,6 +32,16 @@ void Scene::Update_Scene(float elapsedTime)
 
 }
 
+Effect_Sync_Data Scene::Get_Effect_Status()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    Effect_Sync_Data effect_data{};
+    effect_data.motion_blur_active = true;
+    effect_data.zoom_blur_active = true;
+    return effect_data;
+}
+
+
 //======================================================
 void Lobby_Scene::Init()
 {
@@ -351,8 +361,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (active_client_num >= 2)
-        game_world.Set_Clear_State(true);
+    if (game_world.Get_Boss_Monster() == NULL && Boss_Monster != NULL)
+        game_world.Set_Boss_Moster(Boss_Monster);
+
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
@@ -435,6 +446,8 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 }
             }
     }
+
+    game_world.Boss_Update();
     game_world.Update_Particle(elapsedTime);
 }
 
@@ -484,8 +497,90 @@ Scene_Type Stage_Scene::CheckSceneTransition()
         return Scene_Type::Board;
     else
         return Scene_Type::None;
-
 }
+
+
+Effect_Sync_Data Stage_Scene::Get_Effect_Status()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    Effect_Sync_Data effect_data;
+    
+    effect_data.motion_blur_active = false;
+
+    int Player_ID = 0;
+    for (std::shared_ptr<Player> player_ptr : player_list)
+    {
+        effect_data.motion_blur_apply[Player_ID] = false;
+
+        if (player_ptr)
+        {
+            effect_data.motion_blur_apply[Player_ID] = player_ptr->motion_blur;
+            effect_data.motion_blur_active = true;
+        }
+
+        ++Player_ID;
+    }
+
+
+    zoomObject = game_world.Get_ZoomObject();
+    if (zoomObject != NULL)
+    {
+        effect_data.zoom_blur_active = true;
+        effect_data.zoom_w_position = zoomObject->GetPosition();
+    }
+    else
+    {
+        effect_data.zoom_blur_active = false;
+        effect_data.zoom_w_position = XMFLOAT3(0, 0, 0);
+    }
+
+    int total_monster_count = static_cast<int>(monster_init_spawn_frame_list.size() - 1); // frame  Çì´õ Á¦¿Ü
+    int normal_monster_count = total_monster_count - 1; 
+    int alive_monster_count = static_cast<int>(Monster_List.size());
+
+    int defeated_monsters = normal_monster_count - alive_monster_count;
+
+    int clear_value_1 = 50;
+    if (game_world.Get_Boss_Monster())
+        clear_value_1 = 50 * (1 - game_world.Get_Boss_Monster()->Get_Active());
+
+    int clear_value_2 = 50 * defeated_monsters / normal_monster_count;
+
+    int total_value = clear_value_1 + clear_value_2;
+
+    if (total_value < 30)
+    {
+        effect_data.monster_x_ray = false;
+        effect_data.fog_trigger = true;
+        effect_data.fogStart = 1.0f;
+        effect_data.fogEnd = 500.0f;
+        effect_data.fogDensity = 0.5f;
+    }
+    else if (total_value < 50)
+    {
+        effect_data.monster_x_ray = false;
+        effect_data.fog_trigger = true;
+        effect_data.fogStart = 1.0f;
+        effect_data.fogEnd = 500.0f;
+        effect_data.fogDensity = 3.0f;
+    }
+    else if (total_value < 70)
+    {
+        effect_data.monster_x_ray = true;
+        effect_data.fog_trigger = true;
+        effect_data.fogStart = 1.0f;
+        effect_data.fogEnd = 1500.0f;
+        effect_data.fogDensity = 3.0f;
+    }
+    else if (total_value >= 100)
+    {
+        effect_data.monster_x_ray = false;
+        effect_data.fog_trigger = false;
+    }
+
+    return effect_data;
+}
+
 
 const std::array<std::shared_ptr<Player>, MaxPlayer> Stage_Scene::Get_PlayerList() const
 {
@@ -562,7 +657,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     player_list[clientId]->SetPosition(position);
     player_list[clientId]->SetLook(lookDirection);
     
-    //    player_list[clientId]->key_input(inputFlags);
+    player_list[clientId]->key_input(inputFlags);
 
     if (!tracks.empty())
     {
@@ -579,29 +674,37 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-//    return;
+    return;
 
     int index{}, m_id{};
+    std::shared_ptr<Monster> moster_ptr = NULL;
 
     for (std::shared_ptr<GameObject>monster_frame : monster_init_spawn_frame_list)
     {
+
         string name = monster_frame->Get_Name();
         XMFLOAT3 pos = monster_frame->GetPosition();
         pos.y = 0;
         if (name.find("Fishman") != string::npos)
         {
             m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
-            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
         }
         else if (name.find("Anubis") != string::npos)
         {
             m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
-            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+
+            if (!Boss_Monster)
+                Boss_Monster = moster_ptr;
         }
         else if (name.find("Dragon") != string::npos)
         {
             m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
-            SpawnMonster(m_id, XMFLOAT3(pos), 100);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+
+            if (!Boss_Monster)
+                Boss_Monster = moster_ptr;
         }
         else if (name.find("Monster") != string::npos)
             continue;
@@ -610,10 +713,10 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
     }
 }
 
-void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
+std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 {
     if (id2idx.find(id) != id2idx.end())
-        return;                            
+        return NULL;                            
 
     int mType = GET_MONSTER_TYPE(id);
     std::shared_ptr<Monster> m;
@@ -631,7 +734,7 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
         m = std::make_shared<TestPlayer>(1);
     }
     else {
-        return;
+        return NULL;
     }
 
     m->Set_Child(m->m_pRootModel);
@@ -642,6 +745,7 @@ void Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 
     id2idx[id] = Monster_List.size();       
     Monster_List.emplace_back(std::move(m));
+    return Monster_List.back();
 }
 
 void Stage_Scene::DespawnMonster(int id)

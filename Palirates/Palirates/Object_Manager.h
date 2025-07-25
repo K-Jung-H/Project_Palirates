@@ -275,6 +275,9 @@ public:
 	//Sync Server
 	void Add_Player(std::shared_ptr<CPlayer> player_ptr);
 	void Remove_Player(int player_id);
+
+
+	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData, CCamera* camera = NULL);
 
 
@@ -294,7 +297,7 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
-	void Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+	void Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera, Object_Type type);
 
 
 	// Instancing update flag

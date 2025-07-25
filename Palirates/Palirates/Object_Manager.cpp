@@ -1342,16 +1342,45 @@ void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* p
 }
 
 
-void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Object_Type type)
 {
-	for (auto& [id, obj_ptr] : player_map)
+	switch (type)
 	{
-		if (obj_ptr != NULL)
-			if (obj_ptr->Get_Active())
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
+		{
+			if (skinned_obj_ptr->Get_Active())
 			{
-				obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+				skinned_obj_ptr->UpdateTransform(NULL);
+				skinned_obj_ptr->Render_Depth(pd3dCommandList, pCamera);
 			}
+		}
 	}
+		break;
+
+	case Object_Type::player:
+	{
+		for (auto& [id, obj_ptr] : player_map)
+		{
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+				{
+					obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+				}
+		}
+	}
+		break;
+
+	case Object_Type::non_skinned:
+	case Object_Type::fixed:
+	case Object_Type::trail:
+	case Object_Type::etc:
+	default:
+		break;
+	}
+
+
 }
 
 void Object_Manager::Post_Update(Object_Type type)
@@ -1373,7 +1402,16 @@ void Object_Manager::Post_Update(Object_Type type)
 				obj_ptr->Record_Last_Pos();
 	}
 	break;
-
+	case Object_Type::player:
+	{
+		for (auto& [id, obj_ptr] : player_map)
+		{
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+					obj_ptr->Record_Last_Pos();
+		}
+	}
+	break;
 	case Object_Type::fixed:
 	case Object_Type::etc:
 	default:
@@ -1433,6 +1471,17 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 		return false;
 
 	return true;
+}
+
+bool Object_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
+{
+	if (player_map[player_id])
+	{
+		player_map[player_id]->SetBlurMask(motion_blur_active);
+		return true;
+	}
+	else
+		return false;
 }
 
 void Object_Manager::Post_Update_All()
