@@ -151,7 +151,7 @@ public:
 	bool bMenuActive{ false };
 	bool bStartAnimation{ false };
 	bool bSelectStart{ false };
-
+	bool bStageClear{ false };
 
 public:
 	CScene();

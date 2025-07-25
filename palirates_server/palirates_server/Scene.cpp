@@ -447,6 +447,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             }
     }
 
+    if (Monster_List.size() == 0) {
+        bStageClear = true;
+    }
     game_world.Boss_Update();
     game_world.Update_Particle(elapsedTime);
 }
@@ -456,7 +459,7 @@ void Stage_Scene::Update_Clear_State(int playerid, bool state)
     if (playerid < 0 || playerid >= MaxPlayer)
         return;
 
-    if (game_world.Get_Clear_State())
+    if (bStageClear)
         check_clear_state[playerid] = state;
 }
 
@@ -490,7 +493,7 @@ Scene_Type Stage_Scene::CheckSceneTransition()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (game_world.Get_Clear_State())
+    if (bStageClear)
         Change_Scene_Trigger = Check_Clear_Scene();
 
     if (Change_Scene_Trigger)
@@ -797,6 +800,26 @@ std::vector<MonsterDamageInfo> Stage_Scene::FlushDamageQueue()
     std::vector<MonsterDamageInfo> temp = monster_damage_queue;
     monster_damage_queue.clear();
     return temp;
+}
+
+void Stage_Scene::server_DespawnMonster()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    int delete_id = Monster_List.back()->GetID();
+    DespawnMonster(delete_id);
+}
+
+void Stage_Scene::server_DespawnMonster_For_Clear()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    std::vector<int> ids_to_delete;
+    for (auto& m_ptr : Monster_List)
+        ids_to_delete.push_back(m_ptr->GetID());
+
+    for (int id : ids_to_delete)
+
+        DespawnMonster(id);
 }
 
 //=========================================================

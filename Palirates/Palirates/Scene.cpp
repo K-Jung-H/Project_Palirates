@@ -1351,7 +1351,48 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	RTG_block->bActive = false;
 	texture_ui_manager->Add_TextureBlock(std::move(RTG_block));
 
-	
+	CTexture* ClearbutttonTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	ClearbutttonTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/upper-login.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, ClearbutttonTexture, 0, 0);
+	D2D1_RECT_F CbTscreenRect = MakeNormalizedRect(0.5f, 0.4f, 0.5f, ClearbutttonTexture);
+	std::unique_ptr<TextureBlock> SbTblock = std::make_unique<TextureBlock>(ClearbutttonTexture, CbTscreenRect, mesh, UILayer::Clear);
+	SbTblock->ui_type = UI_EFFECT_FADE_IN;
+	SbTblock->hp = 2.0f;
+	SbTblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(SbTblock));
+
+	CTexture* ClearTxtTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	ClearTxtTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/clear.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, ClearTxtTexture, 0, 0);
+	D2D1_RECT_F CTTscreenRect = MakeNormalizedRect(0.495f, 0.355f, 0.28f, ClearTxtTexture);
+	std::unique_ptr<TextureBlock> STTblock = std::make_unique<TextureBlock>(ClearTxtTexture, CTTscreenRect, mesh, UILayer::Clear);
+	STTblock->ui_type = UI_EFFECT_FADE_IN;
+	STTblock->hp = 2.0f;
+	STTblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
+
+	CTexture* PressPTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	PressPTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/LeatherButton.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, PressPTexture, 0, 0);
+	D2D1_RECT_F PPTscreenRect = MakeNormalizedRect(0.5f, 0.75f, 0.6f, PressPTexture, 0.8f);
+	std::unique_ptr<TextureBlock> PPTblock = std::make_unique<TextureBlock>(PressPTexture, PPTscreenRect, mesh, UILayer::Clear);
+	PPTblock->ui_type = UI_EFFECT_FADE_IN;
+	PPTblock->hp = 2.0f;
+	PPTblock->bActive = false;
+	texture_ui_manager->Add_TextureBlock(std::move(PPTblock));
+
+	CTexture* PressPTextTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	PressPTextTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/PressP.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, PressPTextTexture, 0, 0);
+	D2D1_RECT_F PTTscreenRect = MakeNormalizedRect(0.5f, 0.74f, 0.35f, PressPTextTexture);
+	std::unique_ptr<TextureBlock> PTTblock = std::make_unique<TextureBlock>(PressPTextTexture, PTTscreenRect, mesh, UILayer::Interactable | UILayer::Clear);
+	PTTblock->ui_type = UI_EFFECT_FADE_IN;
+	PTTblock->hp = 2.0f;
+	PTTblock->bActive = false;
+	PTTblock->hitboxRect = CbTscreenRect;
+	PTTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
+	PTTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
+	texture_ui_manager->Add_TextureBlock(std::move(PTTblock));
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1364,7 +1405,7 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 
 void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
-	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive) {
+	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive || bStageClear) {
 
 		std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
@@ -1405,6 +1446,16 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 					{
 						block->bActive = false;
 						bUpdateUI_Screen = false;
+					}
+				}
+			}
+			if (bStageClear) {
+				uint32_t layerMask = static_cast<uint32_t>(UILayer::Clear);
+				if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
+				{
+					if (!block->bActive) {
+						block->start_time = currentTime;
+						block->bActive = true;
 					}
 				}
 			}
