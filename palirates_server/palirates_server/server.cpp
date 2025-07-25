@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "server.h"
 
 Server::Server(int port)
@@ -108,7 +108,7 @@ void Server::Start()
                     else if (GetAsyncKeyState('K') & 0x8000)
                         stage_scene->server_DespawnMonster_For_Clear();
                 }
-                std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
         }).detach();
 }
@@ -226,106 +226,6 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
 }
 
-// 어디서 사용하는거지?
-//void Server::HandlePacket(int clientId, const std::string& packet)
-//{
-//    std::istringstream linestream(packet);
-//    std::string command;
-//    std::getline(linestream, command, ',');
-//
-//    std::vector<std::string> tokens;
-//    tokens.push_back(command);
-//    std::string token;
-//    while (std::getline(linestream, token, ',')) tokens.push_back(token);
-//
-//    if (command == "PING")
-//    {
-//        HandlePingPacket(clientId, command, tokens);
-//        return;
-//    }
-//
-//    // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
-//    if (tokens.size() < 2)
-//    {
-//        return;
-//    }
-//
-//    // 씬 타입 추출 (tokens[1]은 scene_type int로 가정)
-//    int sceneTypeInt = 0;
-//    try
-//    {
-//        sceneTypeInt = std::stoi(tokens[1]);
-//    }
-//    catch (...)
-//    {
-//        std::cerr << "[ERROR] Invalid sceneType token: " << tokens[1] << std::endl;
-//        return;
-//    }
-//
-//    if (tokens.size() < 3)
-//    {
-//        return;
-//    }
-//
-//    Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
-//
-//    clients[clientId]->client_scene_type = sceneType;
-//
-//
-//    switch (sceneType)
-//    {
-//    case Scene_Type::Lobby:
-//        HandleLobbyPacket(clientId, command, tokens);
-//        break;
-//
-//    case Scene_Type::Board:
-//        HandleBoardPacket(clientId, command, tokens);
-//        break;
-//
-//    case Scene_Type::Stage_1:
-//    case Scene_Type::Stage_2:
-//    case Scene_Type::Stage_3:
-//    case Scene_Type::Stage_4:
-//    case Scene_Type::Stage_5:
-//    case Scene_Type::Stage_6:
-//    case Scene_Type::Stage_7:
-//        HandleStagePacket(clientId, command, tokens);
-//        break;
-//
-//    default:
-//        std::cerr << "[ERROR] Unknown scene type received: " << sceneTypeInt << std::endl;
-//        break;
-//    }
-//}
-
-//void Server::ProcessQueuedPackets()
-//{
-//    std::lock_guard<std::mutex> lock(clientsMutex);
-//    for (auto it = clients.begin(); it != clients.end(); ++it)
-//    {
-//        int clientId = it->first;
-//        auto session = it->second;
-//
-//        if (!session->is_connected)
-//            continue;
-//
-//        std::lock_guard<std::mutex> recvLock(session->recvQueueMutex);
-//        while (!session->recvQueue.empty())
-//        {
-//            std::string packet = session->recvQueue.front();
-//            session->recvQueue.pop();
-//            try
-//            {
-//                HandlePacket(clientId, packet);
-//            }
-//            catch (const std::exception& e)
-//            {
-//                std::cerr << "[EXCEPTION][client " << clientId << "] " << e.what() << std::endl;
-//            }
-//        }
-//    }
-//}
-
 void Server::HandlePingPacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
 
@@ -333,7 +233,7 @@ void Server::HandlePingPacket(int clientId, const std::string& command, const st
 
 void Server::HandleChangeScenePacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
-    if (command == "FORCE_TO_CHANGE_SCENE") // 0번 클라에서 전달하는 강제 씬 전환 신호
+    if (command == "FORCE_TO_CHANGE_SCENE") 
     {
         if (tokens.size() < 2) return;
         if (clientId != 0) return;
@@ -347,6 +247,9 @@ void Server::HandleChangeScenePacket(int clientId, const std::string& command, c
     {
         auto active_scene = GetActiveScene();
         if (active_scene == nullptr)  return;
+       /* auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene);
+        if (stage_scene)
+            stage_scene->Update_Clear_State(clientId, true);*/
         if (active_scene->GetSceneType() == Stage_1
             || Stage_2 || Stage_3 || Stage_4
             || Stage_5 || Stage_6 || Stage_7)
@@ -876,6 +779,11 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
         std::string line = temp_effect_status_data.str();
 
         oss << line << "\n";
+    }
+
+    if (stage->bStageClear) {
+        oss << "STAGE_CLEAR," << 1;
+        oss << "\n";
     }
 
     return oss.str();

@@ -1358,7 +1358,8 @@ void CGameFramework::SendPacket()
 
 	if (Stage_Scene::Stage_Clear_Signal) // Stage Clear 
 	{
-		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
+		
+ 		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
 		{
 			oss << "CHANGE_SCENE_READY," << to_string(static_cast<int>(Scene_Type::Board));
 			std::string packet = oss.str() + "\n";
@@ -1572,6 +1573,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
 		else if (cmd == "POST_EFFECT")
 			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+		else if (cmd == "STAGE_CLEAR") {
+			stage_scene->bStageClear = true;
+		}
 
 	}
 	break;
