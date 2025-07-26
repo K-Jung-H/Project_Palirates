@@ -2178,6 +2178,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 #ifdef RENDER_WAVE
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
 }
@@ -3440,6 +3441,7 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 #ifdef RENDER_WAVE
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get()); // Wave_RootSignature
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
 

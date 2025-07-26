@@ -4116,7 +4116,7 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// Pos_Normal: index 3 (UAV)
-	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 4, sizeof(float), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 1, sizeof(XMFLOAT4), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	Pos_Normal_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
 
 
@@ -4204,82 +4204,117 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 {
 	if (!cs_wave_shader) return;
 
-	// Set compute root signature
 	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
 
-	// Step 1: Update global simulation time
+	// Step 1: 시간 갱신
 	CS_Wave_Shader::total_time += fTimeElapsed;
 	if (CS_Wave_Shader::total_time >= XM_2PI)
 		CS_Wave_Shader::total_time -= XM_2PI;
-
 	cs_wave_shader->update_wave_info->g_TotalTime = CS_Wave_Shader::total_time;
 
-	// Step 2: Prepare dispatch group sizes
+	// Step 2: 핑퐁 인덱스 설정
 	const int readIndex = bPingPongToggle ? 1 : 0;
 	const int writeIndex = bPingPongToggle ? 0 : 1;
 	const UINT threadSize = 8;
 	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
 
-	// Step 3: Dispatch Global Wave Pass (runs unconditionally)
+	// Step 3: Global Wave Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV: previous heightmap
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV: write new heightmap
+
+	// === 상태 전이 ===
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(readIndex),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(writeIndex),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// === 바인딩 및 Dispatch ===
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);   // SRV(t0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);  // UAV(u0)
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Step 4: Insert UAV barrier after global wave pass
-	D3D12_RESOURCE_BARRIER uavBarrier0 = {};
-	uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-	uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
-	pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
+	// === UAV Barrier ===
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier0 = {};
+		uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
+	}
 
-	// Step 5: Check boat direction validity
+	// Step 4: Boat 정보 무효 시 리턴
 	if (World_Boat_Dir.x == 0 && World_Boat_Dir.z == 0)
 	{
 		bPingPongToggle = !bPingPongToggle;
 		return;
 	}
 
-	// Step 6: Update boat-related parameters
-	XMFLOAT3 Plane_Position = GetPosition();
+	// Step 5: Boat 정보 갱신
+	XMFLOAT3 planePos = GetPosition();
 	float planeHalfSize = Side_Length * 0.5f;
 
 	XMFLOAT2 boatTexel = {
-		(World_Boat_Pos.x - (Plane_Position.x - planeHalfSize)) / desiredTexelSize,
-		(World_Boat_Pos.z - (Plane_Position.z - planeHalfSize)) / desiredTexelSize
+		(World_Boat_Pos.x - (planePos.x - planeHalfSize)) / desiredTexelSize,
+		(World_Boat_Pos.z - (planePos.z - planeHalfSize)) / desiredTexelSize
 	};
 
 	XMFLOAT2 dirXZ = { World_Boat_Dir.x, World_Boat_Dir.z };
-	XMVECTOR v = XMVector2Normalize(XMLoadFloat2(&dirXZ));
-	XMFLOAT2 normDirXZ;
-	XMStoreFloat2(&normDirXZ, v);
-
+	XMVECTOR normDir = XMVector2Normalize(XMLoadFloat2(&dirXZ));
+	XMStoreFloat2(&cs_wave_shader->update_wave_info->g_BoatDir, normDir);
 	cs_wave_shader->update_wave_info->g_BoatPos = boatTexel;
-	cs_wave_shader->update_wave_info->g_BoatDir = normDirXZ;
 	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
-	// Step 7: Dispatch Boat Wake Pass
+	// Step 6: Boat Wake Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);
+
+	// === 상태 전이 ===
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(writeIndex),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(readIndex),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// === 바인딩 및 Dispatch ===
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);  // SRV(t0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);   // UAV(u0)
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Step 8: UAV barrier after wake pass
-	D3D12_RESOURCE_BARRIER uavBarrier1 = {};
-	uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-	uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
-	pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
+	// === UAV Barrier ===
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier1 = {};
+		uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
+	}
 
-	// Step 9: Dispatch Normal Map Generation Pass
+	// Step 7: NormalMap Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2); // NormalMap
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3); // Position + Normal buffer
+
+	// === 상태 전이 ===
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(readIndex),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(writeIndex),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// === 바인딩 및 Dispatch ===
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV(t0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV(u0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // UAV(u1: NormalMap)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // UAV(u2: Pos+NormalBuffer)
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Step 10: Toggle ping-pong state
+	// Step 8: PingPong 전환
 	bPingPongToggle = !bPingPongToggle;
 }
 

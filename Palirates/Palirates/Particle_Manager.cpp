@@ -729,6 +729,9 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
 
 	Emit_Particles(pd3dCommandList, fTimeElapsed);
+
+	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
+
 	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
 }
 

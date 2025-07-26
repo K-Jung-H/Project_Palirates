@@ -144,13 +144,23 @@ void CGameFramework::CreateDirect3DDevice()
 
 	UINT nDXGIFactoryFlags = 0;
 #if defined(_DEBUG)
-	ID3D12Debug *pd3dDebugController = NULL;
-	hResult = D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void **)&pd3dDebugController);
-	if (pd3dDebugController)
+	ID3D12Debug* pd3dDebugController = nullptr;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pd3dDebugController))))
 	{
 		pd3dDebugController->EnableDebugLayer();
+
+		//=======================================
+		ComPtr<ID3D12Debug1> debugController1;
+		if (SUCCEEDED(pd3dDebugController->QueryInterface(IID_PPV_ARGS(&debugController1))))
+		{
+			debugController1->SetEnableGPUBasedValidation(TRUE);
+			OutputDebugStringA("[D3D12] GPU-based validation enabled.\n");
+		}
+		//=======================================
+
 		pd3dDebugController->Release();
 	}
+
 	nDXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
@@ -1155,8 +1165,6 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Post);
 	PrepareStage(GPU_Stage::Post);
 	{
-		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-
 
 		//Debuging G-Buffer
 		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
@@ -1199,8 +1207,20 @@ void CGameFramework::FrameAdvance()
 			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
 		}
 
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
+
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
+		post_effect_manager->Render_Result(Active_CommandList);
+
+
 		post_effect_manager->Clear_Reserved_Effect();
 
 	}
