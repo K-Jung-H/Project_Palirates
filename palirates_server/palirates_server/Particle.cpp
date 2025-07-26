@@ -32,7 +32,18 @@ void Particle_Object::Update(float elapsedtime)
 
 //====================================================
 
-UINT ParticleManager::AllocateID()
+//UINT ParticleManager::AllocateID()
+//{
+//    if (!reusable_ids.empty())
+//    {
+//        uint32_t id = reusable_ids.front();
+//        reusable_ids.pop();
+//        return id;
+//    }
+//    return next_id++;
+//}
+
+uint32_t ParticleManager::AllocateReusableID()
 {
     if (!reusable_ids.empty())
     {
@@ -43,6 +54,12 @@ UINT ParticleManager::AllocateID()
     return next_id++;
 }
 
+uint32_t ParticleManager::AllocateUniqueID()
+{
+    return next_id++;
+}
+
+
 void ParticleManager::ReleaseID(uint32_t id)
 {
     reusable_ids.push(id);
@@ -51,14 +68,18 @@ void ParticleManager::ReleaseID(uint32_t id)
 std::shared_ptr<Particle_Object> ParticleManager::Create_Particle_Object(Particle_Format p_format)
 {
     std::lock_guard<std::mutex> lock(particle_manage_mutex);
-    UINT id = AllocateID();
+
+    UINT id = (p_format.particle_type == Particle_Type::bleed) ? AllocateUniqueID() : AllocateReusableID();
 
     auto particle = std::make_shared<Particle_Object>(id, p_format);
-    particle_map[id] = particle;
-    created_this_frame.push_back(particle);
 
+    if (p_format.particle_type != Particle_Type::bleed)
+        particle_map[id] = particle;
+
+    created_this_frame.push_back(particle);
     return particle;
 }
+
 
 void ParticleManager::Remove_Particle_Object(UINT particle_id)
 {
