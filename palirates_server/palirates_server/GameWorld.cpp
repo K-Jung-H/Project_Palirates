@@ -188,6 +188,21 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
 }
 
 
+void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
+{
+    Particle_Format p;
+    p.area_xyz = XMFLOAT3{ 500,500,500 };
+    p.lifetime = 3;
+    p.main_direction = XMFLOAT3{ 0,1,0 };
+    p.particle_type = Particle_Type::bleed;
+
+    std::shared_ptr<Particle_Object> new_bleeding_particle = particle_manager.Create_Particle_Object(p);
+    new_bleeding_particle->SetNeedSyncType(false);
+    new_bleeding_particle->SetPosition(pos);
+    new_bleeding_particle->SetLook(main_direction);
+
+}
+
 void GameWorld::Update_Particle(float elapsed_time)
 {
     particle_manager.Update_Particle(elapsed_time);

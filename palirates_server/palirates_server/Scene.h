@@ -166,8 +166,14 @@ public:
 
     void server_DespawnMonster();
     void server_DespawnMonster_For_Clear();
+    void server_Fog_Control();
+    void server_X_Ray_Control();
+    void server_bleeding();
+
 
     bool bStageClear = false;
+    bool bMonster_x_ray_State = false;
+    bool bFog_State = false;
 };
 
 class Stage_1_Scene : public Stage_Scene

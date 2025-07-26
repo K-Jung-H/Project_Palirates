@@ -61,6 +61,7 @@ public:
 	void Load_Scene_Data(shared_ptr<GameObject> scene_obj);
 	void Update_Collision(shared_ptr<Player> player_obj);
 
+	void Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction);
 	void Update_Particle(float elapsed_time);
 	void Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, MaxPlayer> player_list);
 

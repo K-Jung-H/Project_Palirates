@@ -75,7 +75,8 @@ private:
 
     std::mutex particle_manage_mutex;
 private:
-    uint32_t AllocateID();
+    uint32_t AllocateReusableID();
+    uint32_t AllocateUniqueID();
     void ReleaseID(uint32_t id);
 
 
