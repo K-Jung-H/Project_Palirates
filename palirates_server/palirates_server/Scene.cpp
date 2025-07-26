@@ -401,9 +401,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                     toPlayer.y = 0.0f;
                     if (Vector3::LengthSquared(toPlayer) > 0.0001f) {
                         toPlayer = Vector3::Normalize(toPlayer);
-                        m->SetLook(toPlayer); 
+                        m->SetLook(toPlayer);
                     }
-                    
+
                     MonsterDamageInfo data;
                     data.damage = 30.0f;
                     data.monsterID = m->GetID();
@@ -436,8 +436,8 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!player_ptr) continue;
 
             if (player_ptr->bDead) continue;
-			if (!player_ptr->CanCollide()) continue;
-			if (player_ptr->IsInvincible()) continue;
+            if (!player_ptr->CanCollide()) continue;
+            if (player_ptr->IsInvincible()) continue;
 
             if (m->Weapon_ptr->BreathObject) {
                 if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
@@ -461,24 +461,15 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
 
                 float damage;
-                
+
                 if (m->Weapon_ptr->BreathObject)
                 {
                     damage = 10.0f;
                     player_ptr->BreathHit = true;
                 }
-                else 
-                    damage = 30.0f;
-
-                player_ptr->HitDamage(damage);
-                
-                float hp = player_ptr->GetHP();
-                
-                if (hp <= 0.0f)
-                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
-                else
+                else // Normal Hit
                 {
-                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+                    damage = 30.0f;
 
                     XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB.Center);
                     XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
@@ -490,26 +481,35 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
                     XMFLOAT3 contactDir;
                     XMStoreFloat3(&contactDir, direction);
-                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
 
                     game_world.Add_Bleeding_Particle(contactPos, contactDir);
                 }
-                }
+
+                player_ptr->HitDamage(damage);
+
+                float hp = player_ptr->GetHP();
+
+                if (hp <= 0.0f)
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+                else
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
             }
         }
+    }
 
-        if (Monster_List.size() == 0) {
-            bStageClear = true;
-        }
-        game_world.Boss_Update();
-        game_world.Update_Particle(elapsedTime);
+    if (Monster_List.size() == 0) {
+        bStageClear = true;
+    }
+    game_world.Boss_Update();
+    game_world.Update_Particle(elapsedTime);
 
-        if (Monster_List.size() == 0)
-            bStageClear = true;
+    if (Monster_List.size() == 0)
+        bStageClear = true;
 
-        if (bStageClear)
-            game_world.Stage_Clear_Particle_Update(player_list);
-    
+    if (bStageClear)
+        game_world.Stage_Clear_Particle_Update(player_list);
+
 }
 
 void Stage_Scene::Update_Clear_State(int playerid, bool state)
