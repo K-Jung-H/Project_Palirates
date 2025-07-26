@@ -585,7 +585,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
 
     if (total_value < 30)
     {
-        effect_data.monster_x_ray = true;
+        effect_data.monster_x_ray = false;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -593,7 +593,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     }
     else if (total_value < 50)
     {
-        effect_data.monster_x_ray = true;
+        effect_data.monster_x_ray = false;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -612,7 +612,14 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
         effect_data.monster_x_ray = false;
         effect_data.fog_trigger = false;
     }
-    effect_data.fog_trigger = false;
+
+
+    if (bMonster_x_ray_State)
+        effect_data.monster_x_ray = true;
+
+    if (bFog_State)
+        effect_data.fog_trigger = false;
+
     return effect_data;
 }
 
@@ -860,6 +867,30 @@ void Stage_Scene::server_DespawnMonster_For_Clear()
     for (int id : ids_to_delete)
         DespawnMonster(id); 
 }
+
+void Stage_Scene::server_Fog_Control()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    bFog_State = !bFog_State;
+}
+
+void Stage_Scene::server_X_Ray_Control()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    bMonster_x_ray_State = !bMonster_x_ray_State;
+}
+
+void Stage_Scene::server_bleeding()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    XMFLOAT3 pos = player_list[0]->GetPosition();
+    pos.y += 30.0f;
+    XMFLOAT3 dir = player_list[0]->GetLook();
+    game_world.Add_Bleeding_Particle(pos, dir);
+}
+
 
 //=========================================================
 

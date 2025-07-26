@@ -222,7 +222,8 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
             if (CheckCollisionWithGridOBBs(world_pos))
             {
                 p.Velocity = float3(0, -1, 0);
-                p.Color = float3(1, 1, 1);
+                p.Lifetime += 0.01f;
+
             }
             break;
         
@@ -275,7 +276,7 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
         case PARTICLE_TYPE_SNOW:
         {
                 p.Velocity = float3(0, 0, 0);
-                p.Color = float3(1, 1, 1);
+                p.Lifetime += 0.01f;
             }
             break;
 
@@ -385,10 +386,13 @@ static bool DelayActive(inout Particle_Info p)
 // 파티클 동작별 업데이트
 void Update_Snow(inout Particle_Info p, uint index)
 {
-    p.Velocity += p.Acceleration * ElapsedTime;
-    p.Velocity += RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float3 new_direction = RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float speed = length(p.Velocity + p.Acceleration);
+    
+    p.Velocity = normalize(new_direction) * speed;
+    
     p.Position += p.Velocity * ElapsedTime;
-    p.Rotate_Value += 2.5f * ElapsedTime;
+    p.Rotate_Value += 1.5f * ElapsedTime;
 }
 
 

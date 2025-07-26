@@ -708,7 +708,6 @@ std::shared_ptr<ParticleObject> Particle_Manager::Recycle_Particle(shared_ptr<Pa
 			return particle_obj;
 		}
 	}
-
 	return NULL;
 }
 
@@ -729,7 +728,14 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
 
 	Emit_Particles(pd3dCommandList, fTimeElapsed);
+
+	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
+
 	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
+	
+	int a = particle_object_list_map[Particle_Shader_Type::interval].size();
+	cout << a << endl;
+
 }
 
 void Particle_Manager::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -976,6 +982,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 		switch (data.particle_type)
 		{
 		case Particle_Type::bleed:
+			cout << "add bleeding \n" << endl;
 			format.shader_type = Particle_Shader_Type::interval;
 			format.particle_type = Particle_Type::bleed;
 			format.max_particles = 30;
@@ -1035,6 +1042,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.size = 1.0f;
 			mesh = particle_mesh_map["chip"];
 			break;
+
 		default:
 			createQueue.pop(); // skip unknown type
 			continue;
@@ -1045,24 +1053,35 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			continue;
 		}
 
-		auto obj = Add_Particle(device, cmdList, mesh, format);
-		obj->SetPosition(data.obj_pos);
-		obj->Set_Main_Direction(data.obj_look);
-		obj->Set_Name(std::to_string(data.particle_ID));
+		std::shared_ptr<ParticleObject> obj = nullptr;
 
-		if (format.particle_type == Particle_Type::sand)
+		if (format.particle_type == Particle_Type::bleed)
 		{
-			obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
-			obj->Set_Local_Coordinate();
+			obj = Add_Particle(device, cmdList, "bleeding");
+			obj->SetPosition(data.obj_pos);
+			obj->Set_Main_Direction(data.obj_look);
+			obj->Set_Name(std::to_string(data.particle_ID));
 		}
-
-		if (format.particle_type == Particle_Type::party)
+		else
 		{
-			obj->Set_World_Coordinate();
+			obj = Add_Particle(device, cmdList, mesh, format);
+			obj->SetPosition(data.obj_pos);
+			obj->Set_Main_Direction(data.obj_look);
+			obj->Set_Name(std::to_string(data.particle_ID));
+
+			if (format.particle_type == Particle_Type::sand)
+			{
+				obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
+				obj->Set_Local_Coordinate();
+			}
+
+			if (format.particle_type == Particle_Type::party)
+			{
+				obj->Set_World_Coordinate();
+			}
 		}
 
 		particle_id_map[data.particle_ID] = obj;
-
 		createQueue.pop();
 	}
 }
@@ -1074,9 +1093,16 @@ void Particle_Manager::Remove_Particles_From_Queue()
 		UINT id = deleteQueue.front();
 
 		auto it = particle_id_map.find(id);
-		if (it != particle_id_map.end()) {
+		if (it != particle_id_map.end()) 
+		{
 			auto obj = it->second;
 			Particle_Shader_Type shader_type = obj->Get_Shader_Type();
+
+			if (obj->Get_Particle_Type() == Particle_Type::bleed)
+			{
+				deleteQueue.pop();
+				continue;
+			}
 
 			auto& list = particle_object_list_map[shader_type];
 			list.erase(std::remove(list.begin(), list.end(), obj), list.end());
@@ -1088,6 +1114,7 @@ void Particle_Manager::Remove_Particles_From_Queue()
 		deleteQueue.pop();
 	}
 }
+
 //=========================================================================
 
 Grid_Builder::Grid_Builder()

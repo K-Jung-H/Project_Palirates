@@ -752,6 +752,8 @@ void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 void ParticleObject::Init_Info(Particle_Format particle_info)
 {
+	p_type = particle_info.particle_type;
+
 	Set_Focus_Point(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	Set_Area(particle_info.area_xyz);
 	Set_Main_Direction(particle_info.main_direction);
