@@ -3896,6 +3896,45 @@ void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 #endif
 
 
+
+	if (CameraZoomOutAnime) {
+		constexpr XMFLOAT3 camStartOffset = XMFLOAT3(0.0f, 10.0f, -50.0f);
+		constexpr XMFLOAT3 camZoomOutOffset = XMFLOAT3(0.0f, 40.0f, -150.0f);
+		static	float CameraAnimeTime = 0.0f;
+		constexpr float CameraAnimeDuration = 4.0f;
+		static bool CameraZoomReturning = false;
+
+		CameraAnimeTime += fTimeElapsed;
+		float t = CameraAnimeTime / CameraAnimeDuration;
+		t = std::clamp(t, 0.0f, 1.0f);
+
+		XMFLOAT3 targetOffset;
+		if (!CameraZoomReturning)
+		{
+			targetOffset.x = camStartOffset.x + (camZoomOutOffset.x - camStartOffset.x) * t;
+			targetOffset.y = camStartOffset.y + (camZoomOutOffset.y - camStartOffset.y) * t;
+			targetOffset.z = camStartOffset.z + (camZoomOutOffset.z - camStartOffset.z) * t;
+
+			if (t >= 1.0f) {
+				CameraAnimeTime = 0.0f;
+				CameraZoomReturning = true;
+			}
+		}
+		else
+		{
+			targetOffset.x = camZoomOutOffset.x + (camStartOffset.x - camZoomOutOffset.x) * t;
+			targetOffset.y = camZoomOutOffset.y + (camStartOffset.y - camZoomOutOffset.y) * t;
+			targetOffset.z = camZoomOutOffset.z + (camStartOffset.z - camZoomOutOffset.z) * t;
+
+			if (t >= 1.0f) {
+				CameraZoomOutAnime = false;
+				CameraZoomReturning = false;
+				CameraAnimeTime = 0.0f;
+			}
+		}
+
+		m_pPlayer->GetCamera()->SetOffset(targetOffset);
+	}
 }
 
 void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -3922,7 +3961,6 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		test_particle->Set_Main_Direction(m_pPlayer->GetLookVector());
 		test_particle->SetPosition(p_pos);
 	}
-
 }
 
 void Stage_Scene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
