@@ -26,13 +26,31 @@ public:
     State GetStateEnum() const override { return State::Idle; }
 };
 
-class PlayerAttackState : public PlayerState {
+class PlayerAttack1State : public PlayerState {
 public:
     void Enter(Player* monster, PlayerStateMachine* sm) override;
     void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
     void Exit(Player* monster) override;
 
     State GetStateEnum() const override { return State::Attack1; }
+};
+
+class PlayerAttack2State : public PlayerState {
+public:
+    void Enter(Player* monster, PlayerStateMachine* sm) override;
+    void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
+    void Exit(Player* monster) override;
+
+    State GetStateEnum() const override { return State::Attack2; }
+};
+
+class PlayerAttack3State : public PlayerState {
+public:
+    void Enter(Player* monster, PlayerStateMachine* sm) override;
+    void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
+    void Exit(Player* monster) override;
+
+    State GetStateEnum() const override { return State::Attack3; }
 };
 
 class PlayerGetHitState : public PlayerState {
@@ -43,4 +61,23 @@ public:
 
     State GetStateEnum() const override { return State::Get_Hit_F2; }
 };
+
+class PlayerDeadState : public PlayerState {
+public:
+    void Enter(Player* monster, PlayerStateMachine* sm) override;
+    void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
+    void Exit(Player* monster) override;
+
+    State GetStateEnum() const override { return State::Knock_Down; }
+};
+
+class PlayerGetUpState : public PlayerState {
+public:
+    void Enter(Player* monster, PlayerStateMachine* sm) override;
+    void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
+    void Exit(Player* monster) override;
+
+    State GetStateEnum() const override { return State::Get_Up; }
+};
+
 

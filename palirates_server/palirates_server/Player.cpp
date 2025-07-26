@@ -24,6 +24,10 @@ Player::Player(int playerId) : Skinned_GameObject()
 
     std::unordered_set<int> OnceType = {
         TRACK_ATTACK1,
+        TRACK_ATTACK2,
+        TRACK_ATTACK3,
+        TRACK_KNOCK_DOWN,
+        TRACK_GET_UP,
 		TRACK_GET_HIT_F2
     };
 
@@ -77,10 +81,12 @@ void Player::update(float deltaTime)
     }
 
     if (bIsInvincible) {
-		invincibleTimeRemaining += deltaTime;
-        if (invincibleTimeRemaining >= invincibleDuration) {
-            bIsInvincible = false;
-			invincibleTimeRemaining = 0.0f;
+        if (!bDead) {
+            invincibleTimeRemaining += deltaTime;
+            if (invincibleTimeRemaining >= invincibleDuration) {
+                bIsInvincible = false;
+                invincibleTimeRemaining = 0.0f;
+            }
         }
     }
 }
@@ -142,4 +148,10 @@ void Player::InitStateMachine() {
 
     if (auto state = m_StateMachine->GetCurrentState())
         state->Enter(this, m_StateMachine.get());
+}
+
+void Player::HitDamage(float damage) {
+    if (hp - damage < 0.0f)
+        hp = 0.0f;
+    else hp -= damage;
 }

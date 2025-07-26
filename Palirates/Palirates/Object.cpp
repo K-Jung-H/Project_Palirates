@@ -4154,7 +4154,7 @@ XMFLOAT3 Wave_Object::Readback_Buffer_Data()
 		return XMFLOAT3{ 0.0f,0.0f,0.0f };
 
 	float* pReadData = nullptr;
-	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; // 4개의 float (16바이트)
+	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; 
 
 	if (SUCCEEDED(Pos_Normal_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&pReadData))) && pReadData)
 	{
@@ -4810,7 +4810,8 @@ void CMonsterObject::SetupWeaponCollider()
 	);
 
 	model->Set_Collider(obb);
-	model->bUpdateOBBOff();
+	//model->bUpdateOBBOff();
+	model->bUpdateOBBOn();
 	Weapon_ptr = model;
 
 }
@@ -4830,7 +4831,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
-
+	currentHP = syncData.hp;
 	controller->ApplyCurrentAnimationPose(this);
 	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
 }
