@@ -243,7 +243,15 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
-
+        case PARTICLE_TYPE_INTERVAL_BLEEDING:
+        {
+                if (CheckCollisionWithGridOBBs(world_pos))
+                {
+                    p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                    p.Velocity = float3(0.0f, -0.1f, 0.0f);
+                }
+            }
+            break;
         default:
             if (CheckCollisionWithGridOBBs(world_pos))
             {
@@ -294,7 +302,15 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
-
+        case PARTICLE_TYPE_INTERVAL_BLEEDING:
+        {
+                if (world_pos.y < 1.0f)
+                {
+                    p.Velocity = float3(0.0f, 0.0f, 0.0f);
+                    p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                }
+            }
+            break;
         default:
         {
                 p.Active = 0;
@@ -569,7 +585,7 @@ void Update_Bleeding(inout Particle_Info p, uint index)
     p.Position += p.Velocity * ElapsedTime;
 
     // 위치 갱신
-    p.Rotate_Value += 8.0f * ElapsedTime;
+    p.Rotate_Value += 1.0f * ElapsedTime;
 }
 
 
@@ -630,20 +646,8 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
         float3 localPos = p.Position;
         float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
 
-        if (CheckCollisionWithGridOBBs(worldPos))
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            p.Color = float3(0.0f, 0.0f, 1.0f);
-            ParticleBuffer_Update[index] = p;
-            return;
-        }
-        else if (worldPos.y <= 3.0f)
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            ParticleBuffer_Update[index] = p;
-        }
+
+        Check_Collisions(p);
         Extract_Instance(p);
     }
 

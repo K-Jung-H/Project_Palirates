@@ -545,7 +545,7 @@ void Particle_Manager::Create_Particle_Manager(ID3D12Device* pd3dDevice, ID3D12G
 
 
 	ParticleData bleeding_particle_data;
-	bleeding_particle_data.particle_shape_mesh = particle_mesh_map["tetrahedron"];
+	bleeding_particle_data.particle_shape_mesh = particle_mesh_map["sphere"];
 	bleeding_particle_data.particle_format = bleeding_info;
 
 	particle_data_map["bleeding"] = bleeding_particle_data;
@@ -574,7 +574,7 @@ void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12Graph
 	particle_mesh_map["cube_dust"] = make_shared<Cube_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["billboard"] = make_shared<Billboard_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
 	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
-	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 10.0f); 
+	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["chip"] = make_shared<Cube_Chip_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f);
 
 }
@@ -994,7 +994,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.acceleration = XMFLOAT3(0, -9.8f, 0);
 			format.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 			format.size = 0.3f;
-			mesh = particle_mesh_map["cube_dust"];
+			mesh = particle_mesh_map["sphere"];
 			break;
 
 		case Particle_Type::sand:
