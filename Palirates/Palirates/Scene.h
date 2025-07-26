@@ -152,6 +152,7 @@ public:
 	bool bStartAnimation{ false };
 	bool bSelectStart{ false };
 	bool bStageClear{ false };
+	bool CameraZoomOutAnime{ false };
 
 public:
 	CScene();

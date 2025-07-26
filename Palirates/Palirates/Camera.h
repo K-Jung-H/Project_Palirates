@@ -95,6 +95,7 @@ private:
 	bool m_bControlRotating = false;
 
 public:
+	XMFLOAT3 camStartOffset;
 	void SetMouseButtonHeld(bool held);
 	void UpdateMouseHold(float fElapsedTime);
 	bool IsControlRotating() const { return m_bControlRotating; }

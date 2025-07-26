@@ -1875,9 +1875,10 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 		}
 	}
 	
-
 	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
-
+	if (post_effect_sync_data.zoom_blur_active) {
+		scene_manager->Get_Active_Scene()->CameraZoomOutAnime = true;
+	}
 	post_effect_sync_data.zoom_w_position =
 	{
 		(std::stof(tokens[9])),
@@ -1885,6 +1886,13 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 		(std::stof(tokens[11]))
 	};
 
+	if (post_effect_sync_data.zoom_w_position.x != 0.0f || post_effect_sync_data.zoom_w_position.y != 0.0f || post_effect_sync_data.zoom_w_position.z != 0.0f)
+	{
+		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f) {
+			post_effect_sync_data.zoom_blur_active = false;
+			scene_manager->Get_Active_Scene()->CameraZoomOutAnime = false;
+		}
+	}
 	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
 
 	Fog_Info server_fog_info;
@@ -2041,7 +2049,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		{
 			bool player_exist = scene_manager->Sync_Player_Data(player_ID, syncData);
 
-			if (player_exist == false) // 다른 씬으로 이동한 경우
+			if (player_exist == false) 
 			{
 				auto newPlayer = Create_Player(player_ID, character_model_ID);
 				scene_manager->Add_Player(newPlayer);
