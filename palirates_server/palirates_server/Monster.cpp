@@ -64,6 +64,7 @@ ServerSyncData Monster::MakeSyncData() {
     if (m_pSkinnedAnimationController) {
         data.track_info_list = m_pSkinnedAnimationController->MakeSyncData();
     }
+    data.hp = GetHP();
     return data;
 }
 

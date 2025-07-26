@@ -49,6 +49,7 @@ struct ServerSyncData
     std::vector<Animation_Sync> track_info_list;
     bool bStateChange = false;
     int changedStateNum = -1;
+    float hp;
 };
 
 class CTexture

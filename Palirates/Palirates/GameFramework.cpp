@@ -1561,12 +1561,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					stage_scene->DespawnMonster(id);
 				}
-				else if (cmdType == "DAMAGE") {
+				/*else if (cmdType == "DAMAGE") {
 					int id = std::stoi(tokens[idx++]);
 					float damage = std::stoi(tokens[idx++]);
 					stage_scene->DamageMonster(id, damage);
 					std::cout << "Damage : " << id << ", " << damage << "\n";
-				}
+				}*/
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
@@ -1709,9 +1709,10 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
-		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
+		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
 		syncData.changedStateNum = changedStateNum;
-
+		float hp = std::stof(tokens[stateFlagIndex]);
+		syncData.hp = hp;
 		HandlePlayerSync(playerId, modelId, syncData);
 		
 		startIndex = stateFlagIndex + 1;
@@ -1759,7 +1760,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
 
 		syncData.track_info_list = track_list;
-		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
+		syncData.bStateChange = std::stoi(tokens[stateFlagIndex++]);
+		syncData.hp = std::stoi(tokens[stateFlagIndex]);
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
 		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
@@ -1986,16 +1988,16 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	{
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
-		
+		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
-			if (!m_pPlayer->bIsInvincible) {
+			//if (!m_pPlayer->bIsInvincible) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
-			}
+			//}
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
-			if (!m_pPlayer->bIsInvincible) {
+			//if (!m_pPlayer->bIsInvincible) {
 				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			}
+			//}
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;

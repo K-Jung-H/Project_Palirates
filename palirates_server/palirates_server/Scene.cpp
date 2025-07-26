@@ -383,7 +383,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 if (!m->CanCollide()) continue;
                 if (m->IsInvincible()) continue;
 
-                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
                     continue;
                 }
 
@@ -422,17 +422,26 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         }
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
-
         m->UpdateTransform();
         m->Weapon_ptr->UpdateWorldOBB();
         auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();
         for (std::shared_ptr<Player> player_ptr : player_list) {
             if (!player_ptr) continue;
+            if (player_ptr->bDead) continue;
 			if (!player_ptr->CanCollide()) continue;
 			if (player_ptr->IsInvincible()) continue;
-            if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
-                continue;
+
+            if (m->Weapon_ptr->BreathObject) {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
+                    continue;
+                }
             }
+            else {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
+                    continue;
+                }
+            }
+
             player_ptr->UpdateTransform();
             auto playerOBB = player_ptr->Get_Collider_OBB();
             if (!playerOBB) continue;
@@ -442,7 +451,13 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
             if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
                 std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-                player_ptr->HitDamage(30.0f);
+                float damage;
+                if (m->Weapon_ptr->BreathObject) {
+                    damage = 10.0f;
+                    player_ptr->BreathHit = true;
+                } 
+                else damage = 30.0f;
+                player_ptr->HitDamage(damage);
                 float hp = player_ptr->GetHP();
                 if (hp <= 0.0f)
                     player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());

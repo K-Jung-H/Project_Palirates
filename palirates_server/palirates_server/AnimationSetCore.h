@@ -20,6 +20,7 @@ struct ServerSyncData
     std::vector<Animation_Sync> track_info_list;
     bool stateChanged = false;
     int changedStateNum = -1;
+    float hp;
 };
 
 class CAnimationSet

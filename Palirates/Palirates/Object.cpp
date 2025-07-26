@@ -4775,7 +4775,8 @@ void CMonsterObject::SetupWeaponCollider()
 	);
 
 	model->Set_Collider(obb);
-	model->bUpdateOBBOff();
+	//model->bUpdateOBBOff();
+	model->bUpdateOBBOn();
 	Weapon_ptr = model;
 
 }
@@ -4795,7 +4796,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
-
+	currentHP = syncData.hp;
 	controller->ApplyCurrentAnimationPose(this);
 	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
 }

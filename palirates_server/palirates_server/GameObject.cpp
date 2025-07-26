@@ -851,9 +851,6 @@ void GameObject::UpdateWorldOBB()
 			worldMatrix = XMMatrixScalingFromVector(scaleVec) *
 				XMMatrixRotationQuaternion(rotQuat) *
 				XMMatrixTranslationFromVector(transVec);
-
-			//std::cout << "플레이어 칼 스케일 x10" << ")\n";
-			//std::cout << "Scale = (" << scale.x << ", " << scale.y << ", " << scale.z << ")\n";
 		}
 		worldMatrix = WeaponCustomRotation * worldMatrix;
 		auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));

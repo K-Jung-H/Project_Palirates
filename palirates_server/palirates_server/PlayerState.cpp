@@ -27,7 +27,7 @@ void PlayerNormalState::Exit(Player* player) {
 
 void PlayerAttack1State::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
-	std::cout << "PlayerAttack1State Enter" << std::endl;
+	//std::cout << "PlayerAttack1State Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
@@ -45,14 +45,14 @@ void PlayerAttack1State::Update(Player* player, float deltaTime, PlayerStateMach
 
 void PlayerAttack1State::Exit(Player* player) {
 	player->Weapon_ptr->SetCanCollide(false);
-	std::cout << "PlayerAttack1State Exit" << std::endl;
+	//std::cout << "PlayerAttack1State Exit" << std::endl;
 }
 
 /////////////////////////// attack2 ///////////////////////////////
 
 void PlayerAttack2State::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
-	std::cout << "PlayerAttack2State Enter" << std::endl;
+	//std::cout << "PlayerAttack2State Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
@@ -70,14 +70,14 @@ void PlayerAttack2State::Update(Player* player, float deltaTime, PlayerStateMach
 
 void PlayerAttack2State::Exit(Player* player) {
 	player->Weapon_ptr->SetCanCollide(false);
-	std::cout << "PlayerAttack2State Exit" << std::endl;
+	//std::cout << "PlayerAttack2State Exit" << std::endl;
 }
 
 /////////////////////////// attack3 ///////////////////////////////
 
 void PlayerAttack3State::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
-	std::cout << "PlayerAttack3State Enter" << std::endl;
+	//std::cout << "PlayerAttack3State Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
@@ -95,7 +95,7 @@ void PlayerAttack3State::Update(Player* player, float deltaTime, PlayerStateMach
 
 void PlayerAttack3State::Exit(Player* player) {
 	player->Weapon_ptr->SetCanCollide(false);
-	std::cout << "PlayerAttack3State Exit" << std::endl;
+	//std::cout << "PlayerAttack3State Exit" << std::endl;
 }
 
 /////////////////////////// GetHit ///////////////////////////////
@@ -122,7 +122,10 @@ void PlayerGetHitState::Update(Player* player, float deltaTime, PlayerStateMachi
 
 void PlayerGetHitState::Exit(Player* player) {
 	player->SetCanCollide(true);
-	std::cout << "PlayerGetHitState Exit" << std::endl;
+	if (player->BreathHit) {
+		player->BreathHit = false;
+	}
+	//std::cout << "PlayerGetHitState Exit" << std::endl;
 }
 
 /////////////////////////// Dead ///////////////////////////////
@@ -130,6 +133,7 @@ void PlayerGetHitState::Exit(Player* player) {
 void PlayerDeadState::Enter(Player* player, PlayerStateMachine* sm) {
 	player->SetCanCollide(false);
 	player->SetIsInvincible(true);
+	player->bDead = true;
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
@@ -149,6 +153,10 @@ void PlayerDeadState::Update(Player* player, float deltaTime, PlayerStateMachine
 }
 
 void PlayerDeadState::Exit(Player* player) {
+	player->bDead = false;
+	if (player->BreathHit) {
+		player->BreathHit = false;
+	}
 }
 
 /////////////////////////// GetUp ///////////////////////////////
