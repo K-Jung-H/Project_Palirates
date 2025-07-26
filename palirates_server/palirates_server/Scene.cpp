@@ -367,7 +367,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
-        if (player_ptr) 
+        if (player_ptr)
         {
             game_world.Update_Collision(player_ptr);
             player_ptr->update(elapsedTime);
@@ -390,7 +390,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 m->UpdateTransform();
                 auto monsterOBB = m->Get_Collider_OBB();
                 if (!monsterOBB) continue;
-            
+
                 BoundingOrientedBox worldMonsterOBB;
                 monsterOBB->Transform(worldMonsterOBB,
                     XMLoadFloat4x4(&m->m_xmf4x4World));
@@ -420,7 +420,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     // Collision detection between monster weapons and players
     for (auto m : Monster_List) {
         if (!m) continue;
-		auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
+        auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
         m->update_collision(elapsedTime, obbList);
         if (m->bDead) {
@@ -434,6 +434,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();
         for (std::shared_ptr<Player> player_ptr : player_list) {
             if (!player_ptr) continue;
+
             if (player_ptr->bDead) continue;
 			if (!player_ptr->CanCollide()) continue;
 			if (player_ptr->IsInvincible()) continue;
@@ -456,8 +457,15 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             player_ptr->UpdateWorldOBB();
             auto worldPlayerOBB = *player_ptr->Get_Collider_OBB();
 
+            //        if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
+            //            std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
+                        //player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+            //            }
+            //        }
+
             if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
                 std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
+
                 float damage;
                 if (m->Weapon_ptr->BreathObject) {
                     damage = 10.0f;
@@ -471,19 +479,20 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 else  player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
                 }
             }
+        }
+
+        if (Monster_List.size() == 0) {
+            bStageClear = true;
+        }
+        game_world.Boss_Update();
+        game_world.Update_Particle(elapsedTime);
+
+        if (Monster_List.size() == 0)
+            bStageClear = true;
+
+        if (bStageClear)
+            game_world.Stage_Clear_Particle_Update(player_list);
     }
-
-    if (Monster_List.size() == 0) {
-        bStageClear = true;
-    }
-    game_world.Boss_Update();
-    game_world.Update_Particle(elapsedTime);
-
-    if (Monster_List.size() == 0)
-        bStageClear = true;
-
-    if (bStageClear)
-        game_world.Stage_Clear_Particle_Update(player_list);
 }
 
 void Stage_Scene::Update_Clear_State(int playerid, bool state)
