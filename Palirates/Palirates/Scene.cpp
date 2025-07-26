@@ -1291,6 +1291,7 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 		D2D1_RECT_F HBscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpBack);
 		TextureBlock* HBblock = new TextureBlock(HpBack, HBscreenRect, mesh);
 		HBblock->bActive = false;
+		HBblock->ui_type = UI_EFFECT_FADE_IN;
 		texture_ui_manager->AddMonsterHPBlock(HBblock);
 
 		D2D1_RECT_F HFscreenRect = MakeNormalizedRect(0.28f, 0.9f, 0.36f, HpFront);
@@ -1461,7 +1462,7 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 			}
 		}
 	}
-	Update_Monster_HP_bar(currentTime, elapsedTime, 100.0f);
+	Update_Monster_HP_bar(currentTime, elapsedTime, 300.0f);
 }
 
 std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(float maxDistance)
@@ -1489,12 +1490,22 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 		if (distSq <= maxDistance * maxDistance)
 		{
 			MonsterUIData data;
-			data.position = obj->GetPosition();
-			data.hp = float(obj->currentHP) / obj->maxHP;
-			data.dist = normDist;
 			if (std::string(obj->Get_Name()) == "FishMan") {
 				data.yOffset = 20.0f;
+				data.position = obj->GetPosition();
+				data.hp = float(obj->currentHP) / obj->maxHP;
+				data.dist = normDist;
 			}
+			else if (std::string(obj->Get_Name()) == "Anubis") {
+				data.bBossHP = true;
+				data.hp = float(obj->currentHP) / obj->maxHP;
+			}
+			else if (std::string(obj->Get_Name()) == "Dragon") {
+				data.bBossHP = true;
+				data.hp = float(obj->currentHP) / obj->maxHP;
+			}
+			
+			
 			
 			filtered->emplace_back(data);
 		}
@@ -1517,34 +1528,76 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 	{
 		if (blockIndex + 1 >= hpBlocks.size()) break;
 
-		XMFLOAT3 headWorldPos = monster.position;
-		headWorldPos.y += monster.yOffset;
+		if (monster.bBossHP) {
+			XMFLOAT2 screenPos = XMFLOAT2(0.5f, 0.1f); 
 
-		XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
-			headWorldPos,
-			main_Camera->GetViewMatrix(),
-			main_Camera->GetProjectionMatrix(),
-			main_Camera->GetViewport());
+			float scale = 1.5f; 
 
-		if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
-			continue; 
+			TextureBlock* back = hpBlocks[blockIndex++];
+			back->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 1.0f); 
+			back->wasActive = true;
+			if (back->firstActive) {
+				back->firstActive = false;
+				//back->start_time = currentTime;
+			}
+			back->bActive = true;
 
-		float scale = 0.25f + 0.75f * monster.dist;
+			TextureBlock* front = hpBlocks[blockIndex++];
+			front->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 1.0f);
+			float targetHP = monster.hp;
+			float speed = 15.0f; 
+			front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
 
-		TextureBlock* back = hpBlocks[blockIndex++];
-		back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
-		back->bActive = true;
-
-		TextureBlock* front = hpBlocks[blockIndex++];
-		front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
-		float targetHP = monster.hp;
-		float speed = 15.0f;
-		front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
-
-		if (abs(front->hp - targetHP) < 0.001f) {
-			front->hp = targetHP;
+			if (abs(front->hp - targetHP) < 0.001f) {
+				front->hp = targetHP;
+			}
+			front->wasActive = true;
+			if (front->firstActive) {
+				front->firstActive = false;
+				//front->start_time = currentTime;
+			}
+			front->bActive = true;
 		}
-		front->bActive = true;
+		else {
+			XMFLOAT3 headWorldPos = monster.position;
+			headWorldPos.y += monster.yOffset;
+
+			XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
+				headWorldPos,
+				main_Camera->GetViewMatrix(),
+				main_Camera->GetProjectionMatrix(),
+				main_Camera->GetViewport());
+
+			if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
+				continue;
+
+			float scale = 0.25f + 0.75f * monster.dist;
+
+			TextureBlock* back = hpBlocks[blockIndex++];
+			back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+			back->wasActive = true;
+			if (back->firstActive) {
+				back->firstActive = false;
+				//back->start_time = currentTime;
+			}
+			back->bActive = true;
+
+			TextureBlock* front = hpBlocks[blockIndex++];
+			front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+			float targetHP = monster.hp;
+			float speed = 15.0f;
+			front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+
+			if (abs(front->hp - targetHP) < 0.001f) {
+				front->hp = targetHP;
+			}
+			front->wasActive = true;
+			if (front->firstActive) {
+				front->firstActive = false;
+				//front->start_time = currentTime;
+			}
+			front->bActive = true;
+		}
 	}
 }
 
@@ -1859,11 +1912,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			m_pPlayer->GetStateMachine()->changeState(State::Get_Up, Key_Value::None);
 			m_pPlayer->SetStateElapsedTime(0.0f);
 		}		break;
-		case 'C':
-		{
-			obj_manager->Clear_Object_List(Object_Type::skinned);
 
-		}		break;
 		case 'O':
 		{
 			bOBBRender = !bOBBRender;
@@ -2182,6 +2231,7 @@ void CScene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandL
 
 #ifdef RENDER_WAVE
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get());
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
 }
@@ -2234,6 +2284,15 @@ void CScene::Bind_Player_UI_Callback()
 	}
 }
 
+void CScene::Bind_Player_UI_Updata_Callback()
+{
+	if (m_pPlayer && m_pPlayer->GetStateMachine())
+	{
+		m_pPlayer->GetStateMachine()->onUpdateUI = [this](bool bEnable) {
+			bUpdateUI_HP = bEnable;
+			};
+	}
+}
 
 Change_Signal CScene::Get_Change_Signal()
 {
@@ -3444,6 +3503,7 @@ void Board_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 #ifdef RENDER_WAVE
 	pd3dCommandList->SetGraphicsRootSignature(m_Plane_GraphicsRootSignature.get()); // Wave_RootSignature
+	main_Camera.get()->Update_Render_ShaderVariables(pd3dCommandList);
 	obj_manager->Render_Wave(pd3dCommandList, main_Camera.get());
 #endif
 
@@ -3837,6 +3897,7 @@ void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 
 }
+
 void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 #ifdef RENDER_WAVE
@@ -3919,7 +3980,7 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'O':
+		case 'P':
 		{
 			Stage_Clear_Signal = true;
 		}
@@ -4097,6 +4158,32 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	
 
 #ifdef RENDER_PARTICLE
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	Particle_Format env_ash_info;
+	{
+		env_ash_info.shader_type = Particle_Shader_Type::continuous;
+		env_ash_info.particle_type = Particle_Type::snow;
+		env_ash_info.max_particles = 20000;
+		env_ash_info.MaxLifetime = 100.0f;
+
+		env_ash_info.area_xyz = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+		env_ash_info.EmitFaceIndex = FACE_TOP;
+
+		env_ash_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		env_ash_info.init_velocity_value = 10.0f;
+		env_ash_info.acceleration = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+		env_ash_info.size = 0.5f;
+		env_ash_info.color = XMFLOAT3(0.3f, 0.3f, 0.3f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	env_ash_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_ash_info);
+	env_ash_particle->Set_World_Coordinate();
+	env_ash_particle->SetPosition(1920.0f, 400.0f, 1408.0f);
+	env_ash_particle->Set_Area(XMFLOAT3(3840.0f, 800.0f, 2816.0f));
+
 
 	Particle_Format bleeding_info;
 	{
@@ -4115,7 +4202,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		bleeding_info.size = 0.3f;
 		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 	}
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
@@ -4253,6 +4339,31 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 
 #ifdef RENDER_PARTICLE
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+
+	Particle_Format env_sand_info;
+	{
+		env_sand_info.shader_type = Particle_Shader_Type::continuous;
+		env_sand_info.particle_type = Particle_Type::snow;
+		env_sand_info.max_particles = 20000;
+		env_sand_info.MaxLifetime = 100.0f;
+
+		env_sand_info.area_xyz = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+		env_sand_info.EmitFaceIndex = FACE_TOP;
+
+		env_sand_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		env_sand_info.init_velocity_value = 10.0f;
+		env_sand_info.acceleration = XMFLOAT3(0.0f, -1.0f, 0.0f);
+
+		env_sand_info.size = 0.3f;
+		env_sand_info.color = XMFLOAT3(0.75f, 0.7f, 0.45f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
+	env_sand_particle->Set_World_Coordinate();
+	env_sand_particle->SetPosition(2276.0f, 500.0f, 1536.0f);
+	env_sand_particle->Set_Area(XMFLOAT3(4352.0f, 1000.0f, 3072.0f));
 
 	Particle_Format bleeding_info;
 	{
@@ -4271,36 +4382,11 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		bleeding_info.size = 0.3f;
 		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 	}
-	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
 	test_bleeding->Set_World_Coordinate();
 
-
-	Particle_Format test_party_info;
-	{
-		test_party_info.shader_type = Particle_Shader_Type::continuous;
-		test_party_info.particle_type = Particle_Type::party;
-		test_party_info.max_particles = 3000;
-		test_party_info.MaxLifetime = 100.0f;
-
-		test_party_info.area_xyz = XMFLOAT3(1000.0f, 1000.0f, 1000.0f);
-		test_party_info.EmitFaceIndex = 0;
-
-
-
-		test_party_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-		test_party_info.init_velocity_value = 150.0f;
-		test_party_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
-
-		test_party_info.size = 1.0f;
-		test_party_info.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
-	}
-
-	//particle_mesh = particle_manager->Get_Particle_Mesh("chip");
-	//test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_party_info);
-	//test_particle->Set_World_Coordinate();
 
 #endif
 

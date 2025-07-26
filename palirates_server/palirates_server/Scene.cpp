@@ -367,7 +367,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
-        if (player_ptr) 
+        if (player_ptr)
         {
             game_world.Update_Collision(player_ptr);
             player_ptr->update(elapsedTime);
@@ -383,20 +383,27 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 if (!m->CanCollide()) continue;
                 if (m->IsInvincible()) continue;
 
-                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
                     continue;
                 }
 
                 m->UpdateTransform();
                 auto monsterOBB = m->Get_Collider_OBB();
                 if (!monsterOBB) continue;
-            
+
                 BoundingOrientedBox worldMonsterOBB;
                 monsterOBB->Transform(worldMonsterOBB,
                     XMLoadFloat4x4(&m->m_xmf4x4World));
 
                 if (worldWeaponOBB.Intersects(worldMonsterOBB)) {
                     std::cout << "Collision detected! Player Weapon and Monster ID" << m->GetID() << "\n";
+                    XMFLOAT3 toPlayer = Vector3::Subtract(player_ptr->GetPosition(), m->GetPosition());
+                    toPlayer.y = 0.0f;
+                    if (Vector3::LengthSquared(toPlayer) > 0.0001f) {
+                        toPlayer = Vector3::Normalize(toPlayer);
+                        m->SetLook(toPlayer);
+                    }
+
                     MonsterDamageInfo data;
                     data.damage = 30.0f;
                     data.monsterID = m->GetID();
@@ -413,7 +420,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     // Collision detection between monster weapons and players
     for (auto m : Monster_List) {
         if (!m) continue;
-		auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
+        auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
         m->update_collision(elapsedTime, obbList);
         if (m->bDead) {
@@ -422,17 +429,27 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         }
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
-
         m->UpdateTransform();
         m->Weapon_ptr->UpdateWorldOBB();
         auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();
         for (std::shared_ptr<Player> player_ptr : player_list) {
             if (!player_ptr) continue;
-			if (!player_ptr->CanCollide()) continue;
-			if (player_ptr->IsInvincible()) continue;
-            if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 10.0f) {
-                continue;
+
+            if (player_ptr->bDead) continue;
+            if (!player_ptr->CanCollide()) continue;
+            if (player_ptr->IsInvincible()) continue;
+
+            if (m->Weapon_ptr->BreathObject) {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
+                    continue;
+                }
             }
+            else {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
+                    continue;
+                }
+            }
+
             player_ptr->UpdateTransform();
             auto playerOBB = player_ptr->Get_Collider_OBB();
             if (!playerOBB) continue;
@@ -442,9 +459,43 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
             if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
                 std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-				player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
+                float damage;
+
+                if (m->Weapon_ptr->BreathObject)
+                {
+                    damage = 10.0f;
+                    player_ptr->BreathHit = true;
                 }
+                else // Normal Hit
+                {
+                    damage = 30.0f;
+
+                    XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB.Center);
+                    XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
+
+                    XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
+
+                    XMFLOAT3 contactPos;
+                    XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
+
+                    XMFLOAT3 contactDir;
+                    XMStoreFloat3(&contactDir, direction);
+
+                    game_world.Add_Bleeding_Particle(contactPos, contactDir);
+                }
+
+                player_ptr->HitDamage(damage);
+
+                float hp = player_ptr->GetHP();
+
+                if (hp <= 0.0f)
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+                else
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
             }
+        }
     }
 
     if (Monster_List.size() == 0) {
@@ -458,6 +509,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
     if (bStageClear)
         game_world.Stage_Clear_Particle_Update(player_list);
+
 }
 
 void Stage_Scene::Update_Clear_State(int playerid, bool state)
@@ -559,7 +611,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
 
     if (total_value < 30)
     {
-        effect_data.monster_x_ray = true;
+        effect_data.monster_x_ray = false;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -567,7 +619,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     }
     else if (total_value < 50)
     {
-        effect_data.monster_x_ray = true;
+        effect_data.monster_x_ray = false;
         effect_data.fog_trigger = true;
         effect_data.fogStart = 1.0f;
         effect_data.fogEnd = 500.0f;
@@ -586,7 +638,14 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
         effect_data.monster_x_ray = false;
         effect_data.fog_trigger = false;
     }
-    effect_data.fog_trigger = false;
+
+
+    if (bMonster_x_ray_State)
+        effect_data.monster_x_ray = true;
+
+    if (bFog_State)
+        effect_data.fog_trigger = false;
+
     return effect_data;
 }
 
@@ -673,8 +732,16 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
         if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
-            if (stateNum == int(State::Attack1) || stateNum == int(State::Attack2) || stateNum == int(State::Attack3)) {
-                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttackState>());
+            if (stateNum == int(State::Attack1)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Attack2)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Attack3)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
                 player_list[clientId]->SetStateChangeNum(stateNum);
             }
         }
@@ -826,6 +893,30 @@ void Stage_Scene::server_DespawnMonster_For_Clear()
     for (int id : ids_to_delete)
         DespawnMonster(id); 
 }
+
+void Stage_Scene::server_Fog_Control()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    bFog_State = !bFog_State;
+}
+
+void Stage_Scene::server_X_Ray_Control()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+
+    bMonster_x_ray_State = !bMonster_x_ray_State;
+}
+
+void Stage_Scene::server_bleeding()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    XMFLOAT3 pos = player_list[0]->GetPosition();
+    pos.y += 30.0f;
+    XMFLOAT3 dir = player_list[0]->GetLook();
+    game_world.Add_Bleeding_Particle(pos, dir);
+}
+
 
 //=========================================================
 

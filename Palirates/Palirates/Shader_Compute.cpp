@@ -563,6 +563,9 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 
 	Post_ComputeShader* shader = NULL;
 	Post_ComputeShader::OnPrepare_RootSignature(pd3dCommandList);
+
+
+
 	D3D12_GPU_DESCRIPTOR_HANDLE input_srv = Post_ComputeShader::g_BackBufferSRVs[back_buffer_index];
 
 	for (const std::pair<Effect_Type, std::vector<Resource_Bind_Set>>& pair : m_Effect_reserved)
@@ -601,9 +604,21 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 		// Pass the output SRV to the next effect
 		input_srv = shader->GetOutputTextureSRV();
 	}
+
+	post_process_result = input_srv;
+
+
+
+}
+
+void Post_Effect_Manager::Render_Result(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!m_Effect_reserved.size())
+		return;
+
 	// Pass the final result to the fullscreen shader
 	fullscreen_shader->OnPrepareRender(pd3dCommandList);
-	fullscreen_shader->Set_SRV_ScreenTexture(pd3dCommandList, input_srv);
+	fullscreen_shader->Set_SRV_ScreenTexture(pd3dCommandList, post_process_result);
 	fullscreen_shader->Render(pd3dCommandList);
 }
 

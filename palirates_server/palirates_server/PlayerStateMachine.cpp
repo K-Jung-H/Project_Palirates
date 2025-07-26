@@ -21,9 +21,9 @@ void PlayerStateMachine::ChangeState(std::unique_ptr<PlayerState> newState)
 
     currentState = std::move(newState);
 
+    lastStateChange = static_cast<int>(currentState->GetStateEnum());
+    m_pOwner->SetStateChangeNum(lastStateChange);
+
     if (currentState)
         currentState->Enter(m_pOwner, this);
-
-	lastStateChange = static_cast<int>(currentState->GetStateEnum());
-	m_pOwner->SetStateChangeNum(lastStateChange);
 }

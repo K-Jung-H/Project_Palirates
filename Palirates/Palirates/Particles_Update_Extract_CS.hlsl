@@ -222,7 +222,8 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
             if (CheckCollisionWithGridOBBs(world_pos))
             {
                 p.Velocity = float3(0, -1, 0);
-                p.Color = float3(1, 1, 1);
+                p.Lifetime += 0.01f;
+
             }
             break;
         
@@ -242,7 +243,15 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
-
+        case PARTICLE_TYPE_INTERVAL_BLEEDING:
+        {
+                if (CheckCollisionWithGridOBBs(world_pos))
+                {
+                    p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                    p.Velocity = float3(0.0f, -0.1f, 0.0f);
+                }
+            }
+            break;
         default:
             if (CheckCollisionWithGridOBBs(world_pos))
             {
@@ -275,7 +284,7 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
         case PARTICLE_TYPE_SNOW:
         {
                 p.Velocity = float3(0, 0, 0);
-                p.Color = float3(1, 1, 1);
+                p.Lifetime += 0.01f;
             }
             break;
 
@@ -288,12 +297,20 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
 
         case PARTICLE_TYPE_PARTY:
         {
-                p.Velocity = float3(0, 0, 0.0001f);
+                p.Velocity = float3(0,  0.0001f, 0);
                 if (p.Lifetime < p.MaxLifetime - 5.0f)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
-
+        case PARTICLE_TYPE_INTERVAL_BLEEDING:
+        {
+                if (world_pos.y < 1.0f)
+                {
+                    p.Velocity = float3(0.0f, 0.0f, 0.0f);
+                    p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                }
+            }
+            break;
         default:
         {
                 p.Active = 0;
@@ -385,10 +402,13 @@ static bool DelayActive(inout Particle_Info p)
 // 파티클 동작별 업데이트
 void Update_Snow(inout Particle_Info p, uint index)
 {
-    p.Velocity += p.Acceleration * ElapsedTime;
-    p.Velocity += RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float3 new_direction = RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float speed = length(p.Velocity + p.Acceleration);
+    
+    p.Velocity = normalize(new_direction) * speed;
+    
     p.Position += p.Velocity * ElapsedTime;
-    p.Rotate_Value += 2.5f * ElapsedTime;
+    p.Rotate_Value += 1.5f * ElapsedTime;
 }
 
 
@@ -565,7 +585,7 @@ void Update_Bleeding(inout Particle_Info p, uint index)
     p.Position += p.Velocity * ElapsedTime;
 
     // 위치 갱신
-    p.Rotate_Value += 8.0f * ElapsedTime;
+    p.Rotate_Value += 1.0f * ElapsedTime;
 }
 
 
@@ -626,20 +646,8 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
         float3 localPos = p.Position;
         float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
 
-        if (CheckCollisionWithGridOBBs(worldPos))
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            p.Color = float3(0.0f, 0.0f, 1.0f);
-            ParticleBuffer_Update[index] = p;
-            return;
-        }
-        else if (worldPos.y <= 3.0f)
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            ParticleBuffer_Update[index] = p;
-        }
+
+        Check_Collisions(p);
         Extract_Instance(p);
     }
 

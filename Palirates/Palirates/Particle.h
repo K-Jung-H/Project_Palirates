@@ -280,6 +280,7 @@ protected:
 private:
 	Particle_Manager* owner_manager = nullptr;
 	Particle* particle_data = NULL;
+	Particle_Type p_type = Particle_Type::etc;
 
 	shared_ptr<Particle_Shape_Mesh>  shape_mesh = NULL;
 	shared_ptr<CMaterial> particle_Material = NULL;
@@ -365,5 +366,7 @@ public:
 
 	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
 	void Add_Destroy_Queue();
+
+	Particle_Type Get_Particle_Type() { return p_type; }
 
 };

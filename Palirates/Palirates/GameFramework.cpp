@@ -144,13 +144,23 @@ void CGameFramework::CreateDirect3DDevice()
 
 	UINT nDXGIFactoryFlags = 0;
 #if defined(_DEBUG)
-	ID3D12Debug *pd3dDebugController = NULL;
-	hResult = D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void **)&pd3dDebugController);
-	if (pd3dDebugController)
+	ID3D12Debug* pd3dDebugController = nullptr;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pd3dDebugController))))
 	{
 		pd3dDebugController->EnableDebugLayer();
+
+		//=======================================
+		ComPtr<ID3D12Debug1> debugController1;
+		if (SUCCEEDED(pd3dDebugController->QueryInterface(IID_PPV_ARGS(&debugController1))))
+		{
+			debugController1->SetEnableGPUBasedValidation(TRUE);
+			OutputDebugStringA("[D3D12] GPU-based validation enabled.\n");
+		}
+		//=======================================
+
 		pd3dDebugController->Release();
 	}
+
 	nDXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
@@ -1155,8 +1165,6 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Post);
 	PrepareStage(GPU_Stage::Post);
 	{
-		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-
 
 		//Debuging G-Buffer
 		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
@@ -1199,8 +1207,20 @@ void CGameFramework::FrameAdvance()
 			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
 		}
 
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
 		// Apply reserved effects
 		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
+
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
+		post_effect_manager->Render_Result(Active_CommandList);
+
+
 		post_effect_manager->Clear_Reserved_Effect();
 
 	}
@@ -1561,11 +1581,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					stage_scene->DespawnMonster(id);
 				}
-				else if (cmdType == "DAMAGE") {
+				/*else if (cmdType == "DAMAGE") {
 					int id = std::stoi(tokens[idx++]);
 					float damage = std::stoi(tokens[idx++]);
 					stage_scene->DamageMonster(id, damage);
-				}
+					std::cout << "Damage : " << id << ", " << damage << "\n";
+				}*/
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
@@ -1708,9 +1729,12 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
-		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
+		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
 		syncData.changedStateNum = changedStateNum;
-
+		float hp = std::stof(tokens[stateFlagIndex++]);
+		syncData.hp = hp;
+		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
+		syncData.bBreathHit = bBreathHit;
 		HandlePlayerSync(playerId, modelId, syncData);
 		
 		startIndex = stateFlagIndex + 1;
@@ -1758,7 +1782,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
 
 		syncData.track_info_list = track_list;
-		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
+		syncData.bStateChange = std::stoi(tokens[stateFlagIndex++]);
+		syncData.hp = std::stoi(tokens[stateFlagIndex]);
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
 		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
@@ -1985,10 +2010,28 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	{
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
-
+		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
-			if (!m_pPlayer->bIsInvincible)
+			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+				//std::cout << "[DEBUG] Get_Hit_F2 State Change" << std::endl;
+			}
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
+			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
+				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+				scene_manager->Get_Active_Scene()->bUpdateUI_HP = true;
+				//std::cout << "[DEBUG] Dead State Change" << std::endl;
+			}
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack2 && syncData.changedStateNum == int(State::Attack2)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
 		}
 		return;
 	}

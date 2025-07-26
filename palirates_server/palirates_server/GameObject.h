@@ -47,6 +47,10 @@ public:
 
     XMMATRIX WeaponCustomRotation = XMMatrixIdentity();
     float m_fScale = 1.0f;
+    XMFLOAT3 CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+    bool bDead = false;
+	bool BreathObject = false;
+
 public:
     GameObject()
         : obj_type(Object_Type::etc)

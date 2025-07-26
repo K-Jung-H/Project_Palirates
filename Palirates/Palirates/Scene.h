@@ -278,6 +278,7 @@ public:
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 	virtual void Bind_Player_UI_Callback();
+	virtual void Bind_Player_UI_Updata_Callback();
 
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
@@ -435,8 +436,9 @@ public:
 
 class Stage_1_Scene : public Stage_Scene
 {
-
 private:
+	shared_ptr<ParticleObject> env_ash_particle = NULL;
+
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -448,6 +450,9 @@ public:
 class Stage_2_Scene : public Stage_Scene
 {
 private:
+	shared_ptr<ParticleObject> env_sand_particle = NULL;
+
+	
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
