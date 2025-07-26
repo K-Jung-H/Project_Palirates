@@ -50,6 +50,7 @@ struct ServerSyncData
     bool bStateChange = false;
     int changedStateNum = -1;
     float hp;
+    bool bBreathHit;
 };
 
 class CTexture

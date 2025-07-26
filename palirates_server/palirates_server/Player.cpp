@@ -81,10 +81,12 @@ void Player::update(float deltaTime)
     }
 
     if (bIsInvincible) {
-		invincibleTimeRemaining += deltaTime;
-        if (invincibleTimeRemaining >= invincibleDuration) {
-            bIsInvincible = false;
-			invincibleTimeRemaining = 0.0f;
+        if (!bDead) {
+            invincibleTimeRemaining += deltaTime;
+            if (invincibleTimeRemaining >= invincibleDuration) {
+                bIsInvincible = false;
+                invincibleTimeRemaining = 0.0f;
+            }
         }
     }
 }

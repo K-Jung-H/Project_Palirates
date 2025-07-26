@@ -134,6 +134,7 @@ void PlayerDeadState::Enter(Player* player, PlayerStateMachine* sm) {
 	player->SetCanCollide(false);
 	player->SetIsInvincible(true);
 	player->bDead = true;
+	player->SetHP(0.0f);
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
@@ -153,7 +154,6 @@ void PlayerDeadState::Update(Player* player, float deltaTime, PlayerStateMachine
 }
 
 void PlayerDeadState::Exit(Player* player) {
-	player->bDead = false;
 	if (player->BreathHit) {
 		player->BreathHit = false;
 	}
@@ -180,4 +180,5 @@ void PlayerGetUpState::Exit(Player* player) {
 	player->SetCanCollide(true);
 	player->SetIsInvincible(false);
 	player->SetHP(50.0f);
+	player->bDead = false;
 }

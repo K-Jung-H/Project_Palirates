@@ -1711,8 +1711,10 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 
 		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
 		syncData.changedStateNum = changedStateNum;
-		float hp = std::stof(tokens[stateFlagIndex]);
+		float hp = std::stof(tokens[stateFlagIndex++]);
 		syncData.hp = hp;
+		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
+		syncData.bBreathHit = bBreathHit;
 		HandlePlayerSync(playerId, modelId, syncData);
 		
 		startIndex = stateFlagIndex + 1;
@@ -1990,14 +1992,15 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			m_pPlayer->SetPosition(syncData.position);
 		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
-			//if (!m_pPlayer->bIsInvincible) {
+			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
-			//}
+			}
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
-			//if (!m_pPlayer->bIsInvincible) {
+			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-			//}
+				scene_manager->Get_Active_Scene()->bUpdateUI_HP = true;
+			}
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;

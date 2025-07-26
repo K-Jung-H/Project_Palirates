@@ -23,10 +23,12 @@ void Monster::update(float deltaTime) {
     //}
 
     if (bIsInvincible) {
-        invincibleTimeRemaining += deltaTime;
-        if (invincibleTimeRemaining >= invincibleDuration) {
-            bIsInvincible = false;
-            invincibleTimeRemaining = 0.0f;
+        if (!bDead) {
+            invincibleTimeRemaining += deltaTime;
+            if (invincibleTimeRemaining >= invincibleDuration) {
+                bIsInvincible = false;
+                invincibleTimeRemaining = 0.0f;
+            }
         }
     }
 }
@@ -77,7 +79,7 @@ std::optional<XMFLOAT3> Monster::FindNearestPlayerInRange(float range) {
     const XMFLOAT3 myPos = GetPosition();
 
     for (const auto& player : *pPlayerList) {
-        if (!player || !player->Get_Active()) continue;
+        if (!player || !player->Get_Active() || player->bDead) continue;
 
         const XMFLOAT3 pPos = player->GetPosition();
         float dx = pPos.x - myPos.x;

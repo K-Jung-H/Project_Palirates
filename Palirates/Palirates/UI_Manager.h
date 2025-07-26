@@ -2,7 +2,7 @@
 #include "Shader.h"
 #include "Timer.h"
 
-#define MONSTER_HP_UI_MAX_NUM				20
+#define MONSTER_HP_UI_MAX_NUM				70
 
 #define CHARAACTER_SELECT_CHECK_INDEX 6
 #define CHARAACTER_SELECT_CANCEL_INDEX 7

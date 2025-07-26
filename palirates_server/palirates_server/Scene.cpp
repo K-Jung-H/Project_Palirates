@@ -397,6 +397,13 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
                 if (worldWeaponOBB.Intersects(worldMonsterOBB)) {
                     std::cout << "Collision detected! Player Weapon and Monster ID" << m->GetID() << "\n";
+                    XMFLOAT3 toPlayer = Vector3::Subtract(player_ptr->GetPosition(), m->GetPosition());
+                    toPlayer.y = 0.0f;
+                    if (Vector3::LengthSquared(toPlayer) > 0.0001f) {
+                        toPlayer = Vector3::Normalize(toPlayer);
+                        m->SetLook(toPlayer); 
+                    }
+                    
                     MonsterDamageInfo data;
                     data.damage = 30.0f;
                     data.monsterID = m->GetID();

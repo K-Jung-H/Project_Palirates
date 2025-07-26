@@ -1538,7 +1538,7 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 			back->wasActive = true;
 			if (back->firstActive) {
 				back->firstActive = false;
-				back->start_time = currentTime;
+				//back->start_time = currentTime;
 			}
 			back->bActive = true;
 
@@ -1554,7 +1554,7 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 			front->wasActive = true;
 			if (front->firstActive) {
 				front->firstActive = false;
-				front->start_time = currentTime;
+				//front->start_time = currentTime;
 			}
 			front->bActive = true;
 		}
@@ -1578,7 +1578,7 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 			back->wasActive = true;
 			if (back->firstActive) {
 				back->firstActive = false;
-				back->start_time = currentTime;
+				//back->start_time = currentTime;
 			}
 			back->bActive = true;
 
@@ -1594,7 +1594,7 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 			front->wasActive = true;
 			if (front->firstActive) {
 				front->firstActive = false;
-				front->start_time = currentTime;
+				//front->start_time = currentTime;
 			}
 			front->bActive = true;
 		}
