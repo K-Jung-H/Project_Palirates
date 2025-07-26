@@ -253,6 +253,8 @@ void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateM
             monster->attackPhase = 3;
             sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
             currentTrackIdx = monster->PlayAnimation(State::Jump);
+            if (monster->Weapon_ptr)
+                monster->Weapon_ptr->SetCanCollide(false);
         }
     }
     else if (monster->attackPhase == 3) {

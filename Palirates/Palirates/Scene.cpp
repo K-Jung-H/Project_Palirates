@@ -2287,6 +2287,15 @@ void CScene::Bind_Player_UI_Callback()
 	}
 }
 
+void CScene::Bind_Player_UI_Updata_Callback()
+{
+	if (m_pPlayer && m_pPlayer->GetStateMachine())
+	{
+		m_pPlayer->GetStateMachine()->onUpdateUI = [this](bool bEnable) {
+			bUpdateUI_HP = bEnable;
+			};
+	}
+}
 
 Change_Signal CScene::Get_Change_Signal()
 {

@@ -1994,12 +1994,14 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
 			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+				//std::cout << "[DEBUG] Get_Hit_F2 State Change" << std::endl;
 			}
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
 			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
 				scene_manager->Get_Active_Scene()->bUpdateUI_HP = true;
+				//std::cout << "[DEBUG] Dead State Change" << std::endl;
 			}
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {

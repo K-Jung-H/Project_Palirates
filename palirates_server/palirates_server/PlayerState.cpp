@@ -110,6 +110,7 @@ void PlayerGetHitState::Enter(Player* player, PlayerStateMachine* sm) {
 	}
 	sm->animController->SetTrackWeight(TRACK_GET_HIT_F2, 1.0f);
 	sm->animController->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fPosition = 0.0f;
+	//std::cout << "PlayerGetHitState Enter" << std::endl;
 }
 
 void PlayerGetHitState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -141,6 +142,7 @@ void PlayerDeadState::Enter(Player* player, PlayerStateMachine* sm) {
 	}
 	sm->animController->SetTrackWeight(TRACK_KNOCK_DOWN, 1.0f);
 	sm->animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = 0.0f;
+	//std::cout << "PlayerDeadState Enter" << std::endl;
 }
 
 void PlayerDeadState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
