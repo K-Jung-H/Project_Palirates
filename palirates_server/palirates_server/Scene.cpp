@@ -457,26 +457,43 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             player_ptr->UpdateWorldOBB();
             auto worldPlayerOBB = *player_ptr->Get_Collider_OBB();
 
-            //        if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
-            //            std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-                        //player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
-            //            }
-            //        }
-
             if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
                 std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
 
                 float damage;
-                if (m->Weapon_ptr->BreathObject) {
+                
+                if (m->Weapon_ptr->BreathObject)
+                {
                     damage = 10.0f;
                     player_ptr->BreathHit = true;
-                } 
-                else damage = 30.0f;
+                }
+                else 
+                    damage = 30.0f;
+
                 player_ptr->HitDamage(damage);
+                
                 float hp = player_ptr->GetHP();
+                
                 if (hp <= 0.0f)
                     player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
-                else  player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+                else
+                {
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
+                    XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB.Center);
+                    XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
+
+                    XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
+
+                    XMFLOAT3 contactPos;
+                    XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
+
+                    XMFLOAT3 contactDir;
+                    XMStoreFloat3(&contactDir, direction);
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
+                    game_world.Add_Bleeding_Particle(contactPos, contactDir);
+                }
                 }
             }
         }
@@ -492,7 +509,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
         if (bStageClear)
             game_world.Stage_Clear_Particle_Update(player_list);
-    }
+    
 }
 
 void Stage_Scene::Update_Clear_State(int playerid, bool state)

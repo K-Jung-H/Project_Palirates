@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "server.h"
 
 Server::Server(int port)
@@ -15,7 +15,7 @@ Server::Server(int port)
     bind(listenSocket, (sockaddr*)&serverAddr, sizeof(serverAddr));
     listen(listenSocket, SOMAXCONN);
 
-    for (int i = 0; i < 100; ++i) 
+    for (int i = 0; i < 100; ++i)
         availableIds.push(i);
 
     scenes[Scene_Type::Lobby] = std::make_shared<Lobby_Scene>();
@@ -107,6 +107,12 @@ void Server::Start()
                         stage_scene->server_DespawnMonster();
                     else if (GetAsyncKeyState('K') & 0x8000)
                         stage_scene->server_DespawnMonster_For_Clear();
+                    else if (GetAsyncKeyState('U') & 0x8000)
+                        stage_scene->server_Fog_Control();
+                    else if (GetAsyncKeyState('I') & 0x8000)
+                        stage_scene->server_X_Ray_Control();
+                    else if (GetAsyncKeyState('M') & 0x8000)
+                        stage_scene->server_bleeding();
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -127,7 +133,7 @@ void Server::AcceptClients()
             clients[clientId] = std::make_shared<ClientSession>(clientSocket);
         }
 
-        activeClientCount++; 
+        activeClientCount++;
 
         std::string idPacket = "CLIENT_ID," + std::to_string(clientId) + "\n";
 
@@ -194,7 +200,7 @@ void Server::ProcessClientPackets(SOCKET clientSocket, int clientId)
 
             int sceneTypeInt = std::stoi(tokens[1]);
             Scene_Type sceneType = static_cast<Scene_Type>(sceneTypeInt);
-            
+
             clients[clientId]->client_scene_type = sceneType;
 
             switch (sceneType)
@@ -233,7 +239,7 @@ void Server::HandlePingPacket(int clientId, const std::string& command, const st
 
 void Server::HandleChangeScenePacket(int clientId, const std::string& command, const std::vector<std::string>& tokens)
 {
-    if (command == "FORCE_TO_CHANGE_SCENE") 
+    if (command == "FORCE_TO_CHANGE_SCENE")
     {
         if (tokens.size() < 2) return;
         if (clientId != 0) return;
@@ -247,9 +253,9 @@ void Server::HandleChangeScenePacket(int clientId, const std::string& command, c
     {
         auto active_scene = GetActiveScene();
         if (active_scene == nullptr)  return;
-       /* auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene);
-        if (stage_scene)
-            stage_scene->Update_Clear_State(clientId, true);*/
+        /* auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene);
+         if (stage_scene)
+             stage_scene->Update_Clear_State(clientId, true);*/
         if (active_scene->GetSceneType() == Stage_1
             || Stage_2 || Stage_3 || Stage_4
             || Stage_5 || Stage_6 || Stage_7)
@@ -329,7 +335,7 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
 {
     if (tokens.size() < 6)
     {
-        std::cerr << "[ERROR] HandleBoardPacket: 토큰 개수 부족" << std::endl;
+        std::cerr << " [ERROR] HandleBoardPacket: 토큰 개수 부족" << std::endl;
         return;
     }
 
@@ -348,7 +354,7 @@ void Server::HandleBoardPacket(int clientId, const std::string& command, const s
 
 
     boardScene->Update_KeyState(clientId, inputFlags);
-    boardScene->Select_State(clientId, {Selected_Stage, is_Selected});
+    boardScene->Select_State(clientId, { Selected_Stage, is_Selected });
 
 }
 
@@ -366,7 +372,7 @@ void Server::HandleStagePacket(int clientId, const std::string& command, const s
     int trackCount = std::stoi(tokens[10]);
 
     // 기본(11) + 트랙데이터(3개씩) + bStateChange(1) + changedStateNum(1)
-    int expectedMinTokens = 11 + (trackCount * 3) + 1 + 1; 
+    int expectedMinTokens = 11 + (trackCount * 3) + 1 + 1;
 
     if (tokens.size() < expectedMinTokens)
         return;
@@ -498,17 +504,17 @@ bool Server::Build_Scene_Packet_By_Type(Scene_Type type, std::string& outPacket)
     }
 }
 
-std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby) 
+std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& lobby)
 {
     std::array<std::array<bool, MaxPlayer>, MaxPlayer> selections;
     std::array<int, MaxPlayer> readyStates;
 
     std::ostringstream oss;
-    
+
     {
         std::lock_guard<std::recursive_mutex> lock(lobby->GetSceneMutex());
-        selections = lobby->GetCharacterSelections(); 
-        readyStates = lobby->GetCharacterReadyStates(); 
+        selections = lobby->GetCharacterSelections();
+        readyStates = lobby->GetCharacterReadyStates();
     }
 
     oss << "CHARACTER_SELECT_SCENE,";
@@ -536,7 +542,7 @@ std::string Server::Build_LobbyScene_Packet(const std::shared_ptr<Lobby_Scene>& 
 
     std::string result = oss.str();
     if (!result.empty() && result.back() == ',')
-        result.pop_back(); 
+        result.pop_back();
 
     result += "\n";
 
@@ -558,7 +564,7 @@ std::string Server::Build_BoardScene_Packet(const std::shared_ptr<Board_Scene>& 
 
     std::ostringstream oss;
     oss << "BOARD_SCENE,"
-        << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << "," 
+        << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
         << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z)
         << "\n";
 
@@ -575,9 +581,9 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
     int valid_player_count = 0;
 
     {
-        std::lock_guard<std::recursive_mutex> lock(stage->GetSceneMutex());  
+        std::lock_guard<std::recursive_mutex> lock(stage->GetSceneMutex());
 
-        const auto& player_list = stage->Get_PlayerList();  
+        const auto& player_list = stage->Get_PlayerList();
 
         for (int id = 0; id < MaxPlayer; ++id)
         {
@@ -595,7 +601,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             int changedStateNum = anim_data.changedStateNum;
             float hp = player_ptr->GetHP();
             bool bBreathHit = player_ptr->BreathHit;
-            
+
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
@@ -619,13 +625,13 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
     std::string player_data_str = players_data.str();
 
     if (!player_data_str.empty() && player_data_str.back() == ',')
-        player_data_str.pop_back(); 
+        player_data_str.pop_back();
 
     oss << "STAGE_1," << std::to_string(valid_player_count) << "," << player_data_str << "\n";
 
     //===================================================================
 
-    const auto& monster_list = stage->GetMonsterList(); 
+    const auto& monster_list = stage->GetMonsterList();
 
     if (!monster_list.empty())
     {
@@ -653,7 +659,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             oss << "," << sync_Data.stateChanged;
             oss << "," << sync_Data.hp;
         }
-       
+
         oss << "\n";
     }
 
@@ -674,7 +680,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
         }
         oss << "\n";
     }
-  
+
     //===================================================================
 
     const auto& particle_sync_data = stage->Get_Particle_Sync_Data();
@@ -811,7 +817,7 @@ void Server::Server_Update()
         if (!scene) continue;
 
 
-        scene->Update_Scene(elapsedTime); 
+        scene->Update_Scene(elapsedTime);
 
         //==============================================
         // Handle Scene Chnage
@@ -830,7 +836,7 @@ void Server::Server_Update()
         //PrintClientDebugInfo();
     }
 
-    
+
 }
 
 
@@ -906,7 +912,7 @@ void Server::Change_Scene_And_Init_Players(Scene_Type new_scene_type)
     }
 
     case Scene_Type::Lobby:
-        
+
         break;
 
     default:
@@ -1041,7 +1047,7 @@ void Server::PrintClientDebugInfo()
     if (activeClientCount == 0)
         return;
 
-    
+
     std::lock_guard<std::mutex> lock(clientsMutex);
 
 
