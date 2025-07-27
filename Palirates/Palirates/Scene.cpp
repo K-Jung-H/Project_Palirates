@@ -4355,6 +4355,9 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	test_scene->UpdateTransform(NULL);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
 
+	std::shared_ptr<CGameObject> player_start_position = test_scene->FindFrame("Players");
+	CGameObject::FlattenGameObjectHierarchy(player_start_position, player_start_position_list);
+
 	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
 	{
 		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
