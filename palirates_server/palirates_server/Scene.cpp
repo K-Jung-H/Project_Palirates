@@ -430,6 +430,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
         m->update_collision(elapsedTime, obbList);
+       
         if (m->bDead) {
             DespawnMonster(m->GetID());
             continue;
@@ -511,8 +512,12 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             }
         }
     }
-
-
+    for (auto m : Monster_List) {
+        XMFLOAT3 pos = m->GetPosition();
+        pos.x = std::clamp(pos.x, 0.0f, g_mapSize.x);
+        pos.z = std::clamp(pos.z, 0.0f, g_mapSize.y);
+        m->SetPosition(pos);
+    }
     game_world.Boss_Update(Boss_Monster);
     game_world.Update_Particle(elapsedTime);
 
@@ -942,6 +947,7 @@ Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
 
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+	g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
@@ -968,6 +974,7 @@ Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
 {
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    g_mapSize = XMFLOAT2(3072.0f, 4352.0f);
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
@@ -995,6 +1002,7 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
 
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
@@ -1023,6 +1031,7 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
 
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    g_mapSize = XMFLOAT2(3072.0f, 4352.0f);
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
@@ -1055,6 +1064,7 @@ Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
 
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
@@ -1082,6 +1092,7 @@ Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
 
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    g_mapSize = XMFLOAT2(3072.0f, 4352.0f);
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
@@ -1108,6 +1119,7 @@ Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
 {
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
