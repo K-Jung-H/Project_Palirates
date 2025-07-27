@@ -967,9 +967,9 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 8000, 10, false);
 	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+	wave_obj->SetPosition(XMFLOAT3(1500.0f, -15.0f, 1500.0f));
 
 	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
 	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
