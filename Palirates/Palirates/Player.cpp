@@ -601,6 +601,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 void CTerrainPlayer::Update(float fTimeElapsed)
 {
 	CPlayer::Update(fTimeElapsed);
+	Update_Color_Blending(-fTimeElapsed);
 }
 
 void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)

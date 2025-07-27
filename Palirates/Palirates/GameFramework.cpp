@@ -757,8 +757,8 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 		}
 
-
-		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		if (!CScene::Screen_Fade)
+			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
 
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();

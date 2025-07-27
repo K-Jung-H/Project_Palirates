@@ -2053,7 +2053,7 @@ void CGameObject::Update_Color_Blending(float update_bleeding_value)
 {
 	Blending_value += update_bleeding_value;
 	Blending_value = std::clamp(Blending_value, 0.0f, 1.0f);
-
+	if (Blending_value <= 0.0f) return;
 	if (m_pSibling)
 		m_pSibling->Update_Color_Blending(update_bleeding_value);
 
