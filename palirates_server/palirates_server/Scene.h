@@ -118,7 +118,7 @@ protected:
     std::vector<std::shared_ptr<Monster>> Monster_List;
     std::unordered_map<int, size_t> id2idx;
     std::vector<int> monster_despawn_queue;
-    std::vector<MonsterDamageInfo> monster_damage_queue;
+    std::vector<MonsterHitInfo> monster_damage_queue;
 
     std::shared_ptr<Monster> Boss_Monster = NULL;
     std::shared_ptr<GameObject> zoomObject;
@@ -160,8 +160,8 @@ public:
     void QueueDespawnCommand(int id) { monster_despawn_queue.emplace_back(id); }
     std::vector<int> FlushDespawnQueue();
 
-    void QueueDamageCommand(MonsterDamageInfo id) { monster_damage_queue.emplace_back(id); }
-    std::vector<MonsterDamageInfo> FlushDamageQueue();
+    void QueueDamageCommand(MonsterHitInfo id) { monster_damage_queue.emplace_back(id); }
+    std::vector<MonsterHitInfo> FlushDamageQueue();
 
 
     void server_DespawnMonster();

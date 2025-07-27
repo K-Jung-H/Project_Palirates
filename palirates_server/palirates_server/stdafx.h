@@ -76,10 +76,10 @@ enum InputFlags : uint32_t
     INPUT_ENTER = 1 << KEY_INDEX_ENTER
 };
 
-struct MonsterDamageInfo
+struct MonsterHitInfo
 {
     int monsterID;
-    float damage;
+    bool hitCmd;
 };
 
 struct Effect_Sync_Data

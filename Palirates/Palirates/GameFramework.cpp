@@ -1581,12 +1581,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					stage_scene->DespawnMonster(id);
 				}
-				/*else if (cmdType == "DAMAGE") {
+				else if (cmdType == "HIT") {
 					int id = std::stoi(tokens[idx++]);
-					float damage = std::stoi(tokens[idx++]);
-					stage_scene->DamageMonster(id, damage);
-					std::cout << "Damage : " << id << ", " << damage << "\n";
-				}*/
+					bool on = (tokens[idx++] == "1");
+					stage_scene->HitMonster(id, on);
+					std::cout << "hit : " << id << ", " << on << "\n";
+				}
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);

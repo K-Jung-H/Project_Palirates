@@ -4830,6 +4830,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	{
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
+		//if (animation_track_info.track_index == Hit_Track_idx && track[animation_track_info.track_index].m_fWeight > 0.5f && )
 	}
 	currentHP = syncData.hp;
 	controller->ApplyCurrentAnimationPose(this);
@@ -4856,6 +4857,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		TRACK_FISHMAN_DEAD
 	};
 
+	Hit_Track_idx = TRACK_FISHMAN_GET_HIT;
 	m_StateMachine = std::make_unique<FishManStateMachine>(this);
 
 	type = EObjectType::Monster;
@@ -4917,7 +4919,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		TRACK_ANUBIS_GET_HIT,
 		TRACK_ANUBIS_DEAD
 	};
-
+	Hit_Track_idx = TRACK_ANUBIS_GET_HIT;
 	n_Animation = 10;
 	RootIndex = 0;
 
@@ -4974,7 +4976,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		TRACK_DRAGON_ATTACK1,
 		TRACK_DRAGON_DEAD
 	};
-
+	Hit_Track_idx = TRACK_DRAGON_GOT_HIT1;
 	n_Animation = 13;
 	RootIndex = 16;
 
