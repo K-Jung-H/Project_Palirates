@@ -816,8 +816,6 @@ void Server::Server_Update()
 
 
         scene->Update_Scene(elapsedTime);
-        
-
 
         //==============================================
         // Handle Scene Chnage
