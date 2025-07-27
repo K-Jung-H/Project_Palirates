@@ -3121,7 +3121,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}; 
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 100, true);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 100, true);
 	wave_obj->Set_Name("board_scene_wave");
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
@@ -3309,7 +3309,7 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	if (!isRunning)
 	{
 		pirate_ship->Animate(fTimeElapsed);
-		pirate_ship->HandleBoundaryReflection(1500.0f);
+		pirate_ship->HandleBoundaryReflection(2000.0f);
 	}
 
 	if (m_pLights)
@@ -3377,8 +3377,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		XMFLOAT3 new_camera_pos;
 		pirate_ship->UpdateTransform(NULL);
 		pirate_ship->GetMarkerWorldPosition(camera_position, new_camera_pos);
-
-		player_camera->UpdateFocusTracking(new_camera_pos);
+		player_camera->SetPosition(new_camera_pos);
+//		player_camera->UpdateFocusTracking(new_camera_pos);
 	}
 	else
 	{
@@ -3414,6 +3414,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 			{
 				bMenuActive = true;
 				Screen_Fade = true;
+
+				if (focus_button)
+					Mouse_Lock = false;
 				Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, true);
 			}
 
@@ -3424,6 +3427,10 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		{
 			bMenuActive = false;
 			bClosedByUser = false;
+			Screen_Fade = false;
+			if (focus_button)
+				Mouse_Lock = true;
+
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 
 			nearest_stage_index = -1;
@@ -3477,17 +3484,17 @@ void Board_Scene::SetCameraTarget(std::string_view target)
 	{
 		camera_position = target;
 		focus_button = true;
-
+		Mouse_Lock = true;
 		XMFLOAT3 camera_pos = camera_ptr->GetPosition();
 		XMFLOAT3 lookDir = camera_ptr->GetLookVector();
 
-		XMFLOAT3 newFocus = Vector3::Add(camera_pos, Vector3::ScalarProduct(lookDir, CAMERA_FOCUS_DISTANCE, false));
-		m_pPlayer->GetCamera()->EnableFocusTracking(true, newFocus);
+//		XMFLOAT3 newFocus = Vector3::Add(camera_pos, Vector3::ScalarProduct(lookDir, CAMERA_FOCUS_DISTANCE, false));
+//		m_pPlayer->GetCamera()->EnableFocusTracking(true, newFocus);
 
 	}
 	else
 	{
-		camera_ptr->EnableFocusTracking(false, XMFLOAT3(0.0f, 0.0f, 0.0f));
+		//camera_ptr->EnableFocusTracking(false, XMFLOAT3(0.0f, 0.0f, 0.0f));
 		XMFLOAT3 lookDir = XMFLOAT3(0.0f, 0.0f, 1.0f); 
 		camera_ptr->SetLookDirection(lookDir);
 		camera_ptr->RegenerateViewMatrix();
