@@ -103,16 +103,14 @@ void Server::Start()
                 auto stage_scene = dynamic_pointer_cast<Stage_Scene>(activeScene);
                 if (stage_scene)
                 {
-                    if (GetAsyncKeyState('J') & 0x8000)
+                    if (GetAsyncKeyState(VK_OEM_1) & 0x8000)  // ; key
                         stage_scene->server_DespawnMonster();
-                    else if (GetAsyncKeyState('K') & 0x8000)
+                    else if (GetAsyncKeyState(VK_OEM_7) & 0x8000)  // ' key
                         stage_scene->server_DespawnMonster_For_Clear();
-                    else if (GetAsyncKeyState('U') & 0x8000)
+                    else if (GetAsyncKeyState(VK_OEM_PERIOD) & 0x8000)  // . key
                         stage_scene->server_Fog_Control();
-                    else if (GetAsyncKeyState('I') & 0x8000)
+                    else if (GetAsyncKeyState(VK_OEM_2) & 0x8000)  // / key
                         stage_scene->server_X_Ray_Control();
-                    else if (GetAsyncKeyState('M') & 0x8000)
-                        stage_scene->server_bleeding();
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
