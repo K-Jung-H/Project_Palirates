@@ -1608,6 +1608,8 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 
 	for (const auto& [meshName, fixedInfo] : fixed_obj_info_map)
 	{
+		if (meshName.find("SM_Env_Background_Hills_01") != std::string::npos)
+			continue;
 		if (!fixedInfo.obj_mesh || !fixedInfo.obj_mesh->Get_BoundingBox()) continue;
 
 		const BoundingOrientedBox& localOBB = *fixedInfo.obj_mesh->Get_BoundingBox();

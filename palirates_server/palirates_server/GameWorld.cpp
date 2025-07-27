@@ -271,7 +271,6 @@ void GameWorld::Boss_Update()
 
     auto boss_weapon = boss_monster->Weapon_ptr;
 
-
     if (boss_monster->attackPhase == 1)
     {
         if (boss_weapon)

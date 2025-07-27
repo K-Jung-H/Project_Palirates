@@ -150,12 +150,12 @@ void CGameFramework::CreateDirect3DDevice()
 		pd3dDebugController->EnableDebugLayer();
 
 		//=======================================
-		/*ComPtr<ID3D12Debug1> debugController1;
-		if (SUCCEEDED(pd3dDebugController->QueryInterface(IID_PPV_ARGS(&debugController1))))
-		{
-			debugController1->SetEnableGPUBasedValidation(TRUE);
-			OutputDebugStringA("[D3D12] GPU-based validation enabled.\n");
-		}*/
+		//ComPtr<ID3D12Debug1> debugController1;
+		//if (SUCCEEDED(pd3dDebugController->QueryInterface(IID_PPV_ARGS(&debugController1))))
+		//{
+		//	debugController1->SetEnableGPUBasedValidation(TRUE);
+		//	OutputDebugStringA("[D3D12] GPU-based validation enabled.\n");
+		//}
 		//=======================================
 
 		pd3dDebugController->Release();
@@ -1687,10 +1687,10 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 	{
 		int base = startIndex;
 
-		if (base + 9 >= tokens.size()) break;
+		if (base + 9 > tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
-		int modelId = std::stoi(tokens[base + 1]); 
+		int modelId = std::stoi(tokens[base + 1]);
 		float px = std::stof(tokens[base + 2]);
 		float py = std::stof(tokens[base + 3]);
 		float pz = std::stof(tokens[base + 4]);
@@ -1700,14 +1700,11 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		int trackCount = std::stoi(tokens[base + 8]);
 
 		int trackStart = base + 9;
-
 		int expectedTrackTokenCount = trackCount * 3;
 
-		if (trackStart + expectedTrackTokenCount >= tokens.size()) 
-			break;
+		if (trackStart + expectedTrackTokenCount + 4 > tokens.size()) break;
 
 		std::vector<Animation_Sync> track_list;
-
 		for (int t = 0; t < trackCount; ++t)
 		{
 			int idx = trackStart + t * 3;
@@ -1718,14 +1715,12 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		}
 
 		int stateFlagIndex = trackStart + expectedTrackTokenCount;
-		if (stateFlagIndex >= tokens.size()) break;
 
 		bool stateChanged = (tokens[stateFlagIndex++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
@@ -1735,11 +1730,15 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		syncData.hp = hp;
 		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
 		syncData.bBreathHit = bBreathHit;
+
 		HandlePlayerSync(playerId, modelId, syncData);
-		
-		startIndex = stateFlagIndex + 1;
+
+
+		int consumed = 9 + (trackCount * 3) + 4;
+		startIndex = base + consumed;
 	}
 }
+
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {

@@ -347,12 +347,13 @@ void Stage_Scene::Init()
 
     monster_init_spawn_frame_list.clear();
     player_init_spawn_frame_list.clear();
+    game_world.Set_Boss_Moster(NULL);
 
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
     GameObject::FlattenGameObjectHierarchy(player_hierarchy_list, player_init_spawn_frame_list);
 
     scene_obj->UpdateTransform(NULL);
-
+    
     if (monster_init_spawn_frame_list.size())
         SpawnMonster_By_Scene_Data();
 }
@@ -763,7 +764,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-//    return;
+    //return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;

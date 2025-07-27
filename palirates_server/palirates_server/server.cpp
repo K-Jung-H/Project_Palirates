@@ -833,7 +833,7 @@ void Server::Server_Update()
             FlushSendQueues();
         }
 
-        //PrintClientDebugInfo();
+        PrintClientDebugInfo();
     }
 
 
@@ -892,13 +892,15 @@ void Server::Change_Scene_And_Init_Players(Scene_Type new_scene_type)
         std::shared_ptr<Stage_Scene> stage_scene = std::dynamic_pointer_cast<Stage_Scene>(new_scene);
         if (stage_scene)
         {
+            stage_scene->Init();
+
             std::lock_guard<std::mutex> lock(clientsMutex);
             for (const auto& [id, session] : clients)
             {
                 if (session->is_connected)
                     stage_scene->Add_Player(id);
             }
-            stage_scene->Init();
+ 
         }
         break;
     }
@@ -1040,7 +1042,7 @@ void Server::Send_Custom(std::shared_ptr<ClientSession> session, const std::stri
 
 void Server::PrintClientDebugInfo()
 {
-    system("cls");
+//    system("cls");
     std::cout << "========= Server Frame Rate: " << m_gameTimer.GetFrameRate() << " FPS =========\n";
 
 
