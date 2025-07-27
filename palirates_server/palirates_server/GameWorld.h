@@ -54,7 +54,9 @@ public:
 
 	shared_ptr<Monster> Get_Boss_Monster() { return boss_monster; }
 	void Set_Boss_Moster(shared_ptr<Monster> boss_ptr) { boss_monster = boss_ptr; }
-	void Boss_Update();
+//	void Boss_Update();
+	void Boss_Update(shared_ptr<Monster>boss_monster);
+
 
 	shared_ptr<GameObject> Get_ZoomObject() { return zoom_object; }
 

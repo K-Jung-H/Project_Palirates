@@ -264,9 +264,12 @@ std::vector<BoundingOrientedBox> GameWorld::Get_Cell_OBBs(const XMFLOAT3& Pos)
 }
 
 
-void GameWorld::Boss_Update()
+void GameWorld::Boss_Update(shared_ptr<Monster>boss_monster)
 {
     if (!boss_monster)
+        return;
+
+    if (boss_monster->attackPhase == -1)
         return;
 
     auto boss_weapon = boss_monster->Weapon_ptr;

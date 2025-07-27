@@ -395,8 +395,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case WM_KEYUP:
 			switch (wParam)
 			{
-				case VK_SPACE:
-//					test_button = !test_button;
+			case VK_OEM_3: // ~
 					Stage_Scene::Change_Scene_Signal = true;
 					break;
 

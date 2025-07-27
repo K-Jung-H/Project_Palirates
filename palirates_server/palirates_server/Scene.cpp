@@ -512,10 +512,8 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         }
     }
 
-    if (Monster_List.size() == 0) {
-        bStageClear = true;
-    }
-    game_world.Boss_Update();
+
+    game_world.Boss_Update(Boss_Monster);
     game_world.Update_Particle(elapsedTime);
 
     if (Monster_List.size() == 0)
@@ -786,19 +784,19 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
         }
         else if (name.find("Anubis") != string::npos)
         {
-            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
-            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+//            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
+//            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
 
-            if (!Boss_Monster)
-                Boss_Monster = moster_ptr;
+//            if (!Boss_Monster)
+//                Boss_Monster = moster_ptr;
         }
         else if (name.find("Dragon") != string::npos)
         {
-            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
-            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+//            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
+//            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
 
-            if (!Boss_Monster)
-                Boss_Monster = moster_ptr;
+//            if (!Boss_Monster)
+//                Boss_Monster = moster_ptr;
         }
         else if (name.find("Monster") != string::npos)
             continue;
@@ -956,6 +954,12 @@ Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
 void Stage_1_Scene::Init()
 {
     Stage_Scene::Init();
+
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(583.0f, 0.0f, 1332.0f), 100);
+    }
 }
 
 //=========================================================
@@ -976,6 +980,12 @@ Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
 void Stage_2_Scene::Init()
 {
     Stage_Scene::Init();
+
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
+    }
 }
 
 //=========================================================
@@ -998,6 +1008,12 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
 void Stage_3_Scene::Init()
 {
     Stage_Scene::Init();
+
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(583.0f, 0.0f, 1332.0f), 100);
+    }
 }
 
 //=========================================================
@@ -1020,10 +1036,16 @@ void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
 
-    int id;
-    id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
-    Boss_Monster = SpawnMonster(id, XMFLOAT3(3450 + 1 * 10, 0, 1650), 100);
-    std::cout << "m spawn s4 " << "\n";
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
+    }
+
+    //int id;
+    //id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
+    //Boss_Monster = SpawnMonster(id, XMFLOAT3(3450 + 1 * 10, 0, 1650), 100);
+    //std::cout << "m spawn s4 " << "\n";
 }
 
 //=========================================================
@@ -1045,6 +1067,12 @@ Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
 void Stage_5_Scene::Init()
 {
     Stage_Scene::Init();
+
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(583.0f, 0.0f, 1332.0f), 100);
+    }
 }
 
 //=========================================================
@@ -1066,6 +1094,12 @@ Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
 void Stage_6_Scene::Init()
 {
     Stage_Scene::Init();
+
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
+    }
 }
 
 //=========================================================
@@ -1086,4 +1120,10 @@ Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
 void Stage_7_Scene::Init()
 {
     Stage_Scene::Init();
+
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(583.0f, 0.0f, 1332.0f), 100);
+    }
 }
