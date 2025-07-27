@@ -42,7 +42,7 @@ CGameFramework::CGameFramework()
 
 	m_pPlayer = NULL;
 
-	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
+	_tcscpy_s(m_pszFrameRate, _T("Palirates"));
 
 	isRunning = false;
 }
@@ -1294,7 +1294,7 @@ void CGameFramework::FrameAdvance()
 	// ====================== [8] Frame Sync ======================
 	MoveToNextFrame();
 
-	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
+//	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 	
 	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
