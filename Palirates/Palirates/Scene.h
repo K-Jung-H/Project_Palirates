@@ -310,7 +310,7 @@ public:
 class Character_Select_Scene : public CScene
 {
 private:
-	int is_Ready = 0; 
+	static int is_Ready; 
 
 
 	std::array<int, MaxPlayer> readyClientIds;
@@ -345,6 +345,8 @@ public:
 
 	void SetReadyClientIds(const std::array<int, MaxPlayer>& readyIds) { readyClientIds = readyIds; }
 	void SetCharacterSelections(const std::array<std::bitset<MaxPlayer>, MaxPlayer>& selections) { characterSelections = selections; }
+
+	static void Reset_Select() { select_index = 0; is_Ready = false; }
 };
 
 class Board_Scene : public CScene
