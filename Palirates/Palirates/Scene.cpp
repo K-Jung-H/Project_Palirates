@@ -1468,6 +1468,9 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 				uint32_t layerMask = static_cast<uint32_t>(UILayer::Load);
 				if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
 				{
+					if (block->start_time == 0.0f) {
+						block->start_time = currentTime;
+					}
 					float elapsed = currentTime - block->start_time;
 					if (elapsed >= block->hp)
 					{

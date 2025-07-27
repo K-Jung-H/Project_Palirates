@@ -154,7 +154,7 @@ enum class UILayer : uint32_t
     Start = 1 << 8,
     Screen_Fade = 1 << 9,
     Clear = 1 << 10,
-    Load = 1 << 10,
+    Load = 1 << 11,
     All = 0xFFFFFFFF
 };
 

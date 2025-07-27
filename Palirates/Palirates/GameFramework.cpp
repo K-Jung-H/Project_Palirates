@@ -1249,7 +1249,6 @@ void CGameFramework::FrameAdvance()
 		// Check MouseLock & FadeEffect
 		scene_manager->Render_ScreenFade(m_pd3dDevice, Active_CommandList);
 
-
 		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 
