@@ -93,11 +93,11 @@ float4 PS_UI(VS_UI_OUTPUT input) : SV_TARGET
 // Fade-out
     if ((type & UI_EFFECT_FADE_OUT) != 0)
     {
-        float fadeSpeed = 3.0f / g_hp;
-        float alpha = exp(-fadeSpeed * elapsed);
-        if (elapsed < 0.0f || elapsed > g_hp || alpha <= 0.01f)
-            discard;
-        result.a *= alpha;
+        float fadeStart = g_hp - 1.0f; 
+        float t = saturate((elapsed - fadeStart) / 1.0f); 
+        float alpha = 1.0f - t; 
+
+        result.a *= saturate(alpha);
     }
 
 // Slide up

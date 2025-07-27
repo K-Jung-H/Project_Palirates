@@ -73,7 +73,18 @@ void Key_State::update(Key_Value key_state)
     case Key_Value::Dive_Key_Up:
         break;
     case Key_Value::Attack1_Key_Down:
-        attack1 = true;
+       // attack1 = true;
+        if (!attack_toggle)
+        {
+            attack1 = true;
+            attack2 = false;
+        }
+        else
+        {
+            attack1 = false;
+            attack2 = true;
+        }
+        attack_toggle = !attack_toggle;
         break;
     case Key_Value::Attack1_Key_Up:
         break;
@@ -131,9 +142,9 @@ void StateMachine::handleEvent(UCHAR* pKeysBuffer)
     { VK_SPACE, { Key_Value::Jump_Key_Down, Key_Value::Jump_Key_Up } },
     { VK_SHIFT, { Key_Value::Dive_Key_Down, Key_Value::Dive_Key_Up } },
 
-    { VK_OEM_COMMA, { Key_Value::Attack1_Key_Down, Key_Value::Attack1_Key_Up } },
+    { VK_LBUTTON, { Key_Value::Attack1_Key_Down, Key_Value::Attack1_Key_Up } },
     { VK_OEM_PERIOD, { Key_Value::Attack2_Key_Down, Key_Value::Attack2_Key_Up } },
-    { VK_OEM_2, { Key_Value::Attack3_Key_Down, Key_Value::Attack3_Key_Up } }
+    { VK_RBUTTON, { Key_Value::Attack3_Key_Down, Key_Value::Attack3_Key_Up } }
     };
 
     for (const auto& [key, keyPair] : keyMappings)
@@ -430,7 +441,8 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
 
     if (IsInState({ State::Get_Hit_F2 })) {
         m_pOwner->bIsInvincible = true;
-        m_pOwner->SetOutlineColor(1);
+        //m_pOwner->SetOutlineColor(1);
+        m_pOwner->Set_Color_Blending(GetColorById(Client_ID));
        // m_pOwner->currentHP -= 30.0f;
         //if (m_pOwner->currentHP < 0) {
         //    //m_pOwner->currentHP = 0.0f;
@@ -486,7 +498,7 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Get_Hit_F2 })) {
-        m_pOwner->SetOutlineColor(0);
+        //m_pOwner->SetOutlineColor(0);
     }
 
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
