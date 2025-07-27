@@ -300,6 +300,7 @@ public:
 	virtual void DespawnMonster(int id);
 
 	virtual void DamageMonster(int id, float damage);
+	virtual void HitMonster(int id, bool on);
 
 	void Fog_Sync(Fog_Info fog_info);
 

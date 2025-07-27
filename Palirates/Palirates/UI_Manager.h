@@ -179,9 +179,9 @@ struct TextureBlock
     D2D1_RECT_F screenRect;
     D2D1_RECT_F hitboxRect;
     std::shared_ptr<CTextureMesh> mesh = nullptr;
-
+    std::shared_ptr<CGameObject> target = nullptr;
     std::function<void()> onClick;
-
+    MonsterUIData UIData;
     bool bHovered = false;
     bool bClicked = false;
     bool bActive = true;
@@ -201,6 +201,11 @@ struct TextureBlock
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default, const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f }, const XMFLOAT2& scale = { 1.0f, 1.0f });
     TextureBlock() = default;
     void UpdateScreenRect(float normCX, float normCY, float normW, float scaleH);
+    void SetTarget(std::shared_ptr<CGameObject> t, bool boss = false, float y_offset = 0.0f) {
+        target = t;
+        UIData.bBossHP = boss;
+        UIData.yOffset = y_offset;
+    }
 };
 
 class Texture_UI_Renderer

@@ -734,7 +734,7 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
 	
 	int a = particle_object_list_map[Particle_Shader_Type::interval].size();
-	cout << a << endl;
+	//cout << a << endl;
 
 }
 

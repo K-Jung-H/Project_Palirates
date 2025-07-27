@@ -50,6 +50,7 @@ public:
     XMFLOAT3 CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
     bool bDead = false;
 	bool BreathObject = false;
+    bool bHittingCmd{ false };
 
 public:
     GameObject()

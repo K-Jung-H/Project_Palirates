@@ -180,6 +180,7 @@ void GetHitState::Update(Monster* monster, float deltaTime, MonsterStateMachine*
 
 void GetHitState::Exit(Monster* monster) {
     monster->SetCanCollide(true);
+    monster->bHittingCmd = true;
 }
 
 /////////////////////////// Dead ///////////////////////////////

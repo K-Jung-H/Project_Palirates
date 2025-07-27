@@ -1516,51 +1516,69 @@ std::shared_ptr<std::vector<MonsterUIData>> CScene::GetNearbyMonstersUIData(floa
 
 void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float maxDistance)
 {
-	auto mList = GetNearbyMonstersUIData(maxDistance);
-	if (!mList) return;
-
-	texture_ui_manager->DeactivateAllMonsterHPBlocks();
 	auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
 
-	size_t blockIndex = 0;
-
-	for (const auto& monster : *mList)
+	for (size_t i = 0; i < hpBlocks.size(); i += 2)
 	{
-		if (blockIndex + 1 >= hpBlocks.size()) break;
+		if (!hpBlocks[i] || hpBlocks[i]->target == nullptr) {
+			hpBlocks[i]->bActive = false;
+			hpBlocks[i + 1]->bActive = false;
+			continue;
+		}
 
-		if (monster.bBossHP) {
-			XMFLOAT2 screenPos = XMFLOAT2(0.5f, 0.1f); 
+		if (!obj_manager || !m_pPlayer) continue;
 
-			float scale = 1.5f; 
+		XMFLOAT3 playerPos = m_pPlayer->GetPosition();
+		XMFLOAT3 monsterPos = hpBlocks[i]->target->GetPosition();
+		float dist = Vector3::Distance(playerPos, monsterPos);
+		if (dist > maxDistance) {
+			hpBlocks[i]->hp = hpBlocks[i]->target->currentHP / hpBlocks[i]->target->maxHP;
+			hpBlocks[i]->bActive = false;
+			hpBlocks[i + 1]->hp = hpBlocks[i + 1]->target->currentHP / hpBlocks[i + 1]->target->maxHP;
+			hpBlocks[i + 1]->bActive = false;
+			continue;
+		}
+		if (!hpBlocks[i]->bActive && !hpBlocks[i + 1]->bActive) {
+			hpBlocks[i]->start_time = currentTime;
+			hpBlocks[i + 1]->start_time = currentTime;
+		}
+		/*hpBlocks[i]->bActive = true;
+		hpBlocks[i + 1]->bActive = true;*/
 
-			TextureBlock* back = hpBlocks[blockIndex++];
-			back->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 1.0f); 
-			back->wasActive = true;
-			if (back->firstActive) {
-				back->firstActive = false;
+		if (hpBlocks[i]->UIData.bBossHP) {
+			XMFLOAT2 screenPos = XMFLOAT2(0.5f, 0.06f);
+
+			float scale = 1.5f;
+
+			hpBlocks[i]->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 0.5f);
+			hpBlocks[i]->wasActive = true;
+			if (hpBlocks[i]->firstActive) {
+				hpBlocks[i]->firstActive = false;
 				//back->start_time = currentTime;
 			}
-			back->bActive = true;
+			hpBlocks[i]->bActive = true;
 
-			TextureBlock* front = hpBlocks[blockIndex++];
-			front->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 1.0f);
-			float targetHP = monster.hp;
-			float speed = 15.0f; 
-			front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+			hpBlocks[i + 1]->UpdateScreenRect(screenPos.x, screenPos.y, 0.4f * scale, 0.5f);
+			float targetHP = hpBlocks[i + 1]->target->currentHP / hpBlocks[i + 1]->target->maxHP;
+			float speed = 15.0f;
+			hpBlocks[i + 1]->hp = hpBlocks[i + 1]->hp + (targetHP - hpBlocks[i + 1]->hp) * (elapsedTime * speed);
 
-			if (abs(front->hp - targetHP) < 0.001f) {
-				front->hp = targetHP;
+			if (abs(hpBlocks[i + 1]->hp - targetHP) < 0.001f) {
+				hpBlocks[i + 1]->hp = targetHP;
 			}
-			front->wasActive = true;
-			if (front->firstActive) {
-				front->firstActive = false;
+			hpBlocks[i + 1]->wasActive = true;
+			if (hpBlocks[i + 1]->firstActive) {
+				hpBlocks[i + 1]->firstActive = false;
 				//front->start_time = currentTime;
 			}
-			front->bActive = true;
+			hpBlocks[i + 1]->bActive = true;
+
 		}
 		else {
-			XMFLOAT3 headWorldPos = monster.position;
-			headWorldPos.y += monster.yOffset;
+			float normDist = 1.0f - (dist / (maxDistance * maxDistance));
+			normDist = std::clamp(normDist, 0.0f, 1.0f);
+			XMFLOAT3 headWorldPos = hpBlocks[i]->target->GetPosition();
+			headWorldPos.y += hpBlocks[i]->UIData.yOffset;
 
 			XMFLOAT2 screenPos = main_Camera->WorldToNormalizedScreen(
 				headWorldPos,
@@ -1571,32 +1589,30 @@ void CScene::Update_Monster_HP_bar(float currentTime, float elapsedTime, float m
 			if (screenPos.x < 0.0f || screenPos.x > 1.0f || screenPos.x < 0.0f || screenPos.y > 1.0f)
 				continue;
 
-			float scale = 0.25f + 0.75f * monster.dist;
+			float scale = 0.25f + 0.75f * normDist;
 
-			TextureBlock* back = hpBlocks[blockIndex++];
-			back->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
-			back->wasActive = true;
-			if (back->firstActive) {
-				back->firstActive = false;
-				//back->start_time = currentTime;
+			hpBlocks[i]->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+			hpBlocks[i]->wasActive = true;
+			if (hpBlocks[i]->firstActive) {
+				hpBlocks[i]->firstActive = false;
+				//hpBlocks[i + 1]->start_time = currentTime;
 			}
-			back->bActive = true;
+			hpBlocks[i]->bActive = true;
 
-			TextureBlock* front = hpBlocks[blockIndex++];
-			front->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
-			float targetHP = monster.hp;
+			hpBlocks[i + 1]->UpdateScreenRect(screenPos.x, screenPos.y, 0.1f * scale, 1.0f);
+			float targetHP = hpBlocks[i + 1]->target->currentHP / hpBlocks[i + 1]->target->maxHP;
 			float speed = 15.0f;
-			front->hp = front->hp + (targetHP - front->hp) * (elapsedTime * speed);
+			hpBlocks[i + 1]->hp = hpBlocks[i + 1]->hp + (targetHP - hpBlocks[i + 1]->hp) * (elapsedTime * speed);
 
-			if (abs(front->hp - targetHP) < 0.001f) {
-				front->hp = targetHP;
+			if (abs(hpBlocks[i + 1]->hp - targetHP) < 0.001f) {
+				hpBlocks[i + 1]->hp = targetHP;
 			}
-			front->wasActive = true;
-			if (front->firstActive) {
-				front->firstActive = false;
+			hpBlocks[i + 1]->wasActive = true;
+			if (hpBlocks[i + 1]->firstActive) {
+				hpBlocks[i + 1]->firstActive = false;
 				//front->start_time = currentTime;
 			}
-			front->bActive = true;
+			hpBlocks[i + 1]->bActive = true;
 		}
 	}
 }
@@ -2457,6 +2473,21 @@ void CScene::DamageMonster(int id, float damage)
 	size_t idx = it->second;
 
 	(*mlist)[idx]->currentHP -= damage;
+}
+
+void CScene::HitMonster(int id, bool on)
+{
+	auto* mlist = obj_manager->Get_Object_List(Object_Type::skinned);
+	if (!mlist) return;
+
+	auto& mMap = obj_manager->Get_Monster_Map();
+
+	auto it = mMap.find(id);
+	if (it == mMap.end()) return;
+
+	size_t idx = it->second;
+
+	(*mlist)[idx]->SetOutlineColor(on);
 }
 
 void CScene::Create_Particle_Object(const Particle_Sync_Data& syncData)
@@ -4056,14 +4087,19 @@ void Stage_Scene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	int mType = GET_MONSTER_TYPE(id);
 	std::shared_ptr<CGameObject> m;
 
+	bool boss = false;
+	float y_offset = 0.0f;
 	if (mType == static_cast<int>(Monster_Type::Fishman)) {
 		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		y_offset = 20.0f;
 	}
 	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
 		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		boss = true;
 	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		boss = true;
 	}
 	else if (mType == static_cast<int>(Monster_Type::ETC)) {
 		m = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
@@ -4081,6 +4117,16 @@ void Stage_Scene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	m->SetPosition(pos.x, pos.y, pos.z);
 	id2idx[id] = obj_manager->Get_Object_List(Object_Type::skinned)->size();
 	obj_manager->Add_Object(m, Object_Type::skinned);
+	size_t ui_idx = id2idx[id];
+	size_t front_idx = ui_idx * 2;
+
+	const auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
+
+	if (front_idx + 1 < hpBlocks.size())
+	{
+		if (hpBlocks[front_idx])     hpBlocks[front_idx]->SetTarget(m, boss, y_offset);
+		if (hpBlocks[front_idx + 1]) hpBlocks[front_idx + 1]->SetTarget(m, boss, y_offset);
+	}
 }
 void Stage_Scene::DespawnMonster(int id)
 {
@@ -4095,6 +4141,11 @@ void Stage_Scene::DespawnMonster(int id)
 	size_t idx = it->second;
 	size_t last = plist->size() - 1;
 
+	size_t frontA = idx * 2;
+	size_t backA = idx * 2 + 1;
+	size_t frontB = last * 2;
+	size_t backB = last * 2 + 1;
+	auto& hpBlocks = texture_ui_manager->GetMonsterHPBlocks();
 	if (idx != last)
 	{
 		std::swap((*plist)[idx], (*plist)[last]);
@@ -4104,6 +4155,24 @@ void Stage_Scene::DespawnMonster(int id)
 			int newId = (*plist)[idx]->GetID();
 			mMap[newId] = idx;
 		}
+
+		
+		if (backB < hpBlocks.size() && frontB < hpBlocks.size())
+		{
+			std::swap(hpBlocks[frontA], hpBlocks[frontB]);
+			std::swap(hpBlocks[backA], hpBlocks[backB]);
+
+			if (hpBlocks[frontA]) hpBlocks[frontA]->SetTarget((*plist)[idx]);
+			if (hpBlocks[backA])  hpBlocks[backA]->SetTarget((*plist)[idx]);
+
+			if (hpBlocks[frontB]) hpBlocks[frontB]->SetTarget((*plist)[last]);
+			if (hpBlocks[backB])  hpBlocks[backB]->SetTarget((*plist)[last]);
+		}
+	}
+
+	if (backB < hpBlocks.size() && frontB < hpBlocks.size()) {
+		if (hpBlocks[frontB]) hpBlocks[frontB]->SetTarget(nullptr);
+		if (hpBlocks[backB])  hpBlocks[backB]->SetTarget(nullptr);
 	}
 
 	plist->pop_back();

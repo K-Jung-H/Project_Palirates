@@ -404,15 +404,21 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                         m->SetLook(toPlayer);
                     }
 
-                    MonsterDamageInfo data;
-                    data.damage = 30.0f;
+                    MonsterHitInfo data;
+                    
                     data.monsterID = m->GetID();
-                    QueueDamageCommand(data);
-                    m->HitDamage(data.damage);
+                    
+                    m->HitDamage(30.0f);
                     float hp = m->GetHP();
-                    if (hp <= 0.0f)
+                    if (hp <= 0.0f) {
                         m->GetStateMachine()->ChangeState(std::make_unique<DeadState>());
-                    else  m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
+                        data.hitCmd = false;
+                    }
+                    else {
+                        m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
+                        data.hitCmd = true;
+                    }
+                    QueueDamageCommand(data);
                 }
             }
         }
@@ -426,6 +432,13 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         if (m->bDead) {
             DespawnMonster(m->GetID());
             continue;
+        }
+        if (m->bHittingCmd) {
+            MonsterHitInfo data;
+            data.monsterID = m->GetID();
+            data.hitCmd = false;
+            QueueDamageCommand(data);
+            m->bHittingCmd = false;
         }
         if (!m->Weapon_ptr) continue;
         if (!m->Weapon_ptr->CanCollide()) continue;
@@ -868,9 +881,9 @@ std::vector<int> Stage_Scene::FlushDespawnQueue()
     return temp;
 }
 
-std::vector<MonsterDamageInfo> Stage_Scene::FlushDamageQueue()
+std::vector<MonsterHitInfo> Stage_Scene::FlushDamageQueue()
 {
-    std::vector<MonsterDamageInfo> temp = monster_damage_queue;
+    std::vector<MonsterHitInfo> temp = monster_damage_queue;
     monster_damage_queue.clear();
     return temp;
 }

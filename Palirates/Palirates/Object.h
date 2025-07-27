@@ -1121,7 +1121,7 @@ protected:
 
 public:
     int test_num{ 0 };
-
+    int Hit_Track_idx = -1;
     CMonsterObject() {};
     virtual ~CMonsterObject();
 

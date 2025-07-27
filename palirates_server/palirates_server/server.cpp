@@ -675,8 +675,8 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
     const auto damage_list = stage->FlushDamageQueue();
     if (!damage_list.empty()) {
         oss << "MONSTER_COMMAND," << damage_list.size();
-        for (MonsterDamageInfo data : damage_list) {
-            oss << ",DAMAGE," << data.monsterID << "," << data.damage;
+        for (MonsterHitInfo data : damage_list) {
+            oss << ",HIT," << data.monsterID << "," << data.hitCmd;
         }
         oss << "\n";
     }
