@@ -273,6 +273,9 @@ Scene_Type Board_Scene::CheckSceneTransition()
         else return Scene_Type::None;
     }
 
+    if (Stage_Scene::Clear_number == 2)
+        return Scene_Type::Lobby;
+
     return Scene_Type::None;
 }
 
@@ -319,6 +322,7 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 }
 
 //======================================================
+UINT Stage_Scene::Clear_number = 0;
 
 Stage_Scene::Stage_Scene(Scene_Type scene_type) : Scene (scene_type)
 {
@@ -572,7 +576,10 @@ Scene_Type Stage_Scene::CheckSceneTransition()
         Change_Scene_Trigger = Check_Clear_Scene();
 
     if (Change_Scene_Trigger)
+    {
+        Clear_number += 1;
         return Scene_Type::Board;
+    }
     else
         return Scene_Type::None;
 }

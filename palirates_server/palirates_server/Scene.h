@@ -104,6 +104,9 @@ public:
 
 class Stage_Scene : public Scene
 {
+public:
+    static UINT Clear_number;
+
 protected:
     std::array<std::shared_ptr<Player>, MaxPlayer> player_list;
     std::array<int32_t, MaxPlayer> player_keyState;
