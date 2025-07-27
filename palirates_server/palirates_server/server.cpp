@@ -914,10 +914,7 @@ void Server::Change_Scene_And_Init_Players(Scene_Type new_scene_type)
     }
 
     case Scene_Type::Lobby:
-        std::shared_ptr<Board_Scene> lobby_scene = std::dynamic_pointer_cast<Board_Scene>(new_scene);
 
-        if (lobby_scene)
-            lobby_scene->Init();
         break;
 
     default:

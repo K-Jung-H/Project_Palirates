@@ -660,9 +660,6 @@ bool CGameFramework::Change_Scene()
 	if (!c_signal.change)
 		return false;
 
-	if (c_signal.type == Scene_Type::Lobby)
-		Character_Select_Scene::Reset_Select();
-
 	if (c_signal.type == Scene_Type::Board)
 		Board_Scene::Reset_Sail_Status();
 	if (scene_manager->Find_Scene(c_signal.scene_name))

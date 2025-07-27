@@ -2546,7 +2546,6 @@ void CScene::Fog_Sync(Fog_Info fog_info_data)
 	fog_info->fogDensity = fog_info_data.fogDensity;
 }
 //==========================================================================================
-static int is_Ready = 0;
 
 void Character_Select_Scene::BuildDefaultLightsAndMaterials()
 {
