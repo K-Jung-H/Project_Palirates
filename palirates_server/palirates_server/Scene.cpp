@@ -159,7 +159,7 @@ void Board_Scene::Init()
     selected_stage_index = -1;
 
     if(pirate_ship)
-        pirate_ship->SetPosition(0.0f, 0.0f, 1200.0f);
+        pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
 
     for (int i = 0; i < MaxPlayer; i++)
     {
@@ -337,7 +337,7 @@ void Stage_Scene::Init()
 
     std::fill(check_clear_state.begin(), check_clear_state.end(), false);
 
-    if (game_world.Get_Clear_State())
+    if (bStageClear)
         return;
 
     //======================================================
@@ -657,7 +657,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     if (bMonster_x_ray_State)
         effect_data.monster_x_ray = true;
 
-    if (bFog_State)
+    if (bFog_State || bStageClear)
         effect_data.fog_trigger = false;
 
     return effect_data;
