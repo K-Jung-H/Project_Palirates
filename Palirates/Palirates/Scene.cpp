@@ -4064,7 +4064,6 @@ bool Stage_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wP
 	default:
 		break;
 	}
-
 	return false;
 }
 
@@ -4281,7 +4280,7 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	//===============================================================================
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 8000, 100, false);
 	wave_obj->Set_Name("in_game_wave");
 	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
 
@@ -4381,6 +4380,9 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 	test_scene->UpdateTransform(NULL);
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	std::shared_ptr<CGameObject> player_start_position = test_scene->FindFrame("Players");
+	CGameObject::FlattenGameObjectHierarchy(player_start_position, player_start_position_list);
 
 	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
 	{
