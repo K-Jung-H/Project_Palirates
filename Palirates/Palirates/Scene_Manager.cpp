@@ -199,9 +199,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
         pPlayer->Set_Child(pPlayer->m_pRootModel);
         pPlayer->SetID(Client_ID);
-
+        pPlayer->SetOutlineColor(Client_ID + 1);
         pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
-
 
         pPlayer->SetupWeaponCollider();
 
