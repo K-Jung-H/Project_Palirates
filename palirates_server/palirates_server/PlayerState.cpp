@@ -16,15 +16,14 @@ void PlayerNormalState::Enter(Player* player, PlayerStateMachine* sm) {
 }
 
 void PlayerNormalState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
-	/*if (player->GetAnimationSyncData().changedStateNum == int(State::Dive)) {
+	if (player->GetAnimationSyncData().changedStateNum == int(State::Dive)) {
 		player->motion_blur = true;
 	}
-	else player->motion_blur = false;*/
+	else player->motion_blur = false;
 }
 
 void PlayerNormalState::Exit(Player* player) {
 	//std::cout << "PlayerNormalState Exit" << std::endl;
-	//player->motion_blur = false;
 }
 
 /////////////////////////// attack1 ///////////////////////////////

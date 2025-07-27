@@ -773,10 +773,6 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
                 player_list[clientId]->SetStateChangeNum(stateNum);
             }
         }
-        if (stateNum == int(State::Dive)) {
-			player_list[clientId]->motion_blur = true; 
-        }
-        else player_list[clientId]->motion_blur = false;
     }
 }
 
