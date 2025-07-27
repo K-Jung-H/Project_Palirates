@@ -1394,6 +1394,19 @@ void CScene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLis
 	PTTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	PTTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(PTTblock));
+
+	CTexture* LoadingTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	LoadingTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/loading.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, LoadingTexture, 0, 0);
+	D2D1_RECT_F LoadscreenRect = MakeNormalizedRect(0.5f, 0.5f, 1.0f, LoadingTexture);
+	std::unique_ptr<TextureBlock> Loadblock = std::make_unique<TextureBlock>(LoadingTexture, LoadscreenRect, mesh, UILayer::Load);
+	Loadblock->ui_type = UI_EFFECT_FADE_OUT;
+	Loadblock->hp = 5.0f;
+	Loadblock->bActive = true;
+	//Loadblock->start_time = current_time;
+	texture_ui_manager->Add_TextureBlock(std::move(Loadblock));
+
+	bUpdateUI_Load = true;
 }
 
 std::vector<TextureBlock*> CScene::Get_Texture_List()
@@ -1406,7 +1419,7 @@ std::vector<TextureBlock*> CScene::Get_Texture_List()
 
 void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 {
-	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive || bStageClear) {
+	if (bUpdateUI_HP || bUpdateUI_Screen || bMenuActive || bStageClear || bUpdateUI_Load) {
 
 		std::vector<TextureBlock*>& blocks = texture_ui_manager->GetTextureBlockPtrs();
 
@@ -1447,6 +1460,19 @@ void CScene::Update_Texture_UI(float currentTime, float elapsedTime)
 					{
 						block->bActive = false;
 						bUpdateUI_Screen = false;
+					}
+				}
+			}
+			if (bUpdateUI_Load)
+			{
+				uint32_t layerMask = static_cast<uint32_t>(UILayer::Load);
+				if ((static_cast<uint32_t>(block->layer) & layerMask) != 0)
+				{
+					float elapsed = currentTime - block->start_time;
+					if (elapsed >= block->hp)
+					{
+						block->bActive = false;
+						bUpdateUI_Load = false;
 					}
 				}
 			}

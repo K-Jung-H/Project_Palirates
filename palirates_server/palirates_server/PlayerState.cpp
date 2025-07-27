@@ -16,7 +16,10 @@ void PlayerNormalState::Enter(Player* player, PlayerStateMachine* sm) {
 }
 
 void PlayerNormalState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
-
+	if (player->GetAnimationSyncData().changedStateNum == int(State::Dive)) {
+		player->motion_blur = true;
+	}
+	else player->motion_blur = false;
 }
 
 void PlayerNormalState::Exit(Player* player) {

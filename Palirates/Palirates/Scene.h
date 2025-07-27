@@ -153,6 +153,7 @@ public:
 	bool bSelectStart{ false };
 	bool bStageClear{ false };
 	bool CameraZoomOutAnime{ false };
+	bool bUpdateUI_Load{ true };
 
 public:
 	CScene();

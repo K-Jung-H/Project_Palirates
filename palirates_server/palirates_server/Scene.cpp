@@ -758,6 +758,10 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
                 player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
                 player_list[clientId]->SetStateChangeNum(stateNum);
             }
+            else if (stateNum == int(State::Dive)) {
+                //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
         }
     }
 }
