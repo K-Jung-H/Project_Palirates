@@ -3490,6 +3490,8 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 			Screen_Fade = false;
 			if (focus_button)
 				Mouse_Lock = true;
+			else
+				Mouse_Lock = false;
 
 			Set_UI_Layer_Active(blocks, UILayer::Dialogue | UILayer::Dialogue_Button, false);
 
