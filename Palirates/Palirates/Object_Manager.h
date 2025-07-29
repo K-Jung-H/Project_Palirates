@@ -235,7 +235,9 @@ private:
 	std::unique_ptr<OBB_Manager> dynamic_obb_manager;
 
 public:
-	// Constructor / Destructor
+	std::shared_ptr<Aura_Object> aura_obj = NULL;
+
+
 	Object_Manager();
 	~Object_Manager();
 

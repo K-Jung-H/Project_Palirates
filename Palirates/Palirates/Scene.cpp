@@ -515,31 +515,39 @@ ID3D12RootSignature* CScene::Create_Transparent_GraphicsRootSignature(ID3D12Devi
 		pd3dDescriptorRanges[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[4];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
 	{
-		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
-		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[ROOT_PARAMETER_FRAME_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_FRAME_BUFFER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_FRAME_BUFFER_INDEX].Descriptor.ShaderRegister = 0; //Frame_Info
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_FRAME_BUFFER_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_FRAME_BUFFER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// n = 1, b1 = GameObject
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
-		pd3dRootParameters[ROOT_PARAMETER_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_GAMEOBJECT_TRANSFORM_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_GAMEOBJECT_TRANSFORM_INDEX].Constants.Num32BitValues = 32;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_GAMEOBJECT_TRANSFORM_INDEX].Constants.ShaderRegister = 1;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_GAMEOBJECT_TRANSFORM_INDEX].Constants.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_GAMEOBJECT_TRANSFORM_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 		// n = 2, b2 = Camera
-		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 2;
-		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
-		pd3dRootParameters[ROOT_PARAMETER_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_CAMERA_CBV_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_CAMERA_CBV_INDEX].Descriptor.ShaderRegister = 2;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_CAMERA_CBV_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_CAMERA_CBV_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
-		// n = 3, t0 = Albeo_Texture
-		pd3dRootParameters[3].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		pd3dRootParameters[3].DescriptorTable.NumDescriptorRanges = 1;
-		pd3dRootParameters[3].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
-		pd3dRootParameters[3].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		// n = 3, b3 = Sprite_Info
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX].Constants.Num32BitValues = 4;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX].Constants.ShaderRegister = 3;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX].Constants.RegisterSpace = 0;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+
+		// n = 4, t0 = Albeo_Texture
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_ALBEDO_TEXTURE_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_ALBEDO_TEXTURE_INDEX].DescriptorTable.NumDescriptorRanges = 1;
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_ALBEDO_TEXTURE_INDEX].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[0]);
+		pd3dRootParameters[ROOT_PARAMETER_TRANSPARENT_ALBEDO_TEXTURE_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 	}
 
@@ -922,6 +930,15 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	CMaterial::PrepareShaders(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	CSkyBox::CreateShader(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 
+	if (Object_Manager::trail_shader == NULL)
+	{
+		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
+		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+	}
+
+	Aura_Object::CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
 	fog_info = make_shared<Fog_Info>();
 	{
 		fog_info->fogColor = XMFLOAT3(0.8f, 0.6f, 0.3f);
@@ -962,9 +979,7 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
 	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
 
-	Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-	Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-	Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
 
 #ifdef RENDER_WAVE
 	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 8000, 10, false);
@@ -4023,12 +4038,10 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 //	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
-	if (test_particle)
+
+	if (test_aura && m_pPlayer)
 	{
-		XMFLOAT3 p_pos = m_pPlayer->GetPosition();
-		p_pos.y += 30.0f;
-		test_particle->Set_Main_Direction(m_pPlayer->GetLookVector());
-		test_particle->SetPosition(p_pos);
+		test_aura->Set_Aura_Target(m_pPlayer);
 	}
 }
 
@@ -4275,13 +4288,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	if (Object_Manager::trail_shader == NULL)
-	{
-		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	}
-
 	//===============================================================================
 
 #ifdef RENDER_WAVE
@@ -4459,13 +4465,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
-	if (Object_Manager::trail_shader == NULL)
-	{
-		Object_Manager::trail_shader = std::make_shared<Trail_Shader>();
-		Object_Manager::trail_shader->CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
-		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
-	}
-
 	//===============================================================================
 
 #ifdef RENDER_WAVE
@@ -4586,6 +4585,20 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 
 #endif
+
+	//===============================================================================
+
+	test_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	test_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
+
+	test_aura->Set_Sprite_Info(test_sprite_info);
+	obj_manager->aura_obj = test_aura;
 
 	//===============================================================================
 

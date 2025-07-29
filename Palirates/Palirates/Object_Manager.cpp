@@ -1103,6 +1103,8 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
 	Animate_Objects(Object_Type::trail, fTimeElapsed);
+	if(aura_obj)
+		aura_obj->Animate(fTimeElapsed);
 
 }
 
@@ -1339,6 +1341,10 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
+
+	if (aura_obj)
+		aura_obj->Render(pd3dCommandList, pCamera);
+
 }
 
 
