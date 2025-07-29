@@ -238,3 +238,51 @@ float4 Trail_PS(VS_TRAIL_OUTPUT input) : SV_Target
     return float4(finalColor, fade);
 }
 
+
+//==================================================================
+
+cbuffer cbSpriteInfo : register(b3)
+{
+    uint frameCols;
+    uint frameRows;
+    uint totalFrames;
+    float frameTime;
+}
+
+struct VS_AURA_INPUT
+{
+    float3 position : POSITION;
+    float2 uv : TEXCOORD0;
+};
+
+struct VS_AURA_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD0;
+};
+
+VS_AURA_OUTPUT Aura_VS(VS_AURA_INPUT input)
+{
+    VS_AURA_OUTPUT output;
+
+    float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
+    float4 viewPos = mul(worldPos, gmtxView);
+    output.position = mul(viewPos, gmtxProjection);
+    output.uv = input.uv;
+
+    return output;
+}
+
+float4 Aura_PS(VS_AURA_OUTPUT input) : SV_Target
+{
+    int currentFrame = int(gfCurrentTime / frameTime) % totalFrames;
+
+    int col = currentFrame % frameCols;
+    int row = currentFrame / frameCols;
+
+    float2 uvSize = float2(1.0 / frameCols, 1.0 / frameRows);
+    float2 animatedUV = input.uv * uvSize + uvSize * float2(col, row);
+
+    float4 texColor = gtxtAlbedoTexture.Sample(gssWrap, animatedUV);
+    return texColor;
+}

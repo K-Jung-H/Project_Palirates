@@ -24,6 +24,7 @@ class Deferred_CTerrainShader;
 class Deferred_Plane_Shader;
 class CS_Wave_Shader;
 class CSkyBoxShader;
+class Aura_Shader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -1108,10 +1109,44 @@ public:
 
 };
 
-
 //==================================================================================
 
+struct SpriteInfo
+{
+    UINT frameCols;
+    UINT frameRows;
+    UINT totalFrames;
+    float frameTime;
+};
 
+
+class Aura_Object : public CGameObject
+{
+public:
+    static void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+
+private:
+    static Aura_Shader* aura_shader;
+    shared_ptr<CGameObject> m_pTargetObject = nullptr;
+    shared_ptr<CMaterial> aura_material = nullptr;
+    SpriteInfo sprite_info;
+    float TimeElapsed = 0.0f;
+public:
+    Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius = 20.0f, float top_radius = 10.0f, float height = 5.0f);
+    virtual ~Aura_Object();
+
+    virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
+    void Set_Sprite_Info(SpriteInfo& new_sprite_info) { sprite_info = new_sprite_info; }
+
+    virtual void Animate(float fTimeElapsed);
+    virtual void Update_Sprite_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+    void Set_Aura_Target(shared_ptr<CGameObject> target) { m_pTargetObject = target; }
+
+};
+
+//==================================================================================
 
 
 class CMonsterObject : public CGameObject

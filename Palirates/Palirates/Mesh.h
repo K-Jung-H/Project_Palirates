@@ -426,3 +426,13 @@ protected:
 	ID3D12Resource* m_pd3dVertexUploadBuffer = nullptr;
 	D3D12_VERTEX_BUFFER_VIEW m_d3dVertexBufferView = {};
 };
+
+class Frustum_Ring_Shape_Mesh : public CStandardMesh
+{
+public:
+	Frustum_Ring_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius = 2.0f, float top_radius = 1.0f, float height = 1.0f, int seg = 64);
+	virtual ~Frustum_Ring_Shape_Mesh();
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
+
+};
