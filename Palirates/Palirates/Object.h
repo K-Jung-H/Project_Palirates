@@ -24,7 +24,7 @@ class Deferred_CTerrainShader;
 class Deferred_Plane_Shader;
 class CS_Wave_Shader;
 class CSkyBoxShader;
-class Aura_Shader;
+class Sprite_Shader;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -1119,27 +1119,61 @@ struct SpriteInfo
     float frameTime;
 };
 
-
-class Aura_Object : public CGameObject
+class Sprite_Object : public CGameObject
 {
 public:
     static void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
-private:
-    static Aura_Shader* aura_shader;
-    shared_ptr<CGameObject> m_pTargetObject = nullptr;
-    shared_ptr<CMaterial> aura_material = nullptr;
-    SpriteInfo sprite_info;
+protected:
+    static Sprite_Shader* sprite_shader;
+    shared_ptr<CMaterial> sprite_material = nullptr;
+
+    SpriteInfo sprite_info {};
+    
+    Sprite_Effect_Type effect_type = Sprite_Effect_Type::etc;
     float TimeElapsed = 0.0f;
+    bool is_cycle_passed = false;
+
 public:
-    Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius = 20.0f, float top_radius = 10.0f, float height = 5.0f);
-    virtual ~Aura_Object();
+    Sprite_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual ~Sprite_Object() {}
 
     virtual void Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename);
     void Set_Sprite_Info(SpriteInfo& new_sprite_info) { sprite_info = new_sprite_info; }
 
     virtual void Animate(float fTimeElapsed);
     virtual void Update_Sprite_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+    bool Get_Cycle_Passed() { return is_cycle_passed; }
+    void Check_Cycle_Passed();
+    virtual void Reset();
+
+    void Set_Sprite_Effect_Type(Sprite_Effect_Type type) { effect_type = type; }
+    Sprite_Effect_Type Get_Sprite_Effect_Type() { return effect_type; }
+};
+
+class Sprite_Billboard_Object : public Sprite_Object
+{
+public:
+    Sprite_Billboard_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float length = 5.0f);
+    virtual ~Sprite_Billboard_Object() {}
+
+    virtual void Animate(float fTimeElapsed);
+    virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
+
+};
+
+class Aura_Object : public Sprite_Object
+{
+protected:
+    shared_ptr<CGameObject> m_pTargetObject = nullptr;
+
+public:
+    Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius = 20.0f, float top_radius = 10.0f, float height = 5.0f);
+    virtual ~Aura_Object() {}
+
+    virtual void Animate(float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     void Set_Aura_Target(shared_ptr<CGameObject> target) { m_pTargetObject = target; }

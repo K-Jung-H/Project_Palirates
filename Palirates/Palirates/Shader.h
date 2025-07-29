@@ -199,11 +199,11 @@ public:
 
 };
 
-class Aura_Shader : public CStandardShader
+class Sprite_Shader : public CStandardShader
 {
 public:
-	Aura_Shader();
-	virtual ~Aura_Shader();
+	Sprite_Shader();
+	virtual ~Sprite_Shader();
 
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 

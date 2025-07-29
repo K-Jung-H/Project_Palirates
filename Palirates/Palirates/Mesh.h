@@ -436,3 +436,12 @@ public:
 	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
 
 };
+
+class Billboard_Mesh : public CStandardMesh
+{
+public:
+	Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float length = 1.0f);
+	virtual ~Billboard_Mesh() {}
+
+	virtual void OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext);
+};

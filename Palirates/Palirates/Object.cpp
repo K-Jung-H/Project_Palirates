@@ -4731,37 +4731,32 @@ void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 }
 
 //=====================================================================================
-Aura_Shader* Aura_Object::aura_shader = NULL;
+Sprite_Shader* Sprite_Object::sprite_shader = NULL;
 
-void Aura_Object::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+Sprite_Object::Sprite_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (aura_shader == NULL)
+	sprite_info = {};
+
+	if (!sprite_material)
 	{
-		aura_shader = new Aura_Shader();
-		aura_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
-		aura_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
+		sprite_material = make_shared<CMaterial>(1);
+
+		if (sprite_shader)
+			sprite_material->SetShader(sprite_shader);
 	}
 }
 
-Aura_Object::Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius, float top_radius, float height)
+void Sprite_Object::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
-	m_pMesh = make_shared<Frustum_Ring_Shape_Mesh>(pd3dDevice, pd3dCommandList, bottom_radius, top_radius, height, 64);
-
-	if (!aura_material)
+	if (sprite_shader == NULL)
 	{
-		aura_material = make_shared<CMaterial>(1);
-
-		if (aura_shader)
-			aura_material->SetShader(aura_shader);
+		sprite_shader = new Sprite_Shader();
+		sprite_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+		sprite_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 }
 
-Aura_Object::~Aura_Object()
-{
-
-}
-
-void Aura_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
+void Sprite_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, wchar_t* filename)
 {
 	if (filename == NULL)
 		return;
@@ -4772,12 +4767,87 @@ void Aura_Object::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, aura_sprite_texture.get(), 0, ROOT_PARAMETER_TRANSPARENT_ALBEDO_TEXTURE_INDEX);
 
 
-	aura_material->SetTexture(aura_sprite_texture, 0);
+	sprite_material->SetTexture(aura_sprite_texture, 0);
+}
+
+void Sprite_Object::Animate(float fTimeElapsed)
+{
+	TimeElapsed += fTimeElapsed;
+}
+
+
+void Sprite_Object::Update_Sprite_Info(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX, 4, &sprite_info, 0);
+
+}
+
+void Sprite_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+
+		Update_Sprite_Info(pd3dCommandList);
+		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
+
+		m_pMesh->Render(pd3dCommandList, 0);
+	
+}
+
+void Sprite_Object::Check_Cycle_Passed()
+{
+	int currentFrame = static_cast<int>(TimeElapsed / sprite_info.frameTime);
+	int totalFrames = static_cast<int>(sprite_info.totalFrames);
+
+
+	if (!is_cycle_passed && currentFrame >= totalFrames)
+	{
+		is_cycle_passed = true;
+	}
+}
+
+void Sprite_Object::Reset()
+{
+	TimeElapsed = 0.0f;
+	is_cycle_passed = false;
+	Set_Active(true);
+}
+
+//=====================================================================================
+
+Sprite_Billboard_Object::Sprite_Billboard_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float length)
+	: Sprite_Object(pd3dDevice, pd3dCommandList)
+{
+	m_pMesh = make_shared<Billboard_Mesh>(pd3dDevice, pd3dCommandList, length);
+}
+
+void Sprite_Billboard_Object::Animate(float fTimeElapsed)
+{
+	Sprite_Object::Animate(fTimeElapsed);
+}
+
+void Sprite_Billboard_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+{
+	if (sprite_material && sprite_material->m_pShader)
+	{
+		sprite_material->m_pShader->Setting_Render(pd3dCommandList, 1);
+		sprite_material->UpdateShaderVariable(pd3dCommandList);
+	}
+
+	Sprite_Object::Render(pd3dCommandList, pCamera);
+}
+
+//=====================================================================================
+
+Aura_Object::Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius, float top_radius, float height)
+	: Sprite_Object(pd3dDevice, pd3dCommandList)
+{
+	m_pMesh = make_shared<Frustum_Ring_Shape_Mesh>(pd3dDevice, pd3dCommandList, bottom_radius, top_radius, height, 64);
+
+
 }
 
 void Aura_Object::Animate(float fTimeElapsed)
 {
-	TimeElapsed += fTimeElapsed;
+	Sprite_Object::Animate(fTimeElapsed);
 
 	if (m_pTargetObject)
 	{
@@ -4786,26 +4856,15 @@ void Aura_Object::Animate(float fTimeElapsed)
 	}
 }
 
-void Aura_Object::Update_Sprite_Info(ID3D12GraphicsCommandList* pd3dCommandList)
-{
-	pd3dCommandList->SetGraphicsRoot32BitConstants(ROOT_PARAMETER_TRANSPARENT_SPRITE_INFO_INDEX, 4, &sprite_info, 0);
-
-}
-
-
 void Aura_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	if (aura_material && aura_material->m_pShader)
+	if (sprite_material && sprite_material->m_pShader)
 	{
-		aura_material->m_pShader->Setting_Render(pd3dCommandList, 0);
-		aura_material->UpdateShaderVariable(pd3dCommandList);
-
-
-		Update_Sprite_Info(pd3dCommandList);
-		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
-		m_pMesh->Render(pd3dCommandList, 0);
+		sprite_material->m_pShader->Setting_Render(pd3dCommandList, 0);
+		sprite_material->UpdateShaderVariable(pd3dCommandList);
 	}
+
+	Sprite_Object::Render(pd3dCommandList, pCamera);
 }
 //=====================================================================================
 

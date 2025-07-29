@@ -249,21 +249,21 @@ cbuffer cbSpriteInfo : register(b3)
     float frameTime;
 }
 
-struct VS_AURA_INPUT
+struct VS_Sprite_INPUT
 {
     float3 position : POSITION;
     float2 uv : TEXCOORD0;
 };
 
-struct VS_AURA_OUTPUT
+struct VS_Sprite_OUTPUT
 {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD0;
 };
 
-VS_AURA_OUTPUT Aura_VS(VS_AURA_INPUT input)
+VS_Sprite_OUTPUT Sprite_VS(VS_Sprite_INPUT input)
 {
-    VS_AURA_OUTPUT output;
+    VS_Sprite_OUTPUT output;
 
     float4 worldPos = mul(float4(input.position, 1.0f), gmtxGameObject);
     float4 viewPos = mul(worldPos, gmtxView);
@@ -273,7 +273,27 @@ VS_AURA_OUTPUT Aura_VS(VS_AURA_INPUT input)
     return output;
 }
 
-float4 Aura_PS(VS_AURA_OUTPUT input) : SV_Target
+VS_Sprite_OUTPUT Sprite_Billboard_VS(VS_Sprite_INPUT input)
+{
+    VS_Sprite_OUTPUT output;
+
+    float3 worldCenter = gmtxGameObject[3].xyz;
+
+    float3 right = normalize(gmtxInverseView[0].xyz); 
+    float3 up = normalize(gmtxInverseView[1].xyz); 
+
+    float3 offset = input.position.x * right + input.position.y * up;
+    float3 worldPos = worldCenter + offset;
+
+    float4 viewPos = mul(float4(worldPos, 1.0f), gmtxView);
+    output.position = mul(viewPos, gmtxProjection);
+
+    output.uv = input.uv;
+
+    return output;
+}
+
+float4 Sprite_PS(VS_Sprite_OUTPUT input) : SV_Target
 {
     int currentFrame = int(gfCurrentTime / frameTime) % totalFrames;
 
@@ -285,4 +305,5 @@ float4 Aura_PS(VS_AURA_OUTPUT input) : SV_Target
 
     float4 texColor = gtxtAlbedoTexture.Sample(gssWrap, animatedUV);
     return texColor;
+
 }

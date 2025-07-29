@@ -527,10 +527,10 @@ Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 	fullscreen_shader = new CTextureToFullScreenShader();
 
 
-	m_EffectMap[Effect_Type::Motion_Blur] = motion_blur_shader;
-	m_EffectMap[Effect_Type::Outline] = edge_detect_shader;
-	m_EffectMap[Effect_Type::Zoom] = zoom_shader;
-	m_EffectMap[Effect_Type::etc] = NULL;
+	m_EffectMap[Post_Effect_Type::Motion_Blur] = motion_blur_shader;
+	m_EffectMap[Post_Effect_Type::Outline] = edge_detect_shader;
+	m_EffectMap[Post_Effect_Type::Zoom] = zoom_shader;
+	m_EffectMap[Post_Effect_Type::etc] = NULL;
 
 
 	edge_detect_shader->CreateShader(pd3dDevice);
@@ -542,7 +542,7 @@ Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 
 void Post_Effect_Manager::CreateShaderResource(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if(m_EffectMap[Effect_Type::Zoom] != NULL)
+	if(m_EffectMap[Post_Effect_Type::Zoom] != NULL)
 		Create_ZoomBlur_Info(pd3dDevice, pd3dCommandList);
 }
 
@@ -551,12 +551,12 @@ void Post_Effect_Manager::Clear_Reserved_Effect()
 	m_Effect_reserved.clear();
 }
 
-void Post_Effect_Manager::Add_Effect(Effect_Type type, Resource_Bind_Set reserved)
+void Post_Effect_Manager::Add_Post_Effect(Post_Effect_Type type, Resource_Bind_Set reserved)
 {
 	m_Effect_reserved[type].push_back(reserved);
 }
 
-void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index)
+void Post_Effect_Manager::Apply_Post_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index)
 {
 	if (!m_Effect_reserved.size())
 		return;
@@ -568,9 +568,9 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 
 	D3D12_GPU_DESCRIPTOR_HANDLE input_srv = Post_ComputeShader::g_BackBufferSRVs[back_buffer_index];
 
-	for (const std::pair<Effect_Type, std::vector<Resource_Bind_Set>>& pair : m_Effect_reserved)
+	for (const std::pair<Post_Effect_Type, std::vector<Resource_Bind_Set>>& pair : m_Effect_reserved)
 	{
-		Effect_Type reserved_type = pair.first;
+		Post_Effect_Type reserved_type = pair.first;
 		const std::vector<Resource_Bind_Set>& reserved_bind_list = pair.second; 
 
 		shader = m_EffectMap[reserved_type];
@@ -578,7 +578,7 @@ void Post_Effect_Manager::Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandLis
 			continue;
 
 
-		if (reserved_type == Effect_Type::Zoom)
+		if (reserved_type == Post_Effect_Type::Zoom)
 			Update_ZoomBlur_Info(pd3dCommandList);
 
 		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(),

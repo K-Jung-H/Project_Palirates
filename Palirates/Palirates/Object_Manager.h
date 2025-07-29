@@ -236,6 +236,7 @@ private:
 
 public:
 	std::shared_ptr<Aura_Object> aura_obj = NULL;
+	std::shared_ptr<Sprite_Billboard_Object> effect_obj = NULL;
 
 
 	Object_Manager();
@@ -333,5 +334,38 @@ public:
 	std::vector<GPU_OBB> Extract_Fixed_OBBs();
 	void Update_Fixed_OBBs() { m_OBBDataArray = Extract_Fixed_OBBs(); }
 	const std::vector<GPU_OBB>& Get_Fixed_OBBs() const { return m_OBBDataArray; }
+
+};
+
+
+enum class Sprite_Effect_Style
+{
+	temporary,
+	cycle
+};
+
+enum class Sprite_Effect_Type
+{
+	Hit,
+	Aura,
+	etc,
+};
+
+class Sprite_Effect_Manager
+{
+protected:
+	std::vector<std::shared_ptr<Sprite_Object>> temporary_effect_object_list;
+	std::vector<std::shared_ptr<Sprite_Object>> cycle_effect_object_list;
+
+public:
+	shared_ptr<Sprite_Object> Add_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Sprite_Effect_Type type, Sprite_Effect_Style style);
+	shared_ptr<Sprite_Object> Create_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Sprite_Effect_Type type);
+	shared_ptr<Sprite_Object> Recycle_Effect(Sprite_Effect_Type type);
+
+	void Animate_Effects_All(float fTimeElapsed);
+	void Animate_Effects(float fTimeElapsed, Sprite_Effect_Style type);
+
+	void Render_Effects(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera, Sprite_Effect_Style type);
+	void Render_Effects_All (ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
 };

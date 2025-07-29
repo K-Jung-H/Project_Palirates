@@ -4588,18 +4588,31 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	test_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	test_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+	//test_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	//test_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
 
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
+	//SpriteInfo test_sprite_info;
+	//test_sprite_info.frameCols = 5;
+	//test_sprite_info.frameRows = 7;
+	//test_sprite_info.totalFrames = 32;
+	//test_sprite_info.frameTime = 0.05f;
 
-	test_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->aura_obj = test_aura;
+	//test_aura->Set_Sprite_Info(test_sprite_info);
+	//obj_manager->aura_obj = test_aura;
 
+	
+	test_effect = make_shared<Sprite_Billboard_Object>(pd3dDevice, pd3dCommandList, 30);
+	test_effect->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/hit_yellow.dds");
+	test_effect->SetPosition(2000.0f, 100.0f, 2000.0f);
+
+	SpriteInfo test_sprite_info_2;
+	test_sprite_info_2.frameCols = 4;
+	test_sprite_info_2.frameRows = 4;
+	test_sprite_info_2.totalFrames = 16;
+	test_sprite_info_2.frameTime = 0.05f;
+
+	test_effect->Set_Sprite_Info(test_sprite_info_2);
+	obj_manager->effect_obj = test_effect;
 	//===============================================================================
 
 	Object_Manager::Reserve_Update();

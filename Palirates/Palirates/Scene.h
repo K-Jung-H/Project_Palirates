@@ -242,7 +242,9 @@ public:
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_particle = NULL;
 	std::shared_ptr<ParticleObject> test_bleeding = NULL;
+
 	std::shared_ptr<Aura_Object> test_aura = NULL;
+	std::shared_ptr<Sprite_Billboard_Object> test_effect = NULL;
 
 	std::shared_ptr <Object_Manager> obj_manager = NULL;
 
