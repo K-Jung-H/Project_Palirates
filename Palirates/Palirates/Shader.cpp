@@ -903,11 +903,33 @@ void Sprite_Shader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 D3D12_INPUT_LAYOUT_DESC Sprite_Shader::CreateInputLayout(int nPipelineState)
 {
-	UINT nInputElementDescs = 2;
-	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = nullptr;
+	UINT nInputElementDescs = 0;
 
-	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	if (nPipelineState == 0)
+	{
+		nInputElementDescs = 2;
+		pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+		pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    1, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	}
+	else if (nPipelineState == 1)
+	{
+		nInputElementDescs = 6;
+		pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
+
+		pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+		pd3dInputElementDescs[1] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    1, 0,  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+
+		pd3dInputElementDescs[2] = { "POSITION", 1, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0,  D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 }; 
+		pd3dInputElementDescs[3] = { "TEXCOORD", 1, DXGI_FORMAT_R32_FLOAT,       2, 12, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[4] = { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 2, 16, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+		pd3dInputElementDescs[5] = { "TEXCOORD", 2, DXGI_FORMAT_R32_FLOAT,       2, 28, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 };
+
+
+	}
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc = {};
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
@@ -932,8 +954,10 @@ D3D12_SHADER_BYTECODE Sprite_Shader::CreateVertexShader(ID3DBlob** VertexShaderB
 
 D3D12_SHADER_BYTECODE Sprite_Shader::CreatePixelShader(ID3DBlob** PixelShaderBlob, int nPipelineState)
 {
-	if (nPipelineState == 0 || nPipelineState == 1)
+	if (nPipelineState == 0)
 		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "Sprite_PS", "ps_5_1", PixelShaderBlob));
+	else if (nPipelineState == 1)
+		return(CShader::CompileShaderFromFile(L"Particle.hlsl", "Sprite_Billboard_PS", "ps_5_1", PixelShaderBlob));
 	else
 	{
 		D3D12_SHADER_BYTECODE d3dShaderByteCode = { 0, NULL };

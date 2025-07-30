@@ -255,11 +255,14 @@ struct VS_Sprite_INPUT
     float2 uv : TEXCOORD0;
 };
 
+
+
 struct VS_Sprite_OUTPUT
 {
     float4 position : SV_POSITION;
     float2 uv : TEXCOORD0;
 };
+
 
 VS_Sprite_OUTPUT Sprite_VS(VS_Sprite_INPUT input)
 {
@@ -273,25 +276,6 @@ VS_Sprite_OUTPUT Sprite_VS(VS_Sprite_INPUT input)
     return output;
 }
 
-VS_Sprite_OUTPUT Sprite_Billboard_VS(VS_Sprite_INPUT input)
-{
-    VS_Sprite_OUTPUT output;
-
-    float3 worldCenter = gmtxGameObject[3].xyz;
-
-    float3 right = normalize(gmtxInverseView[0].xyz); 
-    float3 up = normalize(gmtxInverseView[1].xyz); 
-
-    float3 offset = input.position.x * right + input.position.y * up;
-    float3 worldPos = worldCenter + offset;
-
-    float4 viewPos = mul(float4(worldPos, 1.0f), gmtxView);
-    output.position = mul(viewPos, gmtxProjection);
-
-    output.uv = input.uv;
-
-    return output;
-}
 
 float4 Sprite_PS(VS_Sprite_OUTPUT input) : SV_Target
 {
@@ -307,3 +291,69 @@ float4 Sprite_PS(VS_Sprite_OUTPUT input) : SV_Target
     return texColor;
 
 }
+
+//===========================================================
+
+struct VS_Sprite_Instance_INPUT
+{
+    float3 pos : POSITION0;
+    float2 uv : TEXCOORD0;
+
+    float3 instancePos : POSITION1;
+    float instanceScale : TEXCOORD1;
+    float3 instanceColor : COLOR0;
+    float instanceElapsed : TEXCOORD2;
+};
+
+struct VS_Sprite_Instance_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float2 uv : TEXCOORD0;
+
+    float3 blendingColor : COLOR0;
+    float elapsedTime : TEXCOORD1;
+};
+
+VS_Sprite_Instance_OUTPUT Sprite_Billboard_VS(VS_Sprite_Instance_INPUT input)
+{
+    VS_Sprite_Instance_OUTPUT output;
+
+    float3 right = normalize(gmtxInverseView[0].xyz); 
+    float3 up = normalize(gmtxInverseView[1].xyz); 
+
+    float3 offset = input.pos.x * right * input.instanceScale +
+                    input.pos.y * up * input.instanceScale;
+
+    float3 worldPos = input.instancePos + offset;
+
+    float4 viewPos = mul(float4(worldPos, 1.0f), gmtxView);
+    output.position = mul(viewPos, gmtxProjection);
+
+    output.uv = input.uv;
+
+    output.blendingColor = input.instanceColor;
+    output.elapsedTime = input.instanceElapsed;
+
+    return output;
+}
+
+float4 Sprite_Billboard_PS(VS_Sprite_Instance_OUTPUT input) : SV_Target
+{
+    int currentFrame = int(input.elapsedTime / frameTime) % totalFrames;
+
+    int col = currentFrame % frameCols;
+    int row = currentFrame / frameCols;
+
+    float2 uvSize = float2(1.0 / frameCols, 1.0 / frameRows);
+    float2 animatedUV = input.uv * uvSize + uvSize * float2(col, row);
+
+    float4 texColor = gtxtAlbedoTexture.Sample(gssWrap, animatedUV);
+
+    if (any(input.blendingColor != float3(0.0f, 0.0f, 0.0f)))
+    {
+        texColor.rgb *= input.blendingColor;
+    }
+
+    return texColor;
+}
+

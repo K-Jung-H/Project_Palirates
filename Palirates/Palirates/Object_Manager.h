@@ -45,7 +45,6 @@ struct Fixed_Object_Info
 
 	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-//	void Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList); // For Shadow-Map Render
 	void Release_Instance_Data_ShaderVariables();
 
 	void Create_Shadow_Instance_Buffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
@@ -235,10 +234,6 @@ private:
 	std::unique_ptr<OBB_Manager> dynamic_obb_manager;
 
 public:
-	std::shared_ptr<Aura_Object> aura_obj = NULL;
-	std::shared_ptr<Sprite_Billboard_Object> effect_obj = NULL;
-
-
 	Object_Manager();
 	~Object_Manager();
 
@@ -337,35 +332,3 @@ public:
 
 };
 
-
-enum class Sprite_Effect_Style
-{
-	temporary,
-	cycle
-};
-
-enum class Sprite_Effect_Type
-{
-	Hit,
-	Aura,
-	etc,
-};
-
-class Sprite_Effect_Manager
-{
-protected:
-	std::vector<std::shared_ptr<Sprite_Object>> temporary_effect_object_list;
-	std::vector<std::shared_ptr<Sprite_Object>> cycle_effect_object_list;
-
-public:
-	shared_ptr<Sprite_Object> Add_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Sprite_Effect_Type type, Sprite_Effect_Style style);
-	shared_ptr<Sprite_Object> Create_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Sprite_Effect_Type type);
-	shared_ptr<Sprite_Object> Recycle_Effect(Sprite_Effect_Type type);
-
-	void Animate_Effects_All(float fTimeElapsed);
-	void Animate_Effects(float fTimeElapsed, Sprite_Effect_Style type);
-
-	void Render_Effects(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera, Sprite_Effect_Style type);
-	void Render_Effects_All (ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
-
-};

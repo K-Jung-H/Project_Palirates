@@ -2,6 +2,7 @@
 #include "Descriptor_Heap.h"
 #include "Object_Manager.h"
 #include "Particle_Manager.h"
+#include "Effect.h"
 #include "UI_Manager.h"
 
 #include "Shader.h"
@@ -243,10 +244,8 @@ public:
 	std::shared_ptr<ParticleObject> test_particle = NULL;
 	std::shared_ptr<ParticleObject> test_bleeding = NULL;
 
-	std::shared_ptr<Aura_Object> test_aura = NULL;
-	std::shared_ptr<Sprite_Billboard_Object> test_effect = NULL;
-
-	std::shared_ptr <Object_Manager> obj_manager = NULL;
+	std::shared_ptr<Object_Manager> obj_manager = NULL;
+	std::shared_ptr<Sprite_Effect_Manager> effect_manager = NULL;
 
 	std::shared_ptr<CHeightMapTerrain> m_pTerrain = NULL;
 	std::shared_ptr<CSkyBox>	m_pSkyBox = NULL;
@@ -421,6 +420,7 @@ public:
 
 	virtual void Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);

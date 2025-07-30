@@ -1103,11 +1103,7 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
 	Animate_Objects(Object_Type::trail, fTimeElapsed);
-	if(aura_obj)
-		aura_obj->Animate(fTimeElapsed);
 
-	if (effect_obj)
-		effect_obj->Animate(fTimeElapsed);
 }
 
 void Object_Manager::ReBuild_Fixed_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -1343,12 +1339,6 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
-
-	if (aura_obj)
-		aura_obj->Render(pd3dCommandList, pCamera);
-
-	if (effect_obj)
-		effect_obj->Render(pd3dCommandList, pCamera);
 }
 
 
@@ -1882,130 +1872,3 @@ void Object_Manager::Render_OBB(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 	dynamic_obb_manager->Render_OBB(pd3dCommandList, camera);
 }
 
-
-//=============================================================
-
-shared_ptr<Sprite_Object>  Sprite_Effect_Manager::Create_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Sprite_Effect_Type type)
-{
-	shared_ptr<Sprite_Object> new_sprite_obj = NULL;
-	switch (type)
-	{
-	case Sprite_Effect_Type::Hit:
-	{
-		new_sprite_obj = make_shared<Sprite_Billboard_Object>();
-		new_sprite_obj->Set_Sprite_Effect_Type(Sprite_Effect_Type::Hit);
-	}
-	break;
-	case Sprite_Effect_Type::Aura:
-	{
-		new_sprite_obj = make_shared<Aura_Object>();
-		new_sprite_obj->Set_Sprite_Effect_Type(Sprite_Effect_Type::Aura);
-	}
-	break;
-
-	case Sprite_Effect_Type::etc:
-	default:
-		break;
-	}
-
-	return new_sprite_obj;
-}
-
-
-shared_ptr<Sprite_Object> Sprite_Effect_Manager::Recycle_Effect(Sprite_Effect_Type type)
-{
-	for (shared_ptr<Sprite_Object> sprite_obj : temporary_effect_object_list)
-	{
-		if (sprite_obj->Get_Active() == false && )
-		{
-
-		}
-	}
-}
-
-shared_ptr<Sprite_Object> Sprite_Effect_Manager::Add_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Sprite_Effect_Type type, Sprite_Effect_Style style)
-{
-	shared_ptr<Sprite_Object> sprite_obj = Recycle_Effect(type);
-
-	if (sprite_obj == NULL)
-		sprite_obj = Create_Effect(pd3dDevice, pd3dCommandList, type);
-
-	switch (style)
-	{
-	case Sprite_Effect_Style::temporary:
-		temporary_effect_object_list.push_back(sprite_obj);
-		break;
-	case Sprite_Effect_Style::cycle:
-		cycle_effect_object_list.push_back(sprite_obj);
-		break;
-	default:
-		break;
-	}
-}
-
-void Sprite_Effect_Manager::Animate_Effects_All(float fTimeElapsed)
-{
-	Animate_Effects(fTimeElapsed, Sprite_Effect_Style::temporary);
-	Animate_Effects(fTimeElapsed, Sprite_Effect_Style::cycle);
-}
-
-void Sprite_Effect_Manager::Animate_Effects(float fTimeElapsed, Sprite_Effect_Style type)
-{
-	switch (type)
-	{
-	case Sprite_Effect_Style::temporary:
-		for (shared_ptr<Sprite_Object> effect_obj : temporary_effect_object_list)
-		{
-			if (effect_obj->Get_Active())
-			{
-				effect_obj->Animate(fTimeElapsed);
-				effect_obj->Check_Cycle_Passed();
-
-				if (effect_obj->Get_Cycle_Passed())
-					effect_obj->Set_Active(false);
-			}
-		}
-		break;
-
-	case Sprite_Effect_Style::cycle:
-		for (shared_ptr<Sprite_Object> effect_obj : cycle_effect_object_list)
-		{
-			effect_obj->Animate(fTimeElapsed);
-		}
-		break;
-
-	default:
-		break;
-	}
-}
-
-void Sprite_Effect_Manager::Render_Effects(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera, Sprite_Effect_Style type)
-{
-	switch (type)
-	{
-	case Sprite_Effect_Style::temporary:
-		for (shared_ptr<Sprite_Object> effect_obj : temporary_effect_object_list)
-		{
-			if (effect_obj->Get_Active())
-				effect_obj->Render(cmdList, pCamera);
-		}
-		break;
-
-	case Sprite_Effect_Style::cycle:
-		for (shared_ptr<Sprite_Object> effect_obj : cycle_effect_object_list)
-		{
-			if (effect_obj->Get_Active())
-				effect_obj->Render(cmdList, pCamera);
-		}
-		break;
-
-	default:
-		break;
-	}
-}
-
-void Sprite_Effect_Manager::Render_Effects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera)
-{
-	Render_Effects(cmdList, pCamera, Sprite_Effect_Style::temporary);
-	Render_Effects(cmdList, pCamera, Sprite_Effect_Style::cycle);
-}

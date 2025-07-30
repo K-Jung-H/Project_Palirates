@@ -2147,3 +2147,23 @@ void Billboard_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, voi
 	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
 	pd3dCommandList->IASetIndexBuffer(&m_pd3dSubSetIndexBufferViews[0]);
 }
+
+void Billboard_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+
+	D3D12_VERTEX_BUFFER_VIEW views[3] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
+
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	if (m_nSubMeshes > 0)
+	{
+
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[0]));
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+	}
+}

@@ -70,9 +70,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
-//	ConnectToServer(SERVER_IP, SERVER_PORT);
-//	StartPingThread();
-//	SendPacket_String("ENTER_SCENE,Character_Select\n");
+	//ConnectToServer(SERVER_IP, SERVER_PORT);
+	//StartPingThread();
+	//SendPacket_String("ENTER_SCENE,Character_Select\n");
 
 	Build_Default_Elements();
 	Build_Default_Scenes();
@@ -603,14 +603,14 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
-//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_1, "Stage_1");
 	Build_Scene(Scene_Type::Stage_2, "Stage_2");
 
 
 	scene_manager->Set_Active_Scene("Stage_2");
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
 
-//	scene_manager->Set_Active_Scene("Character_Select");
+	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
 
 	//========================================================
