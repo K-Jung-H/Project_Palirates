@@ -937,7 +937,11 @@ void CScene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 		Object_Manager::trail_shader->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	Aura_Object::CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+	effect_manager = make_shared<Sprite_Effect_Manager>(pd3dDevice, pd3dCommandList);
+
+	if (Sprite_Effect_Manager::sprite_shader == NULL)
+		Sprite_Effect_Manager::CreateShader(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+
 
 	fog_info = make_shared<Fog_Info>();
 	{
@@ -3964,6 +3968,7 @@ void Stage_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	fog_info->time += fTimeElapsed;
 
 	obj_manager->Animate_Objects_All(fTimeElapsed);
+	effect_manager->Animate_Effects_All(fTimeElapsed);
 
 #ifdef RENDER_WAVE
 
@@ -4038,11 +4043,7 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 //	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
-
-	if (test_aura && m_pPlayer)
-	{
-		test_aura->Set_Aura_Target(m_pPlayer);
-	}
+	effect_manager->Update_Effects_All();
 }
 
 void Stage_Scene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -4064,6 +4065,15 @@ void Stage_Scene::Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 {
 	obj_manager->Render_Objects_All(pd3dCommandList, main_Camera.get());
 }
+
+void Stage_Scene::Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{	
+	effect_manager->Render_Effects_All(pd3dCommandList, main_Camera.get());
+
+	CScene::Transparent_Render(pd3dDevice, pd3dCommandList);
+
+}
+
 
 bool Stage_Scene::OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam)
 {
@@ -4104,6 +4114,12 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			Stage_Clear_Signal = true;
 		}
 		break;
+
+		case 'Q':
+		{
+			XMFLOAT3 new_pos = m_pPlayer->GetPosition();
+			effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, new_pos);
+		}	break;
 
 		default:
 			break;
@@ -4588,17 +4604,21 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	test_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	test_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+	//test_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	//test_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
 
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
+	//SpriteInfo test_sprite_info;
+	//test_sprite_info.frameCols = 5;
+	//test_sprite_info.frameRows = 7;
+	//test_sprite_info.totalFrames = 32;
+	//test_sprite_info.frameTime = 0.05f;
 
-	test_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->aura_obj = test_aura;
+	//test_aura->Set_Sprite_Info(test_sprite_info);
+	//obj_manager->aura_obj = test_aura;
+
+	
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
 
 	//===============================================================================
 

@@ -45,7 +45,6 @@ struct Fixed_Object_Info
 
 	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-//	void Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList); // For Shadow-Map Render
 	void Release_Instance_Data_ShaderVariables();
 
 	void Create_Shadow_Instance_Buffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
@@ -235,9 +234,6 @@ private:
 	std::unique_ptr<OBB_Manager> dynamic_obb_manager;
 
 public:
-	std::shared_ptr<Aura_Object> aura_obj = NULL;
-
-
 	Object_Manager();
 	~Object_Manager();
 
@@ -335,3 +331,4 @@ public:
 	const std::vector<GPU_OBB>& Get_Fixed_OBBs() const { return m_OBBDataArray; }
 
 };
+
