@@ -70,9 +70,9 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
 
-	//ConnectToServer(SERVER_IP, SERVER_PORT);
-	//StartPingThread();
-	//SendPacket_String("ENTER_SCENE,Character_Select\n");
+	ConnectToServer(SERVER_IP, SERVER_PORT);
+	StartPingThread();
+	SendPacket_String("ENTER_SCENE,Character_Select\n");
 
 	Build_Default_Elements();
 	Build_Default_Scenes();
