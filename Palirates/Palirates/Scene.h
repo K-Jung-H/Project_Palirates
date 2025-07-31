@@ -241,8 +241,9 @@ public:
 	std::shared_ptr<Particle_Manager>particle_manager = NULL;
 
 	std::shared_ptr<ParticleObject> test_sand = NULL;
-	std::shared_ptr<ParticleObject> test_particle = NULL;
-	std::shared_ptr<ParticleObject> test_bleeding = NULL;
+	std::shared_ptr<ParticleObject> test_dragon_particle = NULL;
+
+	std::shared_ptr<Aura_Object>test_player_aura = NULL;
 
 	std::shared_ptr<Object_Manager> obj_manager = NULL;
 	std::shared_ptr<Sprite_Effect_Manager> effect_manager = NULL;

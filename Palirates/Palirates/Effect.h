@@ -79,7 +79,7 @@ public:
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
 
     void Set_Aura_Target(shared_ptr<CGameObject> target) { m_pTargetObject = target; }
-
+    shared_ptr<CGameObject> Get_Aura_Target() { return m_pTargetObject; }
 };
 
 

@@ -3,6 +3,7 @@
 #include "Object.h"
 #include "Player.h"
 #include "Shader.h"
+#include "Effect.h"
 
 #define DEFAULT_INSTANCE_NUM 1
 #define MAX_INSTANCING_NUM 10000
@@ -11,6 +12,7 @@ struct BoundingBox_Instance_Info;
 struct Fixed_Object_Info;
 struct Instance_Info;
 struct GPU_OBB;
+
 
 struct Instance_Info
 {
@@ -61,6 +63,7 @@ enum class Object_Type
 	fixed,
 	player,
 	trail,
+	aura,
 	etc
 };
 
@@ -223,6 +226,8 @@ private:
 	std::unordered_map<int, size_t> id2idx;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
+	std::vector<std::shared_ptr<CGameObject>> aura_obj_list;
+
 
 	// Static object map
 	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
