@@ -1034,28 +1034,11 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 		test_sand_storm_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
 	}
 
-	Particle_Format bleeding_info;
-	{
-		bleeding_info.shader_type = Particle_Shader_Type::interval;
-		bleeding_info.particle_type = Particle_Type::bleed;
-		bleeding_info.max_particles = 30;
-		bleeding_info.MaxLifetime = 3.0f;
-
-		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
-		bleeding_info.EmitFaceIndex = 5;
-
-		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		bleeding_info.init_velocity_value = 50.0f;
-		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		bleeding_info.size = 0.3f;
-		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
-	}
 	shared_ptr<Particle_Shape_Mesh> particle_mesh;
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
-	test_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
-	test_particle->Set_Active(false);
+	test_dragon_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, test_dragon_fire_info);
+	test_dragon_particle->Set_Active(false);
 
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("billboard");
@@ -1065,9 +1048,6 @@ void CScene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	test_sand->SetPosition(1200.0f, 1000.0f, 1200.0f);
 	test_sand->Set_Area(XMFLOAT3(2400.0f, 2000.0f, 2400.0f));
 	
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
-	test_bleeding->Set_World_Coordinate();
 #endif
 
 
@@ -1876,36 +1856,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 
 		case 'E':
 		{
-			particle_test_button = !particle_test_button;
-			if (test_particle == NULL)
-				break;
-
-			test_particle->Set_Active(particle_test_button);
-			auto* mon = obj_manager->Get_Object_List(Object_Type::skinned);
-			if (mon)
-			{
-				for (const auto& obj : *mon)
-				{
-					if (!obj) continue;
-
-					if (auto* dragon = dynamic_cast<CDragonObject*>(obj.get()))
-					{
-						if (particle_test_button) {
-							dragon->Test_Mode = true;
-							float centerZ = 1590.0f;
-							XMFLOAT3 centerPos = XMFLOAT3(1723.0f, 35.0f, 831.0f);
-							dragon->GetStateMachine()->changeState(State::Attack3, Key_Value::None);
-							dragon->SetPosition(centerPos);
-							dragon->SetLookDirection(XMFLOAT3(1.0f, 0.0f, 0.0f));
-						}
-						else {
-							dragon->SetPosition(XMFLOAT3(1723.0f, 35.0f, 831.0f));
-							dragon->GetStateMachine()->changeState(State::Idle, Key_Value::None);
-						}
-						break; 
-					}
-				}
-			}
+			bHitSignal = true;
 		}
 		break;
 
@@ -2075,21 +2026,18 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 
 						XMFLOAT3 position;
 						XMStoreFloat3(&position, finalPos);
-						test_particle->SetPosition(position);
+						test_dragon_particle->SetPosition(position);
 
 						XMFLOAT3 look;
 						XMStoreFloat3(&look, forward);
-						test_particle->Set_Main_Direction(look);
+						test_dragon_particle->Set_Main_Direction(look);
 					}
 				}
 			}
 		}
 	}
 
-	if (test_bleeding)
-	{
 
-	}
 #ifdef RENDER_WAVE
 
 	CS_Wave_Shader::update_wave_info->g_WaveMin = 0.15f;
@@ -2103,7 +2051,6 @@ void CScene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float f
 		wave_obj->Animate(pd3dCommandList, fTimeElapsed);
 	}
 #endif
-
 
 }
 
@@ -2146,28 +2093,17 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	if (bHitSignal)
 	{
 		bHitSignal = false;
-
-		int  cbv = CDescriptor_Heap::GetCreatedCbvCount();
-		int  srv = CDescriptor_Heap::GetCreatedSrvCount();
-		int  uav = CDescriptor_Heap::GetCreatedUavCount();
-
-		DebugOutput("CBV: " + to_string(cbv) + "\n");
-		DebugOutput("SRV: " + to_string(srv) + "\n");
-		DebugOutput("UAV: " + to_string(uav) + "\n");
-
-		test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, "bleeding");
-		test_bleeding->Set_World_Coordinate();
-
 		XMFLOAT3 p_pos = m_pPlayer->GetPosition();
 		p_pos.y += 15.0f;
-		test_bleeding->SetPosition(p_pos);
-		test_bleeding->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, 1.0f));
-
-
 		m_pPlayer->Set_Color_Blending(XMFLOAT3(1.0f, 0.0f, 0.0f), 1.0f);
 	}
 
 	m_pPlayer->Update_Color_Blending(-0.01f);
+
+
+	if (test_player_aura && test_player_aura->Get_Aura_Target())
+		test_player_aura->Set_Aura_Target(m_pPlayer);
+
 }
 
 void CScene::After_Update_Objects()
@@ -3640,14 +3576,6 @@ bool Board_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'Q':
-		{
-			if (test_button)
-				break;
-
-			test_button = true;
-		}	break;
-
 		case 'W':		case 'w':
 		{
 			if(!isRunning)
@@ -4043,6 +3971,21 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 //	obj_manager->Update_Culling(pd3dDevice, pd3dCommandList);
 #endif
 
+	if (bHitSignal)
+	{
+		bHitSignal = false;
+		XMFLOAT3 p_pos = m_pPlayer->GetPosition();
+		p_pos.y += 15.0f;
+		m_pPlayer->Set_Color_Blending(XMFLOAT3(1.0f, 0.0f, 0.0f), 1.0f);
+	}
+
+	m_pPlayer->Update_Color_Blending(-0.01f);
+
+
+	if (test_player_aura && test_player_aura->Get_Aura_Target()== NULL)
+		test_player_aura->Set_Aura_Target(m_pPlayer);
+
+
 	effect_manager->Update_Effects_All();
 }
 
@@ -4350,28 +4293,6 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	env_ash_particle->SetPosition(1920.0f, 400.0f, 1408.0f);
 	env_ash_particle->Set_Area(XMFLOAT3(3840.0f, 800.0f, 2816.0f));
 
-
-	Particle_Format bleeding_info;
-	{
-		bleeding_info.shader_type = Particle_Shader_Type::interval;
-		bleeding_info.particle_type = Particle_Type::bleed;
-		bleeding_info.max_particles = 30;
-		bleeding_info.MaxLifetime = 3.0f;
-
-		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
-		bleeding_info.EmitFaceIndex = 5;
-
-		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		bleeding_info.init_velocity_value = 50.0f;
-		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		bleeding_info.size = 0.3f;
-		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
-	}
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
-	test_bleeding->Set_World_Coordinate();
 #endif
 
 	//===============================================================================
@@ -4527,29 +4448,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	env_sand_particle->SetPosition(2276.0f, 500.0f, 1536.0f);
 	env_sand_particle->Set_Area(XMFLOAT3(4352.0f, 1000.0f, 3072.0f));
 
-	Particle_Format bleeding_info;
-	{
-		bleeding_info.shader_type = Particle_Shader_Type::interval;
-		bleeding_info.particle_type = Particle_Type::bleed;
-		bleeding_info.max_particles = 30;
-		bleeding_info.MaxLifetime = 3.0f;
-
-		bleeding_info.area_xyz = XMFLOAT3(500.0f, 500.0f, 500.0f);
-		bleeding_info.EmitFaceIndex = 5;
-
-		bleeding_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		bleeding_info.init_velocity_value = 50.0f;
-		bleeding_info.acceleration = XMFLOAT3(0.0f, -9.8f, 0.0f);
-
-		bleeding_info.size = 0.3f;
-		bleeding_info.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
-	}
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	test_bleeding = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, bleeding_info);
-	test_bleeding->Set_World_Coordinate();
-
-
 #endif
 
 	//===============================================================================
@@ -4604,18 +4502,18 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	//test_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	//test_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	
+	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
 
-	//SpriteInfo test_sprite_info;
-	//test_sprite_info.frameCols = 5;
-	//test_sprite_info.frameRows = 7;
-	//test_sprite_info.totalFrames = 32;
-	//test_sprite_info.frameTime = 0.05f;
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
 
-	//test_aura->Set_Sprite_Info(test_sprite_info);
-	//obj_manager->aura_obj = test_aura;
-
+	test_player_aura->Set_Sprite_Info(test_sprite_info);
+	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
 	
 	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
 	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
