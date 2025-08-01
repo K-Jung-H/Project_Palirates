@@ -548,32 +548,32 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
 
 void PlayerStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
 
-    XMFLOAT3 vec = animController->HipsPosition;
-    XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
+    //XMFLOAT3 vec = animController->HipsPosition;
+    //XMFLOAT3 vec2 = animController->m_xmf3PrevHipsPosition;
 
-    XMFLOAT3 shift;
-    shift.x = vec.x - vec2.x;
-    shift.y = vec.y - vec2.y;
-    shift.z = vec.z - vec2.z;
+    //XMFLOAT3 shift;
+    //shift.x = vec.x - vec2.x;
+    //shift.y = vec.y - vec2.y;
+    //shift.z = vec.z - vec2.z;
 
-    animController->m_xmf3PrevHipsPosition = vec;
-    XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y * scaleFactor, shift.z * scaleFactor };
+    //animController->m_xmf3PrevHipsPosition = vec;
+    //XMFLOAT3 scaleShift = { shift.x * scaleFactor, shift.y * scaleFactor, shift.z * scaleFactor };
 
-    XMFLOAT3 moveDirection = m_pOwner->GetLook();
-    XMFLOAT3 finalMove = {
-        moveDirection.x * scaleShift.z,
-        moveDirection.y * scaleShift.z,
-        moveDirection.z * scaleShift.z
-    };
+    //XMFLOAT3 moveDirection = m_pOwner->GetLook();
+    //XMFLOAT3 finalMove = {
+    //    moveDirection.x * scaleShift.z,
+    //    moveDirection.y * scaleShift.z,
+    //    moveDirection.z * scaleShift.z
+    //};
 
-    if (bUseNegative) {
-        finalMove.x = -1 * finalMove.x;
-        finalMove.z = -1 * finalMove.z;
-    }
+    //if (bUseNegative) {
+    //    finalMove.x = -1 * finalMove.x;
+    //    finalMove.z = -1 * finalMove.z;
+    //}
 
-    if (scaleShift.z > 0.001f) {
-        m_pOwner->Move(finalMove, false);
-    }
+    //if (scaleShift.z > 0.001f) {
+    //    m_pOwner->Move(finalMove, false);
+    //}
 }
 
 void PlayerStateMachine::ResetTrackForState(State state, bool posReset)

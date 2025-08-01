@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "GameObject.h"
 #include "ServerAnimLoader.h"
+#include "Scene.h"
 
 
 XMFLOAT3 Lerp(XMFLOAT3 a, XMFLOAT3 b, float t) {

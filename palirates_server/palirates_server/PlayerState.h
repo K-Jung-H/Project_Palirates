@@ -80,4 +80,12 @@ public:
     State GetStateEnum() const override { return State::Get_Up; }
 };
 
+class PlayerDiveState : public PlayerState {
+public:
+    void Enter(Player* monster, PlayerStateMachine* sm) override;
+    void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
+    void Exit(Player* monster) override;
+
+    State GetStateEnum() const override { return State::Dive; }
+};
 

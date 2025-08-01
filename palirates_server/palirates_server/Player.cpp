@@ -2,6 +2,7 @@
 #include "Player.h"
 #include "AnimationRegistry.h"
 #include "PlayerStateMachine.h"
+#include "Scene.h"
 
 Player::Player(int playerId) : Skinned_GameObject()
 {
@@ -20,6 +21,22 @@ Player::Player(int playerId) : Skinned_GameObject()
     SetType(Object_Type::player);
     WeaponName = "SM_Wep_Cutlass_01";
     RootMotionTrackSet = {
+        TRACK_IDLE,
+        TRACK_RUN_FORWARD_LEFT,
+        TRACK_RUN_FORWARD,
+        TRACK_RUN_FORWARD_RIGHT,
+        TRACK_RUN_BACKWARD_LEFT,
+        TRACK_RUN_BACKWARD,
+        TRACK_RUN_BACKWARD_RIGHT,
+        TRACK_RUN_LEFT,
+        TRACK_RUN_RIGHT,
+        TRACK_DIVEROLL_FORWARD,
+        TRACK_KNOCK_DOWN,
+        TRACK_GET_UP,
+        TRACK_ATTACK1,
+        TRACK_ATTACK2,
+        TRACK_ATTACK3,
+        TRACK_GET_HIT_F2
     };
 
     std::unordered_set<int> OnceType = {
@@ -28,7 +45,8 @@ Player::Player(int playerId) : Skinned_GameObject()
         TRACK_ATTACK3,
         TRACK_KNOCK_DOWN,
         TRACK_GET_UP,
-		TRACK_GET_HIT_F2
+		TRACK_GET_HIT_F2,
+        TRACK_DIVEROLL_FORWARD
     };
 
     for (int i = 0; i < n_Animation; ++i) {
@@ -56,6 +74,12 @@ void Player::key_input(uint32_t keyState)
     if (keyState & INPUT_Q)
     {
         motion_blur = !motion_blur;
+    }
+
+    if (keyState & INPUT_SHIFT)
+    {
+        cout << "input" << "\n";
+        //GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
     }
 }
 
@@ -154,4 +178,24 @@ void Player::HitDamage(float damage) {
     if (hp - damage < 0.0f)
         hp = 0.0f;
     else hp -= damage;
+}
+
+int Player::PlayAnimation(State state) {
+    int track = AnimationRegistry::GetPlayerAnimationTrack(state);
+    currStateTrackIdx = track;
+    if (track >= 0 && track < n_Animation) {
+        for (int i = 0; i < n_Animation; ++i) {
+            targetWeights[i] = 0.0f;
+        }
+        targetWeights[track] = 1.0f;
+
+        auto& animTrack = m_pSkinnedAnimationController->m_pAnimationTracks[track];
+        if (animTrack.m_nType == ANIMATION_TYPE_ONCE) {
+            animTrack.m_bFinished = false;
+        }
+        animTrack.m_fPosition = 0.0f;
+    }
+    stateElapsedTime = 0.0f;
+
+    return track;
 }

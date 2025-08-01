@@ -161,6 +161,11 @@ void Board_Scene::Init()
     if(pirate_ship)
         pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
 
+#ifdef TEST_MODE
+    if (pirate_ship)
+        pirate_ship->SetPosition(0.0f, 0.0f, 1400.0f);
+#endif
+
     for (int i = 0; i < MaxPlayer; i++)
     {
         player_keyState[i] = 0;
@@ -693,12 +698,12 @@ void Stage_Scene::Add_Player(int id)
     
     player_list[id] = make_shared<Player>(player_model_list[id]);
     player_list[id]->Set_Child(player_list[id]->m_pRootModel);
-
     XMFLOAT3 player_pos = player_init_spawn_frame_list[id + 1]->GetPosition();
 
     player_list[id]->SetPosition(player_pos);
     player_list[id]->SetupWeaponCollider();
     player_list[id]->UpdateTransform();
+    player_list[id]->m_pOwnerScene = this;
 }
 
 void Stage_Scene::Remove_Player(int id)
@@ -761,10 +766,10 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
                 player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
                 player_list[clientId]->SetStateChangeNum(stateNum);
             }
-            else if (stateNum == int(State::Dive)) {
-                //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
-                player_list[clientId]->SetStateChangeNum(stateNum);
-            }
+            //else if (stateNum == int(State::Dive)) {
+            //    //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+            //    player_list[clientId]->SetStateChangeNum(stateNum);
+            //}
         }
         if (stateNum == int(State::Dive)) {
 			player_list[clientId]->motion_blur = true; 
@@ -897,6 +902,13 @@ std::vector<MonsterHitInfo> Stage_Scene::FlushDamageQueue()
 {
     std::vector<MonsterHitInfo> temp = monster_damage_queue;
     monster_damage_queue.clear();
+    return temp;
+}
+
+std::vector<StateChangeInfo> Stage_Scene::FlushStateChangeQueue()
+{
+    std::vector<StateChangeInfo> temp = player_state_change_queue;
+    player_state_change_queue.clear();
     return temp;
 }
 

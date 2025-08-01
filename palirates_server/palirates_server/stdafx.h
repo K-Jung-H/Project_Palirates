@@ -34,6 +34,8 @@ using namespace std;
 
 #define MaxPlayer 6
 
+#define TEST_MODE
+
 enum Scene_Type
 {
 	Lobby,
@@ -80,6 +82,12 @@ struct MonsterHitInfo
 {
     int monsterID;
     bool hitCmd;
+};
+
+struct StateChangeInfo
+{
+    int ID;
+    int stateNum;
 };
 
 struct Effect_Sync_Data

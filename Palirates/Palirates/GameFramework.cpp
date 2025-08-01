@@ -756,8 +756,10 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 		}
 
-		if (!CScene::Screen_Fade)
-			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		if (!isRunning) {
+			if (!CScene::Screen_Fade)
+				m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		}
 
 
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
@@ -801,8 +803,10 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
+			if (!isRunning) {
+				if (dwDirection)
+					m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
+			}
 		}
 
 	}
@@ -1595,6 +1599,12 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else if (cmd == "STAGE_CLEAR") {
 			stage_scene->bStageClear = true;
 		}
+		else if (cmd == "P_S_CMD") {
+			int pID = std::stoi(tokens[3]);
+			int stateNum = std::stoi(tokens[4]);
+			m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+			cout << "change State : " << stateNum << "\n";
+		}
 
 	}
 	break;
@@ -2013,8 +2023,10 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		if (syncData.bStateChange)
-			m_pPlayer->SetPosition(syncData.position);
+		m_pPlayer->SetPosition(syncData.position);
+
+		/*if (syncData.bStateChange)
+			m_pPlayer->SetPosition(syncData.position);*/
 		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
 			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {

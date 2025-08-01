@@ -57,4 +57,6 @@ public:
     float GetHP() { return hp; }
     void SetHP(float setHP) { hp = setHP; }
     void HitDamage(float damage);
+
+    virtual int PlayAnimation(State state);
 };
