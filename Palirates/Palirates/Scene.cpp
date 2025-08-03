@@ -3136,7 +3136,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}; 
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 100, true);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 200, true);
 	wave_obj->Set_Name("board_scene_wave");
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
@@ -3324,10 +3324,22 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 #endif
 
-	if (!isRunning)
+	if (isRunning)
 	{
-		pirate_ship->Animate(fTimeElapsed);
-		pirate_ship->HandleBoundaryReflection(2000.0f);
+		if (pirate_ship)
+		{
+			pirate_ship->UpdateRotationFromWave(fTimeElapsed);
+			pirate_ship->UpdateMovementOnWave(fTimeElapsed);
+			pirate_ship->HandleBoundaryReflection(2000.0f);
+		}
+	}
+	else
+	{
+		if (pirate_ship)
+		{
+			pirate_ship->Animate(fTimeElapsed);
+			pirate_ship->HandleBoundaryReflection(2000.0f);
+		}
 	}
 
 	if (m_pLights)

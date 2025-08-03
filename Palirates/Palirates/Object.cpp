@@ -4076,7 +4076,7 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
-	desiredTexelSize = 20.0f;
+	desiredTexelSize = 10.0f;
 
 	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
@@ -4459,40 +4459,64 @@ void Boat_Object::UpdateRotationFromWave(float fTimeElapsed)
 
 void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
 {
-	// --- 속도 제한 ---
-	float velocityFull = Vector3::Length(m_xmf3Velocity);
-	if (velocityFull > m_fMaxVelocityXZ)
-	{
-		float scale = m_fMaxVelocityXZ / velocityFull;
-		m_xmf3Velocity.x *= scale;
-		m_xmf3Velocity.z *= scale;
-	}
-
-	// --- Look 벡터 방향으로 이동 처리 ---
-	XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
-	XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, velocityFull, false);
-
 	XMFLOAT3 pos = GetPosition();
-	XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
-	XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
 
-	// --- 부드러운 높이 보정 ---
+	if (!isRunning)
+	{
+		// --- 속도 제한 ---
+		float velocityFull = Vector3::Length(m_xmf3Velocity);
+		if (velocityFull > m_fMaxVelocityXZ)
+		{
+			float scale = m_fMaxVelocityXZ / velocityFull;
+			m_xmf3Velocity.x *= scale;
+			m_xmf3Velocity.z *= scale;
+		}
 
-	smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
-	newPos.y = smoothedHeight * 30.0f;
+		// --- Look 벡터 방향으로 이동 처리 ---
+		XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
+		XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, Vector3::Length(m_xmf3Velocity), false);
 
-	SetPosition(newPos);
+		XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
+		XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
 
-	// --- 감속 처리 (속도 크기 감소만)
-	float fDeceleration = m_fFriction * fTimeElapsed;
-	if (fDeceleration > velocityFull) fDeceleration = velocityFull;
+		// --- 부드러운 높이 보정 ---
+		smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
+		newPos.y = smoothedHeight * 30.0f;
 
-	velocityFull -= fDeceleration;
+		SetPosition(newPos);
 
-	// 감속된 속도를 Look 방향에 재적용
-	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
-	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+		// --- 감속 처리 (속도 크기 감소만)
+		float fDeceleration = m_fFriction * fTimeElapsed;
+		float velocityFullDecel = Vector3::Length(m_xmf3Velocity);
+		if (fDeceleration > velocityFullDecel) fDeceleration = velocityFullDecel;
+
+		velocityFullDecel -= fDeceleration;
+
+		// 감속된 속도를 Look 방향에 재적용
+		XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFullDecel, false);
+		m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+	}
+	else
+	{
+		// --- 서버 기반 위치로 방향/속도 추정 ---
+		XMFLOAT3 direction = Vector3::Subtract(pos, previous_position);
+		direction.y = 0.0f; // Ignore vertical movement
+
+		float distance = Vector3::Length(direction);
+		XMFLOAT3 velocity = Vector3::ScalarProduct(direction, 1.0f / fTimeElapsed, false);
+		velocity.y = 0.0f; // Ensure Y is not included
+
+		m_xmf3Velocity = velocity;
+
+		if (distance > 0.0001f)
+			SetLookDirection(Vector3::Normalize(direction));
+
+		// --- 높이 보정 ---
+		pos.y = std::lerp(smoothedHeight, wave_height, 0.1f) * 30.0f;
+		SetPosition(pos);
+	}
 }
+
 
 void Boat_Object::Animate(float fTimeElapsed)
 {
@@ -4549,7 +4573,7 @@ void Boat_Object::Record_Last_Pos()
 {
 	XMFLOAT3 world_pos = GetPosition();
 	previous_position.x = world_pos.x;
-	previous_position.y = world_pos.y;
+	previous_position.y = 0.0f;
 	previous_position.z = world_pos.z;
 
 }
@@ -4563,6 +4587,7 @@ bool Boat_Object::Is_Moving()
 		if (isRunning) // online
 		{
 			XMFLOAT3 present_pos = GetPosition();
+			present_pos.y = 0.0f;
 			if (Compare_XMFLOAT3(previous_position, present_pos, 0.001f))
 			{
 				return false;
