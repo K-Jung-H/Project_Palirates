@@ -772,6 +772,8 @@ void Particle_Manager::Emit_Particles(ID3D12GraphicsCommandList* pd3dCommandList
 
 		for (std::shared_ptr<ParticleObject> particle_obj : particle_object_list_map[type])
 		{
+			if (!particle_obj->IsEmitEnabled()) continue;
+
 			CB_Particle_Update_Info update_info = particle_obj->Get_Particle_Update_Info(fTimeElapsed, true);
 			update_info.obb_num = OBB_num;
 

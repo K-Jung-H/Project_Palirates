@@ -4384,7 +4384,7 @@ void Wave_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 Boat_Object::Boat_Object() : CGameObject(1)
 {
 	m_fMaxVelocityXZ = 200.0f;
-	m_xmf3Velocity.x = 300.0f;
+	m_xmf3Velocity.x = 0.0f;
 	m_xmf3Velocity.y = 0.0f;
 	m_xmf3Velocity.z = 0.0f;
 	m_fFriction = 50.0f;
@@ -4545,11 +4545,36 @@ bool Boat_Object::GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outW
 	return true;
 }
 
+void Boat_Object::Record_Last_Pos()
+{
+	XMFLOAT3 world_pos = GetPosition();
+	previous_position.x = world_pos.x;
+	previous_position.y = world_pos.y;
+	previous_position.z = world_pos.z;
+
+}
+
 bool Boat_Object::Is_Moving()
 {
-	if (5.0f < Vector3::Length(m_xmf3Velocity))
+	if (5.0f < Vector3::Length(m_xmf3Velocity)) // Default
 		return true;
-	return false;
+	else
+	{
+		if (isRunning) // online
+		{
+			XMFLOAT3 present_pos = GetPosition();
+			if (Compare_XMFLOAT3(previous_position, present_pos, 0.001f))
+			{
+				return false;
+			}
+			else
+				return true;
+		}
+		return false;
+
+	}
+
+
 }
 
 void Boat_Object::Change_Model(bool is_stay_mode)

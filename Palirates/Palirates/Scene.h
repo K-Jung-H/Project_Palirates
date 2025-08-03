@@ -359,8 +359,8 @@ private:
 
 	std::shared_ptr<Boat_Object> pirate_ship;
 	std::shared_ptr<Wave_Object> wave_plane;
-	std::shared_ptr<ParticleObject> water_particle_1;
-	std::shared_ptr<ParticleObject> water_particle_2;
+	std::shared_ptr<ParticleObject> water_particle_front;
+	std::shared_ptr<ParticleObject> water_particle_back;
 
 	string camera_position = "";
 	bool focus_button = false;
@@ -376,6 +376,10 @@ private:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void After_Update_Objects();
+	
+	void Update_Boat();
+	void Update_Splash_Particle();
+
 	int Get_Closest_Island_Index(float range);
 
 	void SetCameraTarget(std::string_view target);
