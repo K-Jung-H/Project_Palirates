@@ -599,7 +599,6 @@ private:
 
     bool Active = true;
 
-    XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 
 public:
     static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
@@ -635,6 +634,7 @@ public:
     XMVECTOR target_dir{};
     bool     m_bInAir = false;
     XMVECTOR m_vVelocity = XMVectorZero();
+    XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 
     float    m_fMoveSpeed = 5.0f;
     float    m_fRotationSpeed = 360.0f;
@@ -973,14 +973,13 @@ public:
     void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
     void Add_Rotate(float angleDelta);
 
-    void Set_Velocity(XMFLOAT3 new_velo) { m_xmf3Velocity = new_velo; }
-
-
     virtual void Animate(float fTimeElapsed);
     void HandleBoundaryReflection(float boundary);
 
+    void Set_Velocity(XMFLOAT3 new_velo) { m_xmf3Velocity = new_velo; }
     XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
     float Get_RotationSpeed() { return m_fRotationSpeed; }
+    virtual void Record_Last_Pos();
 
     void RegisterMarker(const std::string& name, shared_ptr<CGameObject> node) { Boat_Frames_Marker[name] = node; }
 

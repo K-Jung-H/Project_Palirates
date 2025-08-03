@@ -271,6 +271,7 @@ class ParticleObject : public CGameObject
 {
 private:
 	bool wasResetFlagSent = false;
+	bool bEmitEnabled = true;
 
 protected:
 	XMFLOAT3 m_xmf3Direction = { 0.0f, 0.0f, 1.0f }; // 기본 전방
@@ -369,4 +370,8 @@ public:
 
 	Particle_Type Get_Particle_Type() { return p_type; }
 
+
+	void EnableEmit() { bEmitEnabled = true; }
+	void DisableEmit() { bEmitEnabled = false; }
+	bool IsEmitEnabled() const { return bEmitEnabled; }
 };

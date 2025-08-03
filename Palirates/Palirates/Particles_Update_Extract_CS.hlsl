@@ -290,8 +290,7 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
 
         case PARTICLE_TYPE_SPLASH:
         {
-                p.Velocity *= 0.2f;
-                p.Color = float3(0.2f, 0.2f, 1.0f);
+
             }
             break;
 
@@ -414,7 +413,6 @@ void Update_Snow(inout Particle_Info p, uint index)
 
 void Update_Water_Splash(inout Particle_Info p, uint index)
 {
-    p.Acceleration = float3(0.0f, -9.8f, 0.0f);
     p.Velocity += p.Acceleration * ElapsedTime;
     p.Position += p.Velocity * ElapsedTime;
     p.Rotate_Value += 4.0f * ElapsedTime;

@@ -3136,7 +3136,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}; 
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 100, true);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 200, true);
 	wave_obj->Set_Name("board_scene_wave");
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
@@ -3265,25 +3265,28 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	{
 		water_splashes_info.shader_type = Particle_Shader_Type::continuous;
 		water_splashes_info.particle_type = Particle_Type::splash;
-		water_splashes_info.max_particles = 300;
+		water_splashes_info.max_particles = 500;
 
-		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);
+		water_splashes_info.area_xyz = XMFLOAT3(3000.0f, 500.0f, 3000.0f);
 
-		water_splashes_info.MaxLifetime = 0.3f;
+		water_splashes_info.MaxLifetime = 5.0f;
 
 		water_splashes_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-		water_splashes_info.init_velocity_value = 100.0f;
-		water_splashes_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+		water_splashes_info.init_velocity_value = 500.0f;
+		water_splashes_info.acceleration = XMFLOAT3(0.0f, -300, 0.0f);
 
 		water_splashes_info.size = 1.0f;
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
 
 	shared_ptr<Particle_Shape_Mesh> particle_mesh;
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 
-	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
-	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_front = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_front->Set_World_Coordinate();
+
+	water_particle_back = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_back->Set_World_Coordinate();
 #endif
 	//=====================================================
 
@@ -3321,10 +3324,22 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 
 #endif
 
-	if (!isRunning)
+	if (isRunning)
 	{
-		pirate_ship->Animate(fTimeElapsed);
-		pirate_ship->HandleBoundaryReflection(2000.0f);
+		if (pirate_ship)
+		{
+			pirate_ship->UpdateRotationFromWave(fTimeElapsed);
+			pirate_ship->UpdateMovementOnWave(fTimeElapsed);
+			pirate_ship->HandleBoundaryReflection(2000.0f);
+		}
+	}
+	else
+	{
+		if (pirate_ship)
+		{
+			pirate_ship->Animate(fTimeElapsed);
+			pirate_ship->HandleBoundaryReflection(2000.0f);
+		}
 	}
 
 	if (m_pLights)
@@ -3333,21 +3348,6 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 		m_pLights[7].m_xmf3Position.y += 100.0f;
 	}
 
-
-#ifdef RENDER_PARTICLE
-	XMFLOAT3 bottom_head_particle_pos;
-	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
-
-
-	water_particle_1->SetPosition(bottom_head_particle_pos);
-	water_particle_1->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
-
-	XMFLOAT3 bottom_tail_particle_pos;
-	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
-
-	water_particle_2->SetPosition(bottom_tail_particle_pos);
-	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
-#endif
 
 	if (m_pPlayer && m_pPlayer->GetCamera())
 	{
@@ -3370,20 +3370,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
-	bool isShipMoving = pirate_ship->Is_Moving(); 
-	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
 
-	if (isShipMoving && !isSailMode)
-	{
-		pirate_ship->Set_Sail_Mode(true); 
-		pirate_ship->Change_Model(false); 
-	}
-	else if (!isShipMoving && isSailMode)
-	{
-		pirate_ship->Set_Sail_Mode(false); 
-		pirate_ship->Change_Model(true); 
-	}
-
+	Update_Boat();
+	Update_Splash_Particle();
 
 	if (focus_button)
 	{
@@ -3460,10 +3449,67 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 }
 
+void Board_Scene::Update_Boat()
+{
+	bool isShipMoving = pirate_ship->Is_Moving();
+	bool isSailMode = pirate_ship->Get_Sail_Mode();
+
+	if (isShipMoving && !isSailMode)
+	{
+		pirate_ship->Set_Sail_Mode(true);
+		pirate_ship->Change_Model(false);
+	}
+	else if (!isShipMoving && isSailMode)
+	{
+		pirate_ship->Set_Sail_Mode(false);
+		pirate_ship->Change_Model(true);
+	}
+}
+
+void Board_Scene::Update_Splash_Particle()
+{
+
+
+#ifdef RENDER_PARTICLE
+	XMFLOAT3 bottom_head_particle_pos;
+	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
+
+	XMFLOAT3 bottom_tail_particle_pos;
+	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
+
+
+	XMFLOAT3  front_dir = Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false);
+	XMFLOAT3  back_dir = Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false);
+	back_dir.y += 0.5f;
+
+	water_particle_front->SetPosition(bottom_head_particle_pos);
+	water_particle_front->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
+
+	water_particle_back->SetPosition(bottom_tail_particle_pos);
+	water_particle_back->Set_Main_Direction(back_dir);
+
+#endif
+
+	bool isShipMoving = pirate_ship->Is_Moving();
+
+	if (!isShipMoving)
+	{
+		water_particle_front->DisableEmit();
+		water_particle_back->DisableEmit();
+	}
+	else
+	{
+		water_particle_front->EnableEmit();
+		water_particle_back->EnableEmit();
+	}
+}
+
 void Board_Scene::After_Update_Objects()
 {
 	CScene::After_Update_Objects();
 
+	if (pirate_ship)
+		pirate_ship->Record_Last_Pos();
 }
 
 int Board_Scene::Get_Closest_Island_Index(float range)

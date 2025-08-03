@@ -283,13 +283,18 @@ inline void Swap(float *pfS, float *pfT) { float fTemp = *pfS; *pfS = *pfT; *pfT
 inline bool IsZeroVector(const XMFLOAT3& v) { return (fabs(v.x) < EPSILON && fabs(v.y) < EPSILON && fabs(v.z) < EPSILON); }
 inline float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
+
+inline bool Compare_XMFLOAT3(const XMFLOAT3& lhs, const XMFLOAT3& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z; }
+inline bool Compare_XMFLOAT3(const XMFLOAT3& lhs, const XMFLOAT3& rhs, float tolerance = 0.001f)
+{
+	return (fabs(lhs.x - rhs.x) < tolerance && fabs(lhs.y - rhs.y) < tolerance && fabs(lhs.z - rhs.z) < tolerance);
+}
+
 inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
 inline bool Compare_XMFLOAT4(const XMFLOAT4& lhs, const XMFLOAT4& rhs, float tolerance = 0.001f)
 {
 	return (fabs(lhs.x - rhs.x) < tolerance && fabs(lhs.y - rhs.y) < tolerance && fabs(lhs.z - rhs.z) < tolerance && fabs(lhs.w - rhs.w) < tolerance);
 }
-
-
 
 
 namespace Vector3
@@ -605,9 +610,10 @@ enum class Monster_Type : int
 //#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"
 //#define SERVER_IP "172.30.1.13"
-//#define SERVER_IP "127.0.0.1"
-#define SERVER_IP "10.30.2.21"
+#define SERVER_IP "127.0.0.1"
+//#define SERVER_IP "10.30.2.21"
 //#define SERVER_IP "192.168.159.1"
+//#define SERVER_IP "121.171.77.91"
 
 #define SERVER_PORT 9000
 

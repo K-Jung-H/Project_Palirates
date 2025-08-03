@@ -78,7 +78,7 @@ VS_TERRAIN_OUTPUT VS_Plane(VS_TERRAIN_INPUT input)
     output.positionW = mul(float4(input.position, 1.0f), gmtxGameObject).xyz;
 
     float height = Plane_Height_Map.SampleLevel(gssWrap, input.uv0, 0.0f).x;
-
+\
     height -= 0.5f;
     //if (height < 0.0f)
     //    height *= 10.0f;
