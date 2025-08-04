@@ -18,24 +18,30 @@ void Monster::update(float deltaTime) {
             m_StateMachine->SetWeight(deltaTime);
         //}
     }
-    if (m_pSkinnedAnimationController) {
-        m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
-    }
+    //if (m_pSkinnedAnimationController) {
+    //    m_pSkinnedAnimationController->AdvanceTime(deltaTime, this);
+    //}
 
     if (bIsInvincible) {
-        invincibleTimeRemaining += deltaTime;
-        if (invincibleTimeRemaining >= invincibleDuration) {
-            bIsInvincible = false;
-            invincibleTimeRemaining = 0.0f;
+        if (!bDead) {
+            invincibleTimeRemaining += deltaTime;
+            if (invincibleTimeRemaining >= invincibleDuration) {
+                bIsInvincible = false;
+                invincibleTimeRemaining = 0.0f;
+            }
         }
     }
 }
 
-void Monster::PlayAnimation(State state) {
-    //if (!m_pSkinnedAnimationController) return;
+void Monster::update_collision(float deltaTime, std::vector<BoundingOrientedBox> obblist) {
+    if (m_pSkinnedAnimationController) {
+        m_pSkinnedAnimationController->AdvanceTime(deltaTime, this, &obblist);
+    }
+}
 
+int Monster::PlayAnimation(State state) {
     int track = AnimationRegistry::GetMonsterAnimationTrack(type, state);
-
+	currStateTrackIdx = track;
     if (track >= 0 && track < n_Animation) {
         for (int i = 0; i < n_Animation; ++i) {
             targetWeights[i] = 0.0f;
@@ -49,6 +55,8 @@ void Monster::PlayAnimation(State state) {
         animTrack.m_fPosition = 0.0f;
     }
     stateElapsedTime = 0.0f;
+
+    return track;
 }
 
 ServerSyncData Monster::MakeSyncData() {
@@ -58,6 +66,7 @@ ServerSyncData Monster::MakeSyncData() {
     if (m_pSkinnedAnimationController) {
         data.track_info_list = m_pSkinnedAnimationController->MakeSyncData();
     }
+    data.hp = GetHP();
     return data;
 }
 
@@ -70,7 +79,7 @@ std::optional<XMFLOAT3> Monster::FindNearestPlayerInRange(float range) {
     const XMFLOAT3 myPos = GetPosition();
 
     for (const auto& player : *pPlayerList) {
-        if (!player || !player->Get_Active()) continue;
+        if (!player || !player->Get_Active() || player->bDead) continue;
 
         const XMFLOAT3 pPos = player->GetPosition();
         float dx = pPos.x - myPos.x;
@@ -89,7 +98,7 @@ std::optional<XMFLOAT3> Monster::FindNearestPlayerInRange(float range) {
 }
 
 void Monster::SetTarget(const XMFLOAT3& targetPos) {
-    m_targetLookDir = targetPos;
+    m_targetPos = targetPos;
     m_shouldRotate = true;
 }
 
@@ -137,16 +146,23 @@ void Monster::InitStateMachine() {
         state->Enter(this, m_StateMachine.get());
 }
 
+void Monster::HitDamage(float damage) {
+    if (hp - damage < 0.0f)
+        hp = 0.0f;
+    else hp -= damage;
+}
 // ---------------- Fishman ----------------
 
 Fishman::Fishman(int id) : Monster(id) {
+    detectionRange = 100.0f;
+    attackRange = 20.0f;
     type = Monster_Type::Fishman;
     SetType(Object_Type::monster);
     WeaponName = "spear_lp";
     RootMotionTrackSet = {
         TRACK_FISHMAN_WALK,
         TRACK_FISHMAN_WALK_BACK,
-       // TRACK_FISHMAN_ATTACK1,
+        TRACK_FISHMAN_ATTACK1,
         TRACK_FISHMAN_ATTACK2,
         TRACK_FISHMAN_GET_HIT,
         TRACK_FISHMAN_DEAD
@@ -176,12 +192,14 @@ Fishman::Fishman(int id) : Monster(id) {
 // ---------------- Anubis ----------------
 
 Anubis::Anubis(int id) : Monster(id) {
+    detectionRange = 100.0f;
+    attackRange = 20.0f;
     type = Monster_Type::Anubis;
     SetType(Object_Type::monster);
     WeaponName = "Staff_LP";
     RootMotionTrackSet = {
-        TRACK_ANUBIS_IDLE,
-        TRACK_ANUBIS_IDLE_BREAK,
+        //TRACK_ANUBIS_IDLE,
+        //TRACK_ANUBIS_IDLE_BREAK,
         TRACK_ANUBIS_IDLE_TO_ATTACK_IDLE,
         TRACK_ANUBIS_WALK,
         TRACK_ANUBIS_BACK_WALK,
@@ -217,11 +235,14 @@ Anubis::Anubis(int id) : Monster(id) {
 // ---------------- Dragon ----------------
 
 Dragon::Dragon(int id) : Monster(id) {
+    detectionRange = 100.0f;
+    attackRange = 50.0f;
     type = Monster_Type::Dragon;
     SetType(Object_Type::monster);
     WeaponName = "HeadA_LP";
     RootMotionTrackSet = {
         TRACK_DRAGON_ATTACK1,
+        //TRACK_DRAGON_FLY_BREATHE,
         TRACK_DRAGON_RUN,
         TRACK_DRAGON_GOT_HIT1,
         TRACK_DRAGON_GOT_HIT2,
@@ -231,6 +252,8 @@ Dragon::Dragon(int id) : Monster(id) {
 
     std::unordered_set<int> OnceType = {
         TRACK_DRAGON_ATTACK1,
+        TRACK_DRAGON_FLY_BREATHE,
+        TRACK_DRAGON_BREATHE,
         TRACK_DRAGON_GOT_HIT1,
         TRACK_DRAGON_GOT_HIT2,
         TRACK_DRAGON_DEAD
@@ -240,13 +263,14 @@ Dragon::Dragon(int id) : Monster(id) {
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();
-
-   /* auto body = std::make_shared<BoundingOrientedBox>(
-        XMFLOAT3(0.0f, 0.8f, 0.0f),
-        XMFLOAT3(0.4f, 0.8f, 0.4f),
+    m_fScale = 15.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 1.0f, -1.6f),
+        XMFLOAT3(0.8f, 1.0f, 2.8f),
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
     );
-    Set_Collider_OBB(body);*/
+    Set_Collider_OBB(body);
 }
 
 // ---------------- Test ----------------

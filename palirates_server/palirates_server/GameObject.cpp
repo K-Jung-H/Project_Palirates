@@ -67,20 +67,25 @@ void GameObject::Set_Name(std::string_view name)
 
 void GameObject::Set_Child(std::shared_ptr<GameObject> pChild)
 {
-	if (pChild)
-		pChild->m_pParent = shared_from_this();
+	if (!pChild) return;
 
+	pChild->m_pParent = shared_from_this();
 
-	if (child_obj)
+	if (!child_obj)
 	{
-		if (pChild)
-			pChild->sibling_obj = child_obj->sibling_obj;
-
-		child_obj->sibling_obj = pChild;
+		child_obj = pChild;
 	}
 	else
-		child_obj = pChild;
+	{
+		std::shared_ptr<GameObject> current = child_obj;
+		while (current->sibling_obj)
+		{
+			current = current->sibling_obj;
+		}
+		current->sibling_obj = pChild;
+	}
 }
+
 
 std::shared_ptr<GameObject> GameObject::Get_Child()
 {
@@ -176,6 +181,40 @@ void GameObject::Rotate(XMFLOAT4* pxmf4Quaternion)
 	m_xmf4x4Parent = Matrix4x4::Multiply(mtxRotate, m_xmf4x4Parent);
 
 	UpdateTransform(NULL);
+}
+
+void GameObject::RotateTowardsTarget(const XMFLOAT3& targetPos, float deltaTime, float rotationSpeed)
+{
+	XMFLOAT3 selfPos = GetPosition();
+	XMFLOAT3 look = GetLook();
+	XMFLOAT3 toTarget = {
+		targetPos.x - selfPos.x,
+		0.0f, 
+		targetPos.z - selfPos.z
+	};
+
+	if (Vector3::LengthSquared(toTarget) < 1e-6f) {
+		return;
+	}
+
+	toTarget = Vector3::Normalize(toTarget);
+
+	float currentYaw = XMConvertToDegrees(atan2f(look.x, look.z));
+	float targetYaw = XMConvertToDegrees(atan2f(toTarget.x, toTarget.z));
+
+	float angleDiff = targetYaw - currentYaw;
+	while (angleDiff > 180.0f) angleDiff -= 360.0f;
+	while (angleDiff < -180.0f) angleDiff += 360.0f;
+
+	if (fabs(angleDiff) < 0.1f) return; 
+
+	float deltaYaw = rotationSpeed * deltaTime;
+	if (fabs(angleDiff) < deltaYaw)
+		deltaYaw = angleDiff;
+	else
+		deltaYaw = (angleDiff > 0) ? deltaYaw : -deltaYaw;
+
+	Rotate(0.0f, deltaYaw, 0.0f);
 }
 
 void GameObject::SetScale(float x, float y, float z, bool keepPosition)
@@ -637,6 +676,9 @@ std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::s
 			nFrame = ::ReadIntegerFromFile(pInFile);
 			nTextures = ::ReadIntegerFromFile(pInFile);
 			::ReadStringFromFile(pInFile, pGameObject->m_pstrFrameName);
+
+			pGameObject->Set_Name(pGameObject->m_pstrFrameName);
+
 		}
 		else if (!strcmp(pstrToken, "<Transform>:"))
 		{
@@ -692,6 +734,27 @@ std::shared_ptr<GameObject> GameObject::Load_Scene_FrameHierarchyFromFile(std::s
 	}
 
 	return pGameObject;
+}
+
+void GameObject::FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList)
+{
+	if (!node) return;
+
+	const std::string& name = node->Get_Name();
+
+
+	if (!name.empty())
+	{
+		outList.push_back(node);
+	}
+
+
+	std::shared_ptr<GameObject> child = node->Get_Child();
+	while (child)
+	{
+		FlattenGameObjectHierarchy(child, outList);
+		child = child->Get_Sibling();
+	}
 }
 
 
@@ -755,8 +818,14 @@ void GameObject::UpdateWorldOBB()
 		if (XMVector3Equal(XMLoadFloat3(&skinnedMesh->m_xmf3AABBExtents), XMVectorZero())) {
 			return;
 		}
-
+		
 		auto localOBB = std::make_shared<DirectX::BoundingOrientedBox>(XMFLOAT3(0.0f, 0.0f, 0.0f), skinnedMesh->m_xmf3AABBExtents, XMFLOAT4(0, 0, 0, 1));
+		
+		if (CustomOBBScale.x != 1.0f || CustomOBBScale.y != 1.0f || CustomOBBScale.z != 1.0f) {
+			localOBB->Extents.x *= CustomOBBScale.x;
+			localOBB->Extents.y *= CustomOBBScale.y;
+			localOBB->Extents.z *= CustomOBBScale.z;
+		}
 
 		if (skinnedMesh->m_ppSkinningBoneFrameCaches.empty() || !skinnedMesh->m_ppSkinningBoneFrameCaches[skinnedMesh->m_nSkinningBones - 1]) {
 			return;
@@ -773,10 +842,25 @@ void GameObject::UpdateWorldOBB()
 		XMFLOAT3 extentsLocal = m_pMesh->m_xmf3AABBExtents;
 
 		XMMATRIX worldMatrix = XMLoadFloat4x4(&m_xmf4x4World);
+		if (m_pstrFrameName && strcmp(m_pstrFrameName, "SM_Wep_Cutlass_01") == 0)
+		{
+			XMVECTOR dummyScale, rotQuat, transVec;
+			XMMatrixDecompose(&dummyScale, &rotQuat, &transVec, worldMatrix);
+
+			XMVECTOR scaleVec = XMVectorSet(10.0f, 10.0f, 10.0f, 0.0f);
+			worldMatrix = XMMatrixScalingFromVector(scaleVec) *
+				XMMatrixRotationQuaternion(rotQuat) *
+				XMMatrixTranslationFromVector(transVec);
+		}
 		worldMatrix = WeaponCustomRotation * worldMatrix;
 		auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
 
 		obb->Transform(*obb, worldMatrix);
+		XMVECTOR scaleVec, rotQuat, transVec;
+		XMMatrixDecompose(&scaleVec, &rotQuat, &transVec, XMLoadFloat4x4(&m_xmf4x4World));
+
+		XMFLOAT3 scale;
+		XMStoreFloat3(&scale, scaleVec);
 
 		m_OBB = obb;
 	}
@@ -856,8 +940,11 @@ void Boat_Object::Animate(float fTimeElapsed)
 	XMFLOAT3 up = { 0.0f, 1.0f, 0.0f };
 	Rotate(&up, m_fRotationSpeed * fTimeElapsed);
 	//m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+#ifdef _DEBUG
 	m_fRotationSpeed = lerp(m_fRotationSpeed, 0.0f, 0.01f);
-
+#else
+	m_fRotationSpeed = std::lerp(m_fRotationSpeed, 0.0f, 0.01f);
+#endif
 	// --- 감속 처리 ---
 	float decel = m_fFriction * fTimeElapsed;
 	if (decel > velocityFull) decel = velocityFull;
@@ -898,7 +985,9 @@ void Skinned_GameObject::SetupWeaponCollider()
 	}
 
 	model->SetType(Object_Type::weapon);
-
+	if (WeaponName == "SM_Wep_Cutlass_01") {
+		model->SetScale(10.0f, 10.0f, 10.0f, true);
+	}
 	XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
 	XMVECTOR scale, rotationQuat, translation;
 	XMFLOAT4 quaternion;
@@ -931,6 +1020,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 			XMConvertToRadians(30.0f),
 			XMConvertToRadians(0.0f));
 	}
+
 	Weapon_ptr = model;
 	//std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
 	//std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;

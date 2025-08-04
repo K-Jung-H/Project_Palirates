@@ -24,6 +24,10 @@ Player::Player(int playerId) : Skinned_GameObject()
 
     std::unordered_set<int> OnceType = {
         TRACK_ATTACK1,
+        TRACK_ATTACK2,
+        TRACK_ATTACK3,
+        TRACK_KNOCK_DOWN,
+        TRACK_GET_UP,
 		TRACK_GET_HIT_F2
     };
 
@@ -34,14 +38,25 @@ Player::Player(int playerId) : Skinned_GameObject()
     }
 
     InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    //SetScale(10.0f, 10.0f, 10.0f);
+   
     m_StateMachine = std::make_unique<PlayerStateMachine>(this);
     InitStateMachine();
+    m_fScale = 10.0f;
+    //SetScale(m_fScale, m_fScale, m_fScale);
+ /*   auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 8.0f, 0.0f),
+        XMFLOAT3(4.0f, 8.0f, 4.0f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);*/
 }
 
 void Player::key_input(uint32_t keyState)
 {
-
+    if (keyState & INPUT_Q)
+    {
+        motion_blur = !motion_blur;
+    }
 }
 
 void Player::animate(float Elapsedtime)
@@ -66,10 +81,12 @@ void Player::update(float deltaTime)
     }
 
     if (bIsInvincible) {
-		invincibleTimeRemaining += deltaTime;
-        if (invincibleTimeRemaining >= invincibleDuration) {
-            bIsInvincible = false;
-			invincibleTimeRemaining = 0.0f;
+        if (!bDead) {
+            invincibleTimeRemaining += deltaTime;
+            if (invincibleTimeRemaining >= invincibleDuration) {
+                bIsInvincible = false;
+                invincibleTimeRemaining = 0.0f;
+            }
         }
     }
 }
@@ -131,4 +148,10 @@ void Player::InitStateMachine() {
 
     if (auto state = m_StateMachine->GetCurrentState())
         state->Enter(this, m_StateMachine.get());
+}
+
+void Player::HitDamage(float damage) {
+    if (hp - damage < 0.0f)
+        hp = 0.0f;
+    else hp -= damage;
 }

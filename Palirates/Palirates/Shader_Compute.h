@@ -149,12 +149,21 @@ struct ZoomBlurInfo_CB
 };
 
 
-enum class Effect_Type
+enum class Post_Effect_Type
 {
 	Motion_Blur,
 	Outline,
 	Zoom,
 	 etc,
+};
+
+struct Effect_Sync_Data
+{
+	bool motion_blur_active;
+	std::array<bool, MaxPlayer> motion_blur_apply;
+	
+	bool zoom_blur_active;
+	XMFLOAT3 zoom_w_position;
 };
 
 
@@ -170,9 +179,11 @@ class Post_Effect_Manager
 private:
 	static UINT Frame_Buffer_Width;
 	static UINT Frame_Buffer_Height;
+	D3D12_GPU_DESCRIPTOR_HANDLE post_process_result;
 
-	std::unordered_map<Effect_Type, Post_ComputeShader*> m_EffectMap;
-	std::unordered_map<Effect_Type, vector<Resource_Bind_Set>> m_Effect_reserved;
+
+	std::unordered_map<Post_Effect_Type, Post_ComputeShader*> m_EffectMap;
+	std::unordered_map<Post_Effect_Type, vector<Resource_Bind_Set>> m_Effect_reserved;
 
 
 	ID3D12Resource* m_pd3dcb_zoomblur_info = NULL;
@@ -187,8 +198,9 @@ public:
 
 
 	void Clear_Reserved_Effect();                    
-	void Add_Effect(Effect_Type type, Resource_Bind_Set reserved);
-	void Apply_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index);
+	void Add_Post_Effect(Post_Effect_Type type, Resource_Bind_Set reserved);
+	void Apply_Post_Effect(ID3D12GraphicsCommandList* pd3dCommandList, UINT back_buffer_index);
+	void Render_Result(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	void Resize_Screen_Size(UINT new_width, UINT new_height);
 

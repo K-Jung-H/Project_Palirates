@@ -28,8 +28,9 @@ enum class Particle_Type
 	snow = 0,
 	splash = 1,
 	dragon_breath = 2,
-	sand = 3,
-	sand_storm = 4,
+	party = 3,
+	sand = 4,
+	sand_storm = 5,
 	//=======================
 	bleed = 10,
 	etc = -1
@@ -226,6 +227,15 @@ public:
 	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 };
 
+class Cube_Chip_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Cube_Chip_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize = 2.0f, float fHeight = 0.5f);
+	virtual ~Cube_Chip_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
 class Sphere_Shape_Mesh : public Particle_Shape_Mesh
 {
 public:
@@ -270,6 +280,7 @@ protected:
 private:
 	Particle_Manager* owner_manager = nullptr;
 	Particle* particle_data = NULL;
+	Particle_Type p_type = Particle_Type::etc;
 
 	shared_ptr<Particle_Shape_Mesh>  shape_mesh = NULL;
 	shared_ptr<CMaterial> particle_Material = NULL;
@@ -355,5 +366,7 @@ public:
 
 	void Set_OwnerManager(Particle_Manager* mgr) { owner_manager = mgr; }
 	void Add_Destroy_Queue();
+
+	Particle_Type Get_Particle_Type() { return p_type; }
 
 };

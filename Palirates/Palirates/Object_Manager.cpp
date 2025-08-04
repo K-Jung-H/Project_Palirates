@@ -939,6 +939,12 @@ void Object_Manager::Add_Object(std::shared_ptr<CGameObject> obj_ptr, Object_Typ
 	}
 	break;
 
+	case Object_Type::aura:
+	{
+		if (obj_ptr != NULL)
+			aura_obj_list.push_back(obj_ptr);
+	}
+	break;
 
 	case Object_Type::etc:
 		break;
@@ -1067,7 +1073,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 				{
 					obj_ptr->Animate(fTimeElapsed);
 //					obj_ptr->UpdateTransform(NULL);
-
+					obj_ptr->Update_Color_Blending(-fTimeElapsed);
 				}
 			
 		}
@@ -1077,6 +1083,16 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	case Object_Type::trail:
 	{
 		for (std::shared_ptr<CGameObject>& obj_ptr : trail_obj_list)
+		{
+			if (obj_ptr->Get_Active())
+				obj_ptr->Animate(fTimeElapsed);
+		}
+	}
+	break;
+
+	case Object_Type::aura:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : aura_obj_list)
 		{
 			if (obj_ptr->Get_Active())
 				obj_ptr->Animate(fTimeElapsed);
@@ -1103,10 +1119,11 @@ void Object_Manager::Animate_Objects_All(float fTimeElapsed)
 	Animate_Objects(Object_Type::non_skinned, fTimeElapsed);
 	Animate_Objects(Object_Type::player, fTimeElapsed);
 	Animate_Objects(Object_Type::trail, fTimeElapsed);
+	Animate_Objects(Object_Type::aura, fTimeElapsed);
 
 }
 
-void Object_Manager::Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+void Object_Manager::ReBuild_Fixed_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (do_instance_update == false)
 		return;
@@ -1203,6 +1220,7 @@ void Object_Manager::Render_Objects_Shadow(Object_Type type, ID3D12GraphicsComma
 	break;
 
 	case Object_Type::trail:
+	case Object_Type::aura:
 	case Object_Type::etc:
 	default:
 	{
@@ -1309,6 +1327,25 @@ void Object_Manager::Render_Objects(Object_Type type, ID3D12GraphicsCommandList*
 	}
 	break;
 
+	case Object_Type::aura:
+	{
+		if (!aura_obj_list.size())
+			break;
+
+		if (!Sprite_Effect_Manager::sprite_shader)
+			break;
+
+		Sprite_Effect_Manager::sprite_shader->Setting_Render(pd3dCommandList, 0);
+		for (std::shared_ptr<CGameObject>& obj_ptr : aura_obj_list)
+		{
+			if (obj_ptr->Get_Active())
+				obj_ptr->Render(pd3dCommandList, pCamera);
+		}
+
+	}
+	break;
+
+
 	case Object_Type::etc:
 	default:
 	{
@@ -1339,19 +1376,51 @@ void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandLi
 void Object_Manager::Render_Transparent_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	Render_Objects(Object_Type::trail, pd3dCommandList, pCamera);
+	Render_Objects(Object_Type::aura, pd3dCommandList, pCamera);
+
 }
 
 
-void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
+void Object_Manager::Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera, Object_Type type)
 {
-	for (auto& [id, obj_ptr] : player_map)
+	switch (type)
 	{
-		if (obj_ptr != NULL)
-			if (obj_ptr->Get_Active())
+	case Object_Type::skinned:
+	{
+		for (std::shared_ptr<CGameObject>& skinned_obj_ptr : skinned_object_list)
+		{
+			if (skinned_obj_ptr->Get_Active())
 			{
-				obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+				skinned_obj_ptr->UpdateTransform(NULL);
+				skinned_obj_ptr->Render_Depth(pd3dCommandList, pCamera);
 			}
+		}
 	}
+		break;
+
+	case Object_Type::player:
+	{
+		for (auto& [id, obj_ptr] : player_map)
+		{
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+				{
+					obj_ptr->Render_Depth(pd3dCommandList, pCamera);
+				}
+		}
+	}
+		break;
+
+	case Object_Type::non_skinned:
+	case Object_Type::fixed:
+	case Object_Type::trail:
+	case Object_Type::aura:
+	case Object_Type::etc:
+	default:
+		break;
+	}
+
+
 }
 
 void Object_Manager::Post_Update(Object_Type type)
@@ -1373,7 +1442,16 @@ void Object_Manager::Post_Update(Object_Type type)
 				obj_ptr->Record_Last_Pos();
 	}
 	break;
-
+	case Object_Type::player:
+	{
+		for (auto& [id, obj_ptr] : player_map)
+		{
+			if (obj_ptr != NULL)
+				if (obj_ptr->Get_Active())
+					obj_ptr->Record_Last_Pos();
+		}
+	}
+	break;
 	case Object_Type::fixed:
 	case Object_Type::etc:
 	default:
@@ -1387,35 +1465,62 @@ void Object_Manager::Post_Update(Object_Type type)
 
 }
 
-void Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
+bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncData, CCamera* camera)
 {
-	if (player_map[player_id]) {
-		player_map[player_id]->ApplySyncData(syncData);
+	if (player_map[player_id])
+	{
+		if (camera) {
+			XMMATRIX view = XMLoadFloat4x4(&camera->GetViewMatrix());
+			XMVECTOR playerWorldPos = XMLoadFloat3(&syncData.position);
 
-
-		if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
-			std::cout << "Attack State" << "\n";
-			player_map[player_id]->bTrailOn();
-			if (player_map[player_id]->GetTrailStart())
+			XMVECTOR viewSpacePos = XMVector3TransformCoord(playerWorldPos, view);
+			float zView = XMVectorGetZ(viewSpacePos);
+			if (zView > 0.0f)
 			{
-				std::cout << "Trail Start" << "\n";
-				player_map[player_id]->GetTrailObj()->Set_Active(true);
-				player_map[player_id]->Trail_Start();
-			}
+				player_map[player_id]->ApplySyncData(syncData);
 
-			if (!player_map[player_id]->GetTrailObj()->Get_Active())
-			{
-				std::cout << "Reset Trail" << "\n";
-				player_map[player_id]->GetTrailObj()->GetTrailMesh()->ResetTrail();
-				player_map[player_id]->GetTrailObj()->Set_Active(true);
+
+				if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
+					std::cout << "Attack State" << "\n";
+					player_map[player_id]->bTrailOn();
+					if (player_map[player_id]->GetTrailStart())
+					{
+						std::cout << "Trail Start" << "\n";
+						player_map[player_id]->GetTrailObj()->Set_Active(true);
+						player_map[player_id]->Trail_Start();
+					}
+
+					if (!player_map[player_id]->GetTrailObj()->Get_Active())
+					{
+						std::cout << "Reset Trail" << "\n";
+						player_map[player_id]->GetTrailObj()->GetTrailMesh()->ResetTrail();
+						player_map[player_id]->GetTrailObj()->Set_Active(true);
+					}
+				}
+				else {
+					player_map[player_id]->bTrailOff();
+					player_map[player_id]->GetTrailObj()->Set_Active(false);
+				}
 			}
 		}
-		else {
-			player_map[player_id]->bTrailOff();
-			player_map[player_id]->GetTrailObj()->Set_Active(false);
-		}
+
+		
 	}
+	else
+		return false;
 
+	return true;
+}
+
+bool Object_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
+{
+	if (player_map[player_id])
+	{
+		player_map[player_id]->SetBlurMask(motion_blur_active);
+		return true;
+	}
+	else
+		return false;
 }
 
 void Object_Manager::Post_Update_All()
@@ -1543,6 +1648,8 @@ std::vector<GPU_OBB> Object_Manager::Extract_Fixed_OBBs()
 
 	for (const auto& [meshName, fixedInfo] : fixed_obj_info_map)
 	{
+		if (meshName.find("SM_Env_Background_Hills_01") != std::string::npos)
+			continue;
 		if (!fixedInfo.obj_mesh || !fixedInfo.obj_mesh->Get_BoundingBox()) continue;
 
 		const BoundingOrientedBox& localOBB = *fixedInfo.obj_mesh->Get_BoundingBox();
@@ -1804,3 +1911,4 @@ void Object_Manager::Render_OBB(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 	fixed_obb_manager->Render_OBB(pd3dCommandList, camera);
 	dynamic_obb_manager->Render_OBB(pd3dCommandList, camera);
 }
+

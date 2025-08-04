@@ -64,6 +64,7 @@ extern std::unordered_map<int, RemotePlayer> remotePlayers;
 class CGameFramework
 {
     bool test_button = false;
+    bool Change_Screen = false;
 public:
     CGameFramework();
     ~CGameFramework();
@@ -246,6 +247,7 @@ public:
     Scene_Type Change_Call_By_Server = None;
     Change_Signal change_signal;
 
+    Effect_Sync_Data post_effect_sync_data;
  
     void ConnectToServer(const std::string& ip, int port);
 
@@ -274,7 +276,9 @@ public:
     void ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
+    void ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
 
+    
     
     bool bClientIdAssigned = false;
 

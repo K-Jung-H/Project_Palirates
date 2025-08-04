@@ -27,10 +27,11 @@ private:
     std::shared_ptr<BoundingOrientedBox> m_worldOBB;  
 
     std::unique_ptr<PlayerStateMachine> m_StateMachine;
-
+    float hp = 100.0f;
 public:
     bool need_to_client_sync = false;
-
+    bool motion_blur = false;
+    bool BreathHit = false;
     Player(int model_index);
     virtual ~Player() {}
 
@@ -46,10 +47,14 @@ public:
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
+    std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB_T() { return m_OBB; }
     void Set_Collider_OBB_Center(const XMFLOAT3& newWorldCenter);
 
     void InitAnimationController(const std::string& filepath, int animCount, int rootIdx, const std::unordered_set<int>& onceTracks) override;
     void InitStateMachine();
 
     PlayerStateMachine* GetStateMachine() { return m_StateMachine.get(); }
+    float GetHP() { return hp; }
+    void SetHP(float setHP) { hp = setHP; }
+    void HitDamage(float damage);
 };

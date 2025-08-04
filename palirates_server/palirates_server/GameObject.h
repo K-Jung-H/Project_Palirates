@@ -47,6 +47,11 @@ public:
 
     XMMATRIX WeaponCustomRotation = XMMatrixIdentity();
     float m_fScale = 1.0f;
+    XMFLOAT3 CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+    bool bDead = false;
+	bool BreathObject = false;
+    bool bHittingCmd{ false };
+
 public:
     GameObject()
         : obj_type(Object_Type::etc)
@@ -79,6 +84,7 @@ public:
     void Rotate(float fPitch = 10.0f, float fYaw = 10.0f, float fRoll = 10.0f);
     void Rotate(XMFLOAT3* pxmf3Axis, float fAngle);
     void Rotate(XMFLOAT4* pxmf4Quaternion);
+    void RotateTowardsTarget(const XMFLOAT3& targetPos, float deltaTime, float rotationSpeed);
 
     void SetScale(float x, float y, float z, bool keepPosition = false);
 
@@ -101,6 +107,9 @@ public:
 
     static std::shared_ptr<GameObject> Load_Scene(char* pstrFileName);
     static std::shared_ptr<GameObject> Load_Scene_FrameHierarchyFromFile(std::shared_ptr<GameObject> pParent, FILE* pInFile);
+
+    static void FlattenGameObjectHierarchy(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
+
 
     void FindAndSetSkinnedMesh(std::vector<std::shared_ptr<CSkinnedMesh>>& outSkinnedMeshes);
     void SetSkinnedMesh(std::shared_ptr<CSkinnedMesh> pMesh);
@@ -192,6 +201,8 @@ public:
 
     char* WeaponName = "";
     std::shared_ptr<GameObject> Weapon_ptr = nullptr;
+
+    bool bDead = false;
 
     virtual void update(float deltaTime) override {};
     void SetupWeaponCollider();

@@ -20,6 +20,7 @@ struct ServerSyncData
     std::vector<Animation_Sync> track_info_list;
     bool stateChanged = false;
     int changedStateNum = -1;
+    float hp;
 };
 
 class CAnimationSet
@@ -127,7 +128,7 @@ public:
     void SetTrackSpeed(int nAnimationTrack, float fSpeed);
     void SetTrackWeight(int nAnimationTrack, float fWeight);
 
-    void AdvanceTime(float fElapsedTime, GameObject* pRootGameObject);
+    void AdvanceTime(float fElapsedTime, GameObject* pRootGameObject, const std::vector<BoundingOrientedBox>* obblist = nullptr);
 
     //void ServerAdvanceTime(const ServerSyncData& syncData);
     std::vector<Animation_Sync> MakeSyncData();
@@ -136,7 +137,7 @@ public:
 public:
     std::shared_ptr<GameObject>            m_pModelRootObject = NULL;
 
-    virtual void OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped);
+    virtual void OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped, const std::vector<BoundingOrientedBox>* obblist = nullptr);
     virtual void OnAnimationIK(GameObject* pRootGameObject) {}
 
     XMFLOAT3 HipsPosition{ 0.0f, 0.0f, 0.0f };

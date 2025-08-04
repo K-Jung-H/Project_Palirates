@@ -2,7 +2,7 @@
 #include "Shader.h"
 #include "Timer.h"
 
-#define MONSTER_HP_UI_MAX_NUM				20
+#define MONSTER_HP_UI_MAX_NUM				70
 
 #define CHARAACTER_SELECT_CHECK_INDEX 6
 #define CHARAACTER_SELECT_CANCEL_INDEX 7
@@ -13,6 +13,7 @@ struct MonsterUIData
     float hp;
     float dist;
     float yOffset;
+    bool bBossHP{ false };
 };
 
 inline D2D1_RECT_F MakeNormalizedRect(
@@ -152,6 +153,8 @@ enum class UILayer : uint32_t
     Dialogue_Button = 1 << 7,
     Start = 1 << 8,
     Screen_Fade = 1 << 9,
+    Clear = 1 << 10,
+    Load = 1 << 11,
     All = 0xFFFFFFFF
 };
 
@@ -177,9 +180,9 @@ struct TextureBlock
     D2D1_RECT_F screenRect;
     D2D1_RECT_F hitboxRect;
     std::shared_ptr<CTextureMesh> mesh = nullptr;
-
+    std::shared_ptr<CGameObject> target = nullptr;
     std::function<void()> onClick;
-
+    MonsterUIData UIData;
     bool bHovered = false;
     bool bClicked = false;
     bool bActive = true;
@@ -189,7 +192,8 @@ struct TextureBlock
     float start_time = 0.0f;
 
     bool bPendingActivation = false;
-
+    bool wasActive{ false };
+    bool firstActive{ false };
     UILayer layer = UILayer::Default;
 
     XMFLOAT4 tintColor = { 1.0f, 1.0f, 1.0f, 1.0f };     
@@ -198,6 +202,11 @@ struct TextureBlock
     TextureBlock(CTexture* texture, const D2D1_RECT_F& rect, std::shared_ptr<CTextureMesh> meshPtr, UILayer layerMask = UILayer::Default, const XMFLOAT2& offsetNormalized = { 0.0f, 0.0f }, const XMFLOAT2& scale = { 1.0f, 1.0f });
     TextureBlock() = default;
     void UpdateScreenRect(float normCX, float normCY, float normW, float scaleH);
+    void SetTarget(std::shared_ptr<CGameObject> t, bool boss = false, float y_offset = 0.0f) {
+        target = t;
+        UIData.bBossHP = boss;
+        UIData.yOffset = y_offset;
+    }
 };
 
 class Texture_UI_Renderer
@@ -259,7 +268,15 @@ public:
     {
         for (auto& block : monsterHPBlocks)
         {
-            if (block) block->bActive = false;
+            if (block) {
+                block->bActive = false;
+                if (!block->wasActive) {
+                    block->firstActive = true;
+                }
+                if (!block->firstActive) {
+                    block->wasActive = false;
+                }
+            }
         }
     }
     std::vector<std::shared_ptr<TextureBlock>> GetMugBlocks() { return mugBlocks; }

@@ -1,5 +1,5 @@
 #pragma once
-
+#include "stdafx.h"
 #include "GameObject.h"
 #include "Player.h"
 #include "Monster.h"
@@ -26,29 +26,49 @@ struct XMINT3Hasher
 class GameWorld
 {
 private:
+	bool Stage_Clear = false;
+	bool Party_Start = false;
+
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
 	ParticleManager particle_manager;
 
 	std::unordered_map<XMINT3, std::vector<UINT>, XMINT3Hasher> uniform_cell_map;
 
-
 	float grid_cell_size = 100.0f;
 	//=======================
+	shared_ptr<Monster> boss_monster = NULL;
+	shared_ptr<GameObject> zoom_object = NULL;
 
-	vector<shared_ptr<Monster>> monster_list;
+
+	std::array< shared_ptr<Particle_Object>, MaxPlayer> party_effect;
+	shared_ptr<Particle_Object> dragon_fire;
+	shared_ptr<Particle_Object> sand;
 
 public:
 	GameWorld();
 	~GameWorld();
 
 	void Init();
+	bool Get_Clear_State() { return Stage_Clear; }
+	void Set_Clear_State(bool stage_clear) { Stage_Clear = stage_clear; }
+
+	shared_ptr<Monster> Get_Boss_Monster() { return boss_monster; }
+	void Set_Boss_Moster(shared_ptr<Monster> boss_ptr) { boss_monster = boss_ptr; }
+//	void Boss_Update();
+	void Boss_Update(shared_ptr<Monster>boss_monster);
+
+
+	shared_ptr<GameObject> Get_ZoomObject() { return zoom_object; }
 
 	void Load_Scene_Data(shared_ptr<GameObject> scene_obj);
 	void Update_Collision(shared_ptr<Player> player_obj);
 
-	void Update_Monster(float elapsed_time);
+	void Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction);
 	void Update_Particle(float elapsed_time);
+	void Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, MaxPlayer> player_list);
+
 	FrameParticleChanges Get_Particle_Sync_Data();
+	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);
 
 private:
 	void FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);
@@ -58,7 +78,7 @@ private:
 	void Compute_CellBounds_From_OBB(const std::shared_ptr<BoundingOrientedBox>& obb, XMINT3& out_min_cell, XMINT3& out_max_cell) const;
 };
 
-const std::unordered_set<std::string> kExcludedNames = 
+const std::unordered_set<std::string> kExcludedNames =
 {
 	"SM_Env_Rock_02.bin",
 	"SM_Env_Rock_03.bin",

@@ -3,6 +3,7 @@
 #include "Object.h"
 #include "Player.h"
 #include "Shader.h"
+#include "Effect.h"
 
 #define DEFAULT_INSTANCE_NUM 1
 #define MAX_INSTANCING_NUM 10000
@@ -11,6 +12,7 @@ struct BoundingBox_Instance_Info;
 struct Fixed_Object_Info;
 struct Instance_Info;
 struct GPU_OBB;
+
 
 struct Instance_Info
 {
@@ -45,7 +47,6 @@ struct Fixed_Object_Info
 
 	void Create_Instance_Data_ShaderVariables(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_Instance_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-//	void Update_Instance_Data_AllObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList); // For Shadow-Map Render
 	void Release_Instance_Data_ShaderVariables();
 
 	void Create_Shadow_Instance_Buffer(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
@@ -62,6 +63,7 @@ enum class Object_Type
 	fixed,
 	player,
 	trail,
+	aura,
 	etc
 };
 
@@ -224,6 +226,8 @@ private:
 	std::unordered_map<int, size_t> id2idx;
 	std::vector<std::shared_ptr<CGameObject>> non_skinned_object_list;
 	std::vector<std::shared_ptr<CGameObject>> trail_obj_list;
+	std::vector<std::shared_ptr<CGameObject>> aura_obj_list;
+
 
 	// Static object map
 	std::unordered_map<std::string, Fixed_Object_Info> fixed_obj_info_map;
@@ -235,7 +239,6 @@ private:
 	std::unique_ptr<OBB_Manager> dynamic_obb_manager;
 
 public:
-	// Constructor / Destructor
 	Object_Manager();
 	~Object_Manager();
 
@@ -275,13 +278,16 @@ public:
 	//Sync Server
 	void Add_Player(std::shared_ptr<CPlayer> player_ptr);
 	void Remove_Player(int player_id);
-	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+
+
+	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
+	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData, CCamera* camera = NULL);
 
 
 	// Visibility / culling
 	void Check_Culling(CCamera* pCamera, Object_Type obj_type);
 	void Check_Culling_All(CCamera* pCamera);
-	void Update_Culling(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void ReBuild_Fixed_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 	// ShadowMapping
 	void Render_Terrain_Shadow(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
@@ -294,7 +300,7 @@ public:
 	void Render_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 	void Render_Transparent_Objects_All(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
 
-	void Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera);
+	void Render_Depth_and_Outline_ID(ID3D12GraphicsCommandList* cmdList, CCamera* pCamera, Object_Type type);
 
 
 	// Instancing update flag
@@ -330,3 +336,4 @@ public:
 	const std::vector<GPU_OBB>& Get_Fixed_OBBs() const { return m_OBBDataArray; }
 
 };
+

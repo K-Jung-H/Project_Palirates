@@ -21,28 +21,6 @@ void Particle_Object::Update(float elapsedtime)
 
     LifeTime -= elapsedtime;
 
-    XMFLOAT3 now_pos = GetPosition();
-    SetPosition(now_pos.x, now_pos.y+0.2f, now_pos.z);
-
-    float angle = XMConvertToRadians(1.0f);
-
-    // 현재 방향 벡터 (예: p.main_direction)
-    XMFLOAT3 dir = GetLook();
-
-    // XMVECTOR로 변환
-    XMVECTOR vDir = XMLoadFloat3(&dir);
-
-    // Y축 회전 행렬
-    XMMATRIX rotY = XMMatrixRotationY(angle);
-
-    // 회전 적용
-    vDir = XMVector3TransformNormal(vDir, rotY);
-
-    // 다시 XMFLOAT3로 저장
-    XMStoreFloat3(&dir, vDir);
-
-    SetLook(dir);
-
     if (LifeTime <= 0.0f)
     {
         Active = false;
@@ -54,7 +32,18 @@ void Particle_Object::Update(float elapsedtime)
 
 //====================================================
 
-UINT ParticleManager::AllocateID()
+//UINT ParticleManager::AllocateID()
+//{
+//    if (!reusable_ids.empty())
+//    {
+//        uint32_t id = reusable_ids.front();
+//        reusable_ids.pop();
+//        return id;
+//    }
+//    return next_id++;
+//}
+
+uint32_t ParticleManager::AllocateReusableID()
 {
     if (!reusable_ids.empty())
     {
@@ -65,6 +54,12 @@ UINT ParticleManager::AllocateID()
     return next_id++;
 }
 
+uint32_t ParticleManager::AllocateUniqueID()
+{
+    return next_id++;
+}
+
+
 void ParticleManager::ReleaseID(uint32_t id)
 {
     reusable_ids.push(id);
@@ -73,14 +68,18 @@ void ParticleManager::ReleaseID(uint32_t id)
 std::shared_ptr<Particle_Object> ParticleManager::Create_Particle_Object(Particle_Format p_format)
 {
     std::lock_guard<std::mutex> lock(particle_manage_mutex);
-    UINT id = AllocateID();
+
+    UINT id = (p_format.particle_type == Particle_Type::bleed) ? AllocateUniqueID() : AllocateReusableID();
 
     auto particle = std::make_shared<Particle_Object>(id, p_format);
-    particle_map[id] = particle;
-    created_this_frame.push_back(particle);
 
+    if (p_format.particle_type != Particle_Type::bleed)
+        particle_map[id] = particle;
+
+    created_this_frame.push_back(particle);
     return particle;
 }
+
 
 void ParticleManager::Remove_Particle_Object(UINT particle_id)
 {

@@ -45,11 +45,14 @@ struct CellInfo
 #define PARTICLE_TYPE_SNOW     0
 #define PARTICLE_TYPE_SPLASH    1
 #define PARTICLE_TYPE_DRAGON_FIRE 2
-#define PARTICLE_TYPE_SAND      3
-#define PARTICLE_TYPE_SAND_STORM 4
+#define PARTICLE_TYPE_PARTY      3
+
+#define PARTICLE_TYPE_SAND      4
+#define PARTICLE_TYPE_SAND_STORM 5
 
 #define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
+#define FLT_MAX 3.402823466e+38f	
 
 cbuffer CB_Particle_Update_Info : register(b0)
 {
@@ -103,14 +106,9 @@ static bool CheckOBBCollision(float3 p_point, OBB_INFO obb)
         return false;
 
     float3 delta = p_point - obb.Center;
-
-    // Inverse quaternion (conjugate)
     float4 invRot = float4(-obb.Rotation.xyz, obb.Rotation.w);
-
-    // Apply inverse rotation to point (convert to OBB local space)
     float3 localPos = RotateVectorByQuaternion(delta, invRot);
 
-    // Check AABB bounds in OBB-local space
     return all(abs(localPos) <= obb.Extents);
 }
 
@@ -140,7 +138,200 @@ static bool CheckCollisionWithGridOBBs(float3 pos)
     return false;
 }
 
+float3 ComputeClosestOBBNormal(float3 pos, OBB_INFO obb)
+{
+    float3 delta = pos - obb.Center;
+    float4 invRot = float4(-obb.Rotation.xyz, obb.Rotation.w);
+    float3 local = RotateVectorByQuaternion(delta, invRot); // world → local
 
+    float3 normalLocal = float3(0, 0, 0);
+    float minDist = FLT_MAX;
+
+    for (int axis = 0; axis < 3; ++axis)
+    {
+        float dist = abs(abs(local[axis]) - obb.Extents[axis]);
+        if (dist < minDist)
+        {
+            minDist = dist;
+
+            if (axis == 0)
+                normalLocal = float3(sign(local.x), 0, 0);
+            else if (axis == 1)
+                normalLocal = float3(0, sign(local.y), 0);
+            else
+                normalLocal = float3(0, 0, sign(local.z));
+        }
+    }
+
+    float3 normalWorld = RotateVectorByQuaternion(normalLocal, obb.Rotation); // local → world
+    return normalize(normalWorld);
+}
+
+static bool CheckCollisionWithGridOBBs_WithNormal(float3 pos, out float3 outNormal)
+{
+    outNormal = float3(0, 1, 0); // fallback normal (e.g. ground)
+
+    int3 cell = int3(floor((pos - worldMin) / cellSize));
+    if (any(cell < 0) || any(cell >= gridDim))
+        return false;
+
+    uint flatIndex = cell.x + cell.y * gridDim.x + cell.z * gridDim.x * gridDim.y;
+    CellInfo info = g_CellInfos[flatIndex];
+
+    [loop]
+    for (uint i = 0; i < info.count; ++i)
+    {
+        uint obbIdx = g_OBBIndices[info.startIndex + i];
+        if (obbIdx >= obb_num)
+            continue;
+
+        OBB_INFO obb = OBB_List[obbIdx];
+        if (CheckOBBCollision(pos, obb))
+        {
+            outNormal = ComputeClosestOBBNormal(pos, obb);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
+{
+    switch (p.Type)
+    {
+        //=================================
+        // need reflection angle
+        case PARTICLE_TYPE_DRAGON_FIRE:
+            {
+                float3 normal;
+                if (CheckCollisionWithGridOBBs_WithNormal(world_pos, normal))
+                {
+                    p.Velocity = reflect(p.Velocity, normalize(normal));
+                    p.Color = float3(1.0f, 0.3f, 0.0f);
+                }
+
+            }
+            break;
+        
+        
+        //=================================        
+        // not need reflection angle
+        case PARTICLE_TYPE_SNOW:
+            if (CheckCollisionWithGridOBBs(world_pos))
+            {
+                p.Velocity = float3(0, -1, 0);
+                p.Lifetime += 0.01f;
+
+            }
+            break;
+        
+        case PARTICLE_TYPE_SPLASH:
+            if (CheckCollisionWithGridOBBs(world_pos))
+            {
+                p.Velocity *= 0.2f;
+                p.Color = float3(0.2f, 0.2f, 1.0f);
+            }
+            break;
+        
+        case PARTICLE_TYPE_PARTY:
+            if (CheckCollisionWithGridOBBs(world_pos))
+            {
+                p.Velocity = float3(0, -1, 0);
+                if (p.Lifetime < p.MaxLifetime - 5.0f)
+                    p.Lifetime = p.MaxLifetime - 5.0f;
+            }
+            break;
+        case PARTICLE_TYPE_INTERVAL_BLEEDING:
+        {
+                if (CheckCollisionWithGridOBBs(world_pos))
+                {
+                    p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                    p.Velocity = float3(0.0f, -0.1f, 0.0f);
+                }
+            }
+            break;
+        default:
+            if (CheckCollisionWithGridOBBs(world_pos))
+            {
+                p.Active = 0;
+            }
+            break;
+    }
+    return false;
+}
+
+bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
+{
+    if (world_pos.y > 3.0f)
+        return false;
+
+    switch (p.Type)
+    {
+        case PARTICLE_TYPE_DRAGON_FIRE:
+        {
+                float3 normal = float3(0, 1, 0);
+                float speed = length(p.Velocity);
+                float3 incident = normalize(p.Velocity);
+
+                p.Velocity = reflect(incident, normal) * speed;
+                p.Position += 3.5f;
+                p.Color = float3(1.0f, 0.3f, 0.0f);
+            }
+            break;
+
+        case PARTICLE_TYPE_SNOW:
+        {
+                p.Velocity = float3(0, 0, 0);
+                p.Lifetime += 0.01f;
+            }
+            break;
+
+        case PARTICLE_TYPE_SPLASH:
+        {
+                p.Velocity *= 0.2f;
+                p.Color = float3(0.2f, 0.2f, 1.0f);
+            }
+            break;
+
+        case PARTICLE_TYPE_PARTY:
+        {
+                p.Velocity = float3(0,  0.0001f, 0);
+                if (p.Lifetime < p.MaxLifetime - 5.0f)
+                    p.Lifetime = p.MaxLifetime - 5.0f;
+            }
+            break;
+        case PARTICLE_TYPE_INTERVAL_BLEEDING:
+        {
+                if (world_pos.y < 1.0f)
+                {
+                    p.Velocity = float3(0.0f, 0.0f, 0.0f);
+                    p.Acceleration = float3(0.0f, 0.0f, 0.0f);
+                }
+            }
+            break;
+        default:
+        {
+                p.Active = 0;
+            }
+            break;
+    }
+
+    return true;
+}
+
+
+void Check_Collisions(inout Particle_Info p)
+{
+    float3 localPos = p.Position;
+    float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
+
+    if (Check_Collision_Ground(p, worldPos))
+        return;
+    
+    Check_Collision_OBB(p, worldPos);
+}
 //===============================================================
 
 float3 GetEmitFaceCenter(int face, float3 min, float3 max)
@@ -211,10 +402,13 @@ static bool DelayActive(inout Particle_Info p)
 // 파티클 동작별 업데이트
 void Update_Snow(inout Particle_Info p, uint index)
 {
-    p.Velocity += p.Acceleration * ElapsedTime;
-    p.Velocity += RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float3 new_direction = RandomSpreadDirection(index, Main_Direction, 2.0f);
+    float speed = length(p.Velocity + p.Acceleration);
+    
+    p.Velocity = normalize(new_direction) * speed;
+    
     p.Position += p.Velocity * ElapsedTime;
-    p.Rotate_Value += 2.5f * ElapsedTime;
+    p.Rotate_Value += 1.5f * ElapsedTime;
 }
 
 
@@ -278,6 +472,16 @@ void Update_DragonFire(inout Particle_Info p, uint index)
     p.Color = FireColorGradient(lifeRatio, outerT);
 }
 
+void Update_Party(inout Particle_Info p, uint index)
+{
+    
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Velocity += RandomSpreadDirection(index, p.Acceleration, 2.0f);
+    p.Position += p.Velocity * ElapsedTime;
+    
+    p.Rotate_Value += 2.5f * ElapsedTime;
+    
+}
 
 //===============================================================
 // 인스턴싱 정보 추출
@@ -290,9 +494,18 @@ void Extract_Instance(in Particle_Info p)
     inst.Position_and_Scale = float4(p.Position.xyz, safeScale);
     inst.Velocity_and_Rotate = float4(p.Velocity, p.Rotate_Value);
 
-    float normalizedLife = saturate(p.Lifetime / p.MaxLifetime);
-    float alpha = 1.0f - normalizedLife;
-    inst.Color = float4(p.Color, alpha);
+    float alpha = 1.0f;
+
+    if(p.Type == PARTICLE_TYPE_PARTY)
+    {
+        inst.Color = float4(p.Color, alpha);
+    }
+    else // fade
+    {
+        float normalizedLife = saturate(p.Lifetime / p.MaxLifetime);
+        alpha = 1.0f - normalizedLife; 
+        inst.Color = float4(p.Color, alpha);
+    }
 
     InterlockedAdd(debug_buffer[3], 1);
     RenderInstanceBuffer.Append(inst);
@@ -351,20 +564,10 @@ void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Water_Splash(p, index);
         else if (p.Type == PARTICLE_TYPE_DRAGON_FIRE)
             Update_DragonFire(p, index);
-    
-        
-        float3 localPos = p.Position;
-        float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
+        else if (p.Type == PARTICLE_TYPE_PARTY)
+            Update_Party(p, index);
 
-        if (CheckCollisionWithGridOBBs(worldPos))
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            p.Color = float3(0.0f, 0.0f, 1.0f);
-            ParticleBuffer_Update[index] = p;
-            return;
-        }
-    
+        Check_Collisions(p);
         Extract_Instance(p);
     }
 
@@ -382,7 +585,7 @@ void Update_Bleeding(inout Particle_Info p, uint index)
     p.Position += p.Velocity * ElapsedTime;
 
     // 위치 갱신
-    p.Rotate_Value += 8.0f * ElapsedTime;
+    p.Rotate_Value += 1.0f * ElapsedTime;
 }
 
 
@@ -443,20 +646,8 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
         float3 localPos = p.Position;
         float3 worldPos = mul(float4(localPos, 1.0f), gWorldMatrix).xyz;
 
-        if (CheckCollisionWithGridOBBs(worldPos))
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            p.Color = float3(0.0f, 0.0f, 1.0f);
-            ParticleBuffer_Update[index] = p;
-            return;
-        }
-        else if (worldPos.y <= 3.0f)
-        {
-            p.Velocity = float3(0.0f, 0.0f, 0.0f);
-            p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-            ParticleBuffer_Update[index] = p;
-        }
+
+        Check_Collisions(p);
         Extract_Instance(p);
     }
 

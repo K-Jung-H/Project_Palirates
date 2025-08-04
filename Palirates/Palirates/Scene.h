@@ -2,6 +2,7 @@
 #include "Descriptor_Heap.h"
 #include "Object_Manager.h"
 #include "Particle_Manager.h"
+#include "Effect.h"
 #include "UI_Manager.h"
 
 #include "Shader.h"
@@ -151,7 +152,9 @@ public:
 	bool bMenuActive{ false };
 	bool bStartAnimation{ false };
 	bool bSelectStart{ false };
-
+	bool bStageClear{ false };
+	bool CameraZoomOutAnime{ false };
+	bool bUpdateUI_Load{ true };
 
 public:
 	CScene();
@@ -228,6 +231,8 @@ protected:
 	static std::shared_ptr<ID3D12RootSignature> m_UI_GraphicsRootSignature;
 
 protected:
+	vector<std::shared_ptr<CGameObject>> player_start_position_list;
+
 	std::shared_ptr<CPlayer> m_pPlayer = NULL;
 	std::shared_ptr<CCamera> main_Camera = NULL;
 	std::shared_ptr<Shadow_Camera> shadow_camera = NULL;
@@ -236,11 +241,12 @@ public:
 	std::shared_ptr<Particle_Manager>particle_manager = NULL;
 
 	std::shared_ptr<ParticleObject> test_sand = NULL;
-	std::shared_ptr<ParticleObject> test_dragonfire = NULL;
-	std::shared_ptr<ParticleObject> test_bleeding = NULL;
+	std::shared_ptr<ParticleObject> test_dragon_particle = NULL;
 
+	std::shared_ptr<Aura_Object>test_player_aura = NULL;
 
-	std::shared_ptr <Object_Manager> obj_manager = NULL;
+	std::shared_ptr<Object_Manager> obj_manager = NULL;
+	std::shared_ptr<Sprite_Effect_Manager> effect_manager = NULL;
 
 	std::shared_ptr<CHeightMapTerrain> m_pTerrain = NULL;
 	std::shared_ptr<CSkyBox>	m_pSkyBox = NULL;
@@ -258,7 +264,6 @@ public:
 	shared_ptr<CMaterial>fog_noise = NULL;
 
 	bool test_button = false;
-	bool blur_effect = false;
 	bool particle_test_button = false;
 
 #ifdef WRITE_TEXT_UI
@@ -277,10 +282,14 @@ public:
 
 	virtual void Set_UI_Layer_Active(std::vector<TextureBlock*>& blocks, UILayer targetLayer, bool bEnable);
 	virtual void Bind_Player_UI_Callback();
+	virtual void Bind_Player_UI_Updata_Callback();
 
 	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
-	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
+	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
+
+	XMFLOAT3 Get_Start_Position_List(int player_id);
 
 
 	void Create_Particle_Object(const Particle_Sync_Data& syncData);
@@ -288,11 +297,15 @@ public:
 	void Remove_Particle_Object(UINT p_obj_id);
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
+	void Monster_Set_Active_False(int monsterID);
 
 	virtual void SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int id, const XMFLOAT3& pos = XMFLOAT3(0, 0, 0));
 	virtual void DespawnMonster(int id);
 
 	virtual void DamageMonster(int id, float damage);
+	virtual void HitMonster(int id, bool on);
+
+	void Fog_Sync(Fog_Info fog_info);
 
 };
 
@@ -394,6 +407,8 @@ class Stage_Scene : public CScene
 {
 public:
 	static bool Change_Scene_Signal; // For send server
+	static bool Stage_Clear_Signal; // For Get server
+	static bool Monster_Depth_Render; // For Get server
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -404,8 +419,12 @@ public:
 	virtual void Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual void Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	virtual void Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Transparent_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
+	virtual bool OnProcessingMouseMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
+	virtual bool OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wParam, LPARAM lParam);
 
 	//=============================================================
 	// Server Sync Func
@@ -423,8 +442,9 @@ public:
 
 class Stage_1_Scene : public Stage_Scene
 {
-
 private:
+	shared_ptr<ParticleObject> env_ash_particle = NULL;
+
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
@@ -436,6 +456,9 @@ public:
 class Stage_2_Scene : public Stage_Scene
 {
 private:
+	shared_ptr<ParticleObject> env_sand_particle = NULL;
+
+	
 	virtual void BuildDefaultLightsAndMaterials();
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 

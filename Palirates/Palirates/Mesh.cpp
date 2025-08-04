@@ -1972,3 +1972,198 @@ void CTextureMesh::ReleaseUploadBuffers()
 	if (m_pd3dVertexUploadBuffer) m_pd3dVertexUploadBuffer->Release();
 	m_pd3dVertexUploadBuffer = nullptr;
 }
+
+
+//===============================================================
+
+
+Frustum_Ring_Shape_Mesh::Frustum_Ring_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius, float top_radius, float height, int seg)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
+{
+	const int sectionCount = seg;
+	const float angleStep = XM_2PI / static_cast<float>(sectionCount);
+
+	m_nVertices = sectionCount * 2; // outer bottom + outer top
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+	m_pxmf2TextureCoords0 = new XMFLOAT2[m_nVertices];
+
+	const float b = bottom_radius;
+	const float t = top_radius;
+
+	const float maxRadius = std::max({ b, t, 0.01f });
+
+	int v = 0;
+	for (int i = 0; i < sectionCount; ++i)
+	{
+		float angle = i * angleStep;
+		float cosA = cosf(angle);
+		float sinA = sinf(angle);
+
+		m_pxmf3Positions[v] = XMFLOAT3(b * cosA, 0.0f, b * sinA);
+		m_pxmf2TextureCoords0[v++] = XMFLOAT2((cosA * b / maxRadius) * 0.5f + 0.5f,
+			(sinA * b / maxRadius) * 0.5f + 0.5f);
+
+		m_pxmf3Positions[v] = XMFLOAT3(t * cosA, height, t * sinA);
+		m_pxmf2TextureCoords0[v++] = XMFLOAT2((cosA * t / maxRadius) * 0.5f + 0.5f,
+			(sinA * t / maxRadius) * 0.5f + 0.5f);
+	}
+
+	m_nSubMeshes = 1;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+	const int totalIndices = sectionCount * 6; // 2 triangles per quad
+	m_pnSubSetIndices[0] = totalIndices;
+	m_ppnSubSetIndices[0] = new UINT[totalIndices];
+
+	int k = 0;
+	for (int i = 0; i < sectionCount; ++i)
+	{
+		int i0 = (i * 2);
+		int i1 = (i * 2 + 2) % (sectionCount * 2);
+
+		m_ppnSubSetIndices[0][k++] = i0;
+		m_ppnSubSetIndices[0][k++] = i1;
+		m_ppnSubSetIndices[0][k++] = i0 + 1;
+
+		m_ppnSubSetIndices[0][k++] = i0 + 1;
+		m_ppnSubSetIndices[0][k++] = i1;
+		m_ppnSubSetIndices[0][k++] = i1 + 1;
+	}
+
+	// Vertex Position Buffer
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions,
+		sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	// Texture Coord Buffer 0
+	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0,
+		sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+
+	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	// Index Buffer
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [1];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [1];
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[1];
+
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0],
+		sizeof(UINT) * m_pnSubSetIndices[0], D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * m_pnSubSetIndices[0];
+}
+
+Frustum_Ring_Shape_Mesh::~Frustum_Ring_Shape_Mesh() 
+{
+}
+
+void Frustum_Ring_Shape_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW views[2] = {
+		m_d3dPositionBufferView,
+		m_d3dTextureCoord0BufferView
+	};
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
+	pd3dCommandList->IASetIndexBuffer(&m_pd3dSubSetIndexBufferViews[0]);
+}
+
+//===============================================================
+
+Billboard_Mesh::Billboard_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float length)
+	: CStandardMesh(pd3dDevice, pd3dCommandList)
+{
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	m_nVertices = 4;
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+	m_pxmf2TextureCoords0 = new XMFLOAT2[m_nVertices];
+	float half = length * 0.5f;
+
+	m_pxmf3Positions[0] = XMFLOAT3(-half, +half, 0.0f); // LT
+	m_pxmf3Positions[1] = XMFLOAT3(+half, +half, 0.0f); // RT
+	m_pxmf3Positions[2] = XMFLOAT3(-half, -half, 0.0f); // LB
+	m_pxmf3Positions[3] = XMFLOAT3(+half, -half, 0.0f); // RB
+
+	m_pxmf2TextureCoords0[0] = XMFLOAT2(0.0f, 0.0f); // LT
+	m_pxmf2TextureCoords0[1] = XMFLOAT2(1.0f, 0.0f); // RT
+	m_pxmf2TextureCoords0[2] = XMFLOAT2(0.0f, 1.0f); // LB
+	m_pxmf2TextureCoords0[3] = XMFLOAT2(1.0f, 1.0f); // RB
+
+	m_nSubMeshes = 1;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+	m_pnSubSetIndices[0] = 6;
+	m_ppnSubSetIndices[0] = new UINT[6]{ 0, 1, 2, 2, 1, 3 };
+
+	// Vertex Position Buffer
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions,
+		sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	// Texture Coord Buffer 0
+	m_pd3dTextureCoord0Buffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf2TextureCoords0,
+		sizeof(XMFLOAT2) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dTextureCoord0UploadBuffer);
+
+	m_d3dTextureCoord0BufferView.BufferLocation = m_pd3dTextureCoord0Buffer->GetGPUVirtualAddress();
+	m_d3dTextureCoord0BufferView.StrideInBytes = sizeof(XMFLOAT2);
+	m_d3dTextureCoord0BufferView.SizeInBytes = sizeof(XMFLOAT2) * m_nVertices;
+
+	// Index Buffer
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [1];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [1];
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[1];
+
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0],
+		sizeof(UINT) * m_pnSubSetIndices[0], D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * m_pnSubSetIndices[0];
+}
+
+void Billboard_Mesh::OnPreRender(ID3D12GraphicsCommandList* pd3dCommandList, void* pContext)
+{
+	D3D12_VERTEX_BUFFER_VIEW views[2] = {
+		m_d3dPositionBufferView,
+		m_d3dTextureCoord0BufferView
+	};
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
+	pd3dCommandList->IASetIndexBuffer(&m_pd3dSubSetIndexBufferViews[0]);
+}
+
+void Billboard_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+
+	D3D12_VERTEX_BUFFER_VIEW views[3] = { m_d3dPositionBufferView, m_d3dTextureCoord0BufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, _countof(views), views);
+
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+
+	if (m_nSubMeshes > 0)
+	{
+
+		pd3dCommandList->IASetIndexBuffer(&(m_pd3dSubSetIndexBufferViews[0]));
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+	}
+}

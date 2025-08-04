@@ -1839,22 +1839,28 @@ void CGameObject::Set_Name(std::string_view name)
 	m_pstrFrameName[sizeof(m_pstrFrameName) - 1] = '\0';
 }
 
+
 void CGameObject::Set_Child(std::shared_ptr<CGameObject> pChild)
 {
-	if (pChild)
-		pChild->m_pParent = shared_from_this();
+	if (!pChild) return;
 
+	pChild->m_pParent = shared_from_this();
 
-	if (m_pChild)
+	if (!m_pChild)
 	{
-		if (pChild)
-			pChild->m_pSibling = m_pChild->m_pSibling;
-
-		m_pChild->m_pSibling = pChild;
+		m_pChild = pChild;
 	}
 	else
-		m_pChild = pChild;
+	{
+		std::shared_ptr<CGameObject> current = m_pChild;
+		while (current->m_pSibling)
+		{
+			current = current->m_pSibling;
+		}
+		current->m_pSibling = pChild;
+	}
 }
+
 
 void CGameObject::Set_Active(bool active, bool IsRoot)
 {
@@ -2047,7 +2053,7 @@ void CGameObject::Update_Color_Blending(float update_bleeding_value)
 {
 	Blending_value += update_bleeding_value;
 	Blending_value = std::clamp(Blending_value, 0.0f, 1.0f);
-
+	if (Blending_value <= 0.0f) return;
 	if (m_pSibling)
 		m_pSibling->Update_Color_Blending(update_bleeding_value);
 
@@ -2227,12 +2233,6 @@ void CGameObject::Set_Last_Pos(XMFLOAT3 pos)
 
 void CGameObject::Record_Last_Pos()
 {
-	//CGameObject* root_obj_ptr = Get_Root_Object();
-	//XMFLOAT3 world_pos = root_obj_ptr->GetPosition();
-
-	//root_obj_ptr->previous_position.x = world_pos.x;
-	//root_obj_ptr->previous_position.y = world_pos.y;
-	//root_obj_ptr->previous_position.z = world_pos.z;
 	if (m_pMesh)
 	{
 		XMFLOAT3 world_pos = GetPosition();
@@ -3198,6 +3198,26 @@ CLoadedModelInfo* CGameObject::Load_Scene_File(ID3D12Device* pd3dDevice, ID3D12G
 	return(pLoadedModel);
 }
 
+void CGameObject::FlattenGameObjectHierarchy(std::shared_ptr<CGameObject> node, std::vector<shared_ptr<CGameObject>>& outList)
+{
+	if (!node) return;
+
+	const std::string& name = node->Get_Name();
+
+
+	if (!name.empty())
+	{
+		outList.push_back(node);
+	}
+
+
+	std::shared_ptr<CGameObject> child = node->Get_Child();
+	while (child)
+	{
+		FlattenGameObjectHierarchy(child, outList);
+		child = child->Get_Sibling();
+	}
+}
 
 void CGameObject::PrintFrameInfo(CGameObject* pGameObject, CGameObject* pParent)
 {
@@ -3559,9 +3579,12 @@ CHeightMapTerrain::CHeightMapTerrain(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	(tile_map_number == 0) ? Set_Name("Root_Tile_Map") : Set_Tile(tile_map_number++);
 
 	Vertex_gap = (Vertex_gap % 2) ? Vertex_gap + 1 : Vertex_gap;
-	m_nWidth = nWidth; m_nLength = nLength; m_xmf3Scale = xmf3Scale; m_nDepth = nMaxDepth;
+	m_nWidth = nWidth; 
+	m_nLength = nLength; 
+	m_xmf3Scale = xmf3Scale; 
+	m_nDepth = nMaxDepth;
 	Area_LT = { start_x_pos * xmf3Scale.x, start_z_pos * xmf3Scale.z };
-	Area_RB = { (start_x_pos + m_nWidth) * xmf3Scale.x, (start_z_pos + m_nLength) * xmf3Scale.z };
+	Area_RB = { (start_x_pos + m_nWidth-1) * xmf3Scale.x, (start_z_pos + m_nLength-1) * xmf3Scale.z };
 	Tile_Start_Pos = { (float)start_x_pos , (float)start_z_pos };
 
 	if (isRoot) 
@@ -4093,7 +4116,7 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// Pos_Normal: index 3 (UAV)
-	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 4, sizeof(float), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 1, sizeof(XMFLOAT4), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 	Pos_Normal_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
 
 
@@ -4131,7 +4154,7 @@ XMFLOAT3 Wave_Object::Readback_Buffer_Data()
 		return XMFLOAT3{ 0.0f,0.0f,0.0f };
 
 	float* pReadData = nullptr;
-	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; // 4개의 float (16바이트)
+	D3D12_RANGE readRange = { 0, sizeof(float) * 4 }; 
 
 	if (SUCCEEDED(Pos_Normal_ReadBack_buffer->Map(0, &readRange, reinterpret_cast<void**>(&pReadData))) && pReadData)
 	{
@@ -4181,82 +4204,117 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 {
 	if (!cs_wave_shader) return;
 
-	// Set compute root signature
 	pd3dCommandList->SetComputeRootSignature(cs_wave_shader->Wave_ComputeRootSignature_ptr);
 
-	// Step 1: Update global simulation time
+	// Step 1: 시간 갱신
 	CS_Wave_Shader::total_time += fTimeElapsed;
 	if (CS_Wave_Shader::total_time >= XM_2PI)
 		CS_Wave_Shader::total_time -= XM_2PI;
-
 	cs_wave_shader->update_wave_info->g_TotalTime = CS_Wave_Shader::total_time;
 
-	// Step 2: Prepare dispatch group sizes
+	// Step 2: 핑퐁 인덱스 설정
 	const int readIndex = bPingPongToggle ? 1 : 0;
 	const int writeIndex = bPingPongToggle ? 0 : 1;
 	const UINT threadSize = 8;
 	const UINT n = static_cast<UINT>(ceil(Tex_Length / float(threadSize)));
 
-	// Step 3: Dispatch Global Wave Pass (runs unconditionally)
+	// Step 3: Global Wave Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 0);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV: previous heightmap
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV: write new heightmap
+
+	// === 상태 전이 ===
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(readIndex),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(writeIndex),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// === 바인딩 및 Dispatch ===
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);   // SRV(t0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);  // UAV(u0)
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Step 4: Insert UAV barrier after global wave pass
-	D3D12_RESOURCE_BARRIER uavBarrier0 = {};
-	uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-	uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
-	pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
+	// === UAV Barrier ===
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier0 = {};
+		uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
+	}
 
-	// Step 5: Check boat direction validity
+	// Step 4: Boat 정보 무효 시 리턴
 	if (World_Boat_Dir.x == 0 && World_Boat_Dir.z == 0)
 	{
 		bPingPongToggle = !bPingPongToggle;
 		return;
 	}
 
-	// Step 6: Update boat-related parameters
-	XMFLOAT3 Plane_Position = GetPosition();
+	// Step 5: Boat 정보 갱신
+	XMFLOAT3 planePos = GetPosition();
 	float planeHalfSize = Side_Length * 0.5f;
 
 	XMFLOAT2 boatTexel = {
-		(World_Boat_Pos.x - (Plane_Position.x - planeHalfSize)) / desiredTexelSize,
-		(World_Boat_Pos.z - (Plane_Position.z - planeHalfSize)) / desiredTexelSize
+		(World_Boat_Pos.x - (planePos.x - planeHalfSize)) / desiredTexelSize,
+		(World_Boat_Pos.z - (planePos.z - planeHalfSize)) / desiredTexelSize
 	};
 
 	XMFLOAT2 dirXZ = { World_Boat_Dir.x, World_Boat_Dir.z };
-	XMVECTOR v = XMVector2Normalize(XMLoadFloat2(&dirXZ));
-	XMFLOAT2 normDirXZ;
-	XMStoreFloat2(&normDirXZ, v);
-
+	XMVECTOR normDir = XMVector2Normalize(XMLoadFloat2(&dirXZ));
+	XMStoreFloat2(&cs_wave_shader->update_wave_info->g_BoatDir, normDir);
 	cs_wave_shader->update_wave_info->g_BoatPos = boatTexel;
-	cs_wave_shader->update_wave_info->g_BoatDir = normDirXZ;
 	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
-	// Step 7: Dispatch Boat Wake Pass
+	// Step 6: Boat Wake Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 1);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);
+
+	// === 상태 전이 ===
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(writeIndex),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(readIndex),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// === 바인딩 및 Dispatch ===
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);  // SRV(t0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);   // UAV(u0)
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Step 8: UAV barrier after wake pass
-	D3D12_RESOURCE_BARRIER uavBarrier1 = {};
-	uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-	uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
-	pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
+	// === UAV Barrier ===
+	{
+		D3D12_RESOURCE_BARRIER uavBarrier1 = {};
+		uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
+		pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
+	}
 
-	// Step 9: Dispatch Normal Map Generation Pass
+	// Step 7: NormalMap Pass
 	cs_wave_shader->OnPrepareDispatch(pd3dCommandList, 2);
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2); // NormalMap
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3); // Position + Normal buffer
+
+	// === 상태 전이 ===
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(readIndex),
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+	SynchronizeResourceTransition(pd3dCommandList,
+		wave_data_texture->GetResource(writeIndex),
+		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// === 바인딩 및 Dispatch ===
+	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV(t0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV(u0)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // UAV(u1: NormalMap)
+	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // UAV(u2: Pos+NormalBuffer)
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
-	// Step 10: Toggle ping-pong state
+	// Step 8: PingPong 전환
 	bPingPongToggle = !bPingPongToggle;
 }
 
@@ -4672,6 +4730,9 @@ void Trail_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* p
 	trail_mesh->Render(pd3dCommandList, 0);
 }
 
+
+//=====================================================================================
+
 CMonsterObject::~CMonsterObject()
 {
 }
@@ -4752,7 +4813,8 @@ void CMonsterObject::SetupWeaponCollider()
 	);
 
 	model->Set_Collider(obb);
-	model->bUpdateOBBOff();
+	//model->bUpdateOBBOff();
+	model->bUpdateOBBOn();
 	Weapon_ptr = model;
 
 }
@@ -4771,8 +4833,9 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	{
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
+		//if (animation_track_info.track_index == Hit_Track_idx && track[animation_track_info.track_index].m_fWeight > 0.5f && )
 	}
-
+	currentHP = syncData.hp;
 	controller->ApplyCurrentAnimationPose(this);
 	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
 }
@@ -4797,6 +4860,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 		TRACK_FISHMAN_DEAD
 	};
 
+	Hit_Track_idx = TRACK_FISHMAN_GET_HIT;
 	m_StateMachine = std::make_unique<FishManStateMachine>(this);
 
 	type = EObjectType::Monster;
@@ -4858,7 +4922,7 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		TRACK_ANUBIS_GET_HIT,
 		TRACK_ANUBIS_DEAD
 	};
-
+	Hit_Track_idx = TRACK_ANUBIS_GET_HIT;
 	n_Animation = 10;
 	RootIndex = 0;
 
@@ -4915,7 +4979,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		TRACK_DRAGON_ATTACK1,
 		TRACK_DRAGON_DEAD
 	};
-
+	Hit_Track_idx = TRACK_DRAGON_GOT_HIT1;
 	n_Animation = 13;
 	RootIndex = 16;
 
@@ -4941,6 +5005,13 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 		}
 	}
 	SetScale(15.0f, 15.0f, 15.0f);
+
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 1.0f, -1.6f),
+		XMFLOAT3(0.8f, 1.0f, 2.8f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
 
 	Set_Name("Dragon");
 

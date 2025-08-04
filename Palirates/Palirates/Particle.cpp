@@ -112,8 +112,109 @@ void Cube_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandLi
 	else
 		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
 
+}
 
 
+//==============================================================================
+
+
+Cube_Chip_Shape_Mesh::Cube_Chip_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize, float fHeight)
+	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
+{
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	m_nVertices = 8;
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+
+	float halfSize = fSize / 2.0f;
+	float halfHeight = fHeight / 2.0f;
+
+	m_pxmf3Positions[0] = XMFLOAT3(-halfSize, -halfSize, -halfHeight);
+	m_pxmf3Positions[1] = XMFLOAT3(halfSize, -halfSize, -halfHeight);
+	m_pxmf3Positions[2] = XMFLOAT3(halfSize, halfSize, -halfHeight);
+	m_pxmf3Positions[3] = XMFLOAT3(-halfSize, halfSize, -halfHeight);
+	m_pxmf3Positions[4] = XMFLOAT3(-halfSize, -halfSize, halfHeight);
+	m_pxmf3Positions[5] = XMFLOAT3(halfSize, -halfSize, halfHeight);
+	m_pxmf3Positions[6] = XMFLOAT3(halfSize, halfSize, halfHeight);
+	m_pxmf3Positions[7] = XMFLOAT3(-halfSize, halfSize, halfHeight);
+
+	m_nSubMeshes = 1;
+
+	int nSubMeshIndices = 36;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+
+	m_pnSubSetIndices[0] = nSubMeshIndices;
+	m_ppnSubSetIndices[0] = new UINT[nSubMeshIndices];
+
+	int k = 0;
+
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 2;
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3;
+
+	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
+	m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 7;
+
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 4; m_ppnSubSetIndices[0][k++] = 7;
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 3;
+
+	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 6;
+	m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 6; m_ppnSubSetIndices[0][k++] = 2;
+
+	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 3; m_ppnSubSetIndices[0][k++] = 7;
+	m_ppnSubSetIndices[0][k++] = 2; m_ppnSubSetIndices[0][k++] = 7; m_ppnSubSetIndices[0][k++] = 6;
+
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 1; m_ppnSubSetIndices[0][k++] = 5;
+	m_ppnSubSetIndices[0][k++] = 0; m_ppnSubSetIndices[0][k++] = 5; m_ppnSubSetIndices[0][k++] = 4;
+
+
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+
+
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(
+		pd3dDevice, pd3dCommandList, m_ppnSubSetIndices[0], sizeof(UINT) * nSubMeshIndices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		&m_ppd3dSubSetIndexUploadBuffers[0]);
+
+
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * nSubMeshIndices;
+
+	//===========================================================
+
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions, sizeof(XMFLOAT3) * m_nVertices,
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+
+	//===========================================================
+}
+
+Cube_Chip_Shape_Mesh::~Cube_Chip_Shape_Mesh()
+{
+}
+
+void Cube_Chip_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+	pd3dCommandList->SOSetTargets(0, 1, NULL);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[2] = { m_d3dPositionBufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews);
+
+	if (m_ppd3dSubSetIndexBuffers[0] != nullptr)
+	{
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = m_pd3dSubSetIndexBufferViews[0];
+		pd3dCommandList->IASetIndexBuffer(&indexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
 
 }
 
@@ -651,6 +752,8 @@ void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 void ParticleObject::Init_Info(Particle_Format particle_info)
 {
+	p_type = particle_info.particle_type;
+
 	Set_Focus_Point(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	Set_Area(particle_info.area_xyz);
 	Set_Main_Direction(particle_info.main_direction);

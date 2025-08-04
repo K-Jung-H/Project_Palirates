@@ -42,7 +42,7 @@ CGameFramework::CGameFramework()
 
 	m_pPlayer = NULL;
 
-	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
+	_tcscpy_s(m_pszFrameRate, _T("Palirates"));
 
 	isRunning = false;
 }
@@ -65,7 +65,7 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 
 	CoInitialize(NULL);
 
-	CDescriptor_Heap::Init(m_pd3dDevice, 0, 200, 400, 50);
+	CDescriptor_Heap::Init(m_pd3dDevice, 0, 800, 800, 50);
 	Light_Material_Manager::Initialize();
 
 	scene_manager = new Scene_Manager(N_SwapChainBuffers, m_pd3dDevice, p_CommandQueue, ptr_SwapChainBackBuffer_List, m_nWndClientWidth, m_nWndClientHeight);
@@ -144,13 +144,23 @@ void CGameFramework::CreateDirect3DDevice()
 
 	UINT nDXGIFactoryFlags = 0;
 #if defined(_DEBUG)
-	ID3D12Debug *pd3dDebugController = NULL;
-	hResult = D3D12GetDebugInterface(__uuidof(ID3D12Debug), (void **)&pd3dDebugController);
-	if (pd3dDebugController)
+	ID3D12Debug* pd3dDebugController = nullptr;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pd3dDebugController))))
 	{
 		pd3dDebugController->EnableDebugLayer();
+
+		//=======================================
+		//ComPtr<ID3D12Debug1> debugController1;
+		//if (SUCCEEDED(pd3dDebugController->QueryInterface(IID_PPV_ARGS(&debugController1))))
+		//{
+		//	debugController1->SetEnableGPUBasedValidation(TRUE);
+		//	OutputDebugStringA("[D3D12] GPU-based validation enabled.\n");
+		//}
+		//=======================================
+
 		pd3dDebugController->Release();
 	}
+
 	nDXGIFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
@@ -307,7 +317,6 @@ void CGameFramework::ChangeSwapChainState()
 	m_nWndClientWidth = rcClient.right - rcClient.left;
 	m_nWndClientHeight = rcClient.bottom - rcClient.top;
 
-	WaitForGpuComplete(GPU_Stage::Render);
 
 	BOOL bFullScreenState = FALSE;
 	m_pdxgiSwapChain->GetFullscreenState(&bFullScreenState, NULL);
@@ -334,6 +343,16 @@ void CGameFramework::ChangeSwapChainState()
 	SwapChainBuffer_Index = m_pdxgiSwapChain->GetCurrentBackBufferIndex();
 
 	CreateRenderTargetViews();
+
+	//=========================================
+
+	D3D12_CPU_DESCRIPTOR_HANDLE d3dRtvHandle = ptr_Rtv_DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	d3dRtvHandle.ptr += (::gnRtvDescriptorIncrementSize * N_SwapChainBuffers);
+
+	if (MRT_shader)
+		MRT_shader->CreateResourcesAndRtvsSrvs(m_pd3dDevice, Active_CommandList, RTV_Format_Num, RenderTarget_Config::RTV_FORMATS, d3dRtvHandle);
+
+	CreateDepthStencilView();
 
 	for (UINT i = 0; i < N_SwapChainBuffers; ++i)
 	{
@@ -376,8 +395,7 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 		case WM_KEYUP:
 			switch (wParam)
 			{
-				case VK_SPACE:
-//					test_button = !test_button;
+			case VK_OEM_3: // ~
 					Stage_Scene::Change_Scene_Signal = true;
 					break;
 
@@ -394,7 +412,15 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				break;
 
 				case VK_F9:
-					ChangeSwapChainState();
+				{
+					if (!Change_Screen)
+						Change_Screen = true;
+					//WaitForGpuComplete(GPU_Stage::Compute);
+					//WaitForGpuComplete(GPU_Stage::Render);
+					//WaitForGpuComplete(GPU_Stage::Post);
+
+					//ChangeSwapChainState();
+				}
 					break;
 				default:
 					break;
@@ -577,11 +603,12 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
-//	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	Build_Scene(Scene_Type::Stage_2, "Stage_2");
 
 
+	scene_manager->Set_Active_Scene("Stage_2");
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
-//	scene_manager->Set_Active_Scene("Test_Scene");
 
 	scene_manager->Set_Active_Scene("Character_Select");
 	m_pPlayer = scene_manager->Get_Active_Scene_Player();
@@ -729,8 +756,8 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 		}
 
-
-		m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		if (!CScene::Screen_Fade)
+			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 
 
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
@@ -918,7 +945,13 @@ void CGameFramework::WaitForGpuComplete(GPU_Stage stage)
 	if (m_pd3dFence->GetCompletedValue() < fenceValue)
 	{
 		m_pd3dFence->SetEventOnCompletion(fenceValue, m_hFenceEvent);
-		WaitForSingleObject(m_hFenceEvent, INFINITE);
+		//WaitForSingleObject(m_hFenceEvent, INFINITE);
+		DWORD waitResult = WaitForSingleObject(m_hFenceEvent, 5000); // 최대 5초
+		if (waitResult == WAIT_TIMEOUT)
+		{
+			std::cerr << "[ERROR] GPU Timeout during fullscreen switch. Device might be lost.\n";
+			return; // or trigger recovery
+		}
 	}
 }
 
@@ -981,6 +1014,12 @@ void CGameFramework::FrameAdvance()
 	WaitForGpuComplete(GPU_Stage::Compute);
 	WaitForGpuComplete(GPU_Stage::Render);
 	WaitForGpuComplete(GPU_Stage::Post);
+	if (Change_Screen)
+	{
+		Change_Screen = false;
+		ChangeSwapChainState();
+	}
+
 	Change_Scene();
 
 
@@ -990,19 +1029,26 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Compute);
 	PrepareStage(GPU_Stage::Compute);
 	{
-//		std::lock_guard<std::mutex> lock(recvQueueMutex);
+		const size_t maxQueueSize = 10000;
+		if (recvQueue.size() > maxQueueSize)
+		{
+			size_t toDiscard = recvQueue.size() - maxQueueSize;
+			for (size_t i = 0; i < toDiscard; ++i)
+			{
+				recvQueue.pop();
+			}
+
+			std::cout << "[WARN] recvQueue overflow. Discarded " << toDiscard << " old packets.\n";
+		}
+
 		while (!recvQueue.empty())
 		{
 			std::string receivedData = recvQueue.front();
 			recvQueue.pop();
 
-//			std::cout << "[FrameAdvance] Received packet processing: " << receivedData << std::endl;
 			ProcessReceivedData(receivedData);
 		}
 	}
-
-
-
 
 	EndGPUStage(GPU_Stage::Compute, true);
 
@@ -1087,6 +1133,8 @@ void CGameFramework::FrameAdvance()
 		auto dsvHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 		Active_CommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
+
+
 		scene_manager->Prepare_MRT_G_Buffer(Active_CommandList, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], &dsvHandle);
 
 		scene_manager->Prepare_Render_Scene(m_pd3dDevice, Active_CommandList);
@@ -1116,8 +1164,6 @@ void CGameFramework::FrameAdvance()
 	BeginGPUStage(GPU_Stage::Post);
 	PrepareStage(GPU_Stage::Post);
 	{
-		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
-
 
 		//Debuging G-Buffer
 		//D3D12_GPU_DESCRIPTOR_HANDLE  Albedo_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(2);
@@ -1130,26 +1176,50 @@ void CGameFramework::FrameAdvance()
 		D3D12_GPU_DESCRIPTOR_HANDLE  Velocity_G_Buffer_SRV_handle = MRT_shader->GetTexture()[0].GetGraphicsSrvGpuDescriptorHandle(3);
 
 
-		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
 
 		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-		Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_1);
-		post_effect_manager->Add_Effect(Effect_Type::Motion_Blur, motion_blur_2);
+		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Outline, outline_blur);
 
-		post_effect_manager->Add_Effect(Effect_Type::Outline, outline_blur);
-
-		if (test_button)
+		if (post_effect_sync_data.motion_blur_active)
 		{
+			Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+			Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_1);
+			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
+		}
+
+		if (post_effect_sync_data.zoom_blur_active)
+		{
+			Resource_Bind_Set zoom_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 			shared_ptr<CCamera> scene_camera = scene_manager->Get_Active_Scene_Main_Camera();
 
-			post_effect_manager->Set_Zoom_Focus_and_Time({ 0.5, 0.3 }, m_GameTimer.GetTimeElapsed());
-			post_effect_manager->Add_Effect(Effect_Type::Zoom, zoom_blur);
+			XMFLOAT2 screenPos = scene_camera->WorldToNormalizedScreen(
+				post_effect_sync_data.zoom_w_position,
+				scene_camera->GetViewMatrix(),
+				scene_camera->GetProjectionMatrix(),
+				scene_camera->GetViewport());
+
+			post_effect_manager->Set_Zoom_Focus_and_Time(screenPos, m_GameTimer.GetTimeElapsed());
+			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Zoom, zoom_blur);
 		}
+
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE);
+
 		// Apply reserved effects
-		post_effect_manager->Apply_Effect(Active_CommandList, SwapChainBuffer_Index);
+		post_effect_manager->Apply_Post_Effect(Active_CommandList, SwapChainBuffer_Index);
+
+		SynchronizeResourceTransition(Active_CommandList, ptr_SwapChainBackBuffer_List[SwapChainBuffer_Index], 
+			D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+
+		Active_CommandList->OMSetRenderTargets(1, &SwapChainBack_Buffer_RTV_CPUHandle_list[SwapChainBuffer_Index], TRUE, nullptr);
+		post_effect_manager->Render_Result(Active_CommandList);
+
+
 		post_effect_manager->Clear_Reserved_Effect();
 
 	}
@@ -1173,14 +1243,10 @@ void CGameFramework::FrameAdvance()
 
 		// Record moving Object's Last Pos to use motion blur
 		scene_manager->Post_Update_Scene(m_pd3dDevice, Active_CommandList);
-		if (m_pPlayer)
-		{
-			m_pPlayer->Record_Last_Pos();
-		}
+
 
 		// Check MouseLock & FadeEffect
 		scene_manager->Render_ScreenFade(m_pd3dDevice, Active_CommandList);
-
 
 		scene_manager->Update_Texture_UI(m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
 		scene_manager->Render_Scene_Texture_UI(Active_CommandList, m_GameTimer.GetTotalTime(), m_GameTimer.GetTimeElapsed());
@@ -1226,7 +1292,7 @@ void CGameFramework::FrameAdvance()
 	// ====================== [8] Frame Sync ======================
 	MoveToNextFrame();
 
-	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
+//	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 	
 	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
@@ -1295,17 +1361,31 @@ void CGameFramework::SendPacket()
 
 
 
-	if (Stage_Scene::Change_Scene_Signal)
+	if (Stage_Scene::Change_Scene_Signal) // Leader's Ability
 	{
 		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
 		{
-			oss << "CHANGE_SCENE," << to_string(static_cast<int>(Scene_Type::Board));
+			oss << "FORCE_TO_CHANGE_SCENE," << to_string(static_cast<int>(Scene_Type::Board));
 			std::string packet = oss.str() + "\n";
 			SendPacket_String(packet);
 			return;
 		}
 		else
 			Stage_Scene::Change_Scene_Signal = false;
+	}
+
+	if (Stage_Scene::Stage_Clear_Signal) // Stage Clear 
+	{
+		
+ 		if (auto stage_scene = dynamic_pointer_cast<Stage_Scene>(active_scene))
+		{
+			oss << "CHANGE_SCENE_READY," << to_string(static_cast<int>(Scene_Type::Board));
+			std::string packet = oss.str() + "\n";
+			SendPacket_String(packet);
+			return;
+		}
+		else
+			Stage_Scene::Stage_Clear_Signal = false;
 	}
 
 	oss << "PLAYER_UPDATE," << to_string(static_cast<int>(active_scene->scene_type)) << "," << Client_ID;
@@ -1486,7 +1566,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		if (!stage_scene)
 			break;
 		if (cmd == "STAGE_1")
-			ProcessReceivedData_Stage(stage_scene, cmd, tokens);  
+			ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "MONSTER_SNAPSHOT")
 			ProcessReceivedData_Monster(stage_scene, tokens);
 		else if (cmd == "MONSTER_COMMAND") {
@@ -1499,16 +1579,33 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 					int id = std::stoi(tokens[idx++]);
 					stage_scene->DespawnMonster(id);
 				}
-				else if (cmdType == "DAMAGE") {
+				else if (cmdType == "HIT") {
 					int id = std::stoi(tokens[idx++]);
-					float damage = std::stoi(tokens[idx++]);
-					stage_scene->DamageMonster(id, damage);
+					bool on = (tokens[idx++] == "1");
+					stage_scene->HitMonster(id, on);
+					std::cout << "hit : " << id << ", " << on << "\n";
 				}
 			}
 		}
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
+		else if (cmd == "POST_EFFECT")
+			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+		else if (cmd == "STAGE_CLEAR") {
+			stage_scene->bStageClear = true;
+		}
+		else if (receivedData.find("RETURN_TO_LOBBY") == 0)
+		{
+			auto scene = scene_manager->Get_Active_Scene();
+			if (scene)
+			{
+				scene->c_signal.change = true;
+				scene->c_signal.scene_name = "Character_Select";
+				scene->c_signal.type = Scene_Type::Lobby;
+			}
+		}
+
 	}
 	break;
 
@@ -1598,10 +1695,10 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 	{
 		int base = startIndex;
 
-		if (base + 9 >= tokens.size()) break;
+		if (base + 9 > tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
-		int modelId = std::stoi(tokens[base + 1]); 
+		int modelId = std::stoi(tokens[base + 1]);
 		float px = std::stof(tokens[base + 2]);
 		float py = std::stof(tokens[base + 3]);
 		float pz = std::stof(tokens[base + 4]);
@@ -1611,14 +1708,11 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		int trackCount = std::stoi(tokens[base + 8]);
 
 		int trackStart = base + 9;
-
 		int expectedTrackTokenCount = trackCount * 3;
 
-		if (trackStart + expectedTrackTokenCount >= tokens.size()) 
-			break;
+		if (trackStart + expectedTrackTokenCount + 4 > tokens.size()) break;
 
 		std::vector<Animation_Sync> track_list;
-
 		for (int t = 0; t < trackCount; ++t)
 		{
 			int idx = trackStart + t * 3;
@@ -1629,24 +1723,30 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		}
 
 		int stateFlagIndex = trackStart + expectedTrackTokenCount;
-		if (stateFlagIndex >= tokens.size()) break;
 
 		bool stateChanged = (tokens[stateFlagIndex++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-
 		syncData.track_info_list = track_list;
 		syncData.bStateChange = stateChanged;
 
-		int changedStateNum = std::stoi(tokens[stateFlagIndex]);
+		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
 		syncData.changedStateNum = changedStateNum;
+		float hp = std::stof(tokens[stateFlagIndex++]);
+		syncData.hp = hp;
+		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
+		syncData.bBreathHit = bBreathHit;
+
 		HandlePlayerSync(playerId, modelId, syncData);
 
-		startIndex = stateFlagIndex + 1;
+
+		int consumed = 9 + (trackCount * 3) + 4;
+		startIndex = base + consumed;
 	}
 }
+
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
@@ -1689,10 +1789,22 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
 
 		syncData.track_info_list = track_list;
-		syncData.bStateChange = std::stoi(tokens[stateFlagIndex]);
+		syncData.bStateChange = std::stoi(tokens[stateFlagIndex++]);
+		syncData.hp = std::stoi(tokens[stateFlagIndex]);
 
+		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
+		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
 
-		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
+		float zView = XMVectorGetZ(viewSpacePos);
+		//std::cout << zView << "\n";
+		if (zView >= 800.0f) {
+			stage_scene->Monster_Set_Active_False(monsterId);
+		}
+		else if (zView >= -50.0f)
+		{
+			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		}
 
 		startIndex = stateFlagIndex + 1;
 	}
@@ -1751,7 +1863,53 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 	}
 }
 
+void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+{
+	if (tokens.size() < 12) return;
 
+
+	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
+
+	for (int player_id = 0; player_id < MaxPlayer; ++player_id)
+	{
+		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
+		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
+		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
+
+		if (player_id == Client_ID)
+		{
+			m_pPlayer->SetBlurMask(player_motion_blur_active);
+		}
+	}
+	
+	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
+	if (post_effect_sync_data.zoom_blur_active) {
+		scene_manager->Get_Active_Scene()->CameraZoomOutAnime = true;
+	}
+	post_effect_sync_data.zoom_w_position =
+	{
+		(std::stof(tokens[9])),
+		(std::stof(tokens[10])),
+		(std::stof(tokens[11]))
+	};
+
+	if (post_effect_sync_data.zoom_w_position.x != 0.0f || post_effect_sync_data.zoom_w_position.y != 0.0f || post_effect_sync_data.zoom_w_position.z != 0.0f)
+	{
+		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f) {
+			post_effect_sync_data.zoom_blur_active = false;
+			scene_manager->Get_Active_Scene()->CameraZoomOutAnime = false;
+		}
+	}
+	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
+
+	Fog_Info server_fog_info;
+	server_fog_info.Fog_Trigger = std::stoi(tokens[13]);
+	server_fog_info.fogStart = std::stof(tokens[14]);
+	server_fog_info.fogEnd = std::stof(tokens[15]);
+	server_fog_info.fogDensity = std::stof(tokens[16]);
+
+	stage_scene->Fog_Sync(server_fog_info);
+}
 
 
 void CGameFramework::HandleClientIdAssignment()
@@ -1865,21 +2023,44 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		// 애니메이션 및 상태 전환은 추가 예정
 		if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);
-
+		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
-			if (!m_pPlayer->bIsInvincible)
+			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
+				//std::cout << "[DEBUG] Get_Hit_F2 State Change" << std::endl;
+			}
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
+			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
+				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
+				scene_manager->Get_Active_Scene()->bUpdateUI_HP = true;
+				//std::cout << "[DEBUG] Dead State Change" << std::endl;
+			}
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack2 && syncData.changedStateNum == int(State::Attack2)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
+		}
+		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
+			m_pPlayer->GetStateMachine()->lastStateChange = 0;
 		}
 		return;
 	}
 	else
 	{
-		if (Connected_Player_List[player_ID]) // 이미 플레이어 데이터 존재
+		if (Connected_Player_List[player_ID])
 		{
-			scene_manager->Sync_Player_Data(player_ID, syncData);
+			bool player_exist = scene_manager->Sync_Player_Data(player_ID, syncData);
+
+			if (player_exist == false) 
+			{
+				auto newPlayer = Create_Player(player_ID, character_model_ID);
+				scene_manager->Add_Player(newPlayer);
+			}
 		}
 		else 
 		{
@@ -2010,36 +2191,6 @@ void CGameFramework::NetworkLoop()
 		}
 	}
 
-	//while (isRunning)
-	//{
-	//	char buffer[1024 + 1];
-	//	int bytesReceived = recv(serverSocket, buffer, 1024, 0);
-	//	//		std::cout << "[recv] Receive successful: " << bytesReceived << std::endl;
-
-	//	if (bytesReceived > 0)
-	//	{
-	//		buffer[bytesReceived] = '\0';
-	//		std::string receivedData(buffer);
-
-	//		{
-	//			std::lock_guard<std::mutex> lock(recvQueueMutex);
-	//			recvQueue.push(receivedData);
-	//			//			std::cout << "[recvQueue] Data push completed, current queue size: " << recvQueue.size() << std::endl;
-	//		}
-	//	}
-
-	//	else if (bytesReceived == SOCKET_ERROR)
-	//	{
-	//		std::cerr << "[ERROR] recv() FAIL: " << WSAGetLastError() << std::endl;
-	//	}
-	//	else if (bytesReceived == 0)
-	//	{
-	//		std::cerr << "[INFO] Connection with server closed" << std::endl;
-	//		isRunning = false;
-	//		break;
-	//	}
-
-	//}
 }
 
 bool CGameFramework::IsServerConnected()
