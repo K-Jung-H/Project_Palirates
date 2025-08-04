@@ -1017,14 +1017,47 @@ public:
 
 };
 
+#define Max_Wave_Trail 640
+
+struct BoatWakeTrail 
+{
+    XMFLOAT2 position;
+    XMFLOAT2 direction;
+    float age;
+    
+    float padding0;
+    float padding1;
+    float padding2;
+};
+
+struct CB_Wave_Trail_Info
+{
+    UINT  g_NumTrails;
+    float g_GlobalTime;
+    float g_BaseStrength;
+    float g_DecayRate;
+    float g_TimeDecayRate;
+};
+
 class Wave_Object : public Plane_Object
 {
 public:
     static CS_Wave_Shader* cs_wave_shader;
 
-private:
-    CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+protected:
+    std::vector<BoatWakeTrail> wakeTrails; // 크기 고정 (예: 64)
+    int wakeTrailIndex = 0;
+
+    CTexture* wave_trail_data_texture = NULL;
+    ID3D12Resource* m_pWakeTrailUploadBuffer = NULL;
+
+    ID3D12Resource* wave_trail_info = nullptr;
+    CB_Wave_Trail_Info* mapped_wave_trail_info = nullptr;
+
+protected:
+    CTexture* wave_general_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
     ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
+
 
     UINT desiredTexelSize = 0;
     UINT Tex_Length = 0;
@@ -1045,8 +1078,12 @@ public:
 
     void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
     XMFLOAT3 Readback_Buffer_Data();
-
+    
     void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+    void Animate_Wave_Trail_Buffer(float fTimeElapsed);
+    void Update_Wave_Trail_Buffer(ID3D12GraphicsCommandList* pd3dCommandList);
+    void Set_Wave_Trail_Info(CB_Wave_Trail_Info& wave_trail_info);
+
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 

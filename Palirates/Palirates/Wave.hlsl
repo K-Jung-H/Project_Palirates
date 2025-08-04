@@ -22,7 +22,32 @@ cbuffer WaveParams : register(b0)
 };
 
 
-Texture2D<float> HeightMap_Read : register(t0);
+cbuffer WakeInfoCB : register(b1)
+{
+    uint g_NumTrails;
+    float g_GlobalTime;
+    float g_BaseStrength;
+    float g_DecayRate;
+    float g_TimeDecayRate;
+};
+
+
+struct BoatWakeTrail
+{
+    float2 position;
+    float2 direction;
+    
+    float age;
+    
+    float padding0;
+    float padding1;
+    float padding2;
+};
+
+
+StructuredBuffer<BoatWakeTrail> g_WakeTrailBuffer : register(t0);
+Texture2D<float> HeightMap_Read : register(t1);
+
 RWTexture2D<float> HeightMap_Write : register(u0);
 RWTexture2D<float4> NormalMap_Write : register(u1);
 
@@ -72,39 +97,81 @@ void CS_Global_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 
 
 
+//[numthreads(8, 8, 1)]
+//void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
+//{
+//    float2 coord = DTid.xy;
+//    float2 dir = normalize(g_BoatDir);
+//    float2 toPix = coord - g_BoatPos;
+
+//    float forwardDist = dot(toPix, dir);
+//    if (forwardDist < 0.0 || forwardDist > g_WakeMaxDist)
+//    {
+//        HeightMap_Write[coord] = HeightMap_Read[coord];
+//        return;
+//    }
+
+//    float2 lateral = toPix - forwardDist * dir;
+//    float sideDist = length(lateral);
+//    float angle = atan2(sideDist, forwardDist);
+
+//    if (angle > g_WakeMaxAngle)
+//    {
+//        HeightMap_Write[coord] = HeightMap_Read[coord];
+//        return;
+//    }
+
+//    float angleRatio = angle / g_WakeMaxAngle;
+//    float sideWeight = pow(abs(1.0 - angleRatio), g_WakeDecay);
+//    float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
+
+//    float depth = sideWeight * forwardWeight;
+
+//    float base = HeightMap_Read[coord];
+//    float result = saturate(base - depth * g_WakeDepthStrength * 1.2f);
+
+//    HeightMap_Write[coord] = result;
+//}
+
 [numthreads(8, 8, 1)]
 void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 {
     float2 coord = DTid.xy;
-    float2 dir = normalize(g_BoatDir);
-    float2 toPix = coord - g_BoatPos;
-
-    float forwardDist = dot(toPix, dir);
-    if (forwardDist < 0.0 || forwardDist > g_WakeMaxDist)
-    {
-        HeightMap_Write[coord] = HeightMap_Read[coord];
-        return;
-    }
-
-    float2 lateral = toPix - forwardDist * dir;
-    float sideDist = length(lateral);
-    float angle = atan2(sideDist, forwardDist);
-
-    if (angle > g_WakeMaxAngle)
-    {
-        HeightMap_Write[coord] = HeightMap_Read[coord];
-        return;
-    }
-
-    float angleRatio = angle / g_WakeMaxAngle;
-    float sideWeight = pow(abs(1.0 - angleRatio), g_WakeDecay);
-    float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
-
-    float depth = sideWeight * forwardWeight;
-
     float base = HeightMap_Read[coord];
-    float result = saturate(base - depth * g_WakeDepthStrength * 1.2f);
 
+    float wakeSum = 0.0f;
+
+    [loop]
+    for (uint i = 0; i < g_NumTrails; ++i)
+    {
+        BoatWakeTrail trail = g_WakeTrailBuffer[i];
+
+        float2 dir = normalize(trail.direction);
+        float2 toPix = coord - trail.position;
+
+        float forwardDist = dot(toPix, dir);
+        if (forwardDist < 0.0 || forwardDist > g_WakeMaxDist)
+            continue;
+
+        float2 lateral = toPix - forwardDist * dir;
+        float sideDist = length(lateral);
+        float angle = atan2(sideDist, forwardDist);
+
+        if (angle > g_WakeMaxAngle)
+            continue;
+
+        float angleRatio = angle / g_WakeMaxAngle;
+        float sideWeight = pow(abs(1.0 - angleRatio), g_WakeDecay);
+        float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
+
+        float decay = exp(-trail.age * g_TimeDecayRate); // 시간 감쇠 적용
+
+        float depth = sideWeight * forwardWeight * decay;
+
+        wakeSum += depth;
+    }
+
+    float result = saturate(base - wakeSum * g_WakeDepthStrength);
     HeightMap_Write[coord] = result;
 }
 

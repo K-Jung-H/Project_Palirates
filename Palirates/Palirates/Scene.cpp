@@ -3320,6 +3320,8 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	{
 		wave_obj->Synchronize_Wave_to_Boat(pirate_ship.get());
 		wave_obj->Animate(pd3dCommandList, fTimeElapsed);
+		wave_obj->Animate_Wave_Trail_Buffer(fTimeElapsed);
+
 	}
 
 #endif
@@ -3362,7 +3364,10 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 #ifdef RENDER_WAVE
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
+	{
+		wave_obj->Update_Wave_Trail_Buffer(pd3dCommandList);
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
+	}
 #endif
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
