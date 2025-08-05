@@ -38,10 +38,10 @@ struct BoatWakeTrail
     float2 direction;
     
     float age;
-    
+    float boat_velocity;
+
     float padding0;
     float padding1;
-    float padding2;
 };
 
 
@@ -97,41 +97,11 @@ void CS_Global_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 
 
 
-//[numthreads(8, 8, 1)]
-//void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
-//{
-//    float2 coord = DTid.xy;
-//    float2 dir = normalize(g_BoatDir);
-//    float2 toPix = coord - g_BoatPos;
 
-//    float forwardDist = dot(toPix, dir);
-//    if (forwardDist < 0.0 || forwardDist > g_WakeMaxDist)
-//    {
-//        HeightMap_Write[coord] = HeightMap_Read[coord];
-//        return;
-//    }
 
-//    float2 lateral = toPix - forwardDist * dir;
-//    float sideDist = length(lateral);
-//    float angle = atan2(sideDist, forwardDist);
-
-//    if (angle > g_WakeMaxAngle)
-//    {
-//        HeightMap_Write[coord] = HeightMap_Read[coord];
-//        return;
-//    }
-
-//    float angleRatio = angle / g_WakeMaxAngle;
-//    float sideWeight = pow(abs(1.0 - angleRatio), g_WakeDecay);
-//    float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
-
-//    float depth = sideWeight * forwardWeight;
-
-//    float base = HeightMap_Read[coord];
-//    float result = saturate(base - depth * g_WakeDepthStrength * 1.2f);
-
-//    HeightMap_Write[coord] = result;
-//}
+#define WAKE_MIN_ANGLE_RAD 0.523599f // 30 rad
+#define WAKE_MAX_ANGLE_RAD 2.094f // 120 rad
+#define WAKE_MAX_AGE 5.0f
 
 [numthreads(8, 8, 1)]
 void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
@@ -140,12 +110,16 @@ void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
     float base = HeightMap_Read[coord];
 
     float wakeSum = 0.0f;
+    float weightSum = 0.0f;
 
     [loop]
     for (uint i = 0; i < g_NumTrails; ++i)
     {
         BoatWakeTrail trail = g_WakeTrailBuffer[i];
 
+        if (trail.age < 0.0f)
+            continue;
+        
         float2 dir = normalize(trail.direction);
         float2 toPix = coord - trail.position;
 
@@ -155,25 +129,34 @@ void CS_Boat_Wave_Height(uint3 DTid : SV_DispatchThreadID)
 
         float2 lateral = toPix - forwardDist * dir;
         float sideDist = length(lateral);
-        float angle = atan2(sideDist, forwardDist);
 
-        if (angle > g_WakeMaxAngle)
+        // === 시간 기반 각도 확장 및 깊이 감쇠 계산 ===
+        float ageNorm = saturate(trail.age / WAKE_MAX_AGE); // 0~1 범위 정규화
+        float ageSmooth = ageNorm * ageNorm * (3.0 - 2.0 * ageNorm); // smoothstep
+
+        float maxAngle = lerp(WAKE_MIN_ANGLE_RAD, WAKE_MAX_ANGLE_RAD, ageSmooth); // 0 → 120도
+        float fadeFactor = 1.5f- ageSmooth; // 나이 들수록 깊이 줄어듦
+
+        float angle = atan2(sideDist, forwardDist);
+        if (angle > maxAngle)
             continue;
 
-        float angleRatio = angle / g_WakeMaxAngle;
+        float angleRatio = angle / maxAngle;
         float sideWeight = pow(abs(1.0 - angleRatio), g_WakeDecay);
         float forwardWeight = 1.0 - (forwardDist / g_WakeMaxDist);
 
-        float decay = exp(-trail.age * g_TimeDecayRate); // 시간 감쇠 적용
-
-        float depth = sideWeight * forwardWeight * decay;
+        float speedWeight = saturate(trail.boat_velocity * g_BaseStrength);
+        float depth = sideWeight * forwardWeight * fadeFactor * speedWeight;
 
         wakeSum += depth;
+        weightSum += 1.0f;
     }
 
-    float result = saturate(base - wakeSum * g_WakeDepthStrength);
+    float averaged = (weightSum > 0.0f) ? (wakeSum / weightSum) : 0.0f;
+    float result = saturate(base - averaged * g_WakeDepthStrength);
     HeightMap_Write[coord] = result;
 }
+
 
 
 [numthreads(8, 8, 1)]

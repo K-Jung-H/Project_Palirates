@@ -4169,6 +4169,19 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_trail_data_texture, 0, 1); // UAV(u2)
 
+	if (wakeTrails.empty())
+	{
+		wakeTrails.resize(Max_Wave_Trail);
+		for (auto& trail : wakeTrails)
+		{
+			trail.position = XMFLOAT2(0.0f, 0.0f);
+			trail.direction = XMFLOAT2(0.0f, 1.0f);
+			trail.age = -1.0f;
+			trail.boat_velocity = 0.0f;
+			trail.padding0 = 0.0f;
+			trail.padding1 = 0.0f;
+		}
+	}
 
 }
 
@@ -4218,11 +4231,7 @@ void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 
 	float speed = XMVectorGetX(XMVector3Length(XMLoadFloat3(&boat_velocity)));
 
-	float absRotation = fabsf(boat_rotation_speed);
-	float rotationFactor = 1.0f - (absRotation / 90.0f);
-	rotationFactor = std::clamp(rotationFactor, 0.5f, 1.0f);
-
-	World_Boat_Velocity = speed * rotationFactor;
+	World_Boat_Velocity = speed;
 
 
 	if (!IsZeroVector(BoatPos_WaveNormal))
@@ -4265,8 +4274,16 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-	wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, readIndex);   // SRV(t0)
-	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, writeIndex);  // UAV(u0)
+	{
+		pd3dCommandList->SetComputeRootConstantBufferView(1, wave_trail_info->GetGPUVirtualAddress()); // wave_trail_info_CBV
+
+		wave_trail_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 2, 0);
+
+
+		wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, readIndex);   // SRV(t0)
+		wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, writeIndex);  // UAV(u0)
+	}
+
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
@@ -4298,7 +4315,7 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 	XMVECTOR normDir = XMVector2Normalize(XMLoadFloat2(&dirXZ));
 	XMStoreFloat2(&cs_wave_shader->update_wave_info->g_BoatDir, normDir);
 	cs_wave_shader->update_wave_info->g_BoatPos = boatTexel;
-	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
+	cs_wave_shader->update_wave_info->g_WakeMaxDist = 50;
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
 	// Step 6: Boat Wake Pass
@@ -4364,40 +4381,58 @@ void Wave_Object::Animate_Wave_Trail_Buffer(float fTimeElapsed)
 	XMFLOAT3 planePos = GetPosition();
 	float planeHalfSize = Side_Length * 0.5f;
 
-	XMFLOAT2 boat_texel_pos= {
+	// 보트 월드 위치 → 텍셀 좌표로 변환
+	XMFLOAT2 boat_texel_pos = {
 		(World_Boat_Pos.x - (planePos.x - planeHalfSize)) / desiredTexelSize,
 		(World_Boat_Pos.z - (planePos.z - planeHalfSize)) / desiredTexelSize
 	};
 
 	XMFLOAT2 boatDirXZ = { World_Boat_Dir.x, World_Boat_Dir.z };
 
-	static float timeSinceLastTrail = 0.0f; // 프레임 간 누적 시간
-
+	static float timeSinceLastTrail = 0.0f;
 	timeSinceLastTrail += fTimeElapsed;
 
-	// 0.5초 이상 지난 경우에만 trail 추가
-	if (timeSinceLastTrail <= 0.01f)
-		return;
-	else
+	// 일정 간격으로 trail 생성
+	if (timeSinceLastTrail >= 0.01f)
+	{
 		timeSinceLastTrail = 0.0f;
 
-	if (wakeTrails.empty())
-		wakeTrails.resize(Max_Wave_Trail);
+		wakeTrails[wakeTrailIndex].position = boat_texel_pos;
+		wakeTrails[wakeTrailIndex].direction = boatDirXZ;
+		wakeTrails[wakeTrailIndex].age = 0.0f;
+		wakeTrails[wakeTrailIndex].boat_velocity = World_Boat_Velocity;
 
-	wakeTrails[wakeTrailIndex].position = boat_texel_pos;
-	wakeTrails[wakeTrailIndex].direction = boatDirXZ;
-	wakeTrails[wakeTrailIndex].age = 0.0f;
+		if (wakeTrailCount < Max_Wave_Trail)
+			++wakeTrailCount;
 
-	wakeTrailIndex = (wakeTrailIndex + 1) % Max_Wave_Trail;
+		wakeTrailIndex = (wakeTrailIndex + 1) % Max_Wave_Trail;
+	}
 
-	for (auto& trail : wakeTrails)
+	const float driftSpeed = 10.0f; // 텍셀 단위 초당 속도
+
+	for (int i = 0; i < wakeTrailCount; ++i)
 	{
+		auto& trail = wakeTrails[i];
+
 		if (trail.age >= 0.0f)
+		{
 			trail.age += fTimeElapsed;
+
+			// 보트 진행 방향으로 drift
+			trail.position.x += trail.direction.x * driftSpeed * fTimeElapsed;
+			trail.position.y += trail.direction.y * driftSpeed * fTimeElapsed;
+
+			// 5초가 지나면 비활성화
+			if (trail.age >= 5.0f)
+			{
+				trail.age = -1.0f;
+				trail.boat_velocity = 0.0f;
+			}
+		}
 	}
 
 	mapped_wave_trail_info->g_GlobalTime += fTimeElapsed;
-	mapped_wave_trail_info->g_NumTrails = wakeTrails.size();
+	mapped_wave_trail_info->g_NumTrails = Max_Wave_Trail; // Shader는 age < 0.0 으로 필터링
 	mapped_wave_trail_info->g_BaseStrength = 0.3f;
 	mapped_wave_trail_info->g_DecayRate = 0.05f;
 	mapped_wave_trail_info->g_TimeDecayRate = 0.05f;
@@ -4405,7 +4440,8 @@ void Wave_Object::Animate_Wave_Trail_Buffer(float fTimeElapsed)
 
 void Wave_Object::Update_Wave_Trail_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (!m_pWakeTrailUploadBuffer || !wave_trail_data_texture || wave_trail_data_texture->GetResource(0) == nullptr) return;
+	if (!m_pWakeTrailUploadBuffer || !wave_trail_data_texture || wave_trail_data_texture->GetResource(0) == nullptr) 
+		return;
 
 	const UINT elementSize = sizeof(BoatWakeTrail);
 	const UINT elementCount = static_cast<UINT>(wakeTrails.size());
@@ -4414,7 +4450,7 @@ void Wave_Object::Update_Wave_Trail_Buffer(ID3D12GraphicsCommandList* pd3dComman
 	void* mappedPtr = nullptr;
 	if (SUCCEEDED(m_pWakeTrailUploadBuffer->Map(0, nullptr, &mappedPtr)))
 	{
-		memcpy(mappedPtr, wakeTrails.data(), bufferSize);
+		memcpy(mappedPtr, wakeTrails.data(), Max_Wave_Trail * sizeof(BoatWakeTrail));
 		m_pWakeTrailUploadBuffer->Unmap(0, nullptr);
 	}
 

@@ -3101,7 +3101,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(-0.57735f, -0.57735f, -0.57735f);
 
 
 }

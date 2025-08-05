@@ -693,7 +693,7 @@ void CS_Wave_Shader::Prepare_WaveParams()
 		// === Boat Wake Parameters ===
 		CS_Wave_Shader::update_wave_info->g_WakeMaxDist = 0.0f;                          // Maximum distance the wake affects
 		CS_Wave_Shader::update_wave_info->g_WakeMaxAngle = XMConvertToRadians(30.0f);      // Maximum spread angle (Kelvin-like wake)
-		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 5.0f;                            // Strength of depth indentation
+		CS_Wave_Shader::update_wave_info->g_WakeDepthStrength = 0.5f;                            // Strength of depth indentation
 		CS_Wave_Shader::update_wave_info->g_WakeDecay = 5.0f;                            // Decay factor for lateral falloff
 
 		// === Time ===

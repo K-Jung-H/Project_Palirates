@@ -1024,10 +1024,10 @@ struct BoatWakeTrail
     XMFLOAT2 position;
     XMFLOAT2 direction;
     float age;
-    
+    float boat_velocity;
+
     float padding0;
     float padding1;
-    float padding2;
 };
 
 struct CB_Wave_Trail_Info
@@ -1047,6 +1047,7 @@ public:
 protected:
     std::vector<BoatWakeTrail> wakeTrails; // 크기 고정 (예: 64)
     int wakeTrailIndex = 0;
+    int wakeTrailCount = 0;
 
     CTexture* wave_trail_data_texture = NULL;
     ID3D12Resource* m_pWakeTrailUploadBuffer = NULL;
