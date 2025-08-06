@@ -335,6 +335,8 @@ public:
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 
 	void Update_Particle_State();
+
+	void Set_Particle_State(UINT new_index) { Particle_State_Func_Index = new_index; }
 	UINT Get_Particle_State() { return Particle_State_Func_Index; }
 
 	void Set_Local_Coordinate() { is_local = true; }

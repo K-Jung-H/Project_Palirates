@@ -1865,7 +1865,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand == NULL)
 				break;
 
-			test_sand->Update_Particle_State();;
 			test_sand->Update_Particle_State();
 
 			if (test_sand->Get_Particle_State() == 0)
@@ -1904,6 +1903,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 								test_sand->SetPosition(pos);
 								test_sand->Set_Focus_Point(anubisPos);
 
+								// move
 								test_sand->Set_Speed(100.0f);
 								test_sand->Set_Direction(dir);
 							}
@@ -4115,6 +4115,12 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, new_pos);
 		}	break;
 
+		case 'T':
+		{
+			if (anubis_sand_particle)
+				anubis_sand_particle->Update_Particle_State();
+		}
+
 		default:
 			break;
 		}
@@ -4298,6 +4304,9 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	Scene_area = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+
+
 	//===============================================================================
 
 #ifdef RENDER_WAVE
@@ -4415,7 +4424,10 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	
 }
 
-
+void Stage_1_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
+}
 //==========================================================================================
 
 
@@ -4453,16 +4465,19 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	Scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+	Scene_center = XMFLOAT3(2176.0f, 500.0f, 1536.0f);
+
 	//===============================================================================
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+	//std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	//wave_obj->Set_Name("in_game_wave");
+	//wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
 
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	obj_manager->Set_Wave_Object(wave_obj);
+	//wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	//wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	//obj_manager->Set_Wave_Object(wave_obj);
 #endif
 
 	//===============================================================================
@@ -4482,7 +4497,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.max_particles = 20000;
 		env_sand_info.MaxLifetime = 100.0f;
 
-		env_sand_info.area_xyz = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+		env_sand_info.area_xyz = XMFLOAT3(Scene_area);
 		env_sand_info.EmitFaceIndex = FACE_TOP;
 
 		env_sand_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
@@ -4493,11 +4508,38 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.color = XMFLOAT3(0.75f, 0.7f, 0.45f);
 	}
 
+	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	//env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
+	//env_sand_particle->Set_World_Coordinate();
+	//env_sand_particle->SetPosition(Scene_center);
+	//env_sand_particle->Set_Area(Scene_area);
+
+	Particle_Format anubis_sand_info;
+	{
+		anubis_sand_info.shader_type = Particle_Shader_Type::sand;
+		anubis_sand_info.particle_type = Particle_Type::sand;
+		anubis_sand_info.max_particles = 20000;
+		anubis_sand_info.MaxLifetime = 10.0f;
+
+		anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
+		anubis_sand_info.EmitFaceIndex = FACE_FRONT;
+
+		anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+		anubis_sand_info.init_velocity_value = 100.0f;
+		anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
+
+		anubis_sand_info.size = 0.3f;
+		anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
+	}
+
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
-	env_sand_particle->Set_World_Coordinate();
-	env_sand_particle->SetPosition(2276.0f, 500.0f, 1536.0f);
-	env_sand_particle->Set_Area(XMFLOAT3(4352.0f, 1000.0f, 3072.0f));
+	anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
+	anubis_sand_particle->Set_Local_Coordinate();
+	anubis_sand_particle->SetPosition(Scene_center);
+//	anubis_sand_particle->Rotate(0, -90, 0);
+	anubis_sand_particle->Set_Area(Scene_area);
+
+	anubis_sand_particle->Set_Focus_Point(Scene_center);
 
 #endif
 
@@ -4553,21 +4595,21 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	
-	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+	//test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	//
+	//test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
 
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
+	//SpriteInfo test_sprite_info;
+	//test_sprite_info.frameCols = 5;
+	//test_sprite_info.frameRows = 7;
+	//test_sprite_info.totalFrames = 32;
+	//test_sprite_info.frameTime = 0.05f;
 
-	test_player_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-	
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
+	//test_player_aura->Set_Sprite_Info(test_sprite_info);
+	//obj_manager->Add_Object(test_player_aura, Object_Type::aura);
+	//
+	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
+	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
 
 	//===============================================================================
 
@@ -4591,6 +4633,48 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 }
 
+void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
+
+
+	if (anubis_sand_particle)
+	{
+		UINT particle_state = anubis_sand_particle->Get_Particle_State();
+		if (particle_state == 0)
+		{
+			anubis_sand_particle->SetPosition(Scene_center);
+			anubis_sand_particle->Set_Area(Scene_area);
+			anubis_sand_particle->Set_Focus_Point(Scene_center);
+			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+			anubis_sand_particle->Set_Speed(0.0f);
+		}
+		else if (particle_state == 1)
+		{
+			anubis_sand_particle->SetPosition(Scene_center);
+			anubis_sand_particle->Set_Area(Scene_area);
+			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition()); // anubis
+
+			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+			anubis_sand_particle->Set_Speed(0.0f);
+
+		}
+		else if (particle_state == 2)
+		{
+			anubis_sand_particle->SetPosition(m_pPlayer->GetPosition()); // anubis
+			anubis_sand_particle->Set_Area(Scene_area);
+			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition());
+			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+			// move
+			anubis_sand_particle->Set_Speed(100.0f);
+			anubis_sand_particle->Set_Direction(m_pPlayer->GetLook());
+		}
+		
+	}
+}
 
 //===============================================================================
 
