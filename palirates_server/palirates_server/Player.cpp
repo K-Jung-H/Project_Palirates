@@ -21,7 +21,7 @@ Player::Player(int playerId) : Skinned_GameObject()
     SetType(Object_Type::player);
     WeaponName = "SM_Wep_Cutlass_01";
     RootMotionTrackSet = {
-        TRACK_IDLE,
+        //TRACK_IDLE,
         TRACK_RUN_FORWARD_LEFT,
         TRACK_RUN_FORWARD,
         TRACK_RUN_FORWARD_RIGHT,
@@ -79,7 +79,8 @@ void Player::key_input(uint32_t keyState)
     if (keyState & INPUT_SHIFT)
     {
         cout << "input" << "\n";
-        //GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
+       // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
+        GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
     }
 }
 

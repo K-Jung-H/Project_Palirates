@@ -99,8 +99,10 @@ extern bool isRunning;
 //#define FRAME_BUFFER_WIDTH				1280
 //#define FRAME_BUFFER_HEIGHT				720
 
-#define FRAME_BUFFER_WIDTH				1920
-#define FRAME_BUFFER_HEIGHT				1080
+//#define FRAME_BUFFER_WIDTH				1920
+//#define FRAME_BUFFER_HEIGHT				1080
+#define FRAME_BUFFER_WIDTH				960
+#define FRAME_BUFFER_HEIGHT				540
 
 #define ANIMATION_TYPE_ONCE				0
 #define ANIMATION_TYPE_LOOP				1

@@ -695,6 +695,7 @@ void CGameFramework::ProcessInput()
 	static bool last_mouse_state = false;
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
+	static bool prevShiftDown = false;
 
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
@@ -735,15 +736,23 @@ void CGameFramework::ProcessInput()
 			{
 				current_keyboard_inputFlags |= INPUT_E;
 			}
-			if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
-			{
-				current_keyboard_inputFlags |= INPUT_SHIFT;
-			}
+			//if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
+			//{
+			//	current_keyboard_inputFlags |= INPUT_SHIFT;
+			//}
 			if (pKeysBuffer[VK_RETURN] & 0xF0) // Enter
 			{
 				current_keyboard_inputFlags |= INPUT_ENTER;
 			}
 		}
+
+		bool currShiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000);
+		if (!prevShiftDown && currShiftDown) 
+		{
+			current_keyboard_inputFlags |= INPUT_SHIFT;
+			cout << "press shift key" << endl;
+		}
+		prevShiftDown = currShiftDown;
 
 
 		//=======================================================================
@@ -1594,8 +1603,9 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
-		else if (cmd == "POST_EFFECT")
-			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+		else if (cmd == "POST_EFFECT") {
+			//ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+		}
 		else if (cmd == "STAGE_CLEAR") {
 			stage_scene->bStageClear = true;
 		}
