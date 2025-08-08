@@ -322,6 +322,7 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 
 Stage_Scene::Stage_Scene(Scene_Type scene_type) : Scene (scene_type)
 {
+    game_world = make_shared<GameWorld>(scene_type);
 }
 
 
@@ -347,7 +348,7 @@ void Stage_Scene::Init()
 
     monster_init_spawn_frame_list.clear();
     player_init_spawn_frame_list.clear();
-    game_world.Set_Boss_Moster(NULL);
+    game_world->Set_Boss_Moster(NULL);
 
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
     GameObject::FlattenGameObjectHierarchy(player_hierarchy_list, player_init_spawn_frame_list);
@@ -362,15 +363,15 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    if (game_world.Get_Boss_Monster() == NULL && Boss_Monster != NULL)
-        game_world.Set_Boss_Moster(Boss_Monster);
+    if (game_world->Get_Boss_Monster() == NULL && Boss_Monster != NULL)
+        game_world->Set_Boss_Moster(Boss_Monster);
 
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
         if (player_ptr)
         {
-            game_world.Update_Collision(player_ptr);
+            game_world->Update_Collision(player_ptr);
             player_ptr->update(elapsedTime);
 
             if (!player_ptr->Weapon_ptr) continue;
@@ -427,7 +428,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     // Collision detection between monster weapons and players
     for (auto m : Monster_List) {
         if (!m) continue;
-        auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
+        auto obbList = game_world->Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
         m->update_collision(elapsedTime, obbList);
        
@@ -497,7 +498,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                     XMFLOAT3 contactDir;
                     XMStoreFloat3(&contactDir, direction);
 
-                    game_world.Add_Bleeding_Particle(contactPos, contactDir);
+                    game_world->Add_Bleeding_Particle(contactPos, contactDir);
                 }
 
                 player_ptr->HitDamage(damage);
@@ -518,14 +519,14 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         pos.z = std::clamp(pos.z, 0.0f, g_mapSize.y);
         m->SetPosition(pos);
     }
-    game_world.Boss_Update(Boss_Monster);
-    game_world.Update_Particle(elapsedTime);
+    game_world->Boss_Update(Boss_Monster);
+    game_world->Update_Particle(elapsedTime);
 
     if (Monster_List.size() == 0)
         bStageClear = true;
 
     if (bStageClear)
-        game_world.Stage_Clear_Particle_Update(player_list);
+        game_world->Stage_Clear_Particle_Update(player_list);
 
 }
 
@@ -600,7 +601,7 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     }
 
 
-    zoomObject = game_world.Get_ZoomObject();
+    zoomObject = game_world->Get_ZoomObject();
     if (zoomObject != NULL)
     {
         effect_data.zoom_blur_active = true;
@@ -619,8 +620,8 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     int defeated_monsters = normal_monster_count - alive_monster_count;
 
     int clear_value_1 = 50;
-    if (game_world.Get_Boss_Monster())
-        clear_value_1 = 50 * (1 - game_world.Get_Boss_Monster()->Get_Active());
+    if (game_world->Get_Boss_Monster())
+        clear_value_1 = 50 * (1 - game_world->Get_Boss_Monster()->Get_Active());
 
     int clear_value_2 = 50 * defeated_monsters / normal_monster_count;
 
@@ -883,7 +884,7 @@ const FrameParticleChanges Stage_Scene::Get_Particle_Sync_Data()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
-    return game_world.Get_Particle_Sync_Data();
+    return game_world->Get_Particle_Sync_Data();
 }
 
 std::vector<int> Stage_Scene::FlushDespawnQueue()
@@ -939,7 +940,7 @@ void Stage_Scene::server_bleeding()
     XMFLOAT3 pos = player_list[0]->GetPosition();
     pos.y += 30.0f;
     XMFLOAT3 dir = player_list[0]->GetLook();
-    game_world.Add_Bleeding_Particle(pos, dir);
+    game_world->Add_Bleeding_Particle(pos, dir);
 }
 
 
@@ -955,7 +956,7 @@ Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
     Init();
 }
@@ -982,7 +983,7 @@ Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
     Init();
 }
@@ -1010,7 +1011,7 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
 
     Init();
@@ -1039,7 +1040,7 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
     Init();
 }
@@ -1072,7 +1073,7 @@ Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
     Init();
 }
@@ -1100,7 +1101,7 @@ Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
     Init();
 }
@@ -1127,7 +1128,7 @@ Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
-    game_world.Load_Scene_Data(scene_obj);
+    game_world->Load_Scene_Data(scene_obj);
 
     Init();
 }

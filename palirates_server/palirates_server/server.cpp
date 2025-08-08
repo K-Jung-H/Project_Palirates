@@ -699,6 +699,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
             float life = fmt.lifetime;
+            UINT status = obj->Get_Particle_Status();
 
             temp_p_create << std::to_string(id) << ","
                 << std::to_string(type) << ","
@@ -706,7 +707,8 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
                 << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
                 << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
-                << std::to_string(life) << ",";
+                << std::to_string(life) << ","
+                << std::to_string(status) << ",";
         }
 
         std::string line = temp_p_create.str();
@@ -732,6 +734,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
             float life = obj->Get_LifeTime();
+            UINT status = obj->Get_Particle_Status();
 
             temp_p_update << std::to_string(id) << ","
                 << std::to_string(type) << ","
@@ -739,8 +742,10 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
                 << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
                 << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
-                << std::to_string(life) << ",";
+                << std::to_string(life) << ","
+                << std::to_string(status) << ",";
         }
+
         std::string line = temp_p_update.str();
         if (!line.empty() && line.back() == ',') line.pop_back();
 

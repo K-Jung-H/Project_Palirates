@@ -109,7 +109,8 @@ protected:
     std::array<int32_t, MaxPlayer> player_keyState;
     std::array<bool, MaxPlayer> check_clear_state;
 
-    GameWorld game_world;
+    std::shared_ptr<GameWorld> game_world;
+
     std::shared_ptr<GameObject> scene_obj;
 
     vector<std::shared_ptr<GameObject>> monster_init_spawn_frame_list;

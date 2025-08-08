@@ -45,16 +45,15 @@ private:
 	shared_ptr<Particle_Object> sand;
 
 public:
-	GameWorld();
+	GameWorld(Scene_Type scene_type);
 	~GameWorld();
 
-	void Init();
+	void Init(Scene_Type scene_type);
 	bool Get_Clear_State() { return Stage_Clear; }
 	void Set_Clear_State(bool stage_clear) { Stage_Clear = stage_clear; }
 
 	shared_ptr<Monster> Get_Boss_Monster() { return boss_monster; }
 	void Set_Boss_Moster(shared_ptr<Monster> boss_ptr) { boss_monster = boss_ptr; }
-//	void Boss_Update();
 	void Boss_Update(shared_ptr<Monster>boss_monster);
 
 

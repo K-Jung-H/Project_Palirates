@@ -33,6 +33,10 @@ enum class Particle_Type
 	sand_storm = 5,
 	//=======================
 	bleed = 10,
+	//=======================
+	env_snow = 20,
+	env_sand = 21,
+	//=======================
 	etc = -1
 };
 
@@ -46,6 +50,7 @@ struct Particle_Sync_Data
 	float LifeTime;
 	XMFLOAT3 area_extent;
 	XMFLOAT3 main_direction;
+	UINT particle_status_index;
 };
 
 struct Particle_Format

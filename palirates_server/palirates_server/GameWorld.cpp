@@ -3,18 +3,57 @@
 
 
 
-GameWorld::GameWorld()
+GameWorld::GameWorld(Scene_Type scene_type)
 {
-	Init();
+	Init(scene_type);
 }
 
 GameWorld::~GameWorld()
 {
 }
 
-void GameWorld::Init()
+void GameWorld::Init(Scene_Type scene_type)
 {
-    
+    switch (scene_type)
+    {
+    case Lobby:
+        break;
+    case Board:
+        break;
+    case Stage_1: 
+        break;
+    case Stage_2: 
+    {
+        Particle_Format env_sand;
+        env_sand.area_xyz = XMFLOAT3{ 10,10,10 };
+        env_sand.lifetime = 10000.0f;
+        env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+        env_sand.particle_type = Particle_Type::sand;
+
+        std::shared_ptr<Particle_Object> sand_particle = particle_manager.Create_Particle_Object(env_sand);
+        sand_particle->Set_Particle_Status(10000);
+        sand_particle->SetNeedSyncType(true);
+    }
+        break;
+    case Stage_3:
+        break;
+    case Stage_4:
+        break;
+    case Stage_5:
+        break;
+    case Stage_6:
+        break;
+    case Stage_7:
+        break;
+    case Test:
+        break;
+    case etc:
+        break;
+    case None:
+        break;
+    default:
+        break;
+    }
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)

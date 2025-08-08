@@ -4536,7 +4536,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
 	anubis_sand_particle->Set_Local_Coordinate();
 	anubis_sand_particle->SetPosition(Scene_center);
-//	anubis_sand_particle->Rotate(0, -90, 0);
 	anubis_sand_particle->Set_Area(Scene_area);
 
 	anubis_sand_particle->Set_Focus_Point(Scene_center);

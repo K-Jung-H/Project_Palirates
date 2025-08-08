@@ -744,7 +744,7 @@ void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 	shared_ptr<CTexture> base_texture = make_shared<CTexture>(1, RESOURCE_TEXTURE2D, 0, 1, 0, 0, 1, 0, 0);
 	base_texture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, filename, RESOURCE_TEXTURE2D, 0);
 
-	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, base_texture.get(), 0, 3);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, base_texture.get(), 0, ROOT_PARAMETER_TRANSPARENT_ALBEDO_TEXTURE_INDEX);
 
 	particle_Material->SetTexture(base_texture, 0);
 }
