@@ -69,8 +69,83 @@ Player::Player(int playerId) : Skinned_GameObject()
     Set_Collider_OBB(body);*/
 }
 
+enum class RunDir : int { N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7 };
+
+inline bool BuildMoveVector(uint32_t keyState, XMFLOAT2& out) {
+    int vx = 0, vz = 0; // x: 오른쪽(+), z: 앞(+)
+    if (keyState & INPUT_D) vx += 1;
+    if (keyState & INPUT_A) vx -= 1;
+    if (keyState & INPUT_W) vz += 1;
+    if (keyState & INPUT_S) vz -= 1;
+    out = XMFLOAT2((float)vx, (float)vz);
+    return (vx != 0 || vz != 0);
+}
+
+inline RunDir Quantize8Way(const XMFLOAT2& v) {
+    float len2 = v.x * v.x + v.y * v.y;
+    if (len2 <= 1e-6f) return RunDir::N; 
+
+    float ang = XMConvertToDegrees(atan2f(v.x, v.y)); 
+ 
+    if (ang < 0.0f) ang += 360.0f;
+
+    int sector = int(std::round(ang / 45.0f)) % 8; 
+    return static_cast<RunDir>(sector);
+}
+
+static const int kRunTrackByDir[8] = {
+    TRACK_RUN_FORWARD,  // N  (0)
+    TRACK_RUN_FORWARD_RIGHT, // NE (1)
+    TRACK_RUN_RIGHT,  // E  (2)
+    TRACK_RUN_BACKWARD_RIGHT, // SE (3)
+    TRACK_RUN_BACKWARD,  // S  (4)
+    TRACK_RUN_BACKWARD_LEFT, // SW (5)
+    TRACK_RUN_LEFT,  // W  (6)
+    TRACK_RUN_FORWARD_LEFT  // NW (7)
+};
+
 void Player::key_input(uint32_t keyState)
 {
+   // cout << keyState << "\n";
+
+
+    if (keyState == INPUT_NONE)
+    {
+       // cout << "key none" << "\n";
+        if (GetStateMachine()->GetCurrentState()->GetStateEnum() == State::Run) {
+            cout << "change normal" << "\n";
+            GetStateMachine()->ChangeState(std::make_unique<PlayerNormalState>());
+        }
+    }
+
+    constexpr uint32_t MOVE_MASK = (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
+    uint32_t moveMask = keyState & MOVE_MASK;
+
+    if (moveMask) {
+        XMFLOAT2 mv;
+        if (BuildMoveVector(keyState, mv)) {
+            RunDir dir = Quantize8Way(mv);
+            int track = kRunTrackByDir[(int)dir];
+           //cout << track << "\n";
+            auto sm = GetStateMachine();
+            if (sm->GetCurrentState()->GetStateEnum() != State::Run) {
+                sm->ChangeState(std::make_unique<PlayerRunState>());
+                SetRunDirectionTrack(track);
+                sm->lastMoveMask = moveMask;
+            }
+            else {
+                if (sm->lastMoveMask != moveMask) {           
+                    SetRunDirectionTrack(track);
+                    sm->lastMoveMask = moveMask;
+                }
+            }
+            return;
+        }
+    }
+    else {
+        GetStateMachine()->lastMoveMask = 0; // 입력 끊김 → 캐시 리셋
+    }
+
     if (keyState & INPUT_Q)
     {
         motion_blur = !motion_blur;
@@ -213,4 +288,20 @@ int Player::PlayAnimation(State state) {
     stateElapsedTime = 0.0f;
 
     return track;
+}
+
+void Player::SetRunDirectionTrack(int track)
+{
+    for (int i = 0; i < m_pSkinnedAnimationController->m_nAnimationTracks; ++i) {
+        m_pSkinnedAnimationController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+    }
+    m_pSkinnedAnimationController->SetTrackWeight(track, 1.0f);
+    if (track >= 0 && track < n_Animation) {
+        for (int i = 0; i < n_Animation; ++i) {
+            targetWeights[i] = 0.0f;
+        }
+        targetWeights[track] = 1.0f;
+    }
+    currStateTrackIdx = track;
+    cout << track << "\n";
 }

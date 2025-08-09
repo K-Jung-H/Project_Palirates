@@ -20,10 +20,12 @@ public:
 
 	std::shared_ptr<CAnimationController> animController;
 	int n_Ani{ 0 };
-
+	int RunDirectionTrack{ 0 };
+	uint32_t lastMoveMask = 0;
 	void update(float deltaTime);
 	void ChangeState(std::unique_ptr<PlayerState> newState);
 	int GetCurrentStateAsInt() { return lastStateChange; }
 	State GetCurrentStateEnum() const { return currentStateEnum; }
 	PlayerState* GetCurrentState() const { return currentState.get(); }
+	void SetRunDirectionTrack(int track) { RunDirectionTrack = track; }
 };

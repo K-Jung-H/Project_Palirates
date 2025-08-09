@@ -59,4 +59,5 @@ public:
     void HitDamage(float damage);
 
     virtual int PlayAnimation(State state);
+    void SetRunDirectionTrack(int track);
 };

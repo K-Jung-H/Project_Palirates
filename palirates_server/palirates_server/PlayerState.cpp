@@ -47,6 +47,25 @@ void PlayerNormalState::Exit(Player* player) {
 	//player->motion_blur = false;
 }
 
+/////////////////////////// run ///////////////////////////////
+
+void PlayerRunState::Enter(Player* player, PlayerStateMachine* sm) {
+	//std::cout << "PlayerNormalState Enter" << std::endl;
+	PrepareForStateEnter(State::Run, player, sm);
+}
+
+void PlayerRunState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
+	/*if (player->GetAnimationSyncData().changedStateNum == int(State::Dive)) {
+		player->motion_blur = true;
+	}
+	else player->motion_blur = false;*/
+}
+
+void PlayerRunState::Exit(Player* player) {
+	//std::cout << "PlayerNormalState Exit" << std::endl;
+	//player->motion_blur = false;
+}
+
 /////////////////////////// attack1 ///////////////////////////////
 
 void PlayerAttack1State::Enter(Player* player, PlayerStateMachine* sm) {

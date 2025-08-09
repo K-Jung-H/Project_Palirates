@@ -55,6 +55,7 @@ int AnimationRegistry::GetPlayerAnimationTrack(State state) {
 
     switch (state) {
     case State::Idle:        return TRACK_IDLE;
+    case State::Run:        return TRACK_RUN_FORWARD;
     case State::Attack1:     return TRACK_ATTACK1;
     case State::Attack2:     return TRACK_ATTACK2;
     case State::Attack3:     return TRACK_ATTACK3;

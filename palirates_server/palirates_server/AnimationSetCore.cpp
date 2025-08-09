@@ -622,7 +622,7 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, GameObject* pRootGam
 		XMFLOAT3 newPos; XMStoreFloat3(&newPos, pos);
 		newPos.y = 0.0f;
 		pRootGameObject->SetPosition(newPos);
-		cout << newPos.x << ", " << newPos.y << ", " << newPos.z << "\n";
+		//cout << newPos.x << ", " << newPos.y << ", " << newPos.z << "\n";
 	}
 
 	m_xmf3PrevHipsPosition = hipsCurr;

@@ -317,7 +317,7 @@ void PlayerStateMachine::update(float Elapsed_time)
         break;
 
     case State::Run:
-        if (moveX == 0.0f && moveZ == 0.0f) {
+        /*if (moveX == 0.0f && moveZ == 0.0f) {
             changeState(State::Idle, Key_Value::None);
         }
         else {
@@ -348,7 +348,8 @@ void PlayerStateMachine::update(float Elapsed_time)
 
             m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
             m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
-        }
+        }*/
+        m_pOwner->targetWeights[TRACK_RUN_FORWARD] = 1.0f;
         break;
     case State::Dive:
 
