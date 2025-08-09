@@ -34,6 +34,8 @@ using namespace std;
 
 #define MaxPlayer 6
 
+#define TEST_MODE
+
 enum Scene_Type
 {
 	Lobby,
@@ -59,7 +61,11 @@ enum KeyIndex
     KEY_INDEX_Q = 4,
     KEY_INDEX_E = 5,
     KEY_INDEX_SHIFT = 6,
-    KEY_INDEX_ENTER = 7
+    KEY_INDEX_ENTER = 7,
+    KEY_INDEX_MOUSE_LEFT = 8,
+    KEY_INDEX_MOUSE_RIGHT = 9,
+    KEY_INDEX_F2 = 10,
+    KEY_INDEX_F3 = 11
 };
 
 // 실제 플래그 enum
@@ -73,13 +79,23 @@ enum InputFlags : uint32_t
     INPUT_Q = 1 << KEY_INDEX_Q,
     INPUT_E = 1 << KEY_INDEX_E,
     INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
-    INPUT_ENTER = 1 << KEY_INDEX_ENTER
+    INPUT_ENTER = 1 << KEY_INDEX_ENTER,
+    INPUT_MOUSE_LEFT = 1 << KEY_INDEX_MOUSE_LEFT,
+    INPUT_MOUSE_RIGHT = 1 << KEY_INDEX_MOUSE_RIGHT,
+    INPUT_F2 = 1 << KEY_INDEX_F2,
+    INPUT_F3 = 1 << KEY_INDEX_F3
 };
 
 struct MonsterHitInfo
 {
     int monsterID;
     bool hitCmd;
+};
+
+struct StateChangeInfo
+{
+    int ID;
+    int stateNum;
 };
 
 struct Effect_Sync_Data

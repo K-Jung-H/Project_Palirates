@@ -1477,10 +1477,11 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 			float zView = XMVectorGetZ(viewSpacePos);
 			if (zView > 0.0f)
 			{
-				player_map[player_id]->ApplySyncData(syncData);
+				//player_map[player_id]->ApplySyncData(syncData);
+				player_map[player_id]->SetLookDirection(syncData.lookVector);
+				player_map[player_id]->SetPosition(syncData.position);
 
-
-				if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
+				/*if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
 					std::cout << "Attack State" << "\n";
 					player_map[player_id]->bTrailOn();
 					if (player_map[player_id]->GetTrailStart())
@@ -1500,7 +1501,7 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 				else {
 					player_map[player_id]->bTrailOff();
 					player_map[player_id]->GetTrailObj()->Set_Active(false);
-				}
+				}*/
 			}
 		}
 

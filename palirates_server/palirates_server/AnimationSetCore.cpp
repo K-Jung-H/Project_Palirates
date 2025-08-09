@@ -280,11 +280,14 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 
 					float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
 					XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
-
-					if (pRootGameObject->GetType() == Object_Type::monster) {
+				
+					/*if (pRootGameObject->GetType() == Object_Type::monster)*/ {
 						if (j == RootIndex) {
 							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.find(k) != pRootGameObject->RootMotionTrackSet.end()) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+								/*if (pRootGameObject->GetType() == Object_Type::player) {
+									cout << HipsPosition.x << ", " << HipsPosition.y << ', ' << HipsPosition.z << "\n";
+								}*/
 								bRootMotion = true;
 							}
 
@@ -337,18 +340,22 @@ void CAnimationController::ResetWeight()
 
 void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped, const std::vector<BoundingOrientedBox>* obblist)
 {
-	if (pRootGameObject->GetType() != Object_Type::monster) return;
-	Monster* monster = dynamic_cast<Monster*>(pRootGameObject);
+	Skinned_GameObject* monster = dynamic_cast<Skinned_GameObject*>(pRootGameObject);
 	if (!monster) return;
 	const float multiplier = pRootGameObject->m_fScale * 1;
 	XMFLOAT3 deltaMove;
 	float currWeight = m_pAnimationTracks[monster->currStateTrackIdx].m_fWeight;
-	if (bTrackLooped || currWeight < 0.3f)
+	if (bTrackLooped || currWeight < 0.3f) {
+		//cout << "bTrackLooped : " << bTrackLooped << ", currWeight : " << currWeight << "\n";
 		deltaMove = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	}
 	else
 		deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
 	deltaMove = XMFLOAT3(deltaMove.x * multiplier, deltaMove.y * multiplier, deltaMove.z * multiplier);
-	if ((deltaMove.x == 0.0f && deltaMove.y == 0.0f && deltaMove.z == 0.0f) || Vector3::LengthSquared(deltaMove) > 1.0f) {
+	/*if (pRootGameObject->GetType() == Object_Type::player) {
+		cout << "Player deltaMove : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
+	}*/
+	if ((deltaMove.x == 0.0f && deltaMove.y == 0.0f && deltaMove.z == 0.0f) /*|| Vector3::LengthSquared(deltaMove) > 1.0f*/) {
 		m_xmf3PrevHipsPosition = HipsPosition;
 		return;
 	}
@@ -443,11 +450,183 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 
 		if (!blocked) {
 			pos += deltaVec_full;
+			if (monster->currStateTrackIdx == TRACK_DIVEROLL_FORWARD)
+				cout << "deltaMove Pos : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
 			XMFLOAT3 newPos;
 			XMStoreFloat3(&newPos, pos);
 			pRootGameObject->SetPosition(newPos);
+			if (pRootGameObject->GetType() == Object_Type::player) {
+				//cout << monster->currStateTrackIdx << "\n";
+				//cout << "Player newPos : " << newPos.x << ", " << newPos.y << ", " << newPos.z << "\n";
+			}
 		}
 	}
 
 	m_xmf3PrevHipsPosition = HipsPosition; 
+}
+
+void CAnimationController::AdvanceTime2(float fTimeElapsed, GameObject* pRootGameObject, const std::vector<BoundingOrientedBox>* obblist)
+{
+	m_fTime += fTimeElapsed;
+	if (!m_pAnimationTracks) return;
+
+	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
+		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
+
+	float totalWeight = 0.0f;
+	std::vector<int> activeTracks;
+	activeTracks.reserve(m_nAnimationTracks);
+	for (int k = 0; k < m_nAnimationTracks; ++k) {
+		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON) {
+			totalWeight += m_pAnimationTracks[k].m_fWeight;
+			activeTracks.push_back(k);
+		}
+	}
+	if (totalWeight == 0.0f) return;
+
+	XMFLOAT3 weightedPrevHips = { 0,0,0 };
+	XMFLOAT3 weightedCurrHips = { 0,0,0 };
+	float    rootWsum = 0.0f;
+	bool     anyLooped = false;
+
+	struct TrackStep { float prevPos; float currPos; bool looped; };
+	std::vector<TrackStep> steps(m_nAnimationTracks, { 0,0,false });
+
+	for (int k : activeTracks) {
+		CAnimationSet* set = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+
+		float prevPos = m_pAnimationTracks[k].m_fPosition;
+		float currPos = m_pAnimationTracks[k].UpdatePosition(prevPos, fTimeElapsed, set->m_fLength);
+		bool  looped = (prevPos > currPos); 
+
+		steps[k] = { prevPos, currPos, looped };
+
+		if (!m_pAnimationTracks[k].m_bFinished &&
+			pRootGameObject->RootMotionTrackSet.find(k) != pRootGameObject->RootMotionTrackSet.end())
+		{
+			if (!looped) {
+				XMFLOAT4X4 prevRoot = set->GetSRT(RootIndex, prevPos);
+				XMFLOAT4X4 currRoot = set->GetSRT(RootIndex, currPos);
+
+				XMFLOAT3 prevH = { prevRoot._41, prevRoot._42, prevRoot._43 };
+				XMFLOAT3 currH = { currRoot._41, currRoot._42, currRoot._43 };
+
+				float w = m_pAnimationTracks[k].m_fWeight;
+				weightedPrevHips.x += prevH.x * w;  weightedPrevHips.y += prevH.y * w;  weightedPrevHips.z += prevH.z * w;
+				weightedCurrHips.x += currH.x * w;  weightedCurrHips.y += currH.y * w;  weightedCurrHips.z += currH.z * w;
+				rootWsum += w;
+			}
+			else {
+				anyLooped = true;
+			}
+		}
+	}
+
+	XMFLOAT3 hipsPrev = { 0,0,0 };
+	XMFLOAT3 hipsCurr = { 0,0,0 };
+	bool bRootMotion = (rootWsum > 0.0f);
+
+	if (bRootMotion && !anyLooped) {
+		float inv = 1.0f / rootWsum;
+		hipsPrev = { weightedPrevHips.x * inv, weightedPrevHips.y * inv, weightedPrevHips.z * inv };
+		hipsCurr = { weightedCurrHips.x * inv, weightedCurrHips.y * inv, weightedCurrHips.z * inv };
+	}
+	else {
+		hipsPrev = m_xmf3PrevHipsPosition;
+		hipsCurr = m_xmf3PrevHipsPosition;
+		bRootMotion = false;
+	}
+
+	for (int k : activeTracks) {
+		CAnimationSet* set = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+		float fPos = steps[k].currPos; 
+		float normW = m_pAnimationTracks[k].m_fWeight / totalWeight;
+
+		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; ++j) {
+			XMFLOAT4X4 accum = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
+			XMFLOAT4X4 srt = set->GetSRT(j, fPos);
+
+			if (j == RootIndex) {
+				srt._41 = 0.0f;
+				srt._42 = 0.0f;
+				srt._43 = 0.0f;
+			}
+
+			XMFLOAT4X4 blended = Matrix4x4::Add(accum, Matrix4x4::Scale(srt, normW));
+			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blended;
+		}
+	}
+
+	if (bRootMotion) {
+		XMFLOAT3 deltaLocal = { hipsCurr.x - hipsPrev.x, hipsCurr.y - hipsPrev.y, hipsCurr.z - hipsPrev.z };
+		{
+			float s = pRootGameObject->m_fScale; 
+			deltaLocal.x *= s;
+			deltaLocal.y *= s;
+			deltaLocal.z *= s;
+		}
+		XMFLOAT3 look = pRootGameObject->GetLook();
+		float yaw = XMConvertToDegrees(atan2f(look.x, look.z));
+		XMMATRIX rotY = XMMatrixRotationY(XMConvertToRadians(yaw));
+
+		XMVECTOR d = XMLoadFloat3(&deltaLocal);
+		d = XMVector3TransformCoord(d, rotY);
+
+		XMVECTOR dFlat = XMVectorSet(XMVectorGetX(d), 0.0f, XMVectorGetZ(d), 0.0f);
+
+		XMVECTOR pos = XMLoadFloat3(&pRootGameObject->GetPosition());
+		bool blocked = false;
+
+		if (obblist) {
+			constexpr float rayLength = 4.0f;
+			constexpr float offsetY = 4.0f;
+			constexpr float lateral = 4.0f;
+			XMVECTOR dir = XMVector3Normalize(dFlat);
+
+			std::array<XMVECTOR, 3> rays = {
+				pos + XMVectorSet(0.0f, offsetY, 0.0f, 0.0f),
+				pos + XMVectorSet(-lateral, offsetY, 0.0f, 0.0f),
+				pos + XMVectorSet(lateral, offsetY, 0.0f, 0.0f)
+			};
+
+			for (auto& ro : rays) {
+				for (const auto& obb : *obblist) {
+					float dist = 0.0f;
+					if (obb.Intersects(ro, dir, dist) && dist <= rayLength) {
+						blocked = true;
+
+						XMVECTOR axisX = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), XMLoadFloat4(&obb.Orientation));
+						XMVECTOR axisY = XMVector3Rotate(XMVectorSet(0, 1, 0, 0), XMLoadFloat4(&obb.Orientation));
+						XMVECTOR axisZ = XMVector3Rotate(XMVectorSet(0, 0, 1, 0), XMLoadFloat4(&obb.Orientation));
+
+						XMVECTOR toRay = XMVector3Normalize(ro - XMLoadFloat3(&obb.Center));
+						float dotX = fabsf(XMVectorGetX(XMVector3Dot(toRay, axisX)));
+						float dotY = fabsf(XMVectorGetX(XMVector3Dot(toRay, axisY)));
+						float dotZ = fabsf(XMVectorGetX(XMVector3Dot(toRay, axisZ)));
+						XMVECTOR n = (dotX > dotY && dotX > dotZ) ? axisX : (dotY > dotZ ? axisY : axisZ);
+						n = XMVector3Normalize(XMVectorSet(XMVectorGetX(n), 0.0f, XMVectorGetZ(n), 0.0f));
+
+						XMVECTOR slide = dFlat - XMVector3Dot(dFlat, n) * n;
+						if (XMVectorGetX(XMVector3LengthSq(slide)) > 0.0001f)
+							pos += slide;
+
+						d = XMVectorZero(); 
+						break;
+					}
+				}
+				if (blocked) break;
+			}
+		}
+
+		if (!blocked) pos += d;
+		XMFLOAT3 newPos; XMStoreFloat3(&newPos, pos);
+		newPos.y = 0.0f;
+		pRootGameObject->SetPosition(newPos);
+		//cout << newPos.x << ", " << newPos.y << ", " << newPos.z << "\n";
+	}
+
+	m_xmf3PrevHipsPosition = hipsCurr;
+
+	pRootGameObject->UpdateTransform(nullptr);
+	OnAnimationIK(pRootGameObject);
 }

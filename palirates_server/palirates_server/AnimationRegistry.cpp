@@ -55,10 +55,12 @@ int AnimationRegistry::GetPlayerAnimationTrack(State state) {
 
     switch (state) {
     case State::Idle:        return TRACK_IDLE;
+    case State::Run:        return TRACK_RUN_FORWARD;
     case State::Attack1:     return TRACK_ATTACK1;
     case State::Attack2:     return TRACK_ATTACK2;
+    case State::Attack3:     return TRACK_ATTACK3;
     case State::Get_Hit_F2:     return TRACK_GET_HIT_F2;
-    //case State::Run:         return TRACK_FISHMAN_WALK;
+    case State::Dive:         return TRACK_DIVEROLL_FORWARD;
     case State::Knock_Down:  return TRACK_KNOCK_DOWN;
     default: return TRACK_IDLE;
     }

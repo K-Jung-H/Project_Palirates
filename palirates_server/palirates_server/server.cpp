@@ -680,6 +680,16 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
         oss << "\n";
     }
 
+    const auto state_change_list = stage->FlushStateChangeQueue();
+    if (!state_change_list.empty()) {
+        oss << "P_S_CMD," << state_change_list.size();
+        for (StateChangeInfo data : state_change_list) {
+            oss << ",STATE_CHANGE," << data.ID << "," << data.stateNum;
+            cout << "s change cmd send" << "\n";
+        }
+        oss << "\n";
+    }
+
     //===================================================================
 
     const auto& particle_sync_data = stage->Get_Particle_Sync_Data();
@@ -837,7 +847,7 @@ void Server::Server_Update()
             FlushSendQueues();
         }
 
-        PrintClientDebugInfo();
+        //PrintClientDebugInfo();
     }
 
 

@@ -120,6 +120,7 @@ protected:
     std::unordered_map<int, size_t> id2idx;
     std::vector<int> monster_despawn_queue;
     std::vector<MonsterHitInfo> monster_damage_queue;
+    std::vector<StateChangeInfo> player_state_change_queue;
 
     std::shared_ptr<Monster> Boss_Monster = NULL;
     std::shared_ptr<GameObject> zoomObject;
@@ -164,6 +165,8 @@ public:
     void QueueDamageCommand(MonsterHitInfo id) { monster_damage_queue.emplace_back(id); }
     std::vector<MonsterHitInfo> FlushDamageQueue();
 
+    void QueueStateChangeCommand(StateChangeInfo id) { player_state_change_queue.emplace_back(id); }
+    std::vector<StateChangeInfo> FlushStateChangeQueue();
 
     void server_DespawnMonster();
     void server_DespawnMonster_For_Clear();

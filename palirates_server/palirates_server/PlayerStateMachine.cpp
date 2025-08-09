@@ -26,4 +26,8 @@ void PlayerStateMachine::ChangeState(std::unique_ptr<PlayerState> newState)
 
     if (currentState)
         currentState->Enter(m_pOwner, this);
+
+    if (m_pOwner->m_pOwnerScene) {
+        //m_pOwnerScene
+    }
 }

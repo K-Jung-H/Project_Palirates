@@ -9,6 +9,7 @@ using namespace std;
 class CSkinnedMesh;
 class CLoadedModelInfo;
 class CAnimationSets;
+class Scene;
 
 enum class Object_Type
 {
@@ -51,6 +52,8 @@ public:
     bool bDead = false;
 	bool BreathObject = false;
     bool bHittingCmd{ false };
+
+    Scene* m_pOwnerScene = nullptr;
 
 public:
     GameObject()
@@ -203,6 +206,8 @@ public:
     std::shared_ptr<GameObject> Weapon_ptr = nullptr;
 
     bool bDead = false;
+    int currStateTrackIdx = 0;
+    float stateElapsedTime = 0.0f;
 
     virtual void update(float deltaTime) override {};
     void SetupWeaponCollider();

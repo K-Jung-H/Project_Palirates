@@ -32,6 +32,7 @@ public:
     bool need_to_client_sync = false;
     bool motion_blur = false;
     bool BreathHit = false;
+    int Client_ID = -1;
     Player(int model_index);
     virtual ~Player() {}
 
@@ -44,6 +45,7 @@ public:
 
     virtual void animate(float Elapsedtime);
     virtual void update(float deltaTime) override;
+    void update_collision(float deltaTime, std::vector<BoundingOrientedBox> obblist);
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
@@ -57,4 +59,7 @@ public:
     float GetHP() { return hp; }
     void SetHP(float setHP) { hp = setHP; }
     void HitDamage(float damage);
+
+    virtual int PlayAnimation(State state);
+    void SetRunDirectionTrack(int track);
 };

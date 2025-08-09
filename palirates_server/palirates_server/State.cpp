@@ -70,7 +70,7 @@ void WalkState::Enter(Monster* monster, MonsterStateMachine* sm) {
     }
     monster->PlayAnimation(State::Run);
     if (auto controller = monster->GetSkinnedAnimationController()) {
-        controller->AdvanceTime(0.0f, monster);
+        //controller->AdvanceTime(0.0f, monster);
         controller->m_xmf3PrevHipsPosition = controller->HipsPosition;
     }
     //std::cout << "WalkState Enter" << std::endl;

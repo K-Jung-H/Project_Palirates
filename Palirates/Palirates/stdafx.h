@@ -101,6 +101,8 @@ extern bool isRunning;
 
 #define FRAME_BUFFER_WIDTH				1920
 #define FRAME_BUFFER_HEIGHT				1080
+//#define FRAME_BUFFER_WIDTH				960
+//#define FRAME_BUFFER_HEIGHT				540
 
 #define ANIMATION_TYPE_ONCE				0
 #define ANIMATION_TYPE_LOOP				1
@@ -163,6 +165,8 @@ extern bool isRunning;
 #define USING_OBB
 #define RENDER_PARTICLE
 #define RENDER_WAVE
+
+#define TEST_MODE
 
 ///#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO

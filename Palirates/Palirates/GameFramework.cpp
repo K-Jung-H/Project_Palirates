@@ -735,19 +735,61 @@ void CGameFramework::ProcessInput()
 			{
 				current_keyboard_inputFlags |= INPUT_E;
 			}
-			if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
-			{
-				current_keyboard_inputFlags |= INPUT_SHIFT;
-			}
+			//if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
+			//{
+			//	current_keyboard_inputFlags |= INPUT_SHIFT;
+			//}
 			if (pKeysBuffer[VK_RETURN] & 0xF0) // Enter
 			{
 				current_keyboard_inputFlags |= INPUT_ENTER;
 			}
 		}
 
+		static bool prevShiftDown = false;
+		bool currShiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000);
+		if (!prevShiftDown && currShiftDown) 
+		{
+			current_keyboard_inputFlags |= INPUT_SHIFT;
+			cout << "press shift key" << endl;
+		}
+		prevShiftDown = currShiftDown;
+
+		static bool prevF2Down = false;
+		bool currF2Down = (GetAsyncKeyState(VK_F2) & 0x8000);
+		if (!prevF2Down && currF2Down)
+		{
+			current_keyboard_inputFlags |= INPUT_F2;
+			cout << "press F2 key" << endl;
+		}
+		prevF2Down = currF2Down;
+
+		static bool prevF3Down = false;
+		bool currF3Down = (GetAsyncKeyState(VK_F3) & 0x8000);
+		if (!prevF3Down && currF3Down)
+		{
+			current_keyboard_inputFlags |= INPUT_F3;
+			cout << "press F3 key" << endl;
+		}
+		prevF3Down = currF3Down;
 
 		//=======================================================================
 
+		static bool prevLDown = false;
+		static bool prevRDown = false;
+
+		bool currLDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) != 0;
+		bool currRDown = (pKeysBuffer[VK_RBUTTON] & 0xF0) != 0;
+
+		if (!prevLDown && currLDown) {
+			current_keyboard_inputFlags |= INPUT_MOUSE_LEFT; 
+		}
+		if (!prevRDown && currRDown) {
+			current_keyboard_inputFlags |= INPUT_MOUSE_RIGHT;
+		}
+
+		// 상태 저장
+		prevLDown = currLDown;
+		prevRDown = currRDown;
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 
@@ -756,8 +798,10 @@ void CGameFramework::ProcessInput()
 			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 		}
 
-		if (!CScene::Screen_Fade)
-			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		if (!isRunning) {
+			if (!CScene::Screen_Fade)
+				m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+		}
 
 
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
@@ -801,8 +845,10 @@ void CGameFramework::ProcessInput()
 				else
 					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
-			if (dwDirection)
-				m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
+			if (!isRunning) {
+				if (dwDirection)
+					m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
+			}
 		}
 
 	}
@@ -1590,10 +1636,27 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
-		else if (cmd == "POST_EFFECT")
-			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+		else if (cmd == "POST_EFFECT") {
+			//ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+		}
 		else if (cmd == "STAGE_CLEAR") {
 			stage_scene->bStageClear = true;
+		}
+		else if (cmd == "P_S_CMD") {
+			ProcessReceivedData_Change_State_Command(tokens);
+			/*int pID = std::stoi(tokens[3]);
+			int stateNum = std::stoi(tokens[4]);
+			cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
+			if (pID == Client_ID)
+				m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+			else {
+				if (Connected_Player_List[pID]) {
+					if (scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]) {
+						scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+					}
+				}
+			}
+			cout << "change State : " << stateNum << "\n";*/
 		}
 
 	}
@@ -1915,6 +1978,22 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 	stage_scene->Fog_Sync(server_fog_info);
 }
 
+void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<std::string>& tokens)
+{
+	int pID = std::stoi(tokens[3]);
+	int stateNum = std::stoi(tokens[4]);
+	cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
+	if (pID == Client_ID)
+		m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+	else {
+		if (Connected_Player_List[pID]) {
+			if (scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]) {
+				scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+			}
+		}
+	}
+	cout << "change State : " << stateNum << "\n";
+}
 
 void CGameFramework::HandleClientIdAssignment()
 {
@@ -2027,8 +2106,10 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-		if (syncData.bStateChange)
-			m_pPlayer->SetPosition(syncData.position);
+		m_pPlayer->SetPosition(syncData.position);
+		//cout << syncData.position.x << ", " << syncData.position.y << ", " << syncData.position.z << "\n";
+		/*if (syncData.bStateChange)
+			m_pPlayer->SetPosition(syncData.position);*/
 		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
 			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
@@ -2043,7 +2124,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 				//std::cout << "[DEBUG] Dead State Change" << std::endl;
 			}
 		}
-		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
+		/*if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack2 && syncData.changedStateNum == int(State::Attack2)) {
@@ -2051,7 +2132,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;
-		}
+		}*/
 		return;
 	}
 	else

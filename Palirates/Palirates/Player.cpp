@@ -520,7 +520,7 @@ void CTerrainPlayer::OnCameraUpdateCallback(float fTimeElapsed)
 	float fHeight = pTerrain->Get_Height(xmf3CameraPosition.x, xmf3CameraPosition.z, bReverseQuad, last_tile_ptr) + 5.0f;
 
 
-	if (xmf3CameraPosition.y <= fHeight)
+	if (xmf3CameraPosition.y < fHeight)
 	{
 		xmf3CameraPosition.y = fHeight;
 		m_pCamera->SetPosition(xmf3CameraPosition);
@@ -566,7 +566,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (HasType(EObjectType::MainPlayer) && !CheckMultiMode()) {
+		if (HasType(EObjectType::MainPlayer | EObjectType::Player) && !CheckMultiMode()) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}
