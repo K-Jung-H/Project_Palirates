@@ -152,12 +152,12 @@ void Player::key_input(uint32_t keyState)
             int track = kRunTrackByDir[(int)dir];
            //cout << track << "\n";
             auto sm = GetStateMachine();
-            if (sm->GetCurrentState()->GetStateEnum() != State::Run) {
+            if (sm->GetCurrentState()->GetStateEnum() == State::Idle) {
                 sm->ChangeState(std::make_unique<PlayerRunState>());
                 SetRunDirectionTrack(track);
                 sm->lastMoveMask = moveMask;
             }
-            else {
+            else if (sm->GetCurrentState()->GetStateEnum() == State::Run) {
                 if (sm->lastMoveMask != moveMask) {           
                     SetRunDirectionTrack(track);
                     sm->lastMoveMask = moveMask;

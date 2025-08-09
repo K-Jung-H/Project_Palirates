@@ -787,7 +787,6 @@ void CGameFramework::ProcessInput()
 			current_keyboard_inputFlags |= INPUT_MOUSE_RIGHT;
 		}
 
-		// 상태 저장
 		prevLDown = currLDown;
 		prevRDown = currRDown;
 
