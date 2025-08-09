@@ -186,13 +186,13 @@ void Player::update(float deltaTime)
         m_StateMachine->update(deltaTime);
         //m_StateMachine->SetWeight(deltaTime);
     }
-    auto con = GetSkinnedAnimationController();
-    if (con) {
+    //auto con = GetSkinnedAnimationController();
+    //if (con) {
 
-        con->AdvanceTime2(deltaTime, this);
-     //   if (con->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fWeight >= 0.5)
-      //      std::cout << con->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fPosition << std::endl;
-    }
+    //    con->AdvanceTime2(deltaTime, this);
+    // //   if (con->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fWeight >= 0.5)
+    //  //      std::cout << con->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fPosition << std::endl;
+    //}
 
     if (bIsInvincible) {
         if (!bDead) {
@@ -202,6 +202,12 @@ void Player::update(float deltaTime)
                 invincibleTimeRemaining = 0.0f;
             }
         }
+    }
+}
+
+void Player::update_collision(float deltaTime, std::vector<BoundingOrientedBox> obblist) {
+    if (m_pSkinnedAnimationController) {
+        m_pSkinnedAnimationController->AdvanceTime2(deltaTime, this, &obblist);
     }
 }
 

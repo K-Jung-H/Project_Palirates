@@ -359,8 +359,8 @@ void Stage_Scene::Init()
 
     scene_obj->UpdateTransform(NULL);
     
-   // if (monster_init_spawn_frame_list.size())
-      //  SpawnMonster_By_Scene_Data();
+    if (monster_init_spawn_frame_list.size())
+        SpawnMonster_By_Scene_Data();
 }
 
 void Stage_Scene::Update_Scene(float elapsedTime)
@@ -375,8 +375,10 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     {
         if (player_ptr)
         {
-            game_world.Update_Collision(player_ptr);
+            auto obbList = game_world.Get_Cell_OBBs(player_ptr->GetPosition());
+            //game_world.Update_Collision(player_ptr);
             player_ptr->update(elapsedTime);
+            player_ptr->update_collision(elapsedTime, obbList);
 
             if (!player_ptr->Weapon_ptr) continue;
             if (!player_ptr->Weapon_ptr->CanCollide()) continue;

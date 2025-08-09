@@ -45,6 +45,7 @@ public:
 
     virtual void animate(float Elapsedtime);
     virtual void update(float deltaTime) override;
+    void update_collision(float deltaTime, std::vector<BoundingOrientedBox> obblist);
 
     virtual void UpdateWorldOBB();
     virtual std::shared_ptr<BoundingOrientedBox> Get_Collider_OBB() { return m_worldOBB; }
