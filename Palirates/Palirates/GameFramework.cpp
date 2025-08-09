@@ -2034,7 +2034,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	if (player_ID == Client_ID)
 	{
 		m_pPlayer->SetPosition(syncData.position);
-
+		cout << syncData.position.x << ", " << syncData.position.y << ", " << syncData.position.z << "\n";
 		/*if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);*/
 		m_pPlayer->currentHP = syncData.hp;

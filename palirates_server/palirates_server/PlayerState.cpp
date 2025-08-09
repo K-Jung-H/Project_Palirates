@@ -208,7 +208,7 @@ void PlayerDiveState::Enter(Player* player, PlayerStateMachine* sm) {
 	sm->animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
 	player->PlayAnimation(State::Dive);
 	if (auto controller = player->GetSkinnedAnimationController()) {
-		controller->AdvanceTime(0.0f, player);
+		//controller->AdvanceTime(0.0f, player);
 		controller->m_xmf3PrevHipsPosition = controller->HipsPosition;
 	}
 	auto currScene = dynamic_cast<Stage_Scene*>(player->m_pOwnerScene);

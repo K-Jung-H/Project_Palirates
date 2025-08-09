@@ -744,7 +744,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     if (clientId < 0 || clientId >= MaxPlayer || !player_list[clientId])
         return;
 
-    player_list[clientId]->SetPosition(position);
+    //player_list[clientId]->SetPosition(position);
     player_list[clientId]->SetLook(lookDirection);
     
     player_list[clientId]->key_input(inputFlags);
