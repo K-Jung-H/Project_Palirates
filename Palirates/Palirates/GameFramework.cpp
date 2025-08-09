@@ -695,7 +695,6 @@ void CGameFramework::ProcessInput()
 	static bool last_mouse_state = false;
 	static UCHAR pKeysBuffer[256];
 	bool bProcessedByScene = false;
-	static bool prevShiftDown = false;
 
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
@@ -746,6 +745,7 @@ void CGameFramework::ProcessInput()
 			}
 		}
 
+		static bool prevShiftDown = false;
 		bool currShiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000);
 		if (!prevShiftDown && currShiftDown) 
 		{
@@ -757,6 +757,22 @@ void CGameFramework::ProcessInput()
 
 		//=======================================================================
 
+		static bool prevLDown = false;
+		static bool prevRDown = false;
+
+		bool currLDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) != 0;
+		bool currRDown = (pKeysBuffer[VK_RBUTTON] & 0xF0) != 0;
+
+		if (!prevLDown && currLDown) {
+			current_keyboard_inputFlags |= INPUT_MOUSE_LEFT; 
+		}
+		if (!prevRDown && currRDown) {
+			current_keyboard_inputFlags |= INPUT_MOUSE_RIGHT;
+		}
+
+		// 상태 저장
+		prevLDown = currLDown;
+		prevRDown = currRDown;
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
 

@@ -6,15 +6,33 @@
 #include "Scene.h"
 #include <memory>
 
+void PlayerState::PrepareForStateEnter(State state, Player* player, PlayerStateMachine* sm)
+{
+	auto trackIdx = AnimationRegistry::GetPlayerAnimationTrack(state);
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+	sm->animController->SetTrackWeight(trackIdx, 1.0f);
+	sm->animController->m_pAnimationTracks[trackIdx].m_fPosition = 0.0f;
+	player->PlayAnimation(state);
+	if (auto controller = player->GetSkinnedAnimationController()) {
+		controller->m_xmf3PrevHipsPosition = controller->HipsPosition;
+	}
+	auto currScene = dynamic_cast<Stage_Scene*>(player->m_pOwnerScene);
+	if (currScene) {
+		StateChangeInfo data;
+		data.ID = player->GetID();
+		data.stateNum = int(state);
+		currScene->QueueStateChangeCommand(data);
+		//cout << "queue in " << "\n";
+	}
+}
+
 /////////////////////////// normal ///////////////////////////////
 
 void PlayerNormalState::Enter(Player* player, PlayerStateMachine* sm) {
 	//std::cout << "PlayerNormalState Enter" << std::endl;
-	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
-		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
-	}
-	sm->animController->SetTrackWeight(TRACK_IDLE, 1.0f);
-	player->PlayAnimation(State::Idle);
+	PrepareForStateEnter(State::Idle, player, sm);
 }
 
 void PlayerNormalState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -34,12 +52,7 @@ void PlayerNormalState::Exit(Player* player) {
 void PlayerAttack1State::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
 	//std::cout << "PlayerAttack1State Enter" << std::endl;
-	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
-		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
-	}
-	sm->animController->SetTrackWeight(TRACK_ATTACK1, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_ATTACK1].m_fPosition = 0.0f;
-	player->PlayAnimation(State::Attack1);
+	PrepareForStateEnter(State::Attack1, player, sm);
 }
 
 void PlayerAttack1State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -60,12 +73,7 @@ void PlayerAttack1State::Exit(Player* player) {
 void PlayerAttack2State::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
 	//std::cout << "PlayerAttack2State Enter" << std::endl;
-	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
-		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
-	}
-	sm->animController->SetTrackWeight(TRACK_ATTACK2, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_ATTACK2].m_fPosition = 0.0f;
-	player->PlayAnimation(State::Attack2);
+	PrepareForStateEnter(State::Attack2, player, sm);
 }
 
 void PlayerAttack2State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -86,12 +94,7 @@ void PlayerAttack2State::Exit(Player* player) {
 void PlayerAttack3State::Enter(Player* player, PlayerStateMachine* sm) {
 	player->Weapon_ptr->SetCanCollide(true);
 	std::cout << "PlayerAttack3State Enter" << std::endl;
-	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
-		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
-	}
-	sm->animController->SetTrackWeight(TRACK_ATTACK3, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition = 0.0f;
-	player->PlayAnimation(State::Attack3);
+	PrepareForStateEnter(State::Attack3, player, sm);
 }
 
 void PlayerAttack3State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -115,13 +118,7 @@ void PlayerGetHitState::Enter(Player* player, PlayerStateMachine* sm) {
 	if (!player->BreathHit)
 		player->SetIsInvincible(true);
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
-	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
-		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
-	}
-	sm->animController->SetTrackWeight(TRACK_GET_HIT_F2, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fPosition = 0.0f;
-	//std::cout << "PlayerGetHitState Enter" << std::endl;
-	player->PlayAnimation(State::Get_Hit_F2);
+	PrepareForStateEnter(State::Get_Hit_F2, player, sm);
 }
 
 void PlayerGetHitState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -148,13 +145,7 @@ void PlayerDeadState::Enter(Player* player, PlayerStateMachine* sm) {
 	player->bDead = true;
 	player->SetHP(0.0f);
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
-	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
-		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
-	}
-	sm->animController->SetTrackWeight(TRACK_KNOCK_DOWN, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = 0.0f;
-	//std::cout << "PlayerDeadState Enter" << std::endl;
-	player->PlayAnimation(State::Knock_Down);
+	PrepareForStateEnter(State::Knock_Down, player, sm);
 }
 
 void PlayerDeadState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -179,9 +170,7 @@ void PlayerGetUpState::Enter(Player* player, PlayerStateMachine* sm) {
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
-	sm->animController->SetTrackWeight(TRACK_GET_UP, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = 0.0f;
-	player->PlayAnimation(State::Get_Up);
+	PrepareForStateEnter(State::Get_Up, player, sm);
 }
 
 void PlayerGetUpState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -204,21 +193,7 @@ void PlayerDiveState::Enter(Player* player, PlayerStateMachine* sm) {
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
-	sm->animController->SetTrackWeight(TRACK_DIVEROLL_FORWARD, 1.0f);
-	sm->animController->m_pAnimationTracks[TRACK_DIVEROLL_FORWARD].m_fPosition = 0.0f;
-	player->PlayAnimation(State::Dive);
-	if (auto controller = player->GetSkinnedAnimationController()) {
-		//controller->AdvanceTime(0.0f, player);
-		controller->m_xmf3PrevHipsPosition = controller->HipsPosition;
-	}
-	auto currScene = dynamic_cast<Stage_Scene*>(player->m_pOwnerScene);
-	if (currScene) {
-		StateChangeInfo data;
-		data.ID = player->GetID();
-		data.stateNum = int(State::Dive);
-		currScene->QueueStateChangeCommand(data);
-		cout << "queue in " << "\n";
-	}
+	PrepareForStateEnter(State::Dive, player, sm);
 }
 
 void PlayerDiveState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {

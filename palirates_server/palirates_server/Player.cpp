@@ -82,6 +82,20 @@ void Player::key_input(uint32_t keyState)
        // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
         GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
     }
+
+    if (keyState & INPUT_MOUSE_LEFT)
+    {
+        cout << "input" << "\n";
+        // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
+        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+    }
+
+    if (keyState & INPUT_MOUSE_RIGHT)
+    {
+        cout << "input" << "\n";
+        // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
+        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+    }
 }
 
 void Player::animate(float Elapsedtime)

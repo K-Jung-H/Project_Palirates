@@ -15,6 +15,7 @@ public:
     virtual void Exit(Player* monster) = 0;
 
     virtual State GetStateEnum() const = 0;
+    void PrepareForStateEnter(State state, Player* player, PlayerStateMachine* sm);
 };
 
 class PlayerNormalState : public PlayerState {
