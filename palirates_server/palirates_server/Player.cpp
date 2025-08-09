@@ -107,19 +107,43 @@ static const int kRunTrackByDir[8] = {
 void Player::key_input(uint32_t keyState)
 {
    // cout << keyState << "\n";
+    constexpr uint32_t MOVE_MASK = (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
+    uint32_t moveMask = keyState & MOVE_MASK;
 
+    static bool F2_Mode = false;
+
+    if (keyState & INPUT_F2)
+    {
+        if (!F2_Mode) {
+            GetStateMachine()->ChangeState(std::make_unique<PlayerObserverState>());
+            F2_Mode = true;
+        }
+    }
+
+    if (keyState & INPUT_F3) {
+        if (F2_Mode) {
+            auto currPos = GetPosition();
+            currPos.y = 0.0f;
+            SetPosition(currPos);
+            GetStateMachine()->ChangeState(std::make_unique<PlayerNormalState>());
+            F2_Mode = false;
+        }
+    }
+
+    if (F2_Mode) {
+        auto sm = GetStateMachine();
+        sm->lastMoveMask = moveMask;
+        return;
+    }
 
     if (keyState == INPUT_NONE)
     {
-       // cout << "key none" << "\n";
+        // cout << "key none" << "\n";
         if (GetStateMachine()->GetCurrentState()->GetStateEnum() == State::Run) {
             cout << "change normal" << "\n";
             GetStateMachine()->ChangeState(std::make_unique<PlayerNormalState>());
         }
     }
-
-    constexpr uint32_t MOVE_MASK = (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
-    uint32_t moveMask = keyState & MOVE_MASK;
 
     if (moveMask) {
         XMFLOAT2 mv;

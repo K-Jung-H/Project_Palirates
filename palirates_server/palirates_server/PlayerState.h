@@ -99,3 +99,11 @@ public:
     State GetStateEnum() const override { return State::Dive; }
 };
 
+class PlayerObserverState : public PlayerState {
+public:
+    void Enter(Player* monster, PlayerStateMachine* sm) override;
+    void Update(Player* monster, float deltaTime, PlayerStateMachine* sm) override;
+    void Exit(Player* monster) override;
+
+    State GetStateEnum() const override { return State::ETC; }
+};

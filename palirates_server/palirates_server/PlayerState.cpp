@@ -224,3 +224,52 @@ void PlayerDiveState::Update(Player* player, float deltaTime, PlayerStateMachine
 
 void PlayerDiveState::Exit(Player* player) {
 }
+
+/////////////////////////// Observer ///////////////////////////////
+
+void PlayerObserverState::Enter(Player* player, PlayerStateMachine* sm) {
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+	PrepareForStateEnter(State::Idle, player, sm);
+	player->SetCanCollide(false);
+	player->SetIsInvincible(true);
+	auto currPos = player->GetPosition();
+	currPos.y = 100.0f;
+	player->SetPosition(currPos);
+}
+
+void PlayerObserverState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
+	uint32_t moveMask = sm->lastMoveMask;
+	if (!moveMask) return; 
+
+	XMFLOAT3 forward = player->GetLook();
+	forward.y = 0.0f;
+	forward = Vector3::Normalize(forward);
+
+	XMFLOAT3 right = player->GetRight();
+	right.y = 0.0f;
+	right = Vector3::Normalize(right);
+
+	XMFLOAT3 dir = { 0, 0, 0 };
+
+	if (moveMask & INPUT_W) dir = Vector3::Add(dir, forward);
+	if (moveMask & INPUT_S) dir = Vector3::Subtract(dir, forward);
+	if (moveMask & INPUT_D) dir = Vector3::Add(dir, right);
+	if (moveMask & INPUT_A) dir = Vector3::Subtract(dir, right);
+
+	if (Vector3::LengthSquared(dir) > 0.0f) {
+		dir = Vector3::Normalize(dir);
+		float speed = 900.0f;
+		XMFLOAT3 deltaMove = Vector3::ScalarProduct(dir, speed * deltaTime, false);
+		player->Move(deltaMove); 
+	}
+}
+
+void PlayerObserverState::Exit(Player* player) {
+	player->SetCanCollide(true);
+	player->SetIsInvincible(false);
+	auto currPos = player->GetPosition();
+	currPos.y = 0.0f;
+	player->SetPosition(currPos);
+}

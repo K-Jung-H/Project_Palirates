@@ -754,6 +754,23 @@ void CGameFramework::ProcessInput()
 		}
 		prevShiftDown = currShiftDown;
 
+		static bool prevF2Down = false;
+		bool currF2Down = (GetAsyncKeyState(VK_F2) & 0x8000);
+		if (!prevF2Down && currF2Down)
+		{
+			current_keyboard_inputFlags |= INPUT_F2;
+			cout << "press F2 key" << endl;
+		}
+		prevF2Down = currF2Down;
+
+		static bool prevF3Down = false;
+		bool currF3Down = (GetAsyncKeyState(VK_F3) & 0x8000);
+		if (!prevF3Down && currF3Down)
+		{
+			current_keyboard_inputFlags |= INPUT_F3;
+			cout << "press F3 key" << endl;
+		}
+		prevF3Down = currF3Down;
 
 		//=======================================================================
 

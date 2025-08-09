@@ -63,7 +63,9 @@ enum KeyIndex
     KEY_INDEX_SHIFT = 6,
     KEY_INDEX_ENTER = 7,
     KEY_INDEX_MOUSE_LEFT = 8,
-    KEY_INDEX_MOUSE_RIGHT = 9
+    KEY_INDEX_MOUSE_RIGHT = 9,
+    KEY_INDEX_F2 = 10,
+    KEY_INDEX_F3 = 11
 };
 
 // 실제 플래그 enum
@@ -79,7 +81,9 @@ enum InputFlags : uint32_t
     INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
     INPUT_ENTER = 1 << KEY_INDEX_ENTER,
     INPUT_MOUSE_LEFT = 1 << KEY_INDEX_MOUSE_LEFT,
-    INPUT_MOUSE_RIGHT = 1 << KEY_INDEX_MOUSE_RIGHT
+    INPUT_MOUSE_RIGHT = 1 << KEY_INDEX_MOUSE_RIGHT,
+    INPUT_F2 = 1 << KEY_INDEX_F2,
+    INPUT_F3 = 1 << KEY_INDEX_F3
 };
 
 struct MonsterHitInfo
