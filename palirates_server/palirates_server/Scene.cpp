@@ -704,6 +704,7 @@ void Stage_Scene::Add_Player(int id)
     player_list[id]->SetupWeaponCollider();
     player_list[id]->UpdateTransform();
     player_list[id]->m_pOwnerScene = this;
+    player_list[id]->Client_ID = id;
 }
 
 void Stage_Scene::Remove_Player(int id)
@@ -753,24 +754,24 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     {
         player_list[clientId]->SetTrackInfoList(tracks);
         player_list[clientId]->SetStateChanged(stateChanged);
-        if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
-            if (stateNum == int(State::Attack1)) {
-                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
-                player_list[clientId]->SetStateChangeNum(stateNum);
-            }
-            else if (stateNum == int(State::Attack2)) {
-                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
-                player_list[clientId]->SetStateChangeNum(stateNum);
-            }
-            else if (stateNum == int(State::Attack3)) {
-                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
-                player_list[clientId]->SetStateChangeNum(stateNum);
-            }
-            //else if (stateNum == int(State::Dive)) {
-            //    //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
-            //    player_list[clientId]->SetStateChangeNum(stateNum);
-            //}
-        }
+        //if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
+        //    if (stateNum == int(State::Attack1)) {
+        //        player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+        //        player_list[clientId]->SetStateChangeNum(stateNum);
+        //    }
+        //    else if (stateNum == int(State::Attack2)) {
+        //        player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
+        //        player_list[clientId]->SetStateChangeNum(stateNum);
+        //    }
+        //    else if (stateNum == int(State::Attack3)) {
+        //        player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+        //        player_list[clientId]->SetStateChangeNum(stateNum);
+        //    }
+        //    //else if (stateNum == int(State::Dive)) {
+        //    //    //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+        //    //    player_list[clientId]->SetStateChangeNum(stateNum);
+        //    //}
+        //}
         if (stateNum == int(State::Dive)) {
 			player_list[clientId]->motion_blur = true; 
         }

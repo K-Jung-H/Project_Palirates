@@ -1626,10 +1626,20 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 			stage_scene->bStageClear = true;
 		}
 		else if (cmd == "P_S_CMD") {
-			int pID = std::stoi(tokens[3]);
+			ProcessReceivedData_Change_State_Command(tokens);
+			/*int pID = std::stoi(tokens[3]);
 			int stateNum = std::stoi(tokens[4]);
-			m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
-			cout << "change State : " << stateNum << "\n";
+			cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
+			if (pID == Client_ID)
+				m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+			else {
+				if (Connected_Player_List[pID]) {
+					if (scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]) {
+						scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+					}
+				}
+			}
+			cout << "change State : " << stateNum << "\n";*/
 		}
 
 	}
@@ -1937,6 +1947,22 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 	stage_scene->Fog_Sync(server_fog_info);
 }
 
+void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<std::string>& tokens)
+{
+	int pID = std::stoi(tokens[3]);
+	int stateNum = std::stoi(tokens[4]);
+	cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
+	if (pID == Client_ID)
+		m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+	else {
+		if (Connected_Player_List[pID]) {
+			if (scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]) {
+				scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
+			}
+		}
+	}
+	cout << "change State : " << stateNum << "\n";
+}
 
 void CGameFramework::HandleClientIdAssignment()
 {
@@ -2050,7 +2076,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	if (player_ID == Client_ID)
 	{
 		m_pPlayer->SetPosition(syncData.position);
-		cout << syncData.position.x << ", " << syncData.position.y << ", " << syncData.position.z << "\n";
+		//cout << syncData.position.x << ", " << syncData.position.y << ", " << syncData.position.z << "\n";
 		/*if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);*/
 		m_pPlayer->currentHP = syncData.hp;
@@ -2067,7 +2093,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 				//std::cout << "[DEBUG] Dead State Change" << std::endl;
 			}
 		}
-		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
+		/*if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack2 && syncData.changedStateNum == int(State::Attack2)) {
@@ -2075,7 +2101,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
 			m_pPlayer->GetStateMachine()->lastStateChange = 0;
-		}
+		}*/
 		return;
 	}
 	else

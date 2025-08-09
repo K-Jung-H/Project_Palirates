@@ -32,6 +32,7 @@ public:
     bool need_to_client_sync = false;
     bool motion_blur = false;
     bool BreathHit = false;
+    int Client_ID = -1;
     Player(int model_index);
     virtual ~Player() {}
 

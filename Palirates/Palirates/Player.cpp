@@ -566,7 +566,7 @@ void CTerrainPlayer::Animate(float fTimeElapsed)
 
 	if (m_pSkinnedAnimationController)
 	{
-		if (HasType(EObjectType::MainPlayer) && !CheckMultiMode()) {
+		if (HasType(EObjectType::MainPlayer | EObjectType::Player) && !CheckMultiMode()) {
 			m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 			GetStateMachine()->update(fTimeElapsed);
 		}

@@ -21,7 +21,7 @@ void PlayerState::PrepareForStateEnter(State state, Player* player, PlayerStateM
 	auto currScene = dynamic_cast<Stage_Scene*>(player->m_pOwnerScene);
 	if (currScene) {
 		StateChangeInfo data;
-		data.ID = player->GetID();
+		data.ID = player->Client_ID;
 		data.stateNum = int(state);
 		currScene->QueueStateChangeCommand(data);
 		//cout << "queue in " << "\n";
