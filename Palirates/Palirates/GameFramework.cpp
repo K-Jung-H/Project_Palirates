@@ -698,8 +698,13 @@ void CGameFramework::ProcessInput()
 
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
-	if (GetKeyboardState(pKeysBuffer) && main_scene)
+	BOOL got = GetKeyboardState(pKeysBuffer);
+	if (!got) {
+		ZeroMemory(pKeysBuffer, sizeof(pKeysBuffer)); 
+	}
+	if (got && main_scene) {
 		bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
+	}
 
 	if (!bProcessedByScene && m_pPlayer->bIsControllable)
 	{
@@ -777,15 +782,12 @@ void CGameFramework::ProcessInput()
 		static bool prevLDown = false;
 		static bool prevRDown = false;
 
-		bool currLDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) != 0;
-		bool currRDown = (pKeysBuffer[VK_RBUTTON] & 0xF0) != 0;
+		// 키보드는 pKeysBuffer로 OK, 마우스는 Async로
+		bool currLDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+		bool currRDown = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
 
-		if (!prevLDown && currLDown) {
-			current_keyboard_inputFlags |= INPUT_MOUSE_LEFT; 
-		}
-		if (!prevRDown && currRDown) {
-			current_keyboard_inputFlags |= INPUT_MOUSE_RIGHT;
-		}
+		if (!prevLDown && currLDown) current_keyboard_inputFlags |= INPUT_MOUSE_LEFT;
+		if (!prevRDown && currRDown) current_keyboard_inputFlags |= INPUT_MOUSE_RIGHT;
 
 		prevLDown = currLDown;
 		prevRDown = currRDown;
