@@ -192,7 +192,7 @@ void Emit_Water_Splash(inout Particle_Info p, uint index)
     float3 baseDir = normalize(Main_Direction);
     float3 right = normalize(cross(float3(0, 1, 0), baseDir));    
     float side = (index % 2 == 0) ? -1.0f : 1.0f;
-    float3 liftedBaseDir = normalize(baseDir + float3(0, 0.5f, 0));
+    float3 liftedBaseDir = normalize(baseDir + float3(0, 0.1f, 0));
     float3 spreadDir = normalize(liftedBaseDir + right * side * 0.5f);
     float3 finalDir = RandomSpreadDirection(index, spreadDir, 0.5f);
     p.Velocity = normalize(finalDir) * Init_Velocity_Value;
@@ -344,7 +344,7 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     if (p.Type == PARTICLE_TYPE_SNOW)
         Emit_Snow(p, index);
     else if (p.Type == PARTICLE_TYPE_SPLASH)
-            Emit_Water_Splash(p, index);
+        Emit_Water_Splash(p, index);
     else if (p.Type == PARTICLE_TYPE_SAND)
         Emit_Sand(p, index);
     else if (p.Type == PARTICLE_TYPE_SAND_STORM)

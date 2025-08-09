@@ -599,7 +599,6 @@ private:
 
     bool Active = true;
 
-    XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 
 public:
     static std::unordered_map<std::string, std::shared_ptr<CMesh>> MeshCache;
@@ -635,6 +634,7 @@ public:
     XMVECTOR target_dir{};
     bool     m_bInAir = false;
     XMVECTOR m_vVelocity = XMVectorZero();
+    XMFLOAT3 previous_position{ 0.0f,0.0f,0.0f };
 
     float    m_fMoveSpeed = 5.0f;
     float    m_fRotationSpeed = 360.0f;
@@ -973,14 +973,13 @@ public:
     void SetRotationAxis(XMFLOAT3 xmf3RotationAxis) { m_xmf3RotationAxis = xmf3RotationAxis; }
     void Add_Rotate(float angleDelta);
 
-    void Set_Velocity(XMFLOAT3 new_velo) { m_xmf3Velocity = new_velo; }
-
-
     virtual void Animate(float fTimeElapsed);
     void HandleBoundaryReflection(float boundary);
 
+    void Set_Velocity(XMFLOAT3 new_velo) { m_xmf3Velocity = new_velo; }
     XMFLOAT3 Get_Velocity() { return m_xmf3Velocity; }
     float Get_RotationSpeed() { return m_fRotationSpeed; }
+    virtual void Record_Last_Pos();
 
     void RegisterMarker(const std::string& name, shared_ptr<CGameObject> node) { Boat_Frames_Marker[name] = node; }
 
@@ -1018,14 +1017,48 @@ public:
 
 };
 
+#define Max_Wave_Trail 640
+
+struct BoatWakeTrail 
+{
+    XMFLOAT2 position;
+    XMFLOAT2 direction;
+    float age;
+    float boat_velocity;
+
+    float padding0;
+    float padding1;
+};
+
+struct CB_Wave_Trail_Info
+{
+    UINT  g_NumTrails;
+    float g_GlobalTime;
+    float g_BaseStrength;
+    float g_DecayRate;
+    float g_TimeDecayRate;
+};
+
 class Wave_Object : public Plane_Object
 {
 public:
     static CS_Wave_Shader* cs_wave_shader;
 
-private:
-    CTexture* wave_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
+protected:
+    std::vector<BoatWakeTrail> wakeTrails; // 크기 고정 (예: 64)
+    int wakeTrailIndex = 0;
+    int wakeTrailCount = 0;
+
+    CTexture* wave_trail_data_texture = NULL;
+    ID3D12Resource* m_pWakeTrailUploadBuffer = NULL;
+
+    ID3D12Resource* wave_trail_info = nullptr;
+    CB_Wave_Trail_Info* mapped_wave_trail_info = nullptr;
+
+protected:
+    CTexture* wave_general_data_texture = NULL; // 0: Reading_Height, 1: Writting_Height, 2: Writting_Normal -> Using for render is 1, 2
     ID3D12Resource* Pos_Normal_ReadBack_buffer = NULL;
+
 
     UINT desiredTexelSize = 0;
     UINT Tex_Length = 0;
@@ -1046,8 +1079,12 @@ public:
 
     void Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList);
     XMFLOAT3 Readback_Buffer_Data();
-
+    
     void Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed);
+    void Animate_Wave_Trail_Buffer(float fTimeElapsed);
+    void Update_Wave_Trail_Buffer(ID3D12GraphicsCommandList* pd3dCommandList);
+    void Set_Wave_Trail_Info(CB_Wave_Trail_Info& wave_trail_info);
+
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
     virtual void Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 

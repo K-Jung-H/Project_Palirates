@@ -33,6 +33,10 @@ enum class Particle_Type
 	sand_storm = 5,
 	//=======================
 	bleed = 10,
+	//=======================
+	env_snow = 20,
+	env_sand = 21,
+	//=======================
 	etc = -1
 };
 
@@ -46,6 +50,7 @@ struct Particle_Sync_Data
 	float LifeTime;
 	XMFLOAT3 area_extent;
 	XMFLOAT3 main_direction;
+	UINT particle_status_index;
 };
 
 struct Particle_Format
@@ -271,6 +276,7 @@ class ParticleObject : public CGameObject
 {
 private:
 	bool wasResetFlagSent = false;
+	bool bEmitEnabled = true;
 
 protected:
 	XMFLOAT3 m_xmf3Direction = { 0.0f, 0.0f, 1.0f }; // 기본 전방
@@ -334,6 +340,8 @@ public:
 	UINT Get_Particle_Max_Num() { return particle_data->Get_Particle_Max_Num(); }
 
 	void Update_Particle_State();
+
+	void Set_Particle_State(UINT new_index) { Particle_State_Func_Index = new_index; }
 	UINT Get_Particle_State() { return Particle_State_Func_Index; }
 
 	void Set_Local_Coordinate() { is_local = true; }
@@ -369,4 +377,8 @@ public:
 
 	Particle_Type Get_Particle_Type() { return p_type; }
 
+
+	void EnableEmit() { bEmitEnabled = true; }
+	void DisableEmit() { bEmitEnabled = false; }
+	bool IsEmitEnabled() const { return bEmitEnabled; }
 };

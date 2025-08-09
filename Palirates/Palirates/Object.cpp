@@ -4076,7 +4076,7 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 	Side_Length = nLength;
 	constexpr int kMaxTextureSize = 15000;
-	desiredTexelSize = 20.0f;
+	desiredTexelSize = 10.0f;
 
 	shared_ptr<PlaneMesh> plane_mesh = make_shared<PlaneMesh>(pd3dDevice, pd3dCommandList, nLength, side_vertex_n);
 	SetMesh(plane_mesh);
@@ -4094,8 +4094,8 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 
 
 
-	wave_data_texture = new CTexture(
-		4,                 // 0: HeightMap_A, 1: HeightMap_B, 2: NormalMap, 
+	wave_general_data_texture = new CTexture(
+		4,                 // 0: HeightMap_A, 1: HeightMap_B, 2: NormalMap, 3: Boat_pos Normal
 		RESOURCE_TEXTURE2D,
 		0,                 // No samplers
 		4,                 // Graphics RootParameters: HeightMap (pinged), NormalMap
@@ -4106,36 +4106,82 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 		4                  // Compute SRV handles
 	);
 
+
+
 	// HeightMap_Read: index 0 (read-only SRV)
-	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	wave_general_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 0, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// HeightMap_Write: index 1 (UAV + SRV)
-	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	wave_general_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 1, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// NormalMap: index 2 (UAV + SRV)
-	wave_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
+	wave_general_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// Pos_Normal: index 3 (UAV)
-	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 1, sizeof(XMFLOAT4), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	wave_general_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 1, sizeof(XMFLOAT4), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+
 	Pos_Normal_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
 
 
 	// HeightMap_A: index 0
-	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 0, 1); // RootParam[1] - SRV(t0)
-	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 0, 2); // RootParam[2] - UAV(u0)
-	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 0, 5); // Graphics RootParam[0] (t#)
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_general_data_texture, 0, 2); // RootParam[1] - SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_general_data_texture, 0, 3); // RootParam[2] - UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_general_data_texture, 0, 5); // Graphics RootParam[0] (t#)
 
 	// HeightMap_B: index 1
-	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_data_texture, 1, 1); // SRV(t0)
-	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 1, 2); // UAV(u0)
-	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 1, 5); // Graphics RootParam[0]
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_general_data_texture, 1, 2); // SRV(t0)
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_general_data_texture, 1, 3); // UAV(u0)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_general_data_texture, 1, 5); // Graphics RootParam[0]
 
 	// NormalMap: index 2
-	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 2, 3); // UAV(u1)
-	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_data_texture, 2, 6); // Graphics RootParam[1]
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_general_data_texture, 2, 4); // UAV(u1)
+	CDescriptor_Heap::CreateGraphicsShaderResourceView(pd3dDevice, wave_general_data_texture, 2, 6); // Graphics RootParam[1]
 
-	// Pos_Normal: index 2
-	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_data_texture, 3, 4); // UAV(u2)
+	// Pos_Normal: index 3
+	CDescriptor_Heap::CreateComputeUnorderedAccessView(pd3dDevice, wave_general_data_texture, 3, 4); // UAV(u2)
+
+
+	//==========================================================================================================
+
+	UINT bufferSize = (sizeof(CB_Wave_Trail_Info) + 255) & ~255;
+	wave_trail_info = CreateBufferResource(pd3dDevice, pd3dCommandList, nullptr, bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr);
+	wave_trail_info->Map(0, nullptr, reinterpret_cast<void**>(&mapped_wave_trail_info));
+
+
+	wave_trail_data_texture = new CTexture(
+		1,                 // 0: trail_buffer
+		RESOURCE_STRUCTURED_BUFFER,
+		0,                 // No samplers
+		0,                 // Graphics RootParameters
+		1,                 // Compute UAV RootParameter
+		1,                 // Compute SRV RootParameter
+		0,                 // Graphics SRV handles
+		1,                 // Compute UAV handles
+		1                  // Compute SRV handles
+	);
+
+
+	// Wave_Trail : Index 0 (read-only SRV)
+	m_pWakeTrailUploadBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, nullptr, sizeof(BoatWakeTrail) * Max_Wave_Trail, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr);
+	wave_trail_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 0, nullptr, Max_Wave_Trail, sizeof(BoatWakeTrail), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+
+	CDescriptor_Heap::CreateComputeShaderResourceView(pd3dDevice, wave_trail_data_texture, 0, 1); // UAV(u2)
+
+	if (wakeTrails.empty())
+	{
+		wakeTrails.resize(Max_Wave_Trail);
+		for (auto& trail : wakeTrails)
+		{
+			trail.position = XMFLOAT2(0.0f, 0.0f);
+			trail.direction = XMFLOAT2(0.0f, 1.0f);
+			trail.age = -1.0f;
+			trail.boat_velocity = 0.0f;
+			trail.padding0 = 0.0f;
+			trail.padding1 = 0.0f;
+		}
+	}
 
 }
 
@@ -4145,7 +4191,7 @@ Wave_Object::~Wave_Object()
 
 void Wave_Object::Copy_Buffer_Data(ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	pd3dCommandList->CopyBufferRegion(Pos_Normal_ReadBack_buffer, 0, wave_data_texture->GetResource(3), 0, sizeof(UINT) * 4);
+	pd3dCommandList->CopyBufferRegion(Pos_Normal_ReadBack_buffer, 0, wave_general_data_texture->GetResource(3), 0, sizeof(UINT) * 4);
 }
 
 XMFLOAT3 Wave_Object::Readback_Buffer_Data()
@@ -4185,11 +4231,7 @@ void Wave_Object::Synchronize_Wave_to_Boat(Boat_Object* boat_ptr)
 
 	float speed = XMVectorGetX(XMVector3Length(XMLoadFloat3(&boat_velocity)));
 
-	float absRotation = fabsf(boat_rotation_speed);
-	float rotationFactor = 1.0f - (absRotation / 90.0f);
-	rotationFactor = std::clamp(rotationFactor, 0.5f, 1.0f);
-
-	World_Boat_Velocity = speed * rotationFactor;
+	World_Boat_Velocity = speed;
 
 
 	if (!IsZeroVector(BoatPos_WaveNormal))
@@ -4223,17 +4265,25 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	// === 상태 전이 ===
 	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(readIndex),
+		wave_general_data_texture->GetResource(readIndex),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(writeIndex),
+		wave_general_data_texture->GetResource(writeIndex),
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);   // SRV(t0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);  // UAV(u0)
+	{
+		pd3dCommandList->SetComputeRootConstantBufferView(1, wave_trail_info->GetGPUVirtualAddress()); // wave_trail_info_CBV
+
+		wave_trail_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 2, 0);
+
+
+		wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, readIndex);   // SRV(t0)
+		wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, writeIndex);  // UAV(u0)
+	}
+
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
@@ -4241,7 +4291,7 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 	{
 		D3D12_RESOURCE_BARRIER uavBarrier0 = {};
 		uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
+		uavBarrier0.UAV.pResource = wave_general_data_texture->GetResource(writeIndex);
 		pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
 	}
 
@@ -4265,7 +4315,7 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 	XMVECTOR normDir = XMVector2Normalize(XMLoadFloat2(&dirXZ));
 	XMStoreFloat2(&cs_wave_shader->update_wave_info->g_BoatDir, normDir);
 	cs_wave_shader->update_wave_info->g_BoatPos = boatTexel;
-	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
+	cs_wave_shader->update_wave_info->g_WakeMaxDist = 50;
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
 	// Step 6: Boat Wake Pass
@@ -4273,24 +4323,32 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	// === 상태 전이 ===
 	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(writeIndex),
+		wave_general_data_texture->GetResource(writeIndex),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(readIndex),
+		wave_general_data_texture->GetResource(readIndex),
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);  // SRV(t0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);   // UAV(u0)
+	{
+		pd3dCommandList->SetComputeRootConstantBufferView(1, wave_trail_info->GetGPUVirtualAddress()); // wave_trail_info_CBV
+
+		wave_trail_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 2, 0); // wave_trail_buffer
+
+
+
+		wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, writeIndex);  // SRV(t0)
+		wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, readIndex);   // UAV(u0)
+	}
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
 	// === UAV Barrier ===
 	{
 		D3D12_RESOURCE_BARRIER uavBarrier1 = {};
 		uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-		uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
+		uavBarrier1.UAV.pResource = wave_general_data_texture->GetResource(readIndex);
 		pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
 	}
 
@@ -4299,35 +4357,125 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	// === 상태 전이 ===
 	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(readIndex),
+		wave_general_data_texture->GetResource(readIndex),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(writeIndex),
+		wave_general_data_texture->GetResource(writeIndex),
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV(t0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV(u0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // UAV(u1: NormalMap)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // UAV(u2: Pos+NormalBuffer)
+	wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, readIndex);     // SRV(t0)
+	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, writeIndex);    // UAV(u0)
+	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 5, 2);             // UAV(u1: NormalMap)
+	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 6, 3);             // UAV(u2: Pos+NormalBuffer)
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
 	// Step 8: PingPong 전환
 	bPingPongToggle = !bPingPongToggle;
 }
 
+void Wave_Object::Animate_Wave_Trail_Buffer(float fTimeElapsed)
+{
+	XMFLOAT3 planePos = GetPosition();
+	float planeHalfSize = Side_Length * 0.5f;
+
+	// 보트 월드 위치 → 텍셀 좌표로 변환
+	XMFLOAT2 boat_texel_pos = {
+		(World_Boat_Pos.x - (planePos.x - planeHalfSize)) / desiredTexelSize,
+		(World_Boat_Pos.z - (planePos.z - planeHalfSize)) / desiredTexelSize
+	};
+
+	XMFLOAT2 boatDirXZ = { World_Boat_Dir.x, World_Boat_Dir.z };
+
+	static float timeSinceLastTrail = 0.0f;
+	timeSinceLastTrail += fTimeElapsed;
+
+	// 일정 간격으로 trail 생성
+	if (timeSinceLastTrail >= 0.01f)
+	{
+		timeSinceLastTrail = 0.0f;
+
+		wakeTrails[wakeTrailIndex].position = boat_texel_pos;
+		wakeTrails[wakeTrailIndex].direction = boatDirXZ;
+		wakeTrails[wakeTrailIndex].age = 0.0f;
+		wakeTrails[wakeTrailIndex].boat_velocity = World_Boat_Velocity;
+
+		if (wakeTrailCount < Max_Wave_Trail)
+			++wakeTrailCount;
+
+		wakeTrailIndex = (wakeTrailIndex + 1) % Max_Wave_Trail;
+	}
+
+	const float driftSpeed = 10.0f; // 텍셀 단위 초당 속도
+
+	for (int i = 0; i < wakeTrailCount; ++i)
+	{
+		auto& trail = wakeTrails[i];
+
+		if (trail.age >= 0.0f)
+		{
+			trail.age += fTimeElapsed;
+
+			// 보트 진행 방향으로 drift
+			trail.position.x += trail.direction.x * driftSpeed * fTimeElapsed;
+			trail.position.y += trail.direction.y * driftSpeed * fTimeElapsed;
+
+			// 5초가 지나면 비활성화
+			if (trail.age >= 5.0f)
+			{
+				trail.age = -1.0f;
+				trail.boat_velocity = 0.0f;
+			}
+		}
+	}
+
+	mapped_wave_trail_info->g_GlobalTime += fTimeElapsed;
+	mapped_wave_trail_info->g_NumTrails = Max_Wave_Trail; // Shader는 age < 0.0 으로 필터링
+	mapped_wave_trail_info->g_BaseStrength = 0.3f;
+	mapped_wave_trail_info->g_DecayRate = 0.05f;
+	mapped_wave_trail_info->g_TimeDecayRate = 0.05f;
+}
+
+void Wave_Object::Update_Wave_Trail_Buffer(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!m_pWakeTrailUploadBuffer || !wave_trail_data_texture || wave_trail_data_texture->GetResource(0) == nullptr) 
+		return;
+
+	const UINT elementSize = sizeof(BoatWakeTrail);
+	const UINT elementCount = static_cast<UINT>(wakeTrails.size());
+	const UINT bufferSize = elementSize * elementCount;
+
+	void* mappedPtr = nullptr;
+	if (SUCCEEDED(m_pWakeTrailUploadBuffer->Map(0, nullptr, &mappedPtr)))
+	{
+		memcpy(mappedPtr, wakeTrails.data(), Max_Wave_Trail * sizeof(BoatWakeTrail));
+		m_pWakeTrailUploadBuffer->Unmap(0, nullptr);
+	}
+
+	ID3D12Resource* dstBuffer = wave_trail_data_texture->GetResource(0);
+	pd3dCommandList->CopyBufferRegion(dstBuffer, 0, m_pWakeTrailUploadBuffer, 0, bufferSize);
+}
+
+void Wave_Object::Set_Wave_Trail_Info(CB_Wave_Trail_Info& wave_trail_info)
+{
+	if (!mapped_wave_trail_info) 
+		return;
+
+	*mapped_wave_trail_info = wave_trail_info;
+}
+
 void Wave_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
 
-	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+	wave_general_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
 
 	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+		wave_general_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 
 
 		if (Plane_Material && Plane_Material->m_pShader)
@@ -4354,12 +4502,12 @@ void Wave_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 {
 	int renderHeightMapIndex = bPingPongToggle ? 1 : 0;
 
-	wave_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
+	wave_general_data_texture->BindGraphicsSrvToRootParameter(pd3dCommandList, 5, renderHeightMapIndex);
 
 	if (Get_Active() && m_pMesh != NULL)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-		wave_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
+		wave_general_data_texture->UpdateGraphicsSrvShaderVariables(pd3dCommandList);
 
 
 		if (Plane_Material && Plane_Material->m_pShader)
@@ -4384,7 +4532,7 @@ void Wave_Object::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 Boat_Object::Boat_Object() : CGameObject(1)
 {
 	m_fMaxVelocityXZ = 200.0f;
-	m_xmf3Velocity.x = 300.0f;
+	m_xmf3Velocity.x = 0.0f;
 	m_xmf3Velocity.y = 0.0f;
 	m_xmf3Velocity.z = 0.0f;
 	m_fFriction = 50.0f;
@@ -4459,40 +4607,64 @@ void Boat_Object::UpdateRotationFromWave(float fTimeElapsed)
 
 void Boat_Object::UpdateMovementOnWave(float fTimeElapsed)
 {
-	// --- 속도 제한 ---
-	float velocityFull = Vector3::Length(m_xmf3Velocity);
-	if (velocityFull > m_fMaxVelocityXZ)
-	{
-		float scale = m_fMaxVelocityXZ / velocityFull;
-		m_xmf3Velocity.x *= scale;
-		m_xmf3Velocity.z *= scale;
-	}
-
-	// --- Look 벡터 방향으로 이동 처리 ---
-	XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
-	XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, velocityFull, false);
-
 	XMFLOAT3 pos = GetPosition();
-	XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
-	XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
 
-	// --- 부드러운 높이 보정 ---
+	if (!isRunning)
+	{
+		// --- 속도 제한 ---
+		float velocityFull = Vector3::Length(m_xmf3Velocity);
+		if (velocityFull > m_fMaxVelocityXZ)
+		{
+			float scale = m_fMaxVelocityXZ / velocityFull;
+			m_xmf3Velocity.x *= scale;
+			m_xmf3Velocity.z *= scale;
+		}
 
-	smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
-	newPos.y = smoothedHeight * 30.0f;
+		// --- Look 벡터 방향으로 이동 처리 ---
+		XMFLOAT3 lookDir = Vector3::Normalize(GetLook());
+		XMFLOAT3 velocityXZ = Vector3::ScalarProduct(lookDir, Vector3::Length(m_xmf3Velocity), false);
 
-	SetPosition(newPos);
+		XMFLOAT3 deltaMove = Vector3::ScalarProduct(velocityXZ, fTimeElapsed, false);
+		XMFLOAT3 newPos = Vector3::Add(pos, deltaMove);
 
-	// --- 감속 처리 (속도 크기 감소만)
-	float fDeceleration = m_fFriction * fTimeElapsed;
-	if (fDeceleration > velocityFull) fDeceleration = velocityFull;
+		// --- 부드러운 높이 보정 ---
+		smoothedHeight = std::lerp(smoothedHeight, wave_height, 0.1f);
+		newPos.y = smoothedHeight * 30.0f;
 
-	velocityFull -= fDeceleration;
+		SetPosition(newPos);
 
-	// 감속된 속도를 Look 방향에 재적용
-	XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFull, false);
-	m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+		// --- 감속 처리 (속도 크기 감소만)
+		float fDeceleration = m_fFriction * fTimeElapsed;
+		float velocityFullDecel = Vector3::Length(m_xmf3Velocity);
+		if (fDeceleration > velocityFullDecel) fDeceleration = velocityFullDecel;
+
+		velocityFullDecel -= fDeceleration;
+
+		// 감속된 속도를 Look 방향에 재적용
+		XMFLOAT3 newVelocity = Vector3::ScalarProduct(lookDir, velocityFullDecel, false);
+		m_xmf3Velocity = XMFLOAT3(newVelocity.x, 0.0f, newVelocity.z);
+	}
+	else
+	{
+		// --- 서버 기반 위치로 방향/속도 추정 ---
+		XMFLOAT3 direction = Vector3::Subtract(pos, previous_position);
+		direction.y = 0.0f; // Ignore vertical movement
+
+		float distance = Vector3::Length(direction);
+		XMFLOAT3 velocity = Vector3::ScalarProduct(direction, 1.0f / fTimeElapsed, false);
+		velocity.y = 0.0f; // Ensure Y is not included
+
+		m_xmf3Velocity = velocity;
+
+		if (distance > 0.0001f)
+			SetLookDirection(Vector3::Normalize(direction));
+
+		// --- 높이 보정 ---
+		pos.y = std::lerp(smoothedHeight, wave_height, 0.1f) * 30.0f;
+		SetPosition(pos);
+	}
 }
+
 
 void Boat_Object::Animate(float fTimeElapsed)
 {
@@ -4545,11 +4717,37 @@ bool Boat_Object::GetMarkerWorldPosition(const std::string& name, XMFLOAT3& outW
 	return true;
 }
 
+void Boat_Object::Record_Last_Pos()
+{
+	XMFLOAT3 world_pos = GetPosition();
+	previous_position.x = world_pos.x;
+	previous_position.y = 0.0f;
+	previous_position.z = world_pos.z;
+
+}
+
 bool Boat_Object::Is_Moving()
 {
-	if (5.0f < Vector3::Length(m_xmf3Velocity))
+	if (5.0f < Vector3::Length(m_xmf3Velocity)) // Default
 		return true;
-	return false;
+	else
+	{
+		if (isRunning) // online
+		{
+			XMFLOAT3 present_pos = GetPosition();
+			present_pos.y = 0.0f;
+			if (Compare_XMFLOAT3(previous_position, present_pos, 0.001f))
+			{
+				return false;
+			}
+			else
+				return true;
+		}
+		return false;
+
+	}
+
+
 }
 
 void Boat_Object::Change_Model(bool is_stay_mode)

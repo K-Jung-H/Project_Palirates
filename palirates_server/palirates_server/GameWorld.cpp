@@ -1,20 +1,269 @@
 ﻿#include "stdafx.h"
 #include "GameWorld.h"
 
-
-
-GameWorld::GameWorld()
+void Dragon_Stage_SceneLogic::onExit()
 {
-	Init();
+    if (dragon_fire)
+    {
+        dragon_fire->SetActive(false);
+        dragon_fire.reset();
+    }
+
+    boss_ptr.reset();
+}
+
+void Dragon_Stage_SceneLogic::init(ParticleManager& pm)
+{
+    SceneLogic::init(pm);
+
+    if (!dragon_fire)
+    {
+        Particle_Format p;
+        p.area_xyz = XMFLOAT3{ 1000,1000,1000 };
+        p.lifetime = 300;
+        p.main_direction = XMFLOAT3{ 1,0,0 };
+        p.particle_type = Particle_Type::dragon_breath;
+
+        dragon_fire = p_mg->Create_Particle_Object(p);
+        dragon_fire->SetActive(false);
+    }
+}
+
+void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
+{
+    auto boss = boss_ptr.lock();
+    if (!boss) 
+        return;
+
+    if (boss->attackPhase == -1) 
+        return;
+
+    auto boss_weapon = boss->Weapon_ptr;
+
+    if (ctx.out_zoom_object) 
+    {
+        if (boss->attackPhase == 1) 
+        {
+            *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
+        }
+        else 
+        {
+            *ctx.out_zoom_object = nullptr;
+        }
+    }
+
+    auto dragon = dynamic_cast<Dragon*>(boss.get());
+    if (!dragon) return;
+
+    Particle_Format p;
+    p.area_xyz = XMFLOAT3{ 1000,1000,1000 };
+    p.lifetime = 300;
+    p.main_direction = XMFLOAT3{ 1,0,0 };
+    p.particle_type = Particle_Type::dragon_breath;
+
+    if (boss->attackPhase == 2) 
+    {
+        if (!dragon_fire) 
+        {
+            dragon_fire = p_mg->Create_Particle_Object(p);
+            dragon_fire->SetNeedSyncType(true);
+        }
+        dragon_fire->SetActive(true);
+    }
+    else 
+    {
+        if (dragon_fire) 
+        {
+            dragon_fire->SetActive(false);
+            dragon_fire.reset();
+        }
+    }
+
+    if (!boss_weapon || !dragon_fire || !dragon_fire->Get_Active()) 
+        return;
+
+    auto obb = boss_weapon->Get_Collider_OBB();
+    if (!obb) return;
+
+    XMVECTOR obbCenter = XMLoadFloat3(&obb->Center);
+    XMVECTOR obbRotationQuat = XMLoadFloat4(&obb->Orientation);
+    XMVECTOR defaultForward = XMVectorSet(0, 0, 1, 0);
+    XMVECTOR rotatedForward = XMVector3Rotate(defaultForward, obbRotationQuat);
+
+    float forwardOffset = 10.0f;
+    float heightOffset = -5.0f;
+    XMVECTOR offsetVec = rotatedForward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
+    XMVECTOR finalPos = obbCenter + offsetVec;
+
+    XMFLOAT3 position, forward;
+    XMStoreFloat3(&position, finalPos);
+    XMStoreFloat3(&forward, rotatedForward);
+
+    dragon_fire->SetPosition(position);
+    dragon_fire->SetLook(forward);
+}
+
+void Anubis_Stage_SceneLogic::onExit()
+{
+    if (sand_env)
+    {
+        sand_env->SetActive(false);
+        sand_env.reset();
+    }
+
+    if (sand_anubis_effect)
+    {
+        sand_anubis_effect->SetActive(false);
+        sand_anubis_effect.reset();
+    }
+}
+
+void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
+{
+    SceneLogic::init(pm);
+
+    if (!sand_env)
+    {
+        Particle_Format env_sand;
+        env_sand.area_xyz = XMFLOAT3{ 10,10,10 };
+        env_sand.lifetime = 10000.0f;
+        env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+        env_sand.particle_type = Particle_Type::sand;
+
+        sand_env = p_mg->Create_Particle_Object(env_sand);
+        sand_env->Set_Particle_Status(10000);
+        sand_env->SetNeedSyncType(true);
+        sand_env->SetPosition(XMFLOAT3(2176.0f, 500.0f, 1536.0f));
+        sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    }
+
+    if (!sand_anubis_effect)
+    {
+        Particle_Format anubis_sand;
+        anubis_sand.area_xyz = XMFLOAT3{ 10,10,10 };
+        anubis_sand.lifetime = 10000.0f;
+        anubis_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+        anubis_sand.particle_type = Particle_Type::sand;
+
+        sand_anubis_effect = p_mg->Create_Particle_Object(anubis_sand);
+        sand_anubis_effect->Set_Particle_Status(10000);
+        sand_anubis_effect->SetNeedSyncType(true);
+        sand_anubis_effect->SetPosition(XMFLOAT3(2176.0f, 500.0f, 1536.0f));
+        sand_anubis_effect->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    }
+
+
+}
+
+void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
+{
+    auto boss = boss_ptr.lock();
+    if (!boss)
+        return;
+
+    if (boss->attackPhase == -1)
+        return;
+
+    //if (sand_anubis_effect)
+    //{
+    //    UINT particle_state = sand_anubis_effect->Get_Particle_Status();
+    //    if (particle_state == 0)
+    //    {
+    //        sand_anubis_effect->SetPosition(scene_center);
+    //        sand_anubis_effect->Set_Area(scene_area);
+    //        sand_anubis_effect->Set_Focus_Point(scene_center);
+    //        sand_anubis_effect->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+    //        sand_anubis_effect->Set_Speed(0.0f);
+    //    }
+    //    else if (particle_state == 1)
+    //    {
+    //        sand_anubis_effect->SetPosition(scene_center);
+    //        sand_anubis_effect->Set_Area(scene_area);
+    //        sand_anubis_effect->Set_Focus_Point(boss->GetPosition()); // anubis
+
+    //        sand_anubis_effect->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+    //        sand_anubis_effect->Set_Speed(0.0f);
+
+    //    }
+    //    else if (particle_state == 2)
+    //    {
+    //        sand_anubis_effect->SetPosition(boss->GetPosition()); // anubis
+    //        sand_anubis_effect->Set_Area(scene_area);
+    //        sand_anubis_effect->Set_Focus_Point(boss->GetPosition());
+    //        sand_anubis_effect->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+    //        // move
+    //        sand_anubis_effect->Set_Speed(100.0f);
+    //        sand_anubis_effect->Set_Direction(boss->GetLook());
+    //    }
+
+    //}
+}
+
+
+GameWorld::GameWorld(Scene_Type new_scene_type)
+{
+	Init(new_scene_type);
 }
 
 GameWorld::~GameWorld()
 {
 }
 
-void GameWorld::Init()
+void GameWorld::Init(Scene_Type new_scene_type)
 {
-    
+    if (scene_logic) 
+    { 
+        scene_logic->onExit(); 
+        scene_logic.reset(); 
+    }
+
+    scene_type = new_scene_type;
+
+    switch (new_scene_type)
+    {
+    case Stage_1:
+    {
+        scene_area = {};
+        scene_center = {};
+        scene_logic = std::make_unique<Dragon_Stage_SceneLogic>();
+    }
+        break;
+    case Stage_2: 
+    {
+        scene_area = {};
+        scene_center = {};
+        scene_logic = std::make_unique<Anubis_Stage_SceneLogic>();
+    }
+        break;
+    case Stage_3:
+        break;
+    case Stage_4:
+        break;
+    case Stage_5:
+        break;
+    case Stage_6:
+        break;
+    case Stage_7:
+        break;
+
+    case Lobby:
+    case Board:
+    case Test:
+    case etc:
+    case None:
+    default:
+        break;
+    }
+
+    if (scene_logic) 
+    {
+        scene_logic->init(particle_manager);
+        scene_logic->setBoss(boss_monster);
+        scene_logic->onEnter();
+    }
 }
 
 void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
@@ -22,6 +271,24 @@ void GameWorld::Load_Scene_Data(shared_ptr<GameObject> scene_obj)
     fixed_object_list.clear();
 	FlattenGameObjectHierarchy_Filter(scene_obj, fixed_object_list);
     AssignToUniformCells();
+}
+
+void GameWorld::Update_World(float dt)
+{
+    if (!scene_logic) 
+        return;
+
+    UpdateContext ctx;
+    {
+        ctx.dt = dt;
+        ctx.out_zoom_object = &zoom_object;
+        ctx.stage_clear = Stage_Clear;
+    }
+
+    scene_logic->update(ctx);
+
+
+
 }
 
 void GameWorld::FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList)
@@ -187,6 +454,11 @@ void GameWorld::Update_Collision(std::shared_ptr<Player> player_obj)
     player_obj->Set_Collider_OBB_Center(player_worldOBB.Center);
 }
 
+void GameWorld::Update_Particle(float elapsed_time)
+{
+    particle_manager.Update_Particle(elapsed_time);
+
+}
 
 void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
 {
@@ -203,11 +475,7 @@ void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
 
 }
 
-void GameWorld::Update_Particle(float elapsed_time)
-{
-    particle_manager.Update_Particle(elapsed_time);
 
-}
 
 void GameWorld::Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, MaxPlayer> player_list)
 {
@@ -244,6 +512,16 @@ FrameParticleChanges GameWorld::Get_Particle_Sync_Data()
     return particle_manager.FlushFrameChanges();
 }
 
+void GameWorld::Sand_Update()
+{
+    shared_ptr<Particle_Object> particle_obj = particle_manager.Get_Particle_Object(1);
+    UINT status = particle_obj->Get_Particle_Status();
+
+    status += 1;
+    status = status % 3;
+    particle_obj->Set_Particle_Status(status);
+}
+
 std::vector<BoundingOrientedBox> GameWorld::Get_Cell_OBBs(const XMFLOAT3& Pos)
 {
     std::vector<BoundingOrientedBox> obbs;
@@ -263,84 +541,10 @@ std::vector<BoundingOrientedBox> GameWorld::Get_Cell_OBBs(const XMFLOAT3& Pos)
     return obbs;
 }
 
-
-void GameWorld::Boss_Update(shared_ptr<Monster>boss_monster)
+void GameWorld::Set_Boss_Moster(shared_ptr<Monster> boss_ptr)
 {
-    if (!boss_monster)
-        return;
+    boss_monster = boss_ptr;
 
-    if (boss_monster->attackPhase == -1)
-        return;
-
-    auto boss_weapon = boss_monster->Weapon_ptr;
-
-    if (boss_monster->attackPhase == 1)
-    {
-        if (boss_weapon)
-            zoom_object = boss_weapon;
-        else
-            zoom_object = NULL;
-    }
-    else
-        zoom_object = NULL;
-
-    //==========================
-
-
-    auto dragon = dynamic_pointer_cast<Dragon>(boss_monster);
-    if (dragon)
-    {
-        Particle_Format p;
-        p.area_xyz = XMFLOAT3{ 1000,1000,1000 };
-        p.lifetime = 300;
-        p.main_direction = XMFLOAT3{ 1,0,0 };
-        p.particle_type = Particle_Type::dragon_breath;
-
-        if (boss_monster->attackPhase == 2)
-        {
-            if (!dragon_fire)
-            {
-                dragon_fire = particle_manager.Create_Particle_Object(p);
-                dragon_fire->SetNeedSyncType(true);
-            }
-            dragon_fire->SetActive(true);
-
-        }
-        else
-        {
-            if (dragon_fire)
-            {
-                dragon_fire->SetActive(false);
-                dragon_fire.reset();
-            }
-        }
-
-        if (boss_weapon)
-        {
-            if (!dragon_fire || !dragon_fire->Get_Active())
-                return;
-
-            std::shared_ptr<BoundingOrientedBox> obb = boss_weapon->Get_Collider_OBB();
-            if (!obb) return;
-
-            XMVECTOR obbCenter = XMLoadFloat3(&obb->Center);
-
-            XMVECTOR obbRotationQuat = XMLoadFloat4(&obb->Orientation);
-
-            XMVECTOR defaultForward = XMVectorSet(0, 0, 1, 0);
-            XMVECTOR rotatedForward = XMVector3Rotate(defaultForward, obbRotationQuat);
-
-            float forwardOffset = 10.0f;
-            float heightOffset = -5.0f;
-            XMVECTOR offsetVec = rotatedForward * forwardOffset + XMVectorSet(0, heightOffset, 0, 0);
-            XMVECTOR finalPosition = obbCenter + offsetVec;
-
-            XMFLOAT3 position, forward;
-            XMStoreFloat3(&position, finalPosition);
-            XMStoreFloat3(&forward, rotatedForward);
-
-            dragon_fire->SetPosition(position);
-            dragon_fire->SetLook(forward);
-        }
-    }
+    if (scene_logic) 
+        scene_logic->setBoss(boss_monster);
 }

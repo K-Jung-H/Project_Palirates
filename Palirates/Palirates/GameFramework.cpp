@@ -42,7 +42,7 @@ CGameFramework::CGameFramework()
 
 	m_pPlayer = NULL;
 
-	_tcscpy_s(m_pszFrameRate, _T("Palirates"));
+	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 
 	isRunning = false;
 }
@@ -1338,7 +1338,7 @@ void CGameFramework::FrameAdvance()
 	// ====================== [8] Frame Sync ======================
 	MoveToNextFrame();
 
-//	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
+	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 	
 	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
@@ -1863,28 +1863,39 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 	}
 }
 
+
+
 void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
+	constexpr int kPerParticleTokens = 16; // id, type, pos(3), look(3), area(3), dir(3), lifetime, state_index
+
 	if (command == "PARTICLE_CREATE" || command == "PARTICLE_UPDATE")
 	{
 		int count = std::stoi(tokens[1]);
 		int base = 2;
 
-
 		for (int i = 0; i < count; ++i)
 		{
-			int idx = base + i * 15;
-			if (idx + 14 >= tokens.size()) break;
+			int idx = base + i * kPerParticleTokens;
+
+
+			if (idx + (kPerParticleTokens - 1) >= static_cast<int>(tokens.size())) 
+				break;
 
 			Particle_Sync_Data particle_sync_data;
 
-			UINT id = std::stoi(tokens[idx]);
+
+			UINT id = static_cast<UINT>(std::stoul(tokens[idx + 0]));
 			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));
-			XMFLOAT3 pos{ std::stof(tokens[idx + 2]), std::stof(tokens[idx + 3]), std::stof(tokens[idx + 4]) };
-			XMFLOAT3 look{ std::stof(tokens[idx + 5]), std::stof(tokens[idx + 6]), std::stof(tokens[idx + 7]) };
-			XMFLOAT3 area{ std::stof(tokens[idx + 8]), std::stof(tokens[idx + 9]), std::stof(tokens[idx + 10]) };
+
+			XMFLOAT3 pos{ std::stof(tokens[idx + 2]),  std::stof(tokens[idx + 3]),  std::stof(tokens[idx + 4]) };
+			XMFLOAT3 look{ std::stof(tokens[idx + 5]),  std::stof(tokens[idx + 6]),  std::stof(tokens[idx + 7]) };
+			XMFLOAT3 area{ std::stof(tokens[idx + 8]),  std::stof(tokens[idx + 9]),  std::stof(tokens[idx + 10]) };
 			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };
+
 			float lifetime = std::stof(tokens[idx + 14]);
+
+			UINT status_index = static_cast<UINT>(std::stoul(tokens[idx + 15]));
 
 			particle_sync_data.particle_ID = id;
 			particle_sync_data.particle_type = type;
@@ -1893,6 +1904,9 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 			particle_sync_data.area_extent = area;
 			particle_sync_data.main_direction = dir;
 			particle_sync_data.LifeTime = lifetime;
+			particle_sync_data.particle_status_index = status_index;
+
+
 
 			if (command == "PARTICLE_CREATE")
 				stage_scene->Create_Particle_Object(particle_sync_data);
@@ -1907,11 +1921,11 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 		for (int i = 0; i < count; ++i)
 		{
 			int idx = 2 + i;
-			if (idx >= tokens.size()) break;
+			if (idx >= static_cast<int>(tokens.size())) 
+				break;
 
-			UINT id = std::stoi(tokens[idx]);
+			UINT id = static_cast<UINT>(std::stoul(tokens[idx]));
 			stage_scene->Remove_Particle_Object(id);
-
 		}
 	}
 }

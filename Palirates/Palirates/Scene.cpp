@@ -1867,7 +1867,6 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 			if (test_sand == NULL)
 				break;
 
-			test_sand->Update_Particle_State();;
 			test_sand->Update_Particle_State();
 
 			if (test_sand->Get_Particle_State() == 0)
@@ -1906,6 +1905,7 @@ bool CScene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM wPar
 								test_sand->SetPosition(pos);
 								test_sand->Set_Focus_Point(anubisPos);
 
+								// move
 								test_sand->Set_Speed(100.0f);
 								test_sand->Set_Direction(dir);
 							}
@@ -3103,7 +3103,7 @@ void Board_Scene::BuildDefaultLightsAndMaterials()
 	m_pLights[8].m_xmf4Ambient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Diffuse = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
 	m_pLights[8].m_xmf4Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	m_pLights[8].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+	m_pLights[8].m_xmf3Direction = XMFLOAT3(-0.57735f, -0.57735f, -0.57735f);
 
 
 }
@@ -3138,7 +3138,7 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}; 
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 100, true);
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 6000, 200, true);
 	wave_obj->Set_Name("board_scene_wave");
 	wave_obj->SetPosition(XMFLOAT3(0.0f, 10.0f, 0.0f));
 
@@ -3267,25 +3267,28 @@ void Board_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	{
 		water_splashes_info.shader_type = Particle_Shader_Type::continuous;
 		water_splashes_info.particle_type = Particle_Type::splash;
-		water_splashes_info.max_particles = 300;
+		water_splashes_info.max_particles = 500;
 
-		water_splashes_info.area_xyz = XMFLOAT3(1000.0f, 100.0f, 1000.0f);
+		water_splashes_info.area_xyz = XMFLOAT3(3000.0f, 500.0f, 3000.0f);
 
-		water_splashes_info.MaxLifetime = 0.3f;
+		water_splashes_info.MaxLifetime = 5.0f;
 
 		water_splashes_info.main_direction = XMFLOAT3(0.0f, 0.0f, 1.0f);
-		water_splashes_info.init_velocity_value = 100.0f;
-		water_splashes_info.acceleration = XMFLOAT3(0.0f, 10.0f, 0.0f);
+		water_splashes_info.init_velocity_value = 500.0f;
+		water_splashes_info.acceleration = XMFLOAT3(0.0f, -300, 0.0f);
 
 		water_splashes_info.size = 1.0f;
 		water_splashes_info.color = XMFLOAT3(0.0f, 0.0f, 1.0f);
 	}
 
 	shared_ptr<Particle_Shape_Mesh> particle_mesh;
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 
-	water_particle_1 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
-	water_particle_2 = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_front = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_front->Set_World_Coordinate();
+
+	water_particle_back = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, water_splashes_info);
+	water_particle_back->Set_World_Coordinate();
 #endif
 	//=====================================================
 
@@ -3319,14 +3322,28 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 	{
 		wave_obj->Synchronize_Wave_to_Boat(pirate_ship.get());
 		wave_obj->Animate(pd3dCommandList, fTimeElapsed);
+		wave_obj->Animate_Wave_Trail_Buffer(fTimeElapsed);
+
 	}
 
 #endif
 
-	if (!isRunning)
+	if (isRunning)
 	{
-		pirate_ship->Animate(fTimeElapsed);
-		pirate_ship->HandleBoundaryReflection(2000.0f);
+		if (pirate_ship)
+		{
+			pirate_ship->UpdateRotationFromWave(fTimeElapsed);
+			pirate_ship->UpdateMovementOnWave(fTimeElapsed);
+			pirate_ship->HandleBoundaryReflection(2000.0f);
+		}
+	}
+	else
+	{
+		if (pirate_ship)
+		{
+			pirate_ship->Animate(fTimeElapsed);
+			pirate_ship->HandleBoundaryReflection(2000.0f);
+		}
 	}
 
 	if (m_pLights)
@@ -3335,21 +3352,6 @@ void Board_Scene::Animate_Objects(ID3D12GraphicsCommandList* pd3dCommandList, fl
 		m_pLights[7].m_xmf3Position.y += 100.0f;
 	}
 
-
-#ifdef RENDER_PARTICLE
-	XMFLOAT3 bottom_head_particle_pos;
-	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
-
-
-	water_particle_1->SetPosition(bottom_head_particle_pos);
-	water_particle_1->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
-
-	XMFLOAT3 bottom_tail_particle_pos;
-	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
-
-	water_particle_2->SetPosition(bottom_tail_particle_pos);
-	water_particle_2->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
-#endif
 
 	if (m_pPlayer && m_pPlayer->GetCamera())
 	{
@@ -3364,7 +3366,10 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 #ifdef RENDER_WAVE
 	shared_ptr<Wave_Object> wave_obj = obj_manager->Get_Wave_Object();
 	if (wave_obj)
+	{
+		wave_obj->Update_Wave_Trail_Buffer(pd3dCommandList);
 		wave_obj->Copy_Buffer_Data(pd3dCommandList);
+	}
 #endif
 
 	obj_manager->Check_Fixed_OBB_Camera_Culling(pd3dDevice, pd3dCommandList, main_Camera.get());
@@ -3372,20 +3377,9 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList);
 
-	bool isShipMoving = pirate_ship->Is_Moving(); 
-	bool isSailMode = pirate_ship->Get_Sail_Mode(); 
 
-	if (isShipMoving && !isSailMode)
-	{
-		pirate_ship->Set_Sail_Mode(true); 
-		pirate_ship->Change_Model(false); 
-	}
-	else if (!isShipMoving && isSailMode)
-	{
-		pirate_ship->Set_Sail_Mode(false); 
-		pirate_ship->Change_Model(true); 
-	}
-
+	Update_Boat();
+	Update_Splash_Particle();
 
 	if (focus_button)
 	{
@@ -3462,10 +3456,67 @@ void Board_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	}
 }
 
+void Board_Scene::Update_Boat()
+{
+	bool isShipMoving = pirate_ship->Is_Moving();
+	bool isSailMode = pirate_ship->Get_Sail_Mode();
+
+	if (isShipMoving && !isSailMode)
+	{
+		pirate_ship->Set_Sail_Mode(true);
+		pirate_ship->Change_Model(false);
+	}
+	else if (!isShipMoving && isSailMode)
+	{
+		pirate_ship->Set_Sail_Mode(false);
+		pirate_ship->Change_Model(true);
+	}
+}
+
+void Board_Scene::Update_Splash_Particle()
+{
+
+
+#ifdef RENDER_PARTICLE
+	XMFLOAT3 bottom_head_particle_pos;
+	pirate_ship->GetMarkerWorldPosition("Head", bottom_head_particle_pos);
+
+	XMFLOAT3 bottom_tail_particle_pos;
+	pirate_ship->GetMarkerWorldPosition("Tail", bottom_tail_particle_pos);
+
+
+	XMFLOAT3  front_dir = Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false);
+	XMFLOAT3  back_dir = Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false);
+	back_dir.y += 0.5f;
+
+	water_particle_front->SetPosition(bottom_head_particle_pos);
+	water_particle_front->Set_Main_Direction(Vector3::ScalarProduct(pirate_ship->GetLook(), -1.0f, false));
+
+	water_particle_back->SetPosition(bottom_tail_particle_pos);
+	water_particle_back->Set_Main_Direction(back_dir);
+
+#endif
+
+	bool isShipMoving = pirate_ship->Is_Moving();
+
+	if (!isShipMoving)
+	{
+		water_particle_front->DisableEmit();
+		water_particle_back->DisableEmit();
+	}
+	else
+	{
+		water_particle_front->EnableEmit();
+		water_particle_back->EnableEmit();
+	}
+}
+
 void Board_Scene::After_Update_Objects()
 {
 	CScene::After_Update_Objects();
 
+	if (pirate_ship)
+		pirate_ship->Record_Last_Pos();
 }
 
 int Board_Scene::Get_Closest_Island_Index(float range)
@@ -4066,6 +4117,12 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, new_pos);
 		}	break;
 
+		case 'T':
+		{
+			if (anubis_sand_particle)
+				anubis_sand_particle->Update_Particle_State();
+		}
+
 		default:
 			break;
 		}
@@ -4249,6 +4306,9 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	Scene_area = XMFLOAT3(2400.0f, 1000.0f, 2400.0f);
+
+
 	//===============================================================================
 
 #ifdef RENDER_WAVE
@@ -4366,7 +4426,10 @@ void Stage_1_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	
 }
 
-
+void Stage_1_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
+}
 //==========================================================================================
 
 
@@ -4404,16 +4467,19 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
+	Scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+	Scene_center = XMFLOAT3(2176.0f, 500.0f, 1536.0f);
+
 	//===============================================================================
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+	//std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	//wave_obj->Set_Name("in_game_wave");
+	//wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
 
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	obj_manager->Set_Wave_Object(wave_obj);
+	//wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	//wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	//obj_manager->Set_Wave_Object(wave_obj);
 #endif
 
 	//===============================================================================
@@ -4433,7 +4499,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.max_particles = 20000;
 		env_sand_info.MaxLifetime = 100.0f;
 
-		env_sand_info.area_xyz = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+		env_sand_info.area_xyz = XMFLOAT3(Scene_area);
 		env_sand_info.EmitFaceIndex = FACE_TOP;
 
 		env_sand_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
@@ -4444,11 +4510,37 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.color = XMFLOAT3(0.75f, 0.7f, 0.45f);
 	}
 
+	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	//env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
+	//env_sand_particle->Set_World_Coordinate();
+	//env_sand_particle->SetPosition(Scene_center);
+	//env_sand_particle->Set_Area(Scene_area);
+
+	Particle_Format anubis_sand_info;
+	{
+		anubis_sand_info.shader_type = Particle_Shader_Type::sand;
+		anubis_sand_info.particle_type = Particle_Type::sand;
+		anubis_sand_info.max_particles = 20000;
+		anubis_sand_info.MaxLifetime = 10.0f;
+
+		anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
+		anubis_sand_info.EmitFaceIndex = FACE_FRONT;
+
+		anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+		anubis_sand_info.init_velocity_value = 100.0f;
+		anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
+
+		anubis_sand_info.size = 0.3f;
+		anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
+	}
+
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
-	env_sand_particle->Set_World_Coordinate();
-	env_sand_particle->SetPosition(2276.0f, 500.0f, 1536.0f);
-	env_sand_particle->Set_Area(XMFLOAT3(4352.0f, 1000.0f, 3072.0f));
+	anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
+	anubis_sand_particle->Set_Local_Coordinate();
+	anubis_sand_particle->SetPosition(Scene_center);
+	anubis_sand_particle->Set_Area(Scene_area);
+
+	anubis_sand_particle->Set_Focus_Point(Scene_center);
 
 #endif
 
@@ -4504,21 +4596,21 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	
-	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+	//test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	//
+	//test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
 
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
+	//SpriteInfo test_sprite_info;
+	//test_sprite_info.frameCols = 5;
+	//test_sprite_info.frameRows = 7;
+	//test_sprite_info.totalFrames = 32;
+	//test_sprite_info.frameTime = 0.05f;
 
-	test_player_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-	
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
+	//test_player_aura->Set_Sprite_Info(test_sprite_info);
+	//obj_manager->Add_Object(test_player_aura, Object_Type::aura);
+	//
+	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
+	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
 
 	//===============================================================================
 
@@ -4542,6 +4634,48 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 }
 
+void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
+
+
+	if (anubis_sand_particle)
+	{
+		UINT particle_state = anubis_sand_particle->Get_Particle_State();
+		if (particle_state == 0)
+		{
+			anubis_sand_particle->SetPosition(Scene_center);
+			anubis_sand_particle->Set_Area(Scene_area);
+			anubis_sand_particle->Set_Focus_Point(Scene_center);
+			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+			anubis_sand_particle->Set_Speed(0.0f);
+		}
+		else if (particle_state == 1)
+		{
+			anubis_sand_particle->SetPosition(Scene_center);
+			anubis_sand_particle->Set_Area(Scene_area);
+			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition()); // anubis
+
+			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+
+			anubis_sand_particle->Set_Speed(0.0f);
+
+		}
+		else if (particle_state == 2)
+		{
+			anubis_sand_particle->SetPosition(m_pPlayer->GetPosition()); // anubis
+			anubis_sand_particle->Set_Area(Scene_area);
+			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition());
+			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
+
+			// move
+			anubis_sand_particle->Set_Speed(100.0f);
+			anubis_sand_particle->Set_Direction(m_pPlayer->GetLook());
+		}
+		
+	}
+}
 
 //===============================================================================
 
