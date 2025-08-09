@@ -376,7 +376,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     {
         if (player_ptr)
         {
-            auto obbList = game_world.Get_Cell_OBBs(player_ptr->GetPosition());
+            auto obbList = game_world->Get_Cell_OBBs(player_ptr->GetPosition());
             //game_world.Update_Collision(player_ptr);
             player_ptr->update(elapsedTime);
             player_ptr->update_collision(elapsedTime, obbList);

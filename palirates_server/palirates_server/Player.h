@@ -33,6 +33,7 @@ public:
     bool motion_blur = false;
     bool BreathHit = false;
     int Client_ID = -1;
+    bool bCanControll = true;
     Player(int model_index);
     virtual ~Player() {}
 
