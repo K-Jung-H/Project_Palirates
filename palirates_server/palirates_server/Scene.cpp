@@ -425,8 +425,8 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             }
         }
     }
-    // Collision detection between monster weapons and players
-    for (auto m : Monster_List) {
+    for (auto m : Monster_List) 
+    {
         if (!m) continue;
         auto obbList = game_world->Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
@@ -513,13 +513,16 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             }
         }
     }
-    for (auto m : Monster_List) {
+    for (auto m : Monster_List) 
+    {
         XMFLOAT3 pos = m->GetPosition();
         pos.x = std::clamp(pos.x, 0.0f, g_mapSize.x);
         pos.z = std::clamp(pos.z, 0.0f, g_mapSize.y);
         m->SetPosition(pos);
     }
-    game_world->Boss_Update(Boss_Monster);
+
+
+    game_world->Update_World(elapsedTime);
     game_world->Update_Particle(elapsedTime);
 
     if (Monster_List.size() == 0)
@@ -943,6 +946,11 @@ void Stage_Scene::server_bleeding()
     game_world->Add_Bleeding_Particle(pos, dir);
 }
 
+void Stage_Scene::server_Sand_Control()
+{
+    std::lock_guard<std::recursive_mutex> lock(sceneMutex);
+    game_world->Sand_Update();
+}
 
 //=========================================================
 

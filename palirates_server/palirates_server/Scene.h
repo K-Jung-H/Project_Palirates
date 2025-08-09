@@ -170,7 +170,7 @@ public:
     void server_Fog_Control();
     void server_X_Ray_Control();
     void server_bleeding();
-
+    void server_Sand_Control();
 
     bool bStageClear = false;
     bool bMonster_x_ray_State = false;
