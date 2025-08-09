@@ -950,6 +950,12 @@ void Particle_Manager::Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsC
 			auto obj = it->second;
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
+			
+			if(obj->Get_Particle_Type() == Particle_Type::sand)
+			{
+				if (data.particle_status_index < 3)
+					obj->Set_Particle_State(data.particle_status_index);				
+			}
 		}
 		else
 			createQueue.push(data);
@@ -1005,6 +1011,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.max_particles = 5000;
 			format.MaxLifetime = 10;
 			format.area_xyz = data.area_extent;
+			format.area_xyz = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
 			format.EmitFaceIndex = FACE_FRONT;
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 100;

@@ -109,7 +109,8 @@ protected:
     std::array<int32_t, MaxPlayer> player_keyState;
     std::array<bool, MaxPlayer> check_clear_state;
 
-    GameWorld game_world;
+    std::shared_ptr<GameWorld> game_world;
+
     std::shared_ptr<GameObject> scene_obj;
 
     vector<std::shared_ptr<GameObject>> monster_init_spawn_frame_list;
@@ -169,7 +170,7 @@ public:
     void server_Fog_Control();
     void server_X_Ray_Control();
     void server_bleeding();
-
+    void server_Sand_Control();
 
     bool bStageClear = false;
     bool bMonster_x_ray_State = false;

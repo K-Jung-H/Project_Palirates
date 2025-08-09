@@ -118,6 +118,7 @@ void ParticleManager::Update_Particle(float elapsed_time)
         std::lock_guard<std::mutex> lock(particle_manage_mutex);
 
 
+
         for (auto& [id, particle] : particle_map)
         {
             particle->Update(elapsed_time);

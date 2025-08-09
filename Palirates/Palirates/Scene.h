@@ -413,6 +413,13 @@ public:
 	static bool Change_Scene_Signal; // For send server
 	static bool Stage_Clear_Signal; // For Get server
 	static bool Monster_Depth_Render; // For Get server
+
+	XMFLOAT3 Scene_area;
+	XMFLOAT3 Scene_center;
+
+	shared_ptr<ParticleObject> anubis_sand_particle = NULL;
+
+
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -454,6 +461,7 @@ private:
 
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 };
 
@@ -468,6 +476,7 @@ private:
 
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 
 };
 

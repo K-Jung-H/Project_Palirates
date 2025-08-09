@@ -12,6 +12,10 @@ enum class Particle_Type
     sand_storm = 5,
     //=======================
     bleed = 10,
+    //=======================
+    env_snow = 20,
+    env_sand = 21,
+    //=======================
     etc = -1
 };
 
@@ -26,10 +30,10 @@ struct Particle_Format
 
 class Particle_Object : public GameObject
 {
-private:
+protected:
     Particle_Format particle_format;
     UINT particle_id = 0;
-
+    UINT particle_status = -1;
     float LifeTime = 0.0f;
     bool Active = false;
 
@@ -42,6 +46,10 @@ public:
     Particle_Format Get_Format() { return particle_format; };
     UINT Get_Particle_ID() { return particle_id; }
     float Get_LifeTime() { return LifeTime; }
+
+    void Set_Particle_Status(UINT new_index) { particle_status = new_index; }
+
+    UINT Get_Particle_Status() { return particle_status; }
 
     void SetNeedSyncType(bool enable) { is_need_to_sync = enable; }
     bool IsContinuousSyncType() const { return is_need_to_sync; }
