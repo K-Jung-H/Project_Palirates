@@ -62,6 +62,7 @@ int AnimationRegistry::GetPlayerAnimationTrack(State state) {
     case State::Get_Hit_F2:     return TRACK_GET_HIT_F2;
     case State::Dive:         return TRACK_DIVEROLL_FORWARD;
     case State::Knock_Down:  return TRACK_KNOCK_DOWN;
+    case State::Get_Up:  return TRACK_GET_UP;
     default: return TRACK_IDLE;
     }
     return 0;

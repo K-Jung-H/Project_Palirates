@@ -34,6 +34,7 @@ public:
     bool BreathHit = false;
     int Client_ID = -1;
     bool bCanControll = true;
+    XMFLOAT3 CommandSetLook = XMFLOAT3(0.0f, 0.0f, 0.0f);
     Player(int model_index);
     virtual ~Player() {}
 
