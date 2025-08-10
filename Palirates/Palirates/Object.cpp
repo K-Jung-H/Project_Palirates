@@ -5020,7 +5020,9 @@ void CMonsterObject::SetupWeaponCollider()
 void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
-
+	if (syncData.bStateChange) {
+		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
+	}
 	currentHP = syncData.hp;
 }
 

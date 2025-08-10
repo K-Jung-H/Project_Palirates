@@ -1702,11 +1702,13 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 	if (tokens.size() < 3) return;
 	int list_size = std::stoi(tokens[1]);
 
+	static std::unordered_map<int, uint32_t> lastSeenVer;
+
 	int startIndex = 2;
 	for (int i = 0; i < list_size; ++i)
 	{
 		int base = startIndex;
-		if (base + 9 > (int)tokens.size()) break;
+		if (base + 11 > (int)tokens.size()) break;
 
 		int monsterId = std::stoi(tokens[base + 0]);
 		float px = std::stof(tokens[base + 1]);
@@ -1717,13 +1719,22 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		float lz = std::stof(tokens[base + 6]);
 		bool bStateChange = (tokens[base + 7] == "1" || tokens[base + 7] == "true");
 		float hp = std::stof(tokens[base + 8]);
+		uint32_t stateVer = static_cast<uint32_t>(std::stoul(tokens[base + 9])); 
+		int stateEnum = std::stoi(tokens[base + 10]);
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-		syncData.bStateChange = bStateChange;
+		syncData.bStateChange = false;
 		syncData.hp = hp;
 		syncData.track_info_list.clear();
+		syncData.stateEnum = stateEnum;
+
+		auto& seen = lastSeenVer[monsterId];
+		if (seen != stateVer) {
+			seen = stateVer;
+			syncData.bStateChange = true;       
+		}
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
 		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
@@ -1737,7 +1748,7 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
 		}
 
-		startIndex = base + 9;
+		startIndex = base + 11;
 	}
 }
 

@@ -181,7 +181,6 @@ void StateMachine::changeState(State newState, Key_Value key_event)
 
 void StateMachine::enterState(State state, Key_Value key_event)
 {
-
     switch (state)
     {
     case State::Idle:
@@ -618,7 +617,7 @@ MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
 
 void MonsterStateMachine::update(float Elapsed_time)
 {
-  //  OnPrepareUpdate(6.0f, Elapsed_time);
+    OnPrepareUpdate(6.0f, Elapsed_time);
 
     //if (stateElapsedTime >= stateChangeTime) {
     //    switch (Get_State()) {
@@ -679,7 +678,7 @@ void MonsterStateMachine::OnPrepareUpdate(float blendSpeedOffSet, float Elapsed_
         }
     }
 
-    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+   // std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
 }
 
 void MonsterStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
@@ -723,10 +722,11 @@ void MonsterStateMachine::enterState(State state, Key_Value key_event)
         }*/
     }
 
+
     std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
     int currTrack = GetMonsterAnimationTrack(m_pOwner->mType, state);
     m_pOwner->targetWeights[currTrack] = 1.0f;
-    animController->m_pAnimationTracks[currTrack].m_fPosition = 0.0f;
+    m_pOwner->GetSkinnedAnimationController()->m_pAnimationTracks[currTrack].m_fPosition = 0.0f;
 }
 
 void MonsterStateMachine::exitState(State state, Key_Value key_event)
@@ -747,7 +747,7 @@ void MonsterStateMachine::SetWeight()
             continue;
 
         float newWeight = prev + (target - prev) * blendSpeed;
-        animController->SetTrackWeight(i, newWeight);
+        m_pOwner->GetSkinnedAnimationController()->SetTrackWeight(i, newWeight);
     }
 }
 

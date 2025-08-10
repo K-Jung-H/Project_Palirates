@@ -640,6 +640,8 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
 
             oss << "," << sync_Data.stateChanged;
             oss << "," << sync_Data.hp;
+            oss << "," << monster->GetStateMachine()->m_stateVer;
+            oss << "," << int(monster->GetStateMachine()->GetCurrentStateEnum());
         }
 
         oss << "\n";
