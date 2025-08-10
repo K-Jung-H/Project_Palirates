@@ -4944,6 +4944,7 @@ void CMonsterObject::Animate(float fTimeElapsed)
 		m_pSkinnedAnimationController->AdvanceTime(fTimeElapsed, this);
 	}
 
+	GetStateMachine()->update(fTimeElapsed);
 	/*if (On_Ground)
 	{
 		CHeightMapTerrain* pTerrain = (CHeightMapTerrain*)m_pPlayerUpdatedContext;
@@ -4960,7 +4961,6 @@ void CMonsterObject::Animate(float fTimeElapsed)
 	if (child_ptr != nullptr)
 		child_ptr->Animate(fTimeElapsed);
 
-	GetStateMachine()->update(fTimeElapsed);
 }
 
 void CMonsterObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera) 
@@ -5021,21 +5021,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
 
-	auto controller = GetSkinnedAnimationController();
-	if (!controller) return;
-	controller->ResetWeight();
-	auto track = controller->m_pAnimationTracks;
-	vector<Animation_Sync> track_list = syncData.track_info_list;
-
-	for (Animation_Sync animation_track_info : track_list)
-	{
-		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
-		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
-		//if (animation_track_info.track_index == Hit_Track_idx && track[animation_track_info.track_index].m_fWeight > 0.5f && )
-	}
 	currentHP = syncData.hp;
-	controller->ApplyCurrentAnimationPose(this);
-	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -5059,9 +5045,10 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	};
 
 	Hit_Track_idx = TRACK_FISHMAN_GET_HIT;
-	m_StateMachine = std::make_unique<FishManStateMachine>(this);
+	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
 
 	type = EObjectType::Monster;
+	mType = Monster_Type::Fishman;
 
 	CLoadedModelInfo* pFishManModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/FishmanLP.bin", NULL);
 
@@ -5124,9 +5111,10 @@ CAnubisObject::CAnubisObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	n_Animation = 10;
 	RootIndex = 0;
 
-	m_StateMachine = std::make_unique<AnubisStateMachine>(this);
+	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
 
 	type = EObjectType::Monster;
+	mType = Monster_Type::Anubis;
 
 	CLoadedModelInfo* pAnubisModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Anubis_LP.bin", NULL);
 
@@ -5181,9 +5169,10 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	n_Animation = 13;
 	RootIndex = 16;
 
-	m_StateMachine = std::make_unique<DragonStateMachine>(this);
+	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
 
 	type = EObjectType::Monster;
+	mType = Monster_Type::Dragon;
 
 	CLoadedModelInfo* pDragonModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Dragon_LP.bin", NULL);
 

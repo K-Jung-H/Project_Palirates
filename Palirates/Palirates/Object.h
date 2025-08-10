@@ -618,7 +618,7 @@ public:
 public:
     char                     m_pstrFrameName[64];
     EObjectType type = EObjectType::None;
-
+    Monster_Type mType = Monster_Type::ETC;
     bool HasType(EObjectType mask) const
     {
         return (type & mask) != EObjectType::None;

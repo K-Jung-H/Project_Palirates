@@ -618,39 +618,39 @@ MonsterStateMachine::MonsterStateMachine(CMonsterObject* owner)
 
 void MonsterStateMachine::update(float Elapsed_time)
 {
-    OnPrepareUpdate(6.0f, Elapsed_time);
+  //  OnPrepareUpdate(6.0f, Elapsed_time);
 
-    if (stateElapsedTime >= stateChangeTime) {
-        switch (Get_State()) {
-        case State::Idle:
-            changeState(State::Run, Key_Value::None);
-            break;
-        case State::Run:
-            changeState(State::Idle, Key_Value::None);
-            break;
-        case State::Dive:
-            break;
-        }
+    //if (stateElapsedTime >= stateChangeTime) {
+    //    switch (Get_State()) {
+    //    case State::Idle:
+    //        changeState(State::Run, Key_Value::None);
+    //        break;
+    //    case State::Run:
+    //        changeState(State::Idle, Key_Value::None);
+    //        break;
+    //    case State::Dive:
+    //        break;
+    //    }
 
-        stateElapsedTime = 0.0f;
-        stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
-    }
+    //    stateElapsedTime = 0.0f;
+    //    stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
+    //}
 
-    switch (Get_State()) {
-    case State::Idle:
-       // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
-        m_pOwner->targetWeights[0] = 1.0f;
-        break;
-    case State::Run:
-        m_pOwner->targetWeights[6] = 1.0f;
+    //switch (Get_State()) {
+    //case State::Idle:
+    //   // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+    //    m_pOwner->targetWeights[0] = 1.0f;
+    //    break;
+    //case State::Run:
+    //    m_pOwner->targetWeights[6] = 1.0f;
 
-        RootMotionMove(10.0f);
+    //    RootMotionMove(10.0f);
 
-        break;
-    case State::Attack2:
+    //    break;
+    //case State::Attack2:
 
-        break;
-    }
+    //    break;
+    //}
 
     SetWeight();
 }
@@ -716,12 +716,17 @@ void MonsterStateMachine::enterState(State state, Key_Value key_event)
 {
     if (IsInState({ State::Get_Hit })) {
         m_pOwner->SetOutlineColor(1);
-        m_pOwner->currentHP -= 30.0f;
+       /* m_pOwner->currentHP -= 30.0f;
         if (m_pOwner->currentHP < 0) {
             m_pOwner->currentHP = 0.0f;
             changeState(State::Knock_Down, Key_Value::None);
-        }
+        }*/
     }
+
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+    int currTrack = GetMonsterAnimationTrack(m_pOwner->mType, state);
+    m_pOwner->targetWeights[currTrack] = 1.0f;
+    animController->m_pAnimationTracks[currTrack].m_fPosition = 0.0f;
 }
 
 void MonsterStateMachine::exitState(State state, Key_Value key_event)

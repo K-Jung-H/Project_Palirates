@@ -636,15 +636,8 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
 
             auto sync_Data = monster->MakeSyncData();
             oss << "," << sync_Data.position.x << "," << sync_Data.position.y << "," << sync_Data.position.z
-                << "," << sync_Data.lookVector.x << "," << sync_Data.lookVector.y << "," << sync_Data.lookVector.z
-                << "," << sync_Data.track_info_list.size();
+                << "," << sync_Data.lookVector.x << "," << sync_Data.lookVector.y << "," << sync_Data.lookVector.z;
 
-            for (auto track_data : sync_Data.track_info_list)
-            {
-                oss << "," << to_string(track_data.track_index)
-                    << "," << to_string(track_data.weight)
-                    << "," << to_string(track_data.track_position);
-            }
             oss << "," << sync_Data.stateChanged;
             oss << "," << sync_Data.hp;
         }

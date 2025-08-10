@@ -1697,17 +1697,16 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 	}
 }
 
-
-
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
 	if (tokens.size() < 3) return;
-	float list_size = std::stof(tokens[1]);
+	int list_size = std::stoi(tokens[1]);
 
 	int startIndex = 2;
-	for (int i = 0; i<int(list_size); ++i) 
+	for (int i = 0; i < list_size; ++i)
 	{
 		int base = startIndex;
+		if (base + 9 > (int)tokens.size()) break;
 
 		int monsterId = std::stoi(tokens[base + 0]);
 		float px = std::stof(tokens[base + 1]);
@@ -1716,52 +1715,31 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		float lx = std::stof(tokens[base + 4]);
 		float ly = std::stof(tokens[base + 5]);
 		float lz = std::stof(tokens[base + 6]);
-		int trackCount = std::stoi(tokens[base + 7]);
-
-		int trackStart = base + 8;
-
-		int expectedTrackTokenCount = trackCount * 3;
-
-		std::vector<Animation_Sync> track_list;
-
-		for (int t = 0; t < trackCount; ++t)
-		{
-			int idx = trackStart + t * 3;
-			int trackIdx = std::stoi(tokens[idx]);
-			float weight = std::stof(tokens[idx + 1]);
-			float position = std::stof(tokens[idx + 2]);
-			track_list.push_back({ trackIdx, weight, position });
-		}
-
-		int stateFlagIndex = trackStart + expectedTrackTokenCount;
+		bool bStateChange = (tokens[base + 7] == "1" || tokens[base + 7] == "true");
+		float hp = std::stof(tokens[base + 8]);
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-
-		syncData.track_info_list = track_list;
-		syncData.bStateChange = std::stoi(tokens[stateFlagIndex++]);
-		syncData.hp = std::stoi(tokens[stateFlagIndex]);
+		syncData.bStateChange = bStateChange;
+		syncData.hp = hp;
+		syncData.track_info_list.clear();
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
 		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
-
 		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
 		float zView = XMVectorGetZ(viewSpacePos);
-		//std::cout << zView << "\n";
+
 		if (zView >= 800.0f) {
 			stage_scene->Monster_Set_Active_False(monsterId);
 		}
-		else if (zView >= -50.0f)
-		{
+		else if (zView >= -50.0f) {
 			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
 		}
 
-		startIndex = stateFlagIndex + 1;
+		startIndex = base + 9;
 	}
 }
-
-
 
 void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {

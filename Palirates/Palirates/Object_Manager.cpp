@@ -1039,7 +1039,7 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 		if (isRunning) {
 			for (std::shared_ptr<CGameObject>& obj_ptr : skinned_object_list)
 				if (obj_ptr->Get_Active()) {
-					if (!obj_ptr->HasType(EObjectType::MainPlayer | EObjectType::Monster))
+					if (!obj_ptr->HasType(EObjectType::MainPlayer/* | EObjectType::Monster*/))
 						obj_ptr->Animate(fTimeElapsed);
 				}
 		}
