@@ -694,126 +694,72 @@ void CGameFramework::ProcessInput()
 {
 	static bool last_mouse_state = false;
 	static UCHAR pKeysBuffer[256];
-	bool bProcessedByScene = false;
+	static bool prevShiftDown = false;
+	static bool prevF2Down = false;
+	static bool prevF3Down = false;
+	static bool prevLDown = false;
+	static bool prevRDown = false;
 
+	if (GetForegroundWindow() != m_hWnd)
+	{
+		ZeroMemory(pKeysBuffer, sizeof(pKeysBuffer));
+		current_keyboard_inputFlags = INPUT_NONE;
+		prevShiftDown = prevF2Down = prevF3Down = prevLDown = prevRDown = false;
+		if (m_pPlayer && m_pPlayer->GetCamera()) m_pPlayer->GetCamera()->SetMouseButtonHeld(false);
+		return;
+	}
+
+	bool bProcessedByScene = false;
 	CScene* main_scene = scene_manager->Get_Active_Scene_Ptr();
 
 	BOOL got = GetKeyboardState(pKeysBuffer);
-	if (!got) {
-		ZeroMemory(pKeysBuffer, sizeof(pKeysBuffer)); 
-	}
-	if (got && main_scene) {
-		bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
-	}
+	if (!got) ZeroMemory(pKeysBuffer, sizeof(pKeysBuffer));
+	if (got && main_scene) bProcessedByScene = main_scene->ProcessInput(pKeysBuffer);
 
 	if (!bProcessedByScene && m_pPlayer->bIsControllable)
 	{
 		DWORD dwDirection = 0;
-		{
-			current_keyboard_inputFlags = INPUT_NONE;
+		current_keyboard_inputFlags = INPUT_NONE;
 
-			if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0)) // W
-			{
-				current_keyboard_inputFlags |= INPUT_W;
-				dwDirection |= DIR_FORWARD;
-			}
-			if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0)) // S
-			{
-				current_keyboard_inputFlags |= INPUT_S;
-				dwDirection |= DIR_BACKWARD;
-			}
-			if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0)) // A
-			{
-				current_keyboard_inputFlags |= INPUT_A;
-				dwDirection |= DIR_LEFT;
-			}
-			if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0)) // D
-			{
-				current_keyboard_inputFlags |= INPUT_D;
-				dwDirection |= DIR_RIGHT;
-			}
-			if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0)) // Q
-			{
-				current_keyboard_inputFlags |= INPUT_Q;
-			}
-			if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0)) // E
-			{
-				current_keyboard_inputFlags |= INPUT_E;
-			}
-			//if (pKeysBuffer[VK_SHIFT] & 0xF0) // Shift
-			//{
-			//	current_keyboard_inputFlags |= INPUT_SHIFT;
-			//}
-			if (pKeysBuffer[VK_RETURN] & 0xF0) // Enter
-			{
-				current_keyboard_inputFlags |= INPUT_ENTER;
-			}
-		}
+		if ((pKeysBuffer[VK_UP] & 0xF0) || (pKeysBuffer[0x57] & 0xF0)) { current_keyboard_inputFlags |= INPUT_W; dwDirection |= DIR_FORWARD; }
+		if ((pKeysBuffer[VK_DOWN] & 0xF0) || (pKeysBuffer[0x53] & 0xF0)) { current_keyboard_inputFlags |= INPUT_S; dwDirection |= DIR_BACKWARD; }
+		if ((pKeysBuffer[VK_LEFT] & 0xF0) || (pKeysBuffer[0x41] & 0xF0)) { current_keyboard_inputFlags |= INPUT_A; dwDirection |= DIR_LEFT; }
+		if ((pKeysBuffer[VK_RIGHT] & 0xF0) || (pKeysBuffer[0x44] & 0xF0)) { current_keyboard_inputFlags |= INPUT_D; dwDirection |= DIR_RIGHT; }
+		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0)) { current_keyboard_inputFlags |= INPUT_Q; }
+		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0)) { current_keyboard_inputFlags |= INPUT_E; }
+		if (pKeysBuffer[VK_RETURN] & 0xF0) { current_keyboard_inputFlags |= INPUT_ENTER; }
 
-		static bool prevShiftDown = false;
 		bool currShiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000);
-		if (!prevShiftDown && currShiftDown) 
-		{
-			current_keyboard_inputFlags |= INPUT_SHIFT;
-			cout << "press shift key" << endl;
-		}
+		if (!prevShiftDown && currShiftDown) { current_keyboard_inputFlags |= INPUT_SHIFT; }
 		prevShiftDown = currShiftDown;
 
-		static bool prevF2Down = false;
 		bool currF2Down = (GetAsyncKeyState(VK_F2) & 0x8000);
-		if (!prevF2Down && currF2Down)
-		{
-			current_keyboard_inputFlags |= INPUT_F2;
-			cout << "press F2 key" << endl;
-		}
+		if (!prevF2Down && currF2Down) { current_keyboard_inputFlags |= INPUT_F2; }
 		prevF2Down = currF2Down;
 
-		static bool prevF3Down = false;
 		bool currF3Down = (GetAsyncKeyState(VK_F3) & 0x8000);
-		if (!prevF3Down && currF3Down)
-		{
-			current_keyboard_inputFlags |= INPUT_F3;
-			cout << "press F3 key" << endl;
-		}
+		if (!prevF3Down && currF3Down) { current_keyboard_inputFlags |= INPUT_F3; }
 		prevF3Down = currF3Down;
 
-		//=======================================================================
-
-		static bool prevLDown = false;
-		static bool prevRDown = false;
-
-		// 키보드는 pKeysBuffer로 OK, 마우스는 Async로
 		bool currLDown = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
 		bool currRDown = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
-
 		if (!prevLDown && currLDown) current_keyboard_inputFlags |= INPUT_MOUSE_LEFT;
 		if (!prevRDown && currRDown) current_keyboard_inputFlags |= INPUT_MOUSE_RIGHT;
-
 		prevLDown = currLDown;
 		prevRDown = currRDown;
 
 		bool isMouseButtonDown = (pKeysBuffer[VK_LBUTTON] & 0xF0) || (pKeysBuffer[VK_RBUTTON] & 0xF0);
-
-		if (m_pPlayer && m_pPlayer->GetCamera())
-		{
-			m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
-		}
+		if (m_pPlayer && m_pPlayer->GetCamera()) m_pPlayer->GetCamera()->SetMouseButtonHeld(isMouseButtonDown);
 
 		if (!isRunning) {
-			if (!CScene::Screen_Fade)
-				m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
+			if (!CScene::Screen_Fade) m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 		}
 
-
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
-
 		if (bMouseLocked != last_mouse_state)
 		{
-			if (bMouseLocked)
-				HideCursor();
-			else
-				ShowCursorFix();
-
+			if (bMouseLocked) HideCursor();
+			else ShowCursorFix();
 			last_mouse_state = bMouseLocked;
 		}
 
@@ -824,37 +770,28 @@ void CGameFramework::ProcessInput()
 
 		if (bMouseLocked)
 		{
-
 			if (GetCursorPos(&ptCursorPos))
 			{
 				cxDelta = (float)(ptCursorPos.x - ptCenter.x);
 				cyDelta = (float)(ptCursorPos.y - ptCenter.y);
-
 				SetCursorPos(ptCenter.x, ptCenter.y);
 			}
 		}
-
-
 
 		if ((dwDirection != 0) || (cxDelta != 0.0f) || (cyDelta != 0.0f))
 		{
 			if (cxDelta || cyDelta)
 			{
-				if (pKeysBuffer[VK_RBUTTON] & 0xF0)
-
-					m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
-				else
-					m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
+				if (pKeysBuffer[VK_RBUTTON] & 0xF0) m_pPlayer->Rotate(cyDelta, 0.0f, -cxDelta);
+				else m_pPlayer->Rotate(cyDelta, cxDelta, 0.0f);
 			}
 			if (!isRunning) {
-				if (dwDirection)
-					m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
+				if (dwDirection) m_pPlayer->Move(dwDirection, 300.0f * m_GameTimer.GetTimeElapsed(), true);
 			}
 		}
-
 	}
-
 }
+
 
 void CGameFramework::Animate_Scene()
 {
@@ -1983,7 +1920,7 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 {
 	int pID = std::stoi(tokens[3]);
 	int stateNum = std::stoi(tokens[4]);
-	cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
+	//cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
 	if (pID == Client_ID)
 		m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
 	else {
@@ -1993,7 +1930,7 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 			}
 		}
 	}
-	cout << "change State : " << stateNum << "\n";
+	//cout << "change State : " << stateNum << "\n";
 }
 
 void CGameFramework::HandleClientIdAssignment()
@@ -2108,6 +2045,10 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	if (player_ID == Client_ID)
 	{
 		m_pPlayer->SetPosition(syncData.position);
+		/*if (!XMVector3Equal(XMLoadFloat3(&syncData.lookVector), XMVectorZero())) {
+			m_pPlayer->SetLookDirection(syncData.lookVector);
+			cout << "set look: " << syncData.lookVector.x << ", " << syncData.lookVector.y << ", " << syncData.lookVector.z << "\n";
+		}*/
 		//cout << syncData.position.x << ", " << syncData.position.y << ", " << syncData.position.z << "\n";
 		/*if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);*/
