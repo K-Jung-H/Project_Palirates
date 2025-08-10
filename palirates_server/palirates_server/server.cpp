@@ -593,6 +593,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             ++valid_player_count;
             const XMFLOAT3 pos = player_ptr->GetPosition();
             const XMFLOAT3 look = player_ptr->GetLook();
+            //const XMFLOAT3 look = player_ptr->CommandSetLook;
 
             const auto& anim_data = player_ptr->GetAnimationSyncData();
             const auto& track_list = anim_data.track_info_list;
@@ -605,6 +606,11 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
                 << std::to_string(track_list.size());
+
+            /*if (!XMVector3Equal(XMLoadFloat3(&player_ptr->CommandSetLook), XMVectorZero())) {
+                XMStoreFloat3(&player_ptr->CommandSetLook, XMVectorZero());
+                cout << "cmd set look reset" << "\n";
+            }*/
 
             for (const auto& track : track_list)
             {

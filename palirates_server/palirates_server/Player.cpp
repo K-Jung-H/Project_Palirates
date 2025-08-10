@@ -72,7 +72,7 @@ Player::Player(int playerId) : Skinned_GameObject()
 enum class RunDir : int { N = 0, NE = 1, E = 2, SE = 3, S = 4, SW = 5, W = 6, NW = 7 };
 
 inline bool BuildMoveVector(uint32_t keyState, XMFLOAT2& out) {
-    int vx = 0, vz = 0; // x: 오른쪽(+), z: 앞(+)
+    int vx = 0, vz = 0; 
     if (keyState & INPUT_D) vx += 1;
     if (keyState & INPUT_A) vx -= 1;
     if (keyState & INPUT_W) vz += 1;
@@ -102,6 +102,17 @@ static const int kRunTrackByDir[8] = {
     TRACK_RUN_BACKWARD_LEFT, // SW (5)
     TRACK_RUN_LEFT,  // W  (6)
     TRACK_RUN_FORWARD_LEFT  // NW (7)
+};
+
+static const DirectX::XMFLOAT3 kDirVecByRunDir[8] = {
+    {  0.f, 0.f,  1.f }, // N
+    {  0.70710678f, 0.f,  0.70710678f }, // NE
+    {  1.f, 0.f,  0.f }, // E
+    {  0.70710678f, 0.f, -0.70710678f }, // SE
+    {  0.f, 0.f, -1.f }, // S
+    { -0.70710678f, 0.f, -0.70710678f }, // SW
+    { -1.f, 0.f,  0.f }, // W
+    { -0.70710678f, 0.f,  0.70710678f }, // NW
 };
 
 void Player::key_input(uint32_t keyState)
@@ -144,6 +155,31 @@ void Player::key_input(uint32_t keyState)
             GetStateMachine()->ChangeState(std::make_unique<PlayerNormalState>());
         }
     }
+    if (keyState & INPUT_SHIFT)
+    {
+       
+        // WASD가 아무것도 없으면 현재 Look 유지
+        GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
+        return;
+    }
+
+    if (keyState & INPUT_MOUSE_LEFT)
+    {
+        DirectX::XMFLOAT2 mv;
+        if (BuildMoveVector(moveMask, mv)) {
+            RunDir dir = Quantize8Way(mv);
+            CommandSetLook = kDirVecByRunDir[(int)dir];
+            cout << CommandSetLook.x << ", " << CommandSetLook.y << ", " << CommandSetLook.z << "\n";
+        }
+        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+    }
+
+    if (keyState & INPUT_MOUSE_RIGHT)
+    {
+        cout << "input" << "\n";
+        // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
+        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+    }
 
     if (moveMask) {
         XMFLOAT2 mv;
@@ -173,27 +209,6 @@ void Player::key_input(uint32_t keyState)
     if (keyState & INPUT_Q)
     {
         motion_blur = !motion_blur;
-    }
-
-    if (keyState & INPUT_SHIFT)
-    {
-        cout << "input" << "\n";
-       // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
-        GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
-    }
-
-    if (keyState & INPUT_MOUSE_LEFT)
-    {
-        cout << "input" << "\n";
-        // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
-        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
-    }
-
-    if (keyState & INPUT_MOUSE_RIGHT)
-    {
-        cout << "input" << "\n";
-        // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
-        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
     }
 }
 
