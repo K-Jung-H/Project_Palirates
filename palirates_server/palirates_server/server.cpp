@@ -710,6 +710,8 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
             float life = fmt.lifetime;
+            XMFLOAT3 focus_point = fmt.focus_point;
+
             UINT status = obj->Get_Particle_Status();
 
             temp_p_create << std::to_string(id) << ","
@@ -719,6 +721,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
                 << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
                 << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
                 << std::to_string(life) << ","
+                << std::to_string(focus_point.x) << "," << std::to_string(focus_point.y) << "," << std::to_string(focus_point.z) << ","
                 << std::to_string(status) << ",";
         }
 
@@ -745,6 +748,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
             float life = obj->Get_LifeTime();
+            XMFLOAT3 focus_point = fmt.focus_point;
             UINT status = obj->Get_Particle_Status();
 
             temp_p_update << std::to_string(id) << ","
@@ -754,6 +758,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
                 << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
                 << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
                 << std::to_string(life) << ","
+                << std::to_string(focus_point.x) << "," << std::to_string(focus_point.y) << "," << std::to_string(focus_point.z) << ","
                 << std::to_string(status) << ",";
         }
 

@@ -23,6 +23,7 @@ struct UpdateContext
 
 struct SceneLogic
 {
+	SceneLogic(XMFLOAT3 init_scene_area, XMFLOAT3 init_scene_center) { scene_area = init_scene_area; scene_center = init_scene_center; }
 	virtual ~SceneLogic() = default;
 	virtual void init(ParticleManager& pm) { p_mg = &pm; }
 
@@ -46,6 +47,8 @@ protected:
 class Dragon_Stage_SceneLogic final : public SceneLogic 
 {
 public:
+	Dragon_Stage_SceneLogic(XMFLOAT3 init_scene_area, XMFLOAT3 init_scene_center) :SceneLogic(init_scene_area, init_scene_center) {}
+
 	~Dragon_Stage_SceneLogic() override { onExit(); };
 	void onExit() override;
 
@@ -60,6 +63,8 @@ private:
 class Anubis_Stage_SceneLogic final : public SceneLogic
 {
 public:
+	Anubis_Stage_SceneLogic(XMFLOAT3 init_scene_area, XMFLOAT3 init_scene_center) :SceneLogic(init_scene_area, init_scene_center) {}
+
 	~Anubis_Stage_SceneLogic() override { onExit(); }
 	void onExit() override;
 

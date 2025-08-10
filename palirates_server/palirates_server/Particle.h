@@ -23,9 +23,10 @@ enum class Particle_Type
 struct Particle_Format
 {
     Particle_Type particle_type;
+    float lifetime;
     XMFLOAT3 area_xyz{};
     XMFLOAT3 main_direction{};
-    float lifetime;
+    XMFLOAT3 focus_point;
 };
 
 class Particle_Object : public GameObject
@@ -44,6 +45,9 @@ public:
     virtual ~Particle_Object();
 
     Particle_Format Get_Format() { return particle_format; };
+    void Set_Format(Particle_Format p_format) { particle_format = p_format;; };
+
+
     UINT Get_Particle_ID() { return particle_id; }
     float Get_LifeTime() { return LifeTime; }
 
@@ -51,7 +55,7 @@ public:
 
     UINT Get_Particle_Status() { return particle_status; }
 
-    void SetNeedSyncType(bool enable) { is_need_to_sync = enable; }
+    void Set_Continuous_SyncType(bool enable) { is_need_to_sync = enable; }
     bool IsContinuousSyncType() const { return is_need_to_sync; }
 
     bool IsActive() { return Active; }

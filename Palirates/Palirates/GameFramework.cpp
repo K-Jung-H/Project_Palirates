@@ -1866,7 +1866,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 
 void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
-	constexpr int kPerParticleTokens = 16; // id, type, pos(3), look(3), area(3), dir(3), lifetime, state_index
+	// id, type, pos(3), look(3), area(3), dir(3), lifetime, focus_point(3), state_index
+	constexpr int kPerParticleTokens = 19;
 
 	if (command == "PARTICLE_CREATE" || command == "PARTICLE_UPDATE")
 	{
@@ -1877,25 +1878,22 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 		{
 			int idx = base + i * kPerParticleTokens;
 
-
-			if (idx + (kPerParticleTokens - 1) >= static_cast<int>(tokens.size())) 
+			if (idx + (kPerParticleTokens - 1) >= static_cast<int>(tokens.size()))
 				break;
 
-			Particle_Sync_Data particle_sync_data;
 
 
-			UINT id = static_cast<UINT>(std::stoul(tokens[idx + 0]));
-			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));
+			UINT id = static_cast<UINT>(std::stoul(tokens[idx + 0]));			// idx+0 : id
+			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));			// idx+1 : type
+			XMFLOAT3 pos{ std::stof(tokens[idx + 2]),  std::stof(tokens[idx + 3]),  std::stof(tokens[idx + 4]) };			// idx+2~4 : pos
+			XMFLOAT3 look{ std::stof(tokens[idx + 5]),  std::stof(tokens[idx + 6]),  std::stof(tokens[idx + 7]) };			// idx+5~7 : look
+			XMFLOAT3 area{ std::stof(tokens[idx + 8]),  std::stof(tokens[idx + 9]),  std::stof(tokens[idx + 10]) };			// idx+8~10 : area
+			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };			// idx+11~13 : dir
+			float lifetime = std::stof(tokens[idx + 14]);			// idx+14 : lifetime
+			XMFLOAT3 focus{ std::stof(tokens[idx + 15]), std::stof(tokens[idx + 16]), std::stof(tokens[idx + 17]) };			// idx+15~17 : focus_point
+			UINT status_index = static_cast<UINT>(std::stoul(tokens[idx + 18]));			// idx+18 : state_index
 
-			XMFLOAT3 pos{ std::stof(tokens[idx + 2]),  std::stof(tokens[idx + 3]),  std::stof(tokens[idx + 4]) };
-			XMFLOAT3 look{ std::stof(tokens[idx + 5]),  std::stof(tokens[idx + 6]),  std::stof(tokens[idx + 7]) };
-			XMFLOAT3 area{ std::stof(tokens[idx + 8]),  std::stof(tokens[idx + 9]),  std::stof(tokens[idx + 10]) };
-			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };
-
-			float lifetime = std::stof(tokens[idx + 14]);
-
-			UINT status_index = static_cast<UINT>(std::stoul(tokens[idx + 15]));
-
+			Particle_Sync_Data particle_sync_data{};
 			particle_sync_data.particle_ID = id;
 			particle_sync_data.particle_type = type;
 			particle_sync_data.obj_pos = pos;
@@ -1903,24 +1901,24 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 			particle_sync_data.area_extent = area;
 			particle_sync_data.main_direction = dir;
 			particle_sync_data.LifeTime = lifetime;
+			particle_sync_data.focus_point = focus;
 			particle_sync_data.particle_status_index = status_index;
-
 
 
 			if (command == "PARTICLE_CREATE")
 				stage_scene->Create_Particle_Object(particle_sync_data);
-			else if (command == "PARTICLE_UPDATE")
+			else 
 				stage_scene->Update_Particle_Object(particle_sync_data);
 		}
 	}
+
 	else if (command == "PARTICLE_REMOVE")
 	{
 		int count = std::stoi(tokens[1]);
-
 		for (int i = 0; i < count; ++i)
 		{
 			int idx = 2 + i;
-			if (idx >= static_cast<int>(tokens.size())) 
+			if (idx >= static_cast<int>(tokens.size()))
 				break;
 
 			UINT id = static_cast<UINT>(std::stoul(tokens[idx]));
