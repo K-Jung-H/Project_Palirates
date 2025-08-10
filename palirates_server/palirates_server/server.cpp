@@ -368,10 +368,8 @@ void Server::HandleStagePacket(int clientId, const std::string& command, const s
 
     if (tokens.size() < 11) return;
 
-    int trackCount = std::stoi(tokens[10]);
-
-    // 기본(11) + 트랙데이터(3개씩) + bStateChange(1) + changedStateNum(1)
-    int expectedMinTokens = 11 + (trackCount * 3) + 1 + 1;
+    // 기본(11) + bStateChange(1) + changedStateNum(1)
+    int expectedMinTokens = 11 + 1 + 1;
 
     if (tokens.size() < expectedMinTokens)
         return;
@@ -397,26 +395,12 @@ void Server::HandleStagePacket(int clientId, const std::string& command, const s
     look.y = std::stof(tokens[8]);
     look.z = std::stof(tokens[9]);
 
-    // 애니메이션 트랙 데이터 시작 위치: 11
-    std::vector<Animation_Sync> trackInfoList;
-    for (int i = 0; i < trackCount; i++)
-    {
-        int track_base = 11 + (i * 3);
-
-        Animation_Sync trackData;
-        trackData.track_index = std::stoi(tokens[track_base]);
-        trackData.weight = std::stof(tokens[track_base + 1]);
-        trackData.track_position = std::stof(tokens[track_base + 2]);
-
-        trackInfoList.push_back(trackData);
-    }
-
     // bStateChange (마지막 토큰)
-    bool bStateChange = (tokens[11 + (trackCount * 3)] == "1" || tokens[11 + (trackCount * 3)] == "true");
+    bool bStateChange = (tokens[11 /*+ (trackCount * 3)*/] == "1" || tokens[11 /*+ (trackCount * 3)*/] == "true");
 
-    int stateNum = stoi(tokens[11 + (trackCount * 3) + 1]);
+    int stateNum = stoi(tokens[11 /*+ (trackCount * 3)*/ + 1]);
     // Scene 업데이트 호출
-    stageScene->update_player_State(clientId, inputFlags, pos, look, trackInfoList, bStateChange, stateNum);
+    stageScene->update_player_State(clientId, inputFlags, pos, look, bStateChange, stateNum);
 }
 
 
@@ -604,20 +588,20 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
 
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
-                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
-                << std::to_string(track_list.size());
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z); //<< ","
+                //<< std::to_string(track_list.size());
 
             /*if (!XMVector3Equal(XMLoadFloat3(&player_ptr->CommandSetLook), XMVectorZero())) {
                 XMStoreFloat3(&player_ptr->CommandSetLook, XMVectorZero());
                 cout << "cmd set look reset" << "\n";
             }*/
 
-            for (const auto& track : track_list)
+            /*for (const auto& track : track_list)
             {
                 players_data << "," << std::to_string(track.track_index)
                     << "," << std::to_string(track.weight)
                     << "," << std::to_string(track.track_position);
-            }
+            }*/
 
             players_data << "," << (state_changed ? "1" : "0");
 

@@ -145,7 +145,7 @@ public:
 
     void update_player_keyinput(int id, uint32_t keystate);
     void update_player_LookV(int id, XMFLOAT3 new_lookV);
-    void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged, int stateNum);
+    void update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, bool stateChanged, int stateNum);
     XMFLOAT2 g_mapSize;
 
 public:

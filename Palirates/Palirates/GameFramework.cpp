@@ -1426,15 +1426,6 @@ void CGameFramework::SendPacket()
 		if (!controller) return;
 
 		auto sync_Data = m_pPlayer->MakeSyncData();
-		
-		oss << sync_Data.track_info_list.size();
-
-		for ( auto track_data : sync_Data.track_info_list)
-		{
-			oss << "," << to_string(track_data.track_index)
-				<< "," << to_string(track_data.weight)
-				<< "," << to_string(track_data.track_position);
-		}
 
 		oss << "," << (sync_Data.bStateChange ? "1" : "0");
 		oss << "," << sync_Data.changedStateNum;
@@ -1582,19 +1573,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		}
 		else if (cmd == "P_S_CMD") {
 			ProcessReceivedData_Change_State_Command(tokens);
-			/*int pID = std::stoi(tokens[3]);
-			int stateNum = std::stoi(tokens[4]);
-			cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
-			if (pID == Client_ID)
-				m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
-			else {
-				if (Connected_Player_List[pID]) {
-					if (scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]) {
-						scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
-					}
-				}
-			}
-			cout << "change State : " << stateNum << "\n";*/
 		}
 
 	}
@@ -1675,7 +1653,7 @@ void CGameFramework::ProcessReceivedData_Board(shared_ptr<Board_Scene> board_sce
 	}
 }
 
-void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
 	if (tokens.size() < 2) return;
 
@@ -1685,8 +1663,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 	for (int i = 0; i < playerCount; ++i)
 	{
 		int base = startIndex;
-
-		if (base + 9 > tokens.size()) break;
+		if (base + 12 > tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
 		int modelId = std::stoi(tokens[base + 1]);
@@ -1696,47 +1673,30 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		float lx = std::stof(tokens[base + 5]);
 		float ly = std::stof(tokens[base + 6]);
 		float lz = std::stof(tokens[base + 7]);
-		int trackCount = std::stoi(tokens[base + 8]);
 
-		int trackStart = base + 9;
-		int expectedTrackTokenCount = trackCount * 3;
-
-		if (trackStart + expectedTrackTokenCount + 4 > tokens.size()) break;
-
-		std::vector<Animation_Sync> track_list;
-		for (int t = 0; t < trackCount; ++t)
-		{
-			int idx = trackStart + t * 3;
-			int trackIdx = std::stoi(tokens[idx]);
-			float weight = std::stof(tokens[idx + 1]);
-			float position = std::stof(tokens[idx + 2]);
-			track_list.push_back({ trackIdx, weight, position });
-		}
-
-		int stateFlagIndex = trackStart + expectedTrackTokenCount;
-
-		bool stateChanged = (tokens[stateFlagIndex++] == "1");
+		int idx = base + 8;
+		bool stateChanged = (tokens[idx++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-		syncData.track_info_list = track_list;
+		syncData.track_info_list.clear(); 
 		syncData.bStateChange = stateChanged;
 
-		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
+		int changedStateNum = std::stoi(tokens[idx++]);
 		syncData.changedStateNum = changedStateNum;
-		float hp = std::stof(tokens[stateFlagIndex++]);
+		float hp = std::stof(tokens[idx++]);
 		syncData.hp = hp;
-		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
+		bool bBreathHit = (tokens[idx++] == "1");
 		syncData.bBreathHit = bBreathHit;
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-
-		int consumed = 9 + (trackCount * 3) + 4;
+		int consumed = 12;
 		startIndex = base + consumed;
 	}
 }
+
 
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)

@@ -744,7 +744,7 @@ void Stage_Scene::update_player_LookV(int id, XMFLOAT3 new_lookV)
     player_list[id]->SetLook(new_lookV);
 }
 
-void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, const std::vector<Animation_Sync>& tracks, bool stateChanged, int stateNum)
+void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const XMFLOAT3& position, const XMFLOAT3& lookDirection, bool stateChanged, int stateNum)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
@@ -755,34 +755,6 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     player_list[clientId]->SetLook(lookDirection);
     
     player_list[clientId]->key_input(inputFlags);
-
-    if (!tracks.empty())
-    {
-        player_list[clientId]->SetTrackInfoList(tracks);
-        player_list[clientId]->SetStateChanged(stateChanged);
-        //if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
-        //    if (stateNum == int(State::Attack1)) {
-        //        player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
-        //        player_list[clientId]->SetStateChangeNum(stateNum);
-        //    }
-        //    else if (stateNum == int(State::Attack2)) {
-        //        player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
-        //        player_list[clientId]->SetStateChangeNum(stateNum);
-        //    }
-        //    else if (stateNum == int(State::Attack3)) {
-        //        player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
-        //        player_list[clientId]->SetStateChangeNum(stateNum);
-        //    }
-        //    //else if (stateNum == int(State::Dive)) {
-        //    //    //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
-        //    //    player_list[clientId]->SetStateChangeNum(stateNum);
-        //    //}
-        //}
-        if (stateNum == int(State::Dive)) {
-			player_list[clientId]->motion_blur = true; 
-        }
-        else player_list[clientId]->motion_blur = false;
-    }
 }
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()

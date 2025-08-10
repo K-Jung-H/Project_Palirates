@@ -617,7 +617,9 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
 
 ServerSyncData CTerrainPlayer::MakeSyncData()
 {
-	ServerSyncData data = CGameObject::MakeSyncData();
+	ServerSyncData data;
+	data.position = GetPosition();
+	data.lookVector = GetLook();
 	data.changedStateNum = GetStateMachine()->GetCurrentStateAsInt();
 
 	return data;
