@@ -58,7 +58,7 @@ void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
     Particle_Format p;
     p.area_xyz = XMFLOAT3{ 1000,1000,1000 };
     p.lifetime = 300;
-    p.main_direction = XMFLOAT3{ 1,0,0 };
+    p.main_direction = XMFLOAT3{ 0,0,1 };
     p.particle_type = Particle_Type::dragon_breath;
 
     if (boss->attackPhase == 2) 
@@ -66,7 +66,7 @@ void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
         if (!dragon_fire) 
         {
             dragon_fire = p_mg->Create_Particle_Object(p);
-            dragon_fire->SetNeedSyncType(true);
+            dragon_fire->Set_Continuous_SyncType(true);
         }
         dragon_fire->SetActive(true);
     }
@@ -122,33 +122,33 @@ void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
 {
     SceneLogic::init(pm);
 
-    if (!sand_env)
-    {
-        Particle_Format env_sand;
-        env_sand.area_xyz = XMFLOAT3{ 10,10,10 };
-        env_sand.lifetime = 10000.0f;
-        env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-        env_sand.particle_type = Particle_Type::sand;
+    //if (!sand_env)
+    //{
+    //    Particle_Format env_sand;
+    //    env_sand.area_xyz = XMFLOAT3{ scene_center };
+    //    env_sand.lifetime = 10000.0f;
+    //    env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+    //    env_sand.particle_type = Particle_Type::sand;
 
-        sand_env = p_mg->Create_Particle_Object(env_sand);
-        sand_env->Set_Particle_Status(10000);
-        sand_env->SetNeedSyncType(true);
-        sand_env->SetPosition(XMFLOAT3(2176.0f, 500.0f, 1536.0f));
-        sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
-    }
+    //    sand_env = p_mg->Create_Particle_Object(env_sand);
+    //    sand_env->Set_Particle_Status(0);
+    //    sand_env->Set_Continuous_SyncType(true);
+    //    sand_env->SetPosition(scene_center);
+    //    sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    //}
 
     if (!sand_anubis_effect)
     {
         Particle_Format anubis_sand;
-        anubis_sand.area_xyz = XMFLOAT3{ 10,10,10 };
+        anubis_sand.area_xyz = XMFLOAT3{ scene_center };
         anubis_sand.lifetime = 10000.0f;
         anubis_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
         anubis_sand.particle_type = Particle_Type::sand;
 
         sand_anubis_effect = p_mg->Create_Particle_Object(anubis_sand);
-        sand_anubis_effect->Set_Particle_Status(10000);
-        sand_anubis_effect->SetNeedSyncType(true);
-        sand_anubis_effect->SetPosition(XMFLOAT3(2176.0f, 500.0f, 1536.0f));
+        sand_anubis_effect->Set_Particle_Status(0);
+        sand_anubis_effect->Set_Continuous_SyncType(true);
+        sand_anubis_effect->SetPosition(scene_center);
         sand_anubis_effect->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
     }
 
@@ -161,45 +161,46 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     if (!boss)
         return;
 
-    if (boss->attackPhase == -1)
-        return;
+    //if (boss->attackPhase == -1)
+    //    return;
 
-    //if (sand_anubis_effect)
-    //{
-    //    UINT particle_state = sand_anubis_effect->Get_Particle_Status();
-    //    if (particle_state == 0)
-    //    {
-    //        sand_anubis_effect->SetPosition(scene_center);
-    //        sand_anubis_effect->Set_Area(scene_area);
-    //        sand_anubis_effect->Set_Focus_Point(scene_center);
-    //        sand_anubis_effect->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    if (sand_anubis_effect)
+    {
+        UINT particle_state = sand_anubis_effect->Get_Particle_Status();
 
-    //        sand_anubis_effect->Set_Speed(0.0f);
-    //    }
-    //    else if (particle_state == 1)
-    //    {
-    //        sand_anubis_effect->SetPosition(scene_center);
-    //        sand_anubis_effect->Set_Area(scene_area);
-    //        sand_anubis_effect->Set_Focus_Point(boss->GetPosition()); // anubis
+        Particle_Format particle_format = sand_anubis_effect->Get_Format();
 
-    //        sand_anubis_effect->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
+        if (particle_state == 0)
+        {
+            sand_anubis_effect->SetPosition(scene_center);
+            particle_format.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+            particle_format.area_xyz = scene_area;
+            particle_format.focus_point = scene_center;
+//            sand_anubis_effect->Set_Speed(0.0f);
+        }
+        else if (particle_state == 1)
+        {
+            sand_anubis_effect->SetPosition(scene_center);
+            particle_format.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+            particle_format.area_xyz = scene_area;
+            particle_format.focus_point = boss->GetPosition(); // anubis
+//            sand_anubis_effect->Set_Speed(0.0f);
 
-    //        sand_anubis_effect->Set_Speed(0.0f);
+        }
+        else if (particle_state == 2)
+        {
+            sand_anubis_effect->SetPosition(boss->GetPosition()); // anubis
+            particle_format.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+            particle_format.area_xyz = scene_area;
+            particle_format.focus_point = boss->GetPosition(); // anubis
 
-    //    }
-    //    else if (particle_state == 2)
-    //    {
-    //        sand_anubis_effect->SetPosition(boss->GetPosition()); // anubis
-    //        sand_anubis_effect->Set_Area(scene_area);
-    //        sand_anubis_effect->Set_Focus_Point(boss->GetPosition());
-    //        sand_anubis_effect->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
-
-    //        // move
-    //        sand_anubis_effect->Set_Speed(100.0f);
-    //        sand_anubis_effect->Set_Direction(boss->GetLook());
-    //    }
-
-    //}
+            // move
+//            sand_anubis_effect->Set_Speed(100.0f);
+//            sand_anubis_effect->Set_Direction(boss->GetLook());
+        }
+        sand_anubis_effect->Set_Format(particle_format);
+        
+    }
 }
 
 
@@ -228,14 +229,14 @@ void GameWorld::Init(Scene_Type new_scene_type)
     {
         scene_area = {};
         scene_center = {};
-        scene_logic = std::make_unique<Dragon_Stage_SceneLogic>();
+        scene_logic = std::make_unique<Dragon_Stage_SceneLogic>(scene_area, scene_center);
     }
         break;
     case Stage_2: 
     {
-        scene_area = {};
-        scene_center = {};
-        scene_logic = std::make_unique<Anubis_Stage_SceneLogic>();
+        scene_area = { 3072.0f, 1000.0f,  4352.0f };
+        scene_center = { 3072.0f / 2, 500.0f,  4352.0f / 2};
+        scene_logic = std::make_unique<Anubis_Stage_SceneLogic>(scene_area, scene_center);
     }
         break;
     case Stage_3:
@@ -460,6 +461,7 @@ void GameWorld::Update_Particle(float elapsed_time)
 
 }
 
+
 void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
 {
     Particle_Format p;
@@ -469,7 +471,7 @@ void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
     p.particle_type = Particle_Type::bleed;
 
     std::shared_ptr<Particle_Object> new_bleeding_particle = particle_manager.Create_Particle_Object(p);
-    new_bleeding_particle->SetNeedSyncType(false);
+    new_bleeding_particle->Set_Continuous_SyncType(false);
     new_bleeding_particle->SetPosition(pos);
     new_bleeding_particle->SetLook(main_direction);
 
@@ -498,7 +500,7 @@ void GameWorld::Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, 
                 p.particle_type = Particle_Type::party; 
 
                 party_effect[id] = particle_manager.Create_Particle_Object(p);
-                party_effect[id]->SetNeedSyncType(true);
+                party_effect[id]->Set_Continuous_SyncType(true);
                 party_effect[id]->SetPosition(player_pos);
                 party_effect[id]->SetLook(XMFLOAT3{ 0,1,0 });
 

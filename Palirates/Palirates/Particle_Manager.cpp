@@ -935,6 +935,48 @@ void Particle_Manager::Enqueue_Delete(UINT id)
 	deleteQueue.push(id);
 }
 
+void Particle_Manager::Process_Sync_By_Type(shared_ptr<ParticleObject> p_obj, Particle_Sync_Data p_data)
+{
+	Particle_Type p_type = p_obj->Get_Particle_Type();
+
+	// Default
+	p_obj->SetPosition(p_data.obj_pos);
+	p_obj->Set_Main_Direction(p_data.main_direction);
+
+	if(p_type != Particle_Type::dragon_breath)
+		p_obj->SetLookDirection(p_data.obj_look);
+
+	switch (p_type)
+	{
+	case Particle_Type::dragon_breath:
+		p_obj->Set_Main_Direction(p_data.obj_look);
+		break;
+
+	case Particle_Type::sand:
+	case Particle_Type::sand_storm:
+	{
+		if (p_data.particle_status_index < 3)
+		{
+			p_obj->Set_Focus_Point(p_data.focus_point);
+			p_obj->Set_Particle_State(p_data.particle_status_index);
+		}
+	}
+	break;
+
+
+	case Particle_Type::snow:
+	case Particle_Type::splash:
+	case Particle_Type::party:
+	case Particle_Type::bleed:
+	case Particle_Type::env_snow:
+	case Particle_Type::env_sand:
+	case Particle_Type::etc:
+	default:
+		break;
+	}
+
+
+}
 
 void Particle_Manager::Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList)
 {
@@ -948,14 +990,8 @@ void Particle_Manager::Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsC
 		if (it != particle_id_map.end())
 		{
 			auto obj = it->second;
-			obj->SetPosition(data.obj_pos);
-			obj->Set_Main_Direction(data.obj_look);
 			
-			if(obj->Get_Particle_Type() == Particle_Type::sand)
-			{
-				if (data.particle_status_index < 3)
-					obj->Set_Particle_State(data.particle_status_index);				
-			}
+			Process_Sync_By_Type(obj, data);
 		}
 		else
 			createQueue.push(data);
@@ -1011,7 +1047,6 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.max_particles = 5000;
 			format.MaxLifetime = 10;
 			format.area_xyz = data.area_extent;
-			format.area_xyz = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
 			format.EmitFaceIndex = FACE_FRONT;
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 100;
@@ -1077,10 +1112,14 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
 			obj->Set_Name(std::to_string(data.particle_ID));
+			obj->Set_Focus_Point(data.focus_point);
 
 			if (format.particle_type == Particle_Type::sand)
 			{
 				obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
+				XMFLOAT3 Scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+				obj->Set_Area(Scene_area);
+
 				obj->Set_Local_Coordinate();
 			}
 

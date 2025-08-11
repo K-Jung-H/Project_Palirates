@@ -50,6 +50,7 @@ struct Particle_Sync_Data
 	float LifeTime;
 	XMFLOAT3 area_extent;
 	XMFLOAT3 main_direction;
+	XMFLOAT3 focus_point;
 	UINT particle_status_index;
 };
 

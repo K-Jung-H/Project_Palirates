@@ -4516,31 +4516,31 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	//env_sand_particle->SetPosition(Scene_center);
 	//env_sand_particle->Set_Area(Scene_area);
 
-	Particle_Format anubis_sand_info;
-	{
-		anubis_sand_info.shader_type = Particle_Shader_Type::sand;
-		anubis_sand_info.particle_type = Particle_Type::sand;
-		anubis_sand_info.max_particles = 20000;
-		anubis_sand_info.MaxLifetime = 10.0f;
+	//Particle_Format anubis_sand_info;
+	//{
+	//	anubis_sand_info.shader_type = Particle_Shader_Type::sand;
+	//	anubis_sand_info.particle_type = Particle_Type::sand;
+	//	anubis_sand_info.max_particles = 20000;
+	//	anubis_sand_info.MaxLifetime = 10.0f;
 
-		anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
-		anubis_sand_info.EmitFaceIndex = FACE_FRONT;
+	//	anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
+	//	anubis_sand_info.EmitFaceIndex = FACE_FRONT;
 
-		anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-		anubis_sand_info.init_velocity_value = 100.0f;
-		anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
+	//	anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+	//	anubis_sand_info.init_velocity_value = 100.0f;
+	//	anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
 
-		anubis_sand_info.size = 0.3f;
-		anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
-	}
+	//	anubis_sand_info.size = 0.3f;
+	//	anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
+	//}
 
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
-	anubis_sand_particle->Set_Local_Coordinate();
-	anubis_sand_particle->SetPosition(Scene_center);
-	anubis_sand_particle->Set_Area(Scene_area);
+	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	//anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
+	//anubis_sand_particle->Set_Local_Coordinate();
+	//anubis_sand_particle->SetPosition(Scene_center);
+	//anubis_sand_particle->Set_Area(Scene_area);
 
-	anubis_sand_particle->Set_Focus_Point(Scene_center);
+	//anubis_sand_particle->Set_Focus_Point(Scene_center);
 
 #endif
 

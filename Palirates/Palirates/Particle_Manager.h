@@ -161,6 +161,8 @@ public:
 	void Enqueue_Create(const Particle_Sync_Data& syncData);
 	void Enqueue_Update(const Particle_Sync_Data& syncData);
 	void Enqueue_Delete(UINT id);
+	
+	void Process_Sync_By_Type(shared_ptr<ParticleObject> p_obj, Particle_Sync_Data p_data);
 	void Process_Sync_Queues(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);
 
 	void Create_Particles_From_Queue(ID3D12Device* device, ID3D12GraphicsCommandList* cmdList);

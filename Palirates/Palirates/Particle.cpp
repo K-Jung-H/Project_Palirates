@@ -750,15 +750,15 @@ void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 }
 
 
-void ParticleObject::Init_Info(Particle_Format particle_info)
+void ParticleObject::Init_Info(Particle_Format particle_format)
 {
-	p_type = particle_info.particle_type;
+	p_type = particle_format.particle_type;
 
 	Set_Focus_Point(XMFLOAT3(0.0f, 0.0f, 0.0f));
-	Set_Area(particle_info.area_xyz);
-	Set_Main_Direction(particle_info.main_direction);
+	Set_Area(particle_format.area_xyz);
+	Set_Main_Direction(particle_format.main_direction);
 	
-	Init_Velocity_Value = particle_info.init_velocity_value;
+	Init_Velocity_Value = particle_format.init_velocity_value;
  }
 
 void ParticleObject::Set_Main_Direction(const XMFLOAT3& input)
