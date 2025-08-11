@@ -58,7 +58,7 @@ void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
     Particle_Format p;
     p.area_xyz = XMFLOAT3{ 1000,1000,1000 };
     p.lifetime = 300;
-    p.main_direction = XMFLOAT3{ 1,0,0 };
+    p.main_direction = XMFLOAT3{ 0,0,1 };
     p.particle_type = Particle_Type::dragon_breath;
 
     if (boss->attackPhase == 2) 
@@ -122,20 +122,20 @@ void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
 {
     SceneLogic::init(pm);
 
-    if (!sand_env)
-    {
-        Particle_Format env_sand;
-        env_sand.area_xyz = XMFLOAT3{ scene_center };
-        env_sand.lifetime = 10000.0f;
-        env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-        env_sand.particle_type = Particle_Type::sand;
+    //if (!sand_env)
+    //{
+    //    Particle_Format env_sand;
+    //    env_sand.area_xyz = XMFLOAT3{ scene_center };
+    //    env_sand.lifetime = 10000.0f;
+    //    env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+    //    env_sand.particle_type = Particle_Type::sand;
 
-        sand_env = p_mg->Create_Particle_Object(env_sand);
-        sand_env->Set_Particle_Status(0);
-        sand_env->Set_Continuous_SyncType(true);
-        sand_env->SetPosition(scene_center);
-        sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
-    }
+    //    sand_env = p_mg->Create_Particle_Object(env_sand);
+    //    sand_env->Set_Particle_Status(0);
+    //    sand_env->Set_Continuous_SyncType(true);
+    //    sand_env->SetPosition(scene_center);
+    //    sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    //}
 
     if (!sand_anubis_effect)
     {
@@ -198,7 +198,8 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
 //            sand_anubis_effect->Set_Speed(100.0f);
 //            sand_anubis_effect->Set_Direction(boss->GetLook());
         }
-
+        sand_anubis_effect->Set_Format(particle_format);
+        
     }
 }
 
@@ -515,7 +516,7 @@ FrameParticleChanges GameWorld::Get_Particle_Sync_Data()
 
 void GameWorld::Sand_Update()
 {
-    shared_ptr<Particle_Object> particle_obj = particle_manager.Get_Particle_Object(2);
+    shared_ptr<Particle_Object> particle_obj = particle_manager.Get_Particle_Object(1);
     UINT status = particle_obj->Get_Particle_Status();
 
     status += 1;

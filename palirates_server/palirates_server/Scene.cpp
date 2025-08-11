@@ -140,7 +140,6 @@ Scene_Type Lobby_Scene::CheckSceneTransition()
             }
         }
 
-
         return Scene_Type::Board;
     }
     else
