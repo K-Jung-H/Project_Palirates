@@ -413,6 +413,150 @@ void Tetrahedron_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCo
 
 }
 
+//==============================================================================
+Cross_Shape_Mesh::Cross_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize)
+	: Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
+{
+	m_d3dPrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	float half = fSize / 2.0f;
+	float armHalfWidth = fSize * 0.15f; // thickness of cross arms in X/Y
+	float armHalfLength = half;          // full reach of arms
+	float thicknessZ = fSize /3;    // front-back thickness
+
+	// Front face vertices (Z = +thicknessZ/2)
+	std::vector<XMFLOAT3> vertices;
+
+	auto AddVertex = [&](float x, float y, float z) {
+		vertices.push_back({ x, y, z });
+		};
+
+	float zFront = thicknessZ / 2.0f;
+	float zBack = -thicknessZ / 2.0f;
+
+	// Order vertices clockwise for front face
+	// Top arm
+	AddVertex(-armHalfWidth, armHalfLength, zFront);
+	AddVertex(armHalfWidth, armHalfLength, zFront);
+	AddVertex(armHalfWidth, armHalfWidth, zFront);
+	AddVertex(armHalfLength, armHalfWidth, zFront);
+	AddVertex(armHalfLength, -armHalfWidth, zFront);
+	AddVertex(armHalfWidth, -armHalfWidth, zFront);
+	AddVertex(armHalfWidth, -armHalfLength, zFront);
+	AddVertex(-armHalfWidth, -armHalfLength, zFront);
+	AddVertex(-armHalfWidth, -armHalfWidth, zFront);
+	AddVertex(-armHalfLength, -armHalfWidth, zFront);
+	AddVertex(-armHalfLength, armHalfWidth, zFront);
+	AddVertex(-armHalfWidth, armHalfWidth, zFront);
+
+	// Back face vertices (same XY, Z = zBack)
+	for (int i = 0; i < 12; i++)
+		vertices.push_back({ vertices[i].x, vertices[i].y, zBack });
+
+	m_nVertices = (UINT)vertices.size();
+	m_pxmf3Positions = new XMFLOAT3[m_nVertices];
+	std::copy(vertices.begin(), vertices.end(), m_pxmf3Positions);
+
+	// Indices
+	std::vector<UINT> indices;
+
+	// Front face triangles (fill the cross shape manually)
+	auto AddFace = [&](int a, int b, int c) { indices.push_back(a); indices.push_back(b); indices.push_back(c); };
+
+	// Front polygon split into triangles
+	AddFace(0, 1, 11);
+	AddFace(1, 2, 11);
+	AddFace(2, 10, 11);
+	AddFace(2, 3, 10);
+	AddFace(3, 9, 10);
+	AddFace(3, 4, 9);
+	AddFace(4, 8, 9);
+	AddFace(4, 5, 8);
+	AddFace(5, 7, 8);
+	AddFace(5, 6, 7);
+
+	// Back face triangles (reverse winding)
+	int backOffset = 12;
+	auto AddBackFace = [&](int a, int b, int c) { indices.push_back(a + backOffset); indices.push_back(c + backOffset); indices.push_back(b + backOffset); };
+	AddBackFace(0, 1, 11);
+	AddBackFace(1, 2, 11);
+	AddBackFace(2, 10, 11);
+	AddBackFace(2, 3, 10);
+	AddBackFace(3, 9, 10);
+	AddBackFace(3, 4, 9);
+	AddBackFace(4, 8, 9);
+	AddBackFace(4, 5, 8);
+	AddBackFace(5, 7, 8);
+	AddBackFace(5, 6, 7);
+
+	// Side faces
+	for (int i = 0; i < 12; i++)
+	{
+		int next = (i + 1) % 12;
+		int frontA = i;
+		int frontB = next;
+		int backA = i + backOffset;
+		int backB = next + backOffset;
+
+		// Quad split into two triangles
+		AddFace(frontA, frontB, backB);
+		AddFace(frontA, backB, backA);
+	}
+
+	m_nSubMeshes = 1;
+	m_pnSubSetIndices = new int[m_nSubMeshes];
+	m_ppnSubSetIndices = new UINT * [m_nSubMeshes];
+	m_pnSubSetIndices[0] = (UINT)indices.size();
+	m_ppnSubSetIndices[0] = new UINT[m_pnSubSetIndices[0]];
+	std::copy(indices.begin(), indices.end(), m_ppnSubSetIndices[0]);
+
+	// Create index buffer
+	m_ppd3dSubSetIndexBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexUploadBuffers = new ID3D12Resource * [m_nSubMeshes];
+	m_ppd3dSubSetIndexBuffers[0] = CreateBufferResource(pd3dDevice, pd3dCommandList,
+		m_ppnSubSetIndices[0], sizeof(UINT) * m_pnSubSetIndices[0],
+		D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_INDEX_BUFFER, &m_ppd3dSubSetIndexUploadBuffers[0]);
+
+	m_pd3dSubSetIndexBufferViews = new D3D12_INDEX_BUFFER_VIEW[m_nSubMeshes];
+	m_pd3dSubSetIndexBufferViews[0].BufferLocation = m_ppd3dSubSetIndexBuffers[0]->GetGPUVirtualAddress();
+	m_pd3dSubSetIndexBufferViews[0].Format = DXGI_FORMAT_R32_UINT;
+	m_pd3dSubSetIndexBufferViews[0].SizeInBytes = sizeof(UINT) * m_pnSubSetIndices[0];
+
+	// Create vertex buffer
+	m_pd3dPositionBuffer = CreateBufferResource(pd3dDevice, pd3dCommandList, m_pxmf3Positions,
+		sizeof(XMFLOAT3) * m_nVertices, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, &m_pd3dPositionUploadBuffer);
+
+	m_d3dPositionBufferView.BufferLocation = m_pd3dPositionBuffer->GetGPUVirtualAddress();
+	m_d3dPositionBufferView.StrideInBytes = sizeof(XMFLOAT3);
+	m_d3dPositionBufferView.SizeInBytes = sizeof(XMFLOAT3) * m_nVertices;
+}
+
+Cross_Shape_Mesh::~Cross_Shape_Mesh() {}
+
+void Cross_Shape_Mesh::Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList,
+	D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num)
+{
+	pd3dCommandList->IASetPrimitiveTopology(m_d3dPrimitiveTopology);
+	pd3dCommandList->SOSetTargets(0, 1, NULL);
+
+	D3D12_VERTEX_BUFFER_VIEW pVertexBufferViews[2] = { m_d3dPositionBufferView, d3dInstancingBufferView };
+	pd3dCommandList->IASetVertexBuffers(m_nSlot, 2, pVertexBufferViews);
+
+	if (m_ppd3dSubSetIndexBuffers[0] != nullptr)
+	{
+		D3D12_INDEX_BUFFER_VIEW indexBufferView = m_pd3dSubSetIndexBufferViews[0];
+		pd3dCommandList->IASetIndexBuffer(&indexBufferView);
+		pd3dCommandList->DrawIndexedInstanced(m_pnSubSetIndices[0], instance_num, 0, 0, 0);
+	}
+	else
+	{
+		pd3dCommandList->DrawInstanced(m_nVertices, instance_num, m_nOffset, 0);
+	}
+}
+
+
 Billboard_Shape_Mesh::Billboard_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize) : Particle_Shape_Mesh(pd3dDevice, pd3dCommandList)
 {
 

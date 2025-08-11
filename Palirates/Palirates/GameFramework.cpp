@@ -1007,7 +1007,7 @@ void CGameFramework::FrameAdvance()
 	Change_Scene();
 
 
-	m_GameTimer.Tick(100.0f);
+	m_GameTimer.Tick(300.0f);
 	ProcessInput();
 
 	BeginGPUStage(GPU_Stage::Compute);

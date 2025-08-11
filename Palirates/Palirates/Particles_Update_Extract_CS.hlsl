@@ -49,6 +49,9 @@ struct CellInfo
 
 #define PARTICLE_TYPE_SAND      4
 #define PARTICLE_TYPE_SAND_STORM 5
+#define PARTICLE_TYPE_HEAL 6
+
+
 
 #define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
@@ -276,7 +279,7 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
                 float3 incident = normalize(p.Velocity);
 
                 p.Velocity = reflect(incident, normal) * speed;
-                p.Position += 3.5f;
+                p.Position.y += 3.5f;
                 p.Color = float3(1.0f, 0.3f, 0.0f);
             }
             break;
@@ -308,6 +311,11 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
                     p.Velocity = float3(0.0f, 0.0f, 0.0f);
                     p.Acceleration = float3(0.0f, 0.0f, 0.0f);
                 }
+            }
+            break; 
+        case PARTICLE_TYPE_HEAL:
+        {
+                p.Position.y += 0.5f;
             }
             break;
         default:
@@ -481,6 +489,13 @@ void Update_Party(inout Particle_Info p, uint index)
     
 }
 
+void Update_Heal(inout Particle_Info p, uint index)
+{
+    p.Position += p.Velocity * ElapsedTime;    
+    p.Rotate_Value += 2.5f * ElapsedTime;
+}
+
+
 //===============================================================
 // 인스턴싱 정보 추출
 
@@ -564,6 +579,8 @@ void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
             Update_DragonFire(p, index);
         else if (p.Type == PARTICLE_TYPE_PARTY)
             Update_Party(p, index);
+        else if (p.Type == PARTICLE_TYPE_HEAL)
+            Update_Heal(p, index);
 
         Check_Collisions(p);
         Extract_Instance(p);
