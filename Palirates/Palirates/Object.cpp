@@ -4535,7 +4535,7 @@ Boat_Object::Boat_Object() : CGameObject(1)
 	m_xmf3Velocity.x = 0.0f;
 	m_xmf3Velocity.y = 0.0f;
 	m_xmf3Velocity.z = 0.0f;
-	m_fFriction = 50.0f;
+	m_fFriction = 0.0f;
 }
 
 Boat_Object::~Boat_Object()

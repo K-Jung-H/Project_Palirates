@@ -99,7 +99,7 @@ struct alignas(16) LightCamera_Info
 class Shadow_Camera : public CCamera
 {
 public:
-	bool update_shadow = true;
+	bool update_root_shadow = true;
 
 private:
 	shared_ptr<CMaterial> shadow_map;

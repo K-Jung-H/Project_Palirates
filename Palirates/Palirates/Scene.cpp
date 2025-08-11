@@ -2131,19 +2131,18 @@ void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (!shadow_camera || shadow_camera->update_shadow == false)
-		return;
+	if (!shadow_camera) return;
 
 	for (int i = 0; i < m_nLights; ++i)
 	{
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
-			int numCascades = NUM_CASCADES;
-			float lambda = 0.9f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, 6000, numCascades, lambda);
+			const int   numCascades = NUM_CASCADES;
+			const float lambda = 0.9f;
+
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, 6000.0f, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
-			shadow_camera->update_shadow = true;
 			break;
 		}
 	}
@@ -2151,26 +2150,29 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 
 void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
 {
-	if (!shadow_camera || shadow_camera->update_shadow == false)
+	if (!shadow_camera) return;
+
+	const int rootIndex = NUM_CASCADES - 1;
+	if (n == rootIndex && !shadow_camera->update_root_shadow)
 		return;
 
 	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
-
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
-
 	pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 	pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
 
 	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, shadow_camera.get());
-	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get()); 
+	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get());
 
+	// Root ShadowMap will update by Controlling
+	if (n == rootIndex)
+		shadow_camera->update_root_shadow = false; 
 }
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
