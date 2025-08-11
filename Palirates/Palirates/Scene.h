@@ -420,6 +420,8 @@ public:
 	shared_ptr<ParticleObject> anubis_sand_particle = NULL;
 
 
+	shared_ptr<ParticleObject> test_heal = NULL;
+
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}

@@ -262,6 +262,24 @@ void Emit_Party(inout Particle_Info p, uint index)
     p.Rotate_Value = frac(sin(index * 73.37f) * 43758.5453f);
 }
 
+void Emit_Heal(inout Particle_Info p, uint index)
+{
+    float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
+    float radius = focus_strength;
+
+    float angle = frac(sin(index * 12.9898f) * 43758.5453f) * 6.2831853f;
+    float x = center.x + radius * cos(angle);
+    float z = center.z + radius * sin(angle);
+    float y = center.y;
+
+    p.Position = float3(x, y, z);
+
+    p.Velocity = normalize(Main_Direction) * Init_Velocity_Value;
+
+    p.Size = 1.0f;
+    p.Rotate_Value = 0.0f;
+}
+
 
 //===============================================================
 // Interval
@@ -286,6 +304,7 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
 
 #define PARTICLE_TYPE_SAND      4
 #define PARTICLE_TYPE_SAND_STORM 5
+#define PARTICLE_TYPE_HEAL 6
 
 #define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
@@ -304,14 +323,18 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     {
         float delay = 1.3f + seed * 10.0f; 
         p.Lifetime = -delay;
-       // float delay = 0.0f + seed * 1.3f;
-        //p.Lifetime = -delay;
+
     }
     else if (p.Type == PARTICLE_TYPE_SPLASH)
     {
         float delay = seed * 0.3f;
         p.Lifetime = -delay;
     }
+    else if (p.Type == PARTICLE_TYPE_HEAL)
+    {
+        float delay = 1.3f + seed * 10.0f;
+        p.Lifetime = -delay;
+    } 
     else
     {
         p.Lifetime = 0.0f;
@@ -353,6 +376,8 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_DragonFire(p, index);
     else if (p.Type == PARTICLE_TYPE_PARTY)
         Emit_Party(p, index);
+    else if (p.Type == PARTICLE_TYPE_HEAL)
+        Emit_Heal(p, index);
 
     else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
     {

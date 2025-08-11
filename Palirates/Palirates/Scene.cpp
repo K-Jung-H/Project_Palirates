@@ -4502,7 +4502,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.MaxLifetime = 100.0f;
 
 		env_sand_info.area_xyz = XMFLOAT3(Scene_area);
-		env_sand_info.EmitFaceIndex = FACE_TOP;
+		env_sand_info.EmitFaceIndex = FACE_FRONT;
 
 		env_sand_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 		env_sand_info.init_velocity_value = 10.0f;
@@ -4512,11 +4512,11 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.color = XMFLOAT3(0.75f, 0.7f, 0.45f);
 	}
 
-	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	//env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
-	//env_sand_particle->Set_World_Coordinate();
-	//env_sand_particle->SetPosition(Scene_center);
-	//env_sand_particle->Set_Area(Scene_area);
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
+	env_sand_particle->Set_World_Coordinate();
+	env_sand_particle->SetPosition(Scene_center);
+	env_sand_particle->Set_Area(Scene_area);
 
 	//Particle_Format anubis_sand_info;
 	//{
@@ -4544,6 +4544,29 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//anubis_sand_particle->Set_Focus_Point(Scene_center);
 
+
+	Particle_Format heal_info;
+	{
+		heal_info.shader_type = Particle_Shader_Type::continuous;
+		heal_info.particle_type = Particle_Type::heal;
+		heal_info.max_particles = 50;
+		heal_info.MaxLifetime = 10.0f;
+
+		heal_info.area_xyz = XMFLOAT3(500,500,500);
+		heal_info.EmitFaceIndex = FACE_TOP;
+
+		heal_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		heal_info.init_velocity_value = 10.0f;
+		heal_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		heal_info.size = 0.3f;
+		heal_info.color = XMFLOAT3(0.3f, 0.7f, 0.3f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
+	test_heal = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
+	test_heal->SetPosition(Scene_center);
+	test_heal->Set_Focus_Strength(50);
 #endif
 
 	//===============================================================================
@@ -4640,6 +4663,8 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
 
+	if (test_heal)
+		test_heal->SetPosition(m_pPlayer->GetPosition());
 
 	if (anubis_sand_particle)
 	{
