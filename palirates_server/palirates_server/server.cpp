@@ -670,7 +670,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
         oss << "P_S_CMD," << state_change_list.size();
         for (StateChangeInfo data : state_change_list) {
             oss << ",STATE_CHANGE," << data.ID << "," << data.stateNum;
-            cout << "s change cmd send" << "\n";
+           // cout << "s change cmd send" << "\n";
         }
         oss << "\n";
     }

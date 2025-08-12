@@ -672,7 +672,6 @@ void MonsterStateMachine::OnPrepareUpdate(float blendSpeedOffSet, float Elapsed_
         isFirstUpdate = false;
     }
     else {
-
         for (int i = 0; i < n_Ani; i++) {
             m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
         }
@@ -725,8 +724,14 @@ void MonsterStateMachine::enterState(State state, Key_Value key_event)
 
     std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
     int currTrack = GetMonsterAnimationTrack(m_pOwner->mType, state);
+    if (m_pOwner->mType == Monster_Type::Anubis) {
+		cout << currTrack << "\n";
+    }
     m_pOwner->targetWeights[currTrack] = 1.0f;
-    m_pOwner->GetSkinnedAnimationController()->m_pAnimationTracks[currTrack].m_fPosition = 0.0f;
+    if (animController != nullptr) {
+        animController->m_pAnimationTracks[currTrack].m_bFinished = false;
+        animController->m_pAnimationTracks[currTrack].m_fPosition = 0.0f;
+    }
 }
 
 void MonsterStateMachine::exitState(State state, Key_Value key_event)
