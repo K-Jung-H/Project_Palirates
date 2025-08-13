@@ -949,12 +949,6 @@ void ParticleObject::Update_Compute_ShaderVariables(ID3D12GraphicsCommandList* p
 
 void ParticleObject::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
 {
-	if (Target_obj != NULL)
-	{
-		XMFLOAT3 target_pos = Target_obj->GetPosition();
-		SetPosition(target_pos);
-	}
-
 	if (Vector3::Length(m_xmf3Direction) == 0.0f || m_fSpeed == 0.0f)
 		return;
 

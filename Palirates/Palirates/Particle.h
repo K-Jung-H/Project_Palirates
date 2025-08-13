@@ -303,7 +303,6 @@ private:
 	shared_ptr<CMaterial> particle_Material = NULL;
 	bool is_textured = false;
 
-	shared_ptr<CGameObject> Target_obj;
 	//=============================
 
 	bool is_local = true;
@@ -327,9 +326,6 @@ public:
 	virtual ~ParticleObject();
 
 	void ReleaseUploadBuffers();
-
-	void Set_Target(shared_ptr<CGameObject> target_obj) { Target_obj = target_obj; }
-	shared_ptr<CGameObject>Get_Target() { return Target_obj; }
 
 	void Set_Shape(shared_ptr<Particle_Shape_Mesh>  mesh_ptr) { shape_mesh = mesh_ptr; }
 	shared_ptr<Particle_Shape_Mesh>  Get_Shape() { return shape_mesh; }

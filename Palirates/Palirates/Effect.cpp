@@ -128,12 +128,6 @@ Aura_Object::Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 void Aura_Object::Animate(float fTimeElapsed)
 {
 	Sprite_Object::Animate(fTimeElapsed);
-
-	if (m_pTargetObject)
-	{
-		XMFLOAT3 target_pos = m_pTargetObject->GetPosition();
-		SetPosition(target_pos);
-	}
 }
 
 void Aura_Object::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)

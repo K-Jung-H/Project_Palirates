@@ -4118,7 +4118,15 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			if (anubis_sand_particle)
 				anubis_sand_particle->Update_Particle_State();
 		}
+		break;
 
+		case 'H':
+		{
+			static bool b_test_state = true;
+			b_test_state = !b_test_state;
+			heal_effect_sample->Set_Active(b_test_state);
+		}
+		break;
 		default:
 			break;
 		}
@@ -4559,9 +4567,32 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
 	test_heal = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
-	test_heal->SetPosition(Scene_center);
-	test_heal->Set_Focus_Strength(50);
+	test_heal->SetPosition(0, 0, 0);
+	test_heal->Set_Focus_Strength(20);
 #endif
+
+	//===============================================================================
+
+	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 22, 10);
+
+	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
+
+	test_player_aura->Set_Sprite_Info(test_sprite_info);
+	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
+
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
+
+	heal_effect_sample = make_shared<CGameObject>(0);
+	heal_effect_sample->Set_Child(test_player_aura);
+	heal_effect_sample->Set_Child(test_heal);
+
 
 	//===============================================================================
 
@@ -4615,29 +4646,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	
-	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
-
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
-
-	test_player_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-	
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
-
-	if (test_player_aura && test_player_aura->Get_Aura_Target() == NULL)
-		test_player_aura->Set_Aura_Target(m_pPlayer);
-
-	heal_effect_sample;
-
-	//===============================================================================
-
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
@@ -4662,8 +4670,11 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
 
-	if (test_heal)
-		test_heal->SetPosition(m_pPlayer->GetPosition());
+	if (heal_effect_sample)
+	{
+		if(heal_effect_sample->Get_Active())
+			heal_effect_sample->SetPosition(m_pPlayer->GetPosition());
+	}
 
 	if (anubis_sand_particle)
 	{
