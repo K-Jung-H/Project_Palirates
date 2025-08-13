@@ -243,7 +243,6 @@ public:
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragon_particle = NULL;
 
-	std::shared_ptr<Aura_Object>test_player_aura = NULL;
 
 	std::shared_ptr<Object_Manager> obj_manager = NULL;
 	std::shared_ptr<Sprite_Effect_Manager> effect_manager = NULL;
@@ -419,8 +418,9 @@ public:
 
 	shared_ptr<ParticleObject> anubis_sand_particle = NULL;
 
-
+	shared_ptr<CGameObject> heal_effect_sample = NULL;
 	shared_ptr<ParticleObject> test_heal = NULL;
+	shared_ptr<Aura_Object>test_player_aura = NULL;
 
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}

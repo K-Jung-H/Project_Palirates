@@ -2101,11 +2101,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 
 	m_pPlayer->Update_Color_Blending(-0.01f);
-
-
-	if (test_player_aura && test_player_aura->Get_Aura_Target())
-		test_player_aura->Set_Aura_Target(m_pPlayer);
-
 }
 
 void CScene::After_Update_Objects()
@@ -4037,8 +4032,7 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pPlayer->Update_Color_Blending(-0.01f);
 
 
-	if (test_player_aura && test_player_aura->Get_Aura_Target()== NULL)
-		test_player_aura->Set_Aura_Target(m_pPlayer);
+
 
 
 	effect_manager->Update_Effects_All();
@@ -4621,21 +4615,26 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	//test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	//
-	//test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
+	
+	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
 
-	//SpriteInfo test_sprite_info;
-	//test_sprite_info.frameCols = 5;
-	//test_sprite_info.frameRows = 7;
-	//test_sprite_info.totalFrames = 32;
-	//test_sprite_info.frameTime = 0.05f;
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
 
-	//test_player_aura->Set_Sprite_Info(test_sprite_info);
-	//obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-	//
-	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
+	test_player_aura->Set_Sprite_Info(test_sprite_info);
+	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
+	
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
+
+	if (test_player_aura && test_player_aura->Get_Aura_Target() == NULL)
+		test_player_aura->Set_Aura_Target(m_pPlayer);
+
+	heal_effect_sample;
 
 	//===============================================================================
 
