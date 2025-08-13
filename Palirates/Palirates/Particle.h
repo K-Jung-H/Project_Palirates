@@ -302,6 +302,7 @@ private:
 	shared_ptr<Particle_Shape_Mesh>  shape_mesh = NULL;
 	shared_ptr<CMaterial> particle_Material = NULL;
 	bool is_textured = false;
+
 	//=============================
 
 	bool is_local = true;
