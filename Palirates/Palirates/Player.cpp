@@ -344,7 +344,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	char* modelPaths[] = {
-	"Model/Captain_v17.bin",
+	"Model/spear_test.bin",
+	//"Model/Captain_v17.bin",
 	"Model/Deckhand_v17.bin",
 	"Model/Female_Pirate_v17.bin",
 	"Model/First_Mate_v17.bin",

@@ -55,7 +55,8 @@ Player::Player(int playerId) : Skinned_GameObject()
         }
     }
 
-    InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
+    //InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
+    InitAnimationController("Model/spear_test.bin", 17, 2, OnceType);
    
     m_StateMachine = std::make_unique<PlayerStateMachine>(this);
     InitStateMachine();
@@ -163,6 +164,7 @@ void Player::key_input(uint32_t keyState)
         return;
     }
 
+    static bool attack1or2 = false;
     if (keyState & INPUT_MOUSE_LEFT)
     {
         DirectX::XMFLOAT2 mv;
@@ -171,7 +173,15 @@ void Player::key_input(uint32_t keyState)
             CommandSetLook = kDirVecByRunDir[(int)dir];
             cout << CommandSetLook.x << ", " << CommandSetLook.y << ", " << CommandSetLook.z << "\n";
         }
-        GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+        if (attack1or2) {
+            GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
+            attack1or2 = !attack1or2;
+        }
+        else {
+            GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+            attack1or2 = !attack1or2;
+        }
+        
     }
 
     if (keyState & INPUT_MOUSE_RIGHT)
