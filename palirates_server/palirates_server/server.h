@@ -34,6 +34,7 @@ struct ClientSession
     std::queue<std::string> sendQueue;
     std::mutex sendQueueMutex;
 
+    int select_idx = -1;
     ClientSession(SOCKET sock)
         : socket(sock) {}
 

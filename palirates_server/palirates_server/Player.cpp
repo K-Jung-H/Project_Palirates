@@ -55,8 +55,20 @@ Player::Player(int playerId) : Skinned_GameObject()
         }
     }
 
+    char* modelPaths[] = {
+        "Model/Captain_v17.bin",
+        "Model/Captain_v17.bin",
+        "Model/Captain_v17.bin",
+        "Model/Captain_v17.bin",
+        "Model/Captain_v17.bin",
+        "Model/spear_test.bin",
+        //"Model/Skeleton_v17.bin"
+    };
+    const int modelCount = sizeof(modelPaths) / sizeof(modelPaths[0]);
+    if (model_index < 0 || model_index >= modelCount)
+        model_index = 0;
     //InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    InitAnimationController("Model/spear_test.bin", 17, 2, OnceType);
+    InitAnimationController(modelPaths[model_index], 17, 2, OnceType);
    
     m_StateMachine = std::make_unique<PlayerStateMachine>(this);
     InitStateMachine();
