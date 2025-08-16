@@ -754,7 +754,7 @@ void CGameFramework::ProcessInput()
 		if (!isRunning) {
 			if (!CScene::Screen_Fade) m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 		}
-
+		m_pPlayer->current_keyboard_inputFlags = current_keyboard_inputFlags;
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
 		if (bMouseLocked != last_mouse_state)
 		{

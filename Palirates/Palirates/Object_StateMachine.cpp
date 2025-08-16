@@ -105,6 +105,27 @@ void Key_State::update(Key_Value key_state)
     }
 }
 
+AnimationTrack GetRunTrackFromInput(uint32_t inputFlags)
+{
+    bool w = (inputFlags & INPUT_W) != 0;
+    bool s = (inputFlags & INPUT_S) != 0;
+    bool a = (inputFlags & INPUT_A) != 0;
+    bool d = (inputFlags & INPUT_D) != 0;
+
+    if (w && a) return TRACK_RUN_FORWARD_LEFT;
+    if (w && d) return TRACK_RUN_FORWARD_RIGHT;
+    if (w)      return TRACK_RUN_FORWARD;
+
+    if (s && a) return TRACK_RUN_BACKWARD_LEFT;
+    if (s && d) return TRACK_RUN_BACKWARD_RIGHT;
+    if (s)      return TRACK_RUN_BACKWARD;
+
+    if (a)      return TRACK_RUN_LEFT;
+    if (d)      return TRACK_RUN_RIGHT;
+
+    return TRACK_IDLE;
+}
+
 bool Key_State::check_move()
 {
     return (left != right) || (forward != back);
@@ -304,51 +325,57 @@ void PlayerStateMachine::update(float Elapsed_time)
     //    m_pOwner->SetStateElapsedTime(0.0f);
     //    changeState(State::Attack3, Key_Value::None);
     //}
-
+    switch (Get_State()) {
+    case State::Run: {
+        std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+        m_pOwner->targetWeights[GetRunTrackFromInput(m_pOwner->current_keyboard_inputFlags)] = 1.0f;
+    }
+                   break;
+    }
     //switch (Get_State()) {
-    //case State::Idle:
+    ///*case State::Idle:
     //    if (moveX == 0.0f && moveZ == 0.0f) {
     //        m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
     //    }
     //    else {
     //        changeState(State::Run, Key_Value::None);
     //    }
-    //    break;
+    //    break;*/
 
     //case State::Run:
-    //    /*if (moveX == 0.0f && moveZ == 0.0f) {
-    //        changeState(State::Idle, Key_Value::None);
-    //    }
-    //    else {
-    //        float length = sqrtf(moveX * moveX + moveZ * moveZ);
-    //        float normX = moveX / length;
-    //        float normZ = moveZ / length;
+    //    //if (moveX == 0.0f && moveZ == 0.0f) {
+    //    //    changeState(State::Idle, Key_Value::None);
+    //    //}
+    //    //else {
+    //    //    float length = sqrtf(moveX * moveX + moveZ * moveZ);
+    //    //    float normX = moveX / length;
+    //    //    float normZ = moveZ / length;
 
-    //        int bestIndex = -1, secondIndex = -1;
-    //        float bestDot = -1.0f, secondDot = -1.0f;
+    //    //    int bestIndex = -1, secondIndex = -1;
+    //    //    float bestDot = -1.0f, secondDot = -1.0f;
 
-    //        for (int i = 0; i < 8; i++) {
-    //            float dot = normX * directions[i].x + normZ * directions[i].z;
-    //            if (dot > bestDot) {
-    //                secondDot = bestDot;
-    //                secondIndex = bestIndex;
-    //                bestDot = dot;
-    //                bestIndex = i;
-    //            }
-    //            else if (dot > secondDot) {
-    //                secondDot = dot;
-    //                secondIndex = i;
-    //            }
-    //        }
+    //    //    for (int i = 0; i < 8; i++) {
+    //    //        float dot = normX * directions[i].x + normZ * directions[i].z;
+    //    //        if (dot > bestDot) {
+    //    //            secondDot = bestDot;
+    //    //            secondIndex = bestIndex;
+    //    //            bestDot = dot;
+    //    //            bestIndex = i;
+    //    //        }
+    //    //        else if (dot > secondDot) {
+    //    //            secondDot = dot;
+    //    //            secondIndex = i;
+    //    //        }
+    //    //    }
 
-    //        float totalDot = bestDot + secondDot;
-    //        float weight1 = bestDot / totalDot;
-    //        float weight2 = secondDot / totalDot;
+    //    //    float totalDot = bestDot + secondDot;
+    //    //    float weight1 = bestDot / totalDot;
+    //    //    float weight2 = secondDot / totalDot;
 
-    //        m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
-    //        m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
-    //    }*/
-    //    m_pOwner->targetWeights[TRACK_RUN_FORWARD] = 1.0f;
+    //    //    m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
+    //    //    m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
+    //    //}
+    //   // m_pOwner->targetWeights[TRACK_RUN_FORWARD] = 1.0f;
     //    break;
     //case State::Dive:
 

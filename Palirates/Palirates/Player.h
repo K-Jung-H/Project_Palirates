@@ -89,6 +89,7 @@ public:
 
 	bool m_bSliding = false;
 	XMFLOAT3 m_xmf3SlideVector = XMFLOAT3(0, 0, 0);
+	uint32_t current_keyboard_inputFlags = 0;
 
 	void EnableSliding(const XMFLOAT3& slideVec)
 	{
