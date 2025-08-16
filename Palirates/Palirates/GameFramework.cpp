@@ -1745,6 +1745,7 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
 		float zView = XMVectorGetZ(viewSpacePos);
 
+		syncData.animMode = DecideMode(zView);
 		/*if (zView >= 800.0f) {
 			stage_scene->Monster_Set_Active_False(monsterId);
 		}

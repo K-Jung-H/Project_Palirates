@@ -610,6 +610,32 @@ enum class Monster_Type : int
 	ETC
 };
 
+enum class AnimUpdateMode : uint8_t {
+	Full,      
+	PoseOnly,   
+	TimeOnly,  
+	Frozen   
+};
+
+static AnimUpdateMode DecideMode(float zView) {
+	if (zView < -50.0f || zView > 800.0f) {
+		return AnimUpdateMode::TimeOnly;
+	}
+
+	return AnimUpdateMode::Full;
+	/*if (dist <= 40.0f) {
+		return AnimUpdateMode::Full;
+	}
+	else if (dist <= 100.0f) {
+		return AnimUpdateMode::PoseOnly;
+	}
+	else if (dist <= 200.0f) {
+		return AnimUpdateMode::TimeOnly;
+	}
+	else {
+		return AnimUpdateMode::Frozen;
+	}*/
+}
 
 //#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"

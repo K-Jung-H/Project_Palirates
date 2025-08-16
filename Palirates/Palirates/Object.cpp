@@ -1228,6 +1228,33 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 {
 	m_fTime += fTimeElapsed;
 
+	AnimUpdateMode mode = AnimUpdateMode::Full;
+	if (pRootGameObject->HasType(EObjectType::Monster)) {
+		if (auto* mon = dynamic_cast<CMonsterObject*>(pRootGameObject)) {
+			mode = mon->animMode;
+		}
+	}
+
+	if (mode == AnimUpdateMode::TimeOnly)
+	{
+		for (int k = 0; k < m_nAnimationTracks; ++k)
+		{
+			if (m_pAnimationTracks[k].m_fWeight <= ANIMATION_CALLBACK_EPSILON) continue;
+
+			CAnimationSet* pSet =
+				m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+
+			m_pAnimationTracks[k].m_fPosition =
+				m_pAnimationTracks[k].UpdatePosition(
+					m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pSet->m_fLength);
+
+			m_pAnimationTracks[k].HandleCallback();
+
+			if (m_pAnimationTracks[k].m_fWeight >= 1.0f) break;
+		}
+		return; 
+	}
+
 	if (m_pAnimationTracks)
 	{
 		for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
@@ -5024,6 +5051,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
 	}
 	currentHP = syncData.hp;
+	this->animMode = syncData.animMode;
 }
 
 ///////////////////////////////////////////////////////////////////
