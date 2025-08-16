@@ -60,7 +60,8 @@ Player::Player(int playerId) : Skinned_GameObject()
         "Model/Captain_v17.bin",
         "Model/Captain_v17.bin",
         "Model/Captain_v17.bin",
-        "Model/Captain_v17.bin",
+        "Model/swordman_test.bin",
+       //"Model/Seaman_v17.bin",
         "Model/spear_test.bin",
         //"Model/Skeleton_v17.bin"
     };
