@@ -503,7 +503,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         if (m->Weapon_ptr.empty()) continue;
         m->UpdateTransform();
         for (auto& w : m->Weapon_ptr) {
-            if (w->CanCollide()) continue;
+            if (!w->CanCollide()) continue;
             w->UpdateWorldOBB();
             auto worldWeaponOBB = w->Get_Collider_OBB();
             for (std::shared_ptr<Player> player_ptr : player_list) {

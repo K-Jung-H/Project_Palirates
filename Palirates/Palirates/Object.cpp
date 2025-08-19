@@ -1262,186 +1262,89 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 			if (m_pAnimationTracks[k].m_fWeight >= 1.0f) break;
 		}
-		return; 
+		return;
 	}
 
 	if (!m_pAnimationTracks) return;
 
-		const int boneCount = m_pAnimationSets->m_nBoneFrames;
+	const int boneCount = m_pAnimationSets->m_nBoneFrames;
 
-		float totalWeight = 0.0f;
-		for (int k = 0; k < m_nAnimationTracks; ++k)
-			if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
-				totalWeight += m_pAnimationTracks[k].m_fWeight;
-		if (totalWeight == 0.0f) return;
+	float totalWeight = 0.0f;
+	for (int k = 0; k < m_nAnimationTracks; ++k)
+		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
+			totalWeight += m_pAnimationTracks[k].m_fWeight;
+	if (totalWeight == 0.0f) return;
 
-		std::vector<XMVECTOR> accT(boneCount, XMVectorZero());
-		std::vector<XMVECTOR> accQ(boneCount, XMVectorZero());
-		std::vector<XMVECTOR> baseQ(boneCount, XMQuaternionIdentity());
-		std::vector<bool>     hasQ(boneCount, false);
+	std::vector<XMVECTOR> accT(boneCount, XMVectorZero());
+	std::vector<XMVECTOR> accQ(boneCount, XMVectorZero());
+	std::vector<XMVECTOR> baseQ(boneCount, XMQuaternionIdentity());
+	std::vector<bool>     hasQ(boneCount, false);
 
-		for (int k = 0; k < m_nAnimationTracks; ++k)
-		{
-			if (m_pAnimationTracks[k].m_fWeight <= ANIMATION_CALLBACK_EPSILON) continue;
+	for (int k = 0; k < m_nAnimationTracks; ++k)
+	{
+		if (m_pAnimationTracks[k].m_fWeight <= ANIMATION_CALLBACK_EPSILON) continue;
 
-			CAnimationSet* pSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
-			float fPos = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pSet->m_fLength);
-			const float w = m_pAnimationTracks[k].m_fWeight / totalWeight;
-
-			for (int j = 0; j < boneCount; ++j)
-			{
-				XMFLOAT4X4 m = pSet->GetSRT(j, fPos);
-				XMVECTOR S, Q, T;
-				if (!XMMatrixDecompose(&S, &Q, &T, XMLoadFloat4x4(&m))) continue;
-
-				if (!hasQ[j]) { baseQ[j] = Q; hasQ[j] = true; }
-				else {
-					if (XMVectorGetX(XMVector4Dot(baseQ[j], Q)) < 0.0f) Q = XMQuaternionNegate(Q);
-				}
-
-				accT[j] += T * w;
-				accQ[j] += Q * w;
-			}
-
-			m_pAnimationTracks[k].HandleCallback();
-		}
+		CAnimationSet* pSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+		float fPos = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pSet->m_fLength);
+		const float w = m_pAnimationTracks[k].m_fWeight / totalWeight;
 
 		for (int j = 0; j < boneCount; ++j)
 		{
-			if (!hasQ[j]) {
-				m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Identity();
-				continue;
+			XMFLOAT4X4 m = pSet->GetSRT(j, fPos);
+			XMVECTOR S, Q, T;
+			if (!XMMatrixDecompose(&S, &Q, &T, XMLoadFloat4x4(&m))) continue;
+
+			if (!hasQ[j]) { baseQ[j] = Q; hasQ[j] = true; }
+			else {
+				if (XMVectorGetX(XMVector4Dot(baseQ[j], Q)) < 0.0f) Q = XMQuaternionNegate(Q);
 			}
 
-			XMVECTOR q = XMQuaternionNormalize(accQ[j]);
-			XMVECTOR s = XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f); 
-			XMMATRIX M = XMMatrixScalingFromVector(s)
-				* XMMatrixRotationQuaternion(q)
-				* XMMatrixTranslationFromVector(accT[j]);
-
-			XMFLOAT4X4 out; XMStoreFloat4x4(&out, M);
-
-			if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player))
-			{
-				if (j == RootIndex)
-				{
-					HipsPosition = XMFLOAT3(out._41, out._42, out._43);
-					out._41 = 0.0f; out._43 = 0.0f;
-				}
-			}
-			else if (pRootGameObject->HasType(EObjectType::Monster))
-			{
-				if (j == RootIndex)
-				{
-					HipsPosition = XMFLOAT3(out._41, out._42, out._43);
-					out._41 = 0.0f; out._43 = 0.0f;
-				}
-			}
-
-			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = out;
+			accT[j] += T * w;
+			accQ[j] += Q * w;
 		}
-	//if (m_pAnimationTracks)
-	//{
-	//	for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-	//	{
-	//		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Zero();
-	//	}
 
-	//	float totalWeight = 0.0f;
-	//	for (int k = 0; k < m_nAnimationTracks; k++)
-	//	{
-	//		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
-	//		{
-	//			totalWeight += m_pAnimationTracks[k].m_fWeight;
-	//		}
-	//	}
-	//	if (totalWeight == 0.0f) return;
+		m_pAnimationTracks[k].HandleCallback();
+	}
 
-	//	for (int k = 0; k < m_nAnimationTracks; k++)
-	//	{
-	//		if (m_pAnimationTracks[k].m_fWeight > ANIMATION_CALLBACK_EPSILON)
-	//		{
-	//			//CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet];
-	//			CAnimationSet* pAnimationSet = m_pAnimationSets->m_pAnimationSet_list[m_pAnimationTracks[k].m_nAnimationSet].get();
+	for (int j = 0; j < boneCount; ++j)
+	{
+		if (!hasQ[j]) {
+			m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = Matrix4x4::Identity();
+			continue;
+		}
 
-	//			float fPosition = m_pAnimationTracks[k].UpdatePosition(m_pAnimationTracks[k].m_fPosition, fTimeElapsed, pAnimationSet->m_fLength);
+		XMVECTOR q = XMQuaternionNormalize(accQ[j]);
+		XMVECTOR s = XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+		XMMATRIX M = XMMatrixScalingFromVector(s)
+			* XMMatrixRotationQuaternion(q)
+			* XMMatrixTranslationFromVector(accT[j]);
 
-	//			for (int j = 0; j < m_pAnimationSets->m_nBoneFrames; j++)
-	//			{
-	//				XMFLOAT4X4 xmf4x4Transform = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent;
-	//				XMFLOAT4X4 xmf4x4TrackTransform = pAnimationSet->GetSRT(j, fPosition);
-	//				
-	//				float normalizedWeight = m_pAnimationTracks[k].m_fWeight / totalWeight;
+		XMFLOAT4X4 out; XMStoreFloat4x4(&out, M);
 
-	//				XMFLOAT4X4 blendedTransform = Matrix4x4::Add(xmf4x4Transform, Matrix4x4::Scale(xmf4x4TrackTransform, normalizedWeight));
+		if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player))
+		{
+			if (j == RootIndex)
+			{
+				HipsPosition = XMFLOAT3(out._41, out._42, out._43);
+				out._41 = 0.0f; out._43 = 0.0f;
+			}
+		}
+		else if (pRootGameObject->HasType(EObjectType::Monster))
+		{
+			if (j == RootIndex)
+			{
+				HipsPosition = XMFLOAT3(out._41, out._42, out._43);
+				out._41 = 0.0f; out._43 = 0.0f;
+			}
+		}
 
-	//				//if (pRootGameObject->Object_type == OBJECT_TPYE_MAIN_PLAYER || pRootGameObject->Object_type == OBJECT_TPYE_PLAYER) {
-	//				if (pRootGameObject->HasType(EObjectType::MainPlayer | EObjectType::Player)) {
-	//					if (j == RootIndex)
-	//					{
-	//						if (!m_pAnimationTracks[k].m_bFinished && GetUpdateHipsTracks().contains(k)) {
-	//							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+		m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = out;
+	}
 
-	//						}
+	pRootGameObject->UpdateTransform(NULL);
 
-	//						blendedTransform._41 = 0.0f;
-	//						//blendedTransform._42 = 0.8762761f;
-	//						blendedTransform._43 = 0.0f;
-
-	//					}
-	//				}
-	//				else if (pRootGameObject->HasType(EObjectType::Monster)) {
-	//					if (j == RootIndex) {
-	//						if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.contains(k)) {
-	//							HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
-	//						}
-
-	//						blendedTransform._41 = 0.0f;
-	//						//blendedTransform._42 = 0.0f;
-	//						blendedTransform._43 = 0.0f;
-	//					}
-
-	//				}
-
-	//				//auto colLen = [](const XMFLOAT4X4& m, int col)->float {
-	//				//	float x = (&m._11)[col * 4 + 0], y = (&m._11)[col * 4 + 1], z = (&m._11)[col * 4 + 2];
-	//				//	return sqrtf(x * x + y * y + z * z);
-	//				//	};
-
-	//				//float sx = colLen(blendedTransform, 0);
-	//				//float sy = colLen(blendedTransform, 1);
-	//				//float sz = colLen(blendedTransform, 2);
-	//				//if (fabsf(sx - 1.f) > 0.02f || fabsf(sy - 1.f) > 0.02f || fabsf(sz - 1.f) > 0.02f) {
-	//				//	const std::string boneName = m_pAnimationSets->GetBoneName(j);
-	//				//	char buf[256];
-	//				//	sprintf_s(buf, "[POST-BLEND] Bone=%d(%s) scale=(%.4f,%.4f,%.4f)\n", j, boneName.c_str(), sx, sy, sz);
-	//				//	//OutputDebugStringA(buf);
-	//				//	cout << buf << "\n";
-	//				//}
-	//				XMVECTOR s, r, t;
-	//				XMMatrixDecompose(&s, &r, &t, XMLoadFloat4x4(&blendedTransform));
-
-	//				s = XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
-
-	//				XMMATRIX fixed = XMMatrixScalingFromVector(s)
-	//					* XMMatrixRotationQuaternion(r)
-	//					* XMMatrixTranslationFromVector(t);
-
-	//				XMStoreFloat4x4(&blendedTransform, fixed);
-	//				m_pAnimationSets->m_ppBoneFrameCaches[j]->m_xmf4x4Parent = blendedTransform;
-	//			}
-
-	//			m_pAnimationTracks[k].HandleCallback();
-	//		}
-	//		/*if (m_pAnimationTracks[k].m_fWeight >= 1.0f)
-	//			break;*/
-	//	}
-
-		pRootGameObject->UpdateTransform(NULL);
-
-		OnRootMotion(pRootGameObject);
-		OnAnimationIK(pRootGameObject);
-	//}
+	OnRootMotion(pRootGameObject);
+	OnAnimationIK(pRootGameObject);
 }
 
 void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)
