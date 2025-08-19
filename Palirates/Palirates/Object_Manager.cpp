@@ -1368,7 +1368,7 @@ void Object_Manager::Render_Terrain(ID3D12GraphicsCommandList* pd3dCommandList, 
 
 void Object_Manager::Render_Objects_All(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-//	Render_Terrain(pd3dCommandList, pCamera);
+	Render_Terrain(pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::non_skinned, pd3dCommandList, pCamera);
 	Render_Objects(Object_Type::player, pd3dCommandList, pCamera);

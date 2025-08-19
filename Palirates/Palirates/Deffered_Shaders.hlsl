@@ -197,7 +197,7 @@ float4 Debug_ShadowMap(float2 uv)
     }
     else
     {
-        cascade_idx = 3;
+        cascade_idx = 2;
         shadow_uv = float2(quad_uv.x - 1.0f, quad_uv.y - 1.0f);
     }
     float depth = gShadowMaps[cascade_idx].SampleLevel(gssWrap, shadow_uv, 0);
@@ -288,8 +288,9 @@ float4 PS_Textured_ScreenRect(VS_TEXTURED_SCREEN_RECT_OUTPUT input) : SV_Target
     if (isEmptyPixel && Fog_Trigger == 0)
         discard;
 
+    
     // ======= Lighting =======
-    float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
+        float shadowFactor = CalcCSMShadowFactor(world_position.xyz, viewspace_Z);
     float3 Light_Color = Lighting(world_position.xyz, wNormal, camera_pos, colorTexture.rgb, materialID, shadowFactor).rgb;
 
     // ======= Fog =======

@@ -2101,11 +2101,6 @@ void CScene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList*
 	}
 
 	m_pPlayer->Update_Color_Blending(-0.01f);
-
-
-	if (test_player_aura && test_player_aura->Get_Aura_Target())
-		test_player_aura->Set_Aura_Target(m_pPlayer);
-
 }
 
 void CScene::After_Update_Objects()
@@ -2131,19 +2126,18 @@ void CScene::Render_Depth(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 
 void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
-	if (!shadow_camera || shadow_camera->update_shadow == false)
-		return;
+	if (!shadow_camera) return;
 
 	for (int i = 0; i < m_nLights; ++i)
 	{
 		if (m_pLights[i].m_bEnable && m_pLights[i].m_nType == DIRECTIONAL_LIGHT)
 		{
-			int numCascades = NUM_CASCADES;
-			float lambda = 0.9f;
-			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, 6000, numCascades, lambda);
+			const int   numCascades = NUM_CASCADES;
+			const float lambda = 0.9f;
+
+			std::vector<float> splits = shadow_camera->GenerateCSMSplitDepths(CAMERA_NEAR, 6000.0f, numCascades, lambda);
 
 			shadow_camera->SetupCSMCascades(m_pLights[i].m_xmf3Direction, splits, main_Camera.get());
-			shadow_camera->update_shadow = true;
 			break;
 		}
 	}
@@ -2151,26 +2145,29 @@ void CScene::Prepare_Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsC
 
 void CScene::Shadow_Map_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int n)
 {
-	if (!shadow_camera || shadow_camera->update_shadow == false)
+	if (!shadow_camera) return;
+
+	const int rootIndex = NUM_CASCADES - 1;
+	if (n == rootIndex && !shadow_camera->update_root_shadow)
 		return;
 
 	shadow_camera->SetViewportsAndScissorRects(pd3dCommandList);
 
-
 	if (m_MRT_GraphicsRootSignature)
 		pd3dCommandList->SetGraphicsRootSignature(m_MRT_GraphicsRootSignature.get());
 
-
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = shadow_camera->Get_Shadow_Map_DSV(n);
-
 	pd3dCommandList->OMSetRenderTargets(0, nullptr, FALSE, &dsvHandle);
 	pd3dCommandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 	shadow_camera->Update_Render_ShaderVariables(pd3dCommandList, n);
 
 	obj_manager->Render_Objects_Shadow_All(pd3dCommandList, shadow_camera.get());
-	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get()); 
+	m_pPlayer->Render_Shadow(pd3dCommandList, shadow_camera.get());
 
+	// Root ShadowMap will update by Controlling
+	if (n == rootIndex)
+		shadow_camera->update_root_shadow = false; 
 }
 
 void CScene::Prepare_Render(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -4035,8 +4032,7 @@ void Stage_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	m_pPlayer->Update_Color_Blending(-0.01f);
 
 
-	if (test_player_aura && test_player_aura->Get_Aura_Target()== NULL)
-		test_player_aura->Set_Aura_Target(m_pPlayer);
+
 
 
 	effect_manager->Update_Effects_All();
@@ -4122,7 +4118,15 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 			if (anubis_sand_particle)
 				anubis_sand_particle->Update_Particle_State();
 		}
+		break;
 
+		case 'H':
+		{
+			static bool b_test_state = true;
+			b_test_state = !b_test_state;
+			heal_effect_sample->Set_Active(b_test_state);
+		}
+		break;
 		default:
 			break;
 		}
@@ -4500,7 +4504,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.MaxLifetime = 100.0f;
 
 		env_sand_info.area_xyz = XMFLOAT3(Scene_area);
-		env_sand_info.EmitFaceIndex = FACE_TOP;
+		env_sand_info.EmitFaceIndex = FACE_FRONT;
 
 		env_sand_info.main_direction = XMFLOAT3(0.0f, -1.0f, 0.0f);
 		env_sand_info.init_velocity_value = 10.0f;
@@ -4510,39 +4514,85 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		env_sand_info.color = XMFLOAT3(0.75f, 0.7f, 0.45f);
 	}
 
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
+	env_sand_particle->Set_World_Coordinate();
+	env_sand_particle->SetPosition(Scene_center);
+	env_sand_particle->Set_Area(Scene_area);
+
+	//Particle_Format anubis_sand_info;
+	//{
+	//	anubis_sand_info.shader_type = Particle_Shader_Type::sand;
+	//	anubis_sand_info.particle_type = Particle_Type::sand;
+	//	anubis_sand_info.max_particles = 20000;
+	//	anubis_sand_info.MaxLifetime = 10.0f;
+
+	//	anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
+	//	anubis_sand_info.EmitFaceIndex = FACE_FRONT;
+
+	//	anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+	//	anubis_sand_info.init_velocity_value = 100.0f;
+	//	anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
+
+	//	anubis_sand_info.size = 0.3f;
+	//	anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
+	//}
+
 	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	//env_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, env_sand_info);
-	//env_sand_particle->Set_World_Coordinate();
-	//env_sand_particle->SetPosition(Scene_center);
-	//env_sand_particle->Set_Area(Scene_area);
+	//anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
+	//anubis_sand_particle->Set_Local_Coordinate();
+	//anubis_sand_particle->SetPosition(Scene_center);
+	//anubis_sand_particle->Set_Area(Scene_area);
 
-	Particle_Format anubis_sand_info;
+	//anubis_sand_particle->Set_Focus_Point(Scene_center);
+
+
+	Particle_Format heal_info;
 	{
-		anubis_sand_info.shader_type = Particle_Shader_Type::sand;
-		anubis_sand_info.particle_type = Particle_Type::sand;
-		anubis_sand_info.max_particles = 20000;
-		anubis_sand_info.MaxLifetime = 10.0f;
+		heal_info.shader_type = Particle_Shader_Type::continuous;
+		heal_info.particle_type = Particle_Type::heal;
+		heal_info.max_particles = 50;
+		heal_info.MaxLifetime = 10.0f;
 
-		anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
-		anubis_sand_info.EmitFaceIndex = FACE_FRONT;
+		heal_info.area_xyz = XMFLOAT3(500,500,500);
+		heal_info.EmitFaceIndex = FACE_TOP;
 
-		anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-		anubis_sand_info.init_velocity_value = 100.0f;
-		anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
+		heal_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		heal_info.init_velocity_value = 10.0f;
+		heal_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-		anubis_sand_info.size = 0.3f;
-		anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
+		heal_info.size = 0.3f;
+		heal_info.color = XMFLOAT3(0.3f, 0.7f, 0.3f);
 	}
 
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
-	anubis_sand_particle->Set_Local_Coordinate();
-	anubis_sand_particle->SetPosition(Scene_center);
-	anubis_sand_particle->Set_Area(Scene_area);
-
-	anubis_sand_particle->Set_Focus_Point(Scene_center);
-
+	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
+	test_heal = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
+	test_heal->SetPosition(0, 0, 0);
+	test_heal->Set_Focus_Strength(20);
 #endif
+
+	//===============================================================================
+
+	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 22, 10);
+
+	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
+
+	test_player_aura->Set_Sprite_Info(test_sprite_info);
+	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
+
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
+	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
+
+	heal_effect_sample = make_shared<CGameObject>(0);
+	heal_effect_sample->Set_Child(test_player_aura);
+	heal_effect_sample->Set_Child(test_heal);
+
 
 	//===============================================================================
 
@@ -4596,24 +4646,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-	//test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 10, 30);
-	//
-	//test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
-
-	//SpriteInfo test_sprite_info;
-	//test_sprite_info.frameCols = 5;
-	//test_sprite_info.frameRows = 7;
-	//test_sprite_info.totalFrames = 32;
-	//test_sprite_info.frameTime = 0.05f;
-
-	//test_player_aura->Set_Sprite_Info(test_sprite_info);
-	//obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-	//
-	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	//effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
-
-	//===============================================================================
-
 	Object_Manager::Reserve_Update();
 	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
 	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
@@ -4638,6 +4670,11 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
 
+	if (heal_effect_sample)
+	{
+		if(heal_effect_sample->Get_Active())
+			heal_effect_sample->SetPosition(m_pPlayer->GetPosition());
+	}
 
 	if (anubis_sand_particle)
 	{

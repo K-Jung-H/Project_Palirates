@@ -31,6 +31,7 @@ enum class Particle_Type
 	party = 3,
 	sand = 4,
 	sand_storm = 5,
+	heal = 6,
 	//=======================
 	bleed = 10,
 	//=======================
@@ -50,6 +51,7 @@ struct Particle_Sync_Data
 	float LifeTime;
 	XMFLOAT3 area_extent;
 	XMFLOAT3 main_direction;
+	XMFLOAT3 focus_point;
 	UINT particle_status_index;
 };
 
@@ -259,6 +261,15 @@ public:
 	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
 };
 
+class Cross_Shape_Mesh : public Particle_Shape_Mesh
+{
+public:
+	Cross_Shape_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float fSize = 3.0f);
+	virtual ~Cross_Shape_Mesh();
+
+	virtual void Instancing_Render(ID3D12GraphicsCommandList* pd3dCommandList, D3D12_VERTEX_BUFFER_VIEW d3dInstancingBufferView, int instance_num);
+};
+
 class Billboard_Shape_Mesh : public Particle_Shape_Mesh
 {
 public:
@@ -291,6 +302,7 @@ private:
 	shared_ptr<Particle_Shape_Mesh>  shape_mesh = NULL;
 	shared_ptr<CMaterial> particle_Material = NULL;
 	bool is_textured = false;
+
 	//=============================
 
 	bool is_local = true;
