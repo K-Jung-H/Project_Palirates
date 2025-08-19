@@ -5065,6 +5065,9 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	}
 	currentHP = syncData.hp;
 	this->animMode = syncData.animMode;
+	if (int(GetStateMachine()->Get_State()) != syncData.stateEnum) {
+		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
+	}
 }
 
 ///////////////////////////////////////////////////////////////////

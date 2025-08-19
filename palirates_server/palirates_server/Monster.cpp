@@ -63,9 +63,9 @@ ServerSyncData Monster::MakeSyncData() {
     ServerSyncData data;
     data.position = GetPosition();
     data.lookVector = GetLook();
-    if (m_pSkinnedAnimationController) {
+    /*if (m_pSkinnedAnimationController) {
         data.track_info_list = m_pSkinnedAnimationController->MakeSyncData();
-    }
+    }*/
     data.hp = GetHP();
     return data;
 }
