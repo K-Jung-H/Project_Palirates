@@ -457,11 +457,22 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
+       /* if (m_pOwner->Weapon_ptr != nullptr)
             m_pOwner->Weapon_ptr->bUpdateOBBOn();
         m_pOwner->Trail_Start();
         m_pOwner->GetTrailObj()->Set_Active(true);
         m_pOwner->GetTrailObj()->GetTrailMesh()->ResetTrail();
+        m_pOwner->bTrailOn();
+        std::cout << "Trail On" << "\n";*/
+
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
+        for (auto& t_obj : m_pOwner->GetTrailObj()) {
+            t_obj->Set_Active(true);
+            t_obj->GetTrailMesh()->ResetTrail();
+        }
+        m_pOwner->Trail_Start();
         m_pOwner->bTrailOn();
         std::cout << "Trail On" << "\n";
     }
@@ -496,8 +507,11 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         break;
     case State::Select_Idle:
         if (m_pOwner != nullptr) {
-            if (m_pOwner->Weapon_ptr != nullptr)
-                m_pOwner->Weapon_ptr->Set_Active(false);
+           /* if (m_pOwner->Weapon_ptr != nullptr)
+                m_pOwner->Weapon_ptr->Set_Active(false);*/
+            for (auto& w : m_pOwner->Weapon_ptr) {
+                w->Set_Active(false);
+            }
         }
         break;
     case State::Knock_Down:
@@ -533,11 +547,19 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
+        for (auto& t_obj : m_pOwner->GetTrailObj()) {
+            t_obj->Set_Active(false);
+        }
+        m_pOwner->Trail_End();
+        m_pOwner->bTrailOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
             m_pOwner->Weapon_ptr->bUpdateOBBOff();
         m_pOwner->Trail_End();
         m_pOwner->GetTrailObj()->Set_Active(false);
-        m_pOwner->bTrailOff();
+        m_pOwner->bTrailOff();*/
         std::cout << "Trail Off" << "\n";
     }
 
@@ -567,7 +589,10 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         break;
     case State::Select_Idle: 
         if (m_pOwner != nullptr) {
-            m_pOwner->Weapon_ptr->Set_Active(true);
+            //m_pOwner->Weapon_ptr->Set_Active(true);
+            for (auto& w : m_pOwner->Weapon_ptr) {
+                w->Set_Active(true);
+            }
         }
     
         break;
@@ -911,8 +936,11 @@ void FishManStateMachine::enterState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
     }
 
     switch (state)
@@ -935,8 +963,11 @@ void FishManStateMachine::exitState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
     }
 }
 
@@ -1053,8 +1084,11 @@ void AnubisStateMachine::enterState(State state, Key_Value key_event)
         ResetTrackForState(state, true);
     }
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
     }
     if (IsInState({ State::Attack3 })) {
         Skill1_ElapsedTime = 0.0f;
@@ -1073,8 +1107,11 @@ void AnubisStateMachine::exitState(State state, Key_Value key_event)
         ResetTrackForState(state, false);
     }
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
     }
 }
 
@@ -1156,8 +1193,11 @@ void DragonStateMachine::enterState(State state, Key_Value key_event)
         ResetTrackForState(state, true);
     }
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
+       /* if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
     }
 }
 
@@ -1173,8 +1213,11 @@ void DragonStateMachine::exitState(State state, Key_Value key_event)
         ResetTrackForState(state, false);
     }
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
     }
 }
 

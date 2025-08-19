@@ -60,7 +60,7 @@ protected:
 
 	bool MultiMode{ false };
 
-	std::shared_ptr<Trail_Object> trail_obj;
+	std::vector<std::shared_ptr<Trail_Object>> trail_obj;
 	bool TrailOn{ false };
 	bool TrailStart{ false };
 
@@ -176,8 +176,8 @@ public:
 	float GetMoveX() { return moveX; }
 	float GetMoveZ() { return moveZ; }
 
-	void SetTrailObj(std::shared_ptr<Trail_Object> obj) { trail_obj = obj; }
-	std::shared_ptr<Trail_Object> GetTrailObj() { return trail_obj; }
+	void SetTrailObj(std::shared_ptr<Trail_Object> obj) { trail_obj.push_back(obj); }
+	std::vector<std::shared_ptr<Trail_Object>> GetTrailObj() { return trail_obj; }
 	void bTrailOn() { TrailOn = true; }
 	void bTrailOff() { TrailOn = false; }
 	bool GetTrailOn() { return TrailOn; }

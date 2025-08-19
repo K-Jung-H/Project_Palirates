@@ -317,7 +317,37 @@ void CPlayer::SetupWeaponCollider()
 
 	model->Set_Collider(obb);
 	model->bUpdateOBBOff();
-	Weapon_ptr = model;
+	//Weapon_ptr = model;
+	Weapon_ptr.push_back(model);
+
+	// Sub Weapon
+	if (WeaponName == "SM_Wep_Cutlass_01") {
+		std::shared_ptr<CGameObject> model = FindFrame("SM_Wep_Cutlass_02");
+		if (!model || !model->m_pMesh) return;
+
+		model->type = EObjectType::PlayerWeapon;
+
+		XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+		XMVECTOR scale, rotationQuat, translation;
+		XMFLOAT4 quaternion;
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+		if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+			XMStoreFloat4(&quaternion, rotationQuat);
+		else
+			quaternion = XMFLOAT4(0, 0, 0, 1);
+
+		BoundingOrientedBox* obb = new BoundingOrientedBox(
+			model->m_pMesh->GetAABBCenter(),
+			model->m_pMesh->GetAABBExtents(),
+			quaternion
+		);
+
+		model->Set_Collider(obb);
+		model->bUpdateOBBOff();
+		//Weapon_ptr = model;
+		Weapon_ptr.push_back(model);
+	}
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 

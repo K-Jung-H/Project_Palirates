@@ -381,8 +381,59 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             player_ptr->update(elapsedTime);
             player_ptr->update_collision(elapsedTime, obbList);
 
-            if (!player_ptr->Weapon_ptr) continue;
-            if (!player_ptr->Weapon_ptr->CanCollide()) continue;
+            if (player_ptr->Weapon_ptr.empty()) continue;
+            player_ptr->UpdateTransform();
+            for (auto& w : player_ptr->Weapon_ptr) {
+                if (!w->CanCollide()) continue;
+                w->UpdateWorldOBB();
+                auto worldWeaponOBB = w->Get_Collider_OBB();
+                cout << worldWeaponOBB->Center.x << ", " << worldWeaponOBB->Center.y << ", " << worldWeaponOBB->Center.z << "\n";
+                for (auto m : Monster_List) {
+                    if (!m) continue;
+                    if (!m->CanCollide()) continue;
+                    if (m->IsInvincible()) continue;
+
+                    if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
+                        continue;
+                    }
+
+                    m->UpdateTransform();
+                    auto monsterOBB = m->Get_Collider_OBB();
+                    if (!monsterOBB) continue;
+
+                    BoundingOrientedBox worldMonsterOBB;
+                    monsterOBB->Transform(worldMonsterOBB,
+                        XMLoadFloat4x4(&m->m_xmf4x4World));
+
+                    if (worldWeaponOBB->Intersects(worldMonsterOBB)) {
+                        std::cout << "Collision detected! Player Weapon and Monster ID" << m->GetID() << "\n";
+                        XMFLOAT3 toPlayer = Vector3::Subtract(player_ptr->GetPosition(), m->GetPosition());
+                        toPlayer.y = 0.0f;
+                        if (Vector3::LengthSquared(toPlayer) > 0.0001f) {
+                            toPlayer = Vector3::Normalize(toPlayer);
+                            m->SetLook(toPlayer);
+                        }
+
+                        MonsterHitInfo data;
+
+                        data.monsterID = m->GetID();
+
+                        m->HitDamage(30.0f);
+                        float hp = m->GetHP();
+                        if (hp <= 0.0f) {
+                            m->GetStateMachine()->ChangeState(std::make_unique<DeadState>());
+                            data.hitCmd = false;
+                        }
+                        else {
+                            m->GetStateMachine()->ChangeState(std::make_unique<GetHitState>());
+                            data.hitCmd = true;
+                        }
+                        QueueDamageCommand(data);
+                    }
+                }
+            }
+
+            /*if (!player_ptr->Weapon_ptr->CanCollide()) continue;
 
             player_ptr->UpdateTransform();
             player_ptr->Weapon_ptr->UpdateWorldOBB();
@@ -429,7 +480,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                     }
                     QueueDamageCommand(data);
                 }
-            }
+            }*/
         }
     }
     for (auto m : Monster_List) 
@@ -450,75 +501,145 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             QueueDamageCommand(data);
             m->bHittingCmd = false;
         }
-        if (!m->Weapon_ptr) continue;
-        if (!m->Weapon_ptr->CanCollide()) continue;
+        if (m->Weapon_ptr.empty()) continue;
         m->UpdateTransform();
-        m->Weapon_ptr->UpdateWorldOBB();
-        auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();
-        for (std::shared_ptr<Player> player_ptr : player_list) {
-            if (!player_ptr) continue;
+        for (auto& w : m->Weapon_ptr) {
+            if (w->CanCollide()) continue;
+            w->UpdateWorldOBB();
+            auto worldWeaponOBB = w->Get_Collider_OBB();
+            for (std::shared_ptr<Player> player_ptr : player_list) {
+                if (!player_ptr) continue;
 
-            if (player_ptr->bDead) continue;
-            if (!player_ptr->CanCollide()) continue;
-            if (player_ptr->IsInvincible()) continue;
+                if (player_ptr->bDead) continue;
+                if (!player_ptr->CanCollide()) continue;
+                if (player_ptr->IsInvincible()) continue;
 
-            if (m->Weapon_ptr->BreathObject) {
-                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
-                    continue;
+                if (w->BreathObject) {
+                    if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
+                        continue;
+                    }
                 }
-            }
-            else {
-                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
-                    continue;
-                }
-            }
-
-            player_ptr->UpdateTransform();
-            auto playerOBB = player_ptr->Get_Collider_OBB();
-            if (!playerOBB) continue;
-
-            player_ptr->UpdateWorldOBB();
-            auto worldPlayerOBB = *player_ptr->Get_Collider_OBB();
-
-            if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
-                std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-
-                float damage;
-
-                if (m->Weapon_ptr->BreathObject)
-                {
-                    damage = 10.0f;
-                    player_ptr->BreathHit = true;
-                }
-                else // Normal Hit
-                {
-                    damage = 30.0f;
-
-                    XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB.Center);
-                    XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
-
-                    XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
-
-                    XMFLOAT3 contactPos;
-                    XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
-
-                    XMFLOAT3 contactDir;
-                    XMStoreFloat3(&contactDir, direction);
-
-                    game_world->Add_Bleeding_Particle(contactPos, contactDir);
+                else {
+                    if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
+                        continue;
+                    }
                 }
 
-                player_ptr->HitDamage(damage);
+                player_ptr->UpdateTransform();
+                auto playerOBB = player_ptr->Get_Collider_OBB();
+                if (!playerOBB) continue;
 
-                float hp = player_ptr->GetHP();
+                player_ptr->UpdateWorldOBB();
+                auto worldPlayerOBB = *player_ptr->Get_Collider_OBB();
 
-                if (hp <= 0.0f)
-                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
-                else
-                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+                if (worldWeaponOBB->Intersects(worldPlayerOBB)) {
+                    std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
 
+                    float damage;
+
+                    if (w->BreathObject)
+                    {
+                        damage = 10.0f;
+                        player_ptr->BreathHit = true;
+                    }
+                    else // Normal Hit
+                    {
+                        damage = 30.0f;
+
+                        XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB->Center);
+                        XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
+
+                        XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
+
+                        XMFLOAT3 contactPos;
+                        XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
+
+                        XMFLOAT3 contactDir;
+                        XMStoreFloat3(&contactDir, direction);
+
+                        game_world->Add_Bleeding_Particle(contactPos, contactDir);
+                    }
+
+                    player_ptr->HitDamage(damage);
+
+                    float hp = player_ptr->GetHP();
+
+                    if (hp <= 0.0f)
+                        player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+                    else
+                        player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
+                }
             }
         }
+        /*if (!m->Weapon_ptr->CanCollide()) continue;
+        m->UpdateTransform();
+        m->Weapon_ptr->UpdateWorldOBB();
+        auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();*/
+        //for (std::shared_ptr<Player> player_ptr : player_list) {
+        //    if (!player_ptr) continue;
+
+        //    if (player_ptr->bDead) continue;
+        //    if (!player_ptr->CanCollide()) continue;
+        //    if (player_ptr->IsInvincible()) continue;
+
+        //    if (m->Weapon_ptr->BreathObject) {
+        //        if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
+        //            continue;
+        //        }
+        //    }
+        //    else {
+        //        if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
+        //            continue;
+        //        }
+        //    }
+
+        //    player_ptr->UpdateTransform();
+        //    auto playerOBB = player_ptr->Get_Collider_OBB();
+        //    if (!playerOBB) continue;
+
+        //    player_ptr->UpdateWorldOBB();
+        //    auto worldPlayerOBB = *player_ptr->Get_Collider_OBB();
+
+        //    if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
+        //        std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
+
+        //        float damage;
+
+        //        if (m->Weapon_ptr->BreathObject)
+        //        {
+        //            damage = 10.0f;
+        //            player_ptr->BreathHit = true;
+        //        }
+        //        else // Normal Hit
+        //        {
+        //            damage = 30.0f;
+
+        //            XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB.Center);
+        //            XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
+
+        //            XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
+
+        //            XMFLOAT3 contactPos;
+        //            XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
+
+        //            XMFLOAT3 contactDir;
+        //            XMStoreFloat3(&contactDir, direction);
+
+        //            game_world->Add_Bleeding_Particle(contactPos, contactDir);
+        //        }
+
+        //        player_ptr->HitDamage(damage);
+
+        //        float hp = player_ptr->GetHP();
+
+        //        if (hp <= 0.0f)
+        //            player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+        //        else
+        //            player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
+        //    }
+        //}
     }
     for (auto m : Monster_List) 
     {

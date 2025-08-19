@@ -669,7 +669,8 @@ public:
     XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
 
     bool bUpdateOBB{ true };
-    std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
+    //std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
+    std::vector<std::shared_ptr<CGameObject>> Weapon_ptr;
 
     bool Test_Mode{ false };
 

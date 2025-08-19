@@ -1022,7 +1022,40 @@ void Skinned_GameObject::SetupWeaponCollider()
 			XMConvertToRadians(0.0f));
 	}
 
-	Weapon_ptr = model;
+	//Weapon_ptr = model;
+	Weapon_ptr.push_back(model);
+
+	// Sub Weapon
+	if (WeaponName == "SM_Wep_Cutlass_01") {
+		std::shared_ptr<GameObject> model = FindFrame("SM_Wep_Cutlass_02");
+
+		if (!model || !model->m_pMesh) {
+			std::cout << "sub weapon set fail" << std::endl;
+			return;
+		}
+		model->SetType(Object_Type::weapon);
+		model->SetScale(10.0f, 10.0f, 10.0f, true);
+		XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+		XMVECTOR scale, rotationQuat, translation;
+		XMFLOAT4 quaternion;
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+		if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+			XMStoreFloat4(&quaternion, rotationQuat);
+		else
+			quaternion = XMFLOAT4(0, 0, 0, 1);
+
+		std::shared_ptr<BoundingOrientedBox> obb = std::shared_ptr<BoundingOrientedBox>(
+			new BoundingOrientedBox(
+				model->m_pMesh->m_xmf3AABBCenter,
+				model->m_pMesh->m_xmf3AABBExtents,
+				quaternion
+			)
+		);
+		model->Set_Collider_OBB(obb);
+		model->SetCanCollide(false);
+		Weapon_ptr.push_back(model);
+	}
 	//std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
 	//std::cout << "weapon set, Extents : " << model->m_pMesh->m_xmf3AABBExtents.x << ", " << model->m_pMesh->m_xmf3AABBExtents.y << ", " << model->m_pMesh->m_xmf3AABBExtents.z << std::endl;
 }

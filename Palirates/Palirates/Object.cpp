@@ -5040,8 +5040,8 @@ void CMonsterObject::SetupWeaponCollider()
 	model->Set_Collider(obb);
 	//model->bUpdateOBBOff();
 	model->bUpdateOBBOn();
-	Weapon_ptr = model;
-
+	//Weapon_ptr = model;
+	Weapon_ptr.push_back(model);
 }
 
 void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
