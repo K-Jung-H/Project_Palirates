@@ -587,7 +587,7 @@ void CTerrainPlayer::ClampPositionToTerrainBounds(CHeightMapTerrain*  terrain_ob
 
 		player_pos.x = std::clamp(player_pos.x, areaLT.x, areaRB.x);
 		player_pos.z = std::clamp(player_pos.z, areaLT.y, areaRB.y);
-		SetPosition(player_pos);
+		//SetPosition(player_pos);
 		UpdateTransform(NULL);
 	}
 }
