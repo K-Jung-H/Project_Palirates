@@ -657,6 +657,12 @@ void PlayerStateMachine::SetWeight()
 
         float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
+
+       /* float target = m_pOwner->targetWeights[i];
+        if (target == 0.0f) {
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        else  animController->SetTrackWeight(i, 1.0f);*/
     }
 }
 

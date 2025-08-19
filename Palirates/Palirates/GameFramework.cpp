@@ -1385,7 +1385,7 @@ void CGameFramework::SendPacket()
 		int selected_index = characterScene->Get_Selected_Character_Index();
 		int select_status = characterScene->Get_Character_Select_Status();
 
-		oss << "," + std::to_string(selected_index) << "," << std::to_string(select_status);
+		oss << "," << selected_index << "," << select_status;
 	}
 	break;
 
@@ -1420,7 +1420,7 @@ void CGameFramework::SendPacket()
 
 		oss << "," << to_string(current_keyboard_inputFlags) << ","
 			<< to_string(pos.x) << "," << to_string(pos.y) << "," << to_string(pos.z) << "," 
-			<< to_string(look.x) << "," << to_string(look.y) << "," << to_string(look.z) << ",";
+			<< to_string(look.x) << "," << to_string(look.y) << "," << to_string(look.z) /*<< ","*/;
 
 		auto controller = m_pPlayer->GetSkinnedAnimationController();
 		if (!controller) return;

@@ -368,8 +368,8 @@ void Server::HandleStagePacket(int clientId, const std::string& command, const s
 
     if (tokens.size() < 11) return;
 
-    // 기본(11) + bStateChange(1) + changedStateNum(1)
-    int expectedMinTokens = 11 + 1 + 1;
+    // 기본(10) + bStateChange(1) + changedStateNum(1)
+    int expectedMinTokens = 10 + 1 + 1;
 
     if (tokens.size() < expectedMinTokens)
         return;
@@ -396,9 +396,9 @@ void Server::HandleStagePacket(int clientId, const std::string& command, const s
     look.z = std::stof(tokens[9]);
 
     // bStateChange (마지막 토큰)
-    bool bStateChange = (tokens[11 /*+ (trackCount * 3)*/] == "1" || tokens[11 /*+ (trackCount * 3)*/] == "true");
+    bool bStateChange = (tokens[10 /*+ (trackCount * 3)*/] == "1" || tokens[10 /*+ (trackCount * 3)*/] == "true");
 
-    int stateNum = stoi(tokens[11 /*+ (trackCount * 3)*/ + 1]);
+    int stateNum = stoi(tokens[10 /*+ (trackCount * 3)*/ + 1]);
     // Scene 업데이트 호출
     stageScene->update_player_State(clientId, inputFlags, pos, look, bStateChange, stateNum);
 }
