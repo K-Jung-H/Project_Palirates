@@ -204,8 +204,30 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         pPlayer->SetupWeaponCollider();
 
-        shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
-        if (trail_target)
+        std::vector<shared_ptr<CGameObject>> trail_target = pPlayer->Weapon_ptr;
+        if (!trail_target.empty()) {
+            XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+
+            XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+            XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+            for (auto& t : trail_target) {
+                std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+                trail_obj->Set_Main_Color(trail_main_color);
+                trail_obj->Set_SubColor(trail_sub_color);
+
+                trail_obj->Set_Trail_Target(t, false);
+                in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+                pPlayer->SetTrailObj(trail_obj);
+                pPlayer->bTrailOff();
+            }
+
+            for (auto& t_obj : pPlayer->GetTrailObj()) {
+                t_obj->Set_Active(false);
+            }
+        }
+        
+       /* if (trail_target)
         {
             std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
 
@@ -223,7 +245,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             pPlayer->SetTrailObj(trail_obj);
             pPlayer->bTrailOff();
             pPlayer->GetTrailObj()->Set_Active(false);
-        }
+        }*/
 
         XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
         pPlayer->SetPosition(new_position);
@@ -262,26 +284,48 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         pPlayer->SetupWeaponCollider();
 
-        shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
-        if (trail_target)
-        {
-            std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
-
+        std::vector<shared_ptr<CGameObject>> trail_target = pPlayer->Weapon_ptr;
+        if (!trail_target.empty()) {
             XMFLOAT3 player_color = GetColorById(Client_ID + 1);
 
             XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
             XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-            trail_obj->Set_Main_Color(trail_main_color);
-            trail_obj->Set_SubColor(trail_sub_color);
+            for (auto& t : trail_target) {
+                std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+                trail_obj->Set_Main_Color(trail_main_color);
+                trail_obj->Set_SubColor(trail_sub_color);
 
-            trail_obj->Set_Trail_Target(trail_target, false);
-            trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-            in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
-            pPlayer->SetTrailObj(trail_obj);
-            pPlayer->bTrailOff();
-            pPlayer->GetTrailObj()->Set_Active(false);
+                trail_obj->Set_Trail_Target(t, false);
+                in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+                pPlayer->SetTrailObj(trail_obj);
+                pPlayer->bTrailOff();
+            }
+
+            for (auto& t_obj : pPlayer->GetTrailObj()) {
+                t_obj->Set_Active(false);
+            }
         }
+
+        /* if (trail_target)
+         {
+             std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+
+             XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+
+             XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+             XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+             trail_obj->Set_Main_Color(trail_main_color);
+             trail_obj->Set_SubColor(trail_sub_color);
+
+             trail_obj->Set_Trail_Target(trail_target, false);
+             trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+             in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+             pPlayer->SetTrailObj(trail_obj);
+             pPlayer->bTrailOff();
+             pPlayer->GetTrailObj()->Set_Active(false);
+         }*/
 
         in_stage_scene->Bind_Player_UI_Callback();
         in_stage_scene->Bind_Player_UI_Updata_Callback();
@@ -311,7 +355,30 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         pPlayer->SetupWeaponCollider();
 
-        shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
+        std::vector<shared_ptr<CGameObject>> trail_target = pPlayer->Weapon_ptr;
+        if (!trail_target.empty()) {
+            XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+
+            XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+            XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+            for (auto& t : trail_target) {
+                std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+                trail_obj->Set_Main_Color(trail_main_color);
+                trail_obj->Set_SubColor(trail_sub_color);
+
+                trail_obj->Set_Trail_Target(t, false);
+                in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+                pPlayer->SetTrailObj(trail_obj);
+                pPlayer->bTrailOff();
+            }
+
+            for (auto& t_obj : pPlayer->GetTrailObj()) {
+                t_obj->Set_Active(false);
+            }
+        }
+
+        /*shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
         if (trail_target)
         {
             std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
@@ -330,7 +397,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             pPlayer->SetTrailObj(trail_obj);
             pPlayer->bTrailOff();
             pPlayer->GetTrailObj()->Set_Active(false);
-        }
+        }*/
 
         in_stage_scene->Bind_Player_UI_Callback();
         in_stage_scene->Bind_Player_UI_Updata_Callback();

@@ -14,6 +14,10 @@ void MonsterStateMachine::ChangeState(std::unique_ptr<MonsterState> newState)
 {
     if (!newState) return;
 
+    if (newState != currentState) {
+        ++m_stateVer;
+    }
+
     if (currentState)
         currentState->Exit(m_pOwner);
 

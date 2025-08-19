@@ -317,7 +317,37 @@ void CPlayer::SetupWeaponCollider()
 
 	model->Set_Collider(obb);
 	model->bUpdateOBBOff();
-	Weapon_ptr = model;
+	//Weapon_ptr = model;
+	Weapon_ptr.push_back(model);
+
+	// Sub Weapon
+	if (WeaponName == "SM_Wep_Cutlass_01") {
+		std::shared_ptr<CGameObject> model = FindFrame("SM_Wep_Cutlass_02");
+		if (!model || !model->m_pMesh) return;
+
+		model->type = EObjectType::PlayerWeapon;
+
+		XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+		XMVECTOR scale, rotationQuat, translation;
+		XMFLOAT4 quaternion;
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+		if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+			XMStoreFloat4(&quaternion, rotationQuat);
+		else
+			quaternion = XMFLOAT4(0, 0, 0, 1);
+
+		BoundingOrientedBox* obb = new BoundingOrientedBox(
+			model->m_pMesh->GetAABBCenter(),
+			model->m_pMesh->GetAABBExtents(),
+			quaternion
+		);
+
+		model->Set_Collider(obb);
+		model->bUpdateOBBOff();
+		//Weapon_ptr = model;
+		Weapon_ptr.push_back(model);
+	}
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
@@ -344,12 +374,15 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	char* modelPaths[] = {
+	//"Model/spear_test.bin",
 	"Model/Captain_v17.bin",
 	"Model/Deckhand_v17.bin",
 	"Model/Female_Pirate_v17.bin",
 	"Model/First_Mate_v17.bin",
-	"Model/Seaman_v17.bin",
-	"Model/Skeleton_v17.bin"
+	"Model/swordman_test.bin",
+	//"Model/Seaman_v17.bin",
+	"Model/spear_test.bin",
+	//"Model/Skeleton_v17.bin"
 	};
 
 	const int modelCount = sizeof(modelPaths) / sizeof(modelPaths[0]);
@@ -617,7 +650,9 @@ void CTerrainPlayer::AlignWithNormal(XMFLOAT3& normal)
 
 ServerSyncData CTerrainPlayer::MakeSyncData()
 {
-	ServerSyncData data = CGameObject::MakeSyncData();
+	ServerSyncData data;
+	data.position = GetPosition();
+	data.lookVector = GetLook();
 	data.changedStateNum = GetStateMachine()->GetCurrentStateAsInt();
 
 	return data;
@@ -627,7 +662,7 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
 
-	auto controller = GetSkinnedAnimationController();
+	/*auto controller = GetSkinnedAnimationController();
 	if (!controller) return;
 	controller->ResetWeight();
 	auto track = controller->m_pAnimationTracks;
@@ -638,7 +673,7 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
-	controller->ApplyCurrentAnimationPose(this);
+	controller->ApplyCurrentAnimationPose(this);*/
 }
 //º¸·ù
 

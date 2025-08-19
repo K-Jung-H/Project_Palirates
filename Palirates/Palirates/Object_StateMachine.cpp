@@ -105,6 +105,27 @@ void Key_State::update(Key_Value key_state)
     }
 }
 
+AnimationTrack GetRunTrackFromInput(uint32_t inputFlags)
+{
+    bool w = (inputFlags & INPUT_W) != 0;
+    bool s = (inputFlags & INPUT_S) != 0;
+    bool a = (inputFlags & INPUT_A) != 0;
+    bool d = (inputFlags & INPUT_D) != 0;
+
+    if (w && a) return TRACK_RUN_FORWARD_LEFT;
+    if (w && d) return TRACK_RUN_FORWARD_RIGHT;
+    if (w)      return TRACK_RUN_FORWARD;
+
+    if (s && a) return TRACK_RUN_BACKWARD_LEFT;
+    if (s && d) return TRACK_RUN_BACKWARD_RIGHT;
+    if (s)      return TRACK_RUN_BACKWARD;
+
+    if (a)      return TRACK_RUN_LEFT;
+    if (d)      return TRACK_RUN_RIGHT;
+
+    return TRACK_IDLE;
+}
+
 bool Key_State::check_move()
 {
     return (left != right) || (forward != back);
@@ -181,7 +202,6 @@ void StateMachine::changeState(State newState, Key_Value key_event)
 
 void StateMachine::enterState(State state, Key_Value key_event)
 {
-
     switch (state)
     {
     case State::Idle:
@@ -305,51 +325,57 @@ void PlayerStateMachine::update(float Elapsed_time)
     //    m_pOwner->SetStateElapsedTime(0.0f);
     //    changeState(State::Attack3, Key_Value::None);
     //}
-
+    switch (Get_State()) {
+    case State::Run: {
+        std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+        m_pOwner->targetWeights[GetRunTrackFromInput(m_pOwner->current_keyboard_inputFlags)] = 1.0f;
+    }
+                   break;
+    }
     //switch (Get_State()) {
-    //case State::Idle:
+    ///*case State::Idle:
     //    if (moveX == 0.0f && moveZ == 0.0f) {
     //        m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
     //    }
     //    else {
     //        changeState(State::Run, Key_Value::None);
     //    }
-    //    break;
+    //    break;*/
 
     //case State::Run:
-    //    /*if (moveX == 0.0f && moveZ == 0.0f) {
-    //        changeState(State::Idle, Key_Value::None);
-    //    }
-    //    else {
-    //        float length = sqrtf(moveX * moveX + moveZ * moveZ);
-    //        float normX = moveX / length;
-    //        float normZ = moveZ / length;
+    //    //if (moveX == 0.0f && moveZ == 0.0f) {
+    //    //    changeState(State::Idle, Key_Value::None);
+    //    //}
+    //    //else {
+    //    //    float length = sqrtf(moveX * moveX + moveZ * moveZ);
+    //    //    float normX = moveX / length;
+    //    //    float normZ = moveZ / length;
 
-    //        int bestIndex = -1, secondIndex = -1;
-    //        float bestDot = -1.0f, secondDot = -1.0f;
+    //    //    int bestIndex = -1, secondIndex = -1;
+    //    //    float bestDot = -1.0f, secondDot = -1.0f;
 
-    //        for (int i = 0; i < 8; i++) {
-    //            float dot = normX * directions[i].x + normZ * directions[i].z;
-    //            if (dot > bestDot) {
-    //                secondDot = bestDot;
-    //                secondIndex = bestIndex;
-    //                bestDot = dot;
-    //                bestIndex = i;
-    //            }
-    //            else if (dot > secondDot) {
-    //                secondDot = dot;
-    //                secondIndex = i;
-    //            }
-    //        }
+    //    //    for (int i = 0; i < 8; i++) {
+    //    //        float dot = normX * directions[i].x + normZ * directions[i].z;
+    //    //        if (dot > bestDot) {
+    //    //            secondDot = bestDot;
+    //    //            secondIndex = bestIndex;
+    //    //            bestDot = dot;
+    //    //            bestIndex = i;
+    //    //        }
+    //    //        else if (dot > secondDot) {
+    //    //            secondDot = dot;
+    //    //            secondIndex = i;
+    //    //        }
+    //    //    }
 
-    //        float totalDot = bestDot + secondDot;
-    //        float weight1 = bestDot / totalDot;
-    //        float weight2 = secondDot / totalDot;
+    //    //    float totalDot = bestDot + secondDot;
+    //    //    float weight1 = bestDot / totalDot;
+    //    //    float weight2 = secondDot / totalDot;
 
-    //        m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
-    //        m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
-    //    }*/
-    //    m_pOwner->targetWeights[TRACK_RUN_FORWARD] = 1.0f;
+    //    //    m_pOwner->targetWeights[directions[bestIndex].track] = weight1;
+    //    //    m_pOwner->targetWeights[directions[secondIndex].track] = weight2;
+    //    //}
+    //   // m_pOwner->targetWeights[TRACK_RUN_FORWARD] = 1.0f;
     //    break;
     //case State::Dive:
 
@@ -431,11 +457,22 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
+       /* if (m_pOwner->Weapon_ptr != nullptr)
             m_pOwner->Weapon_ptr->bUpdateOBBOn();
         m_pOwner->Trail_Start();
         m_pOwner->GetTrailObj()->Set_Active(true);
         m_pOwner->GetTrailObj()->GetTrailMesh()->ResetTrail();
+        m_pOwner->bTrailOn();
+        std::cout << "Trail On" << "\n";*/
+
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
+        for (auto& t_obj : m_pOwner->GetTrailObj()) {
+            t_obj->Set_Active(true);
+            t_obj->GetTrailMesh()->ResetTrail();
+        }
+        m_pOwner->Trail_Start();
         m_pOwner->bTrailOn();
         std::cout << "Trail On" << "\n";
     }
@@ -470,8 +507,11 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         break;
     case State::Select_Idle:
         if (m_pOwner != nullptr) {
-            if (m_pOwner->Weapon_ptr != nullptr)
-                m_pOwner->Weapon_ptr->Set_Active(false);
+           /* if (m_pOwner->Weapon_ptr != nullptr)
+                m_pOwner->Weapon_ptr->Set_Active(false);*/
+            for (auto& w : m_pOwner->Weapon_ptr) {
+                w->Set_Active(false);
+            }
         }
         break;
     case State::Knock_Down:
@@ -507,11 +547,19 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
+        for (auto& t_obj : m_pOwner->GetTrailObj()) {
+            t_obj->Set_Active(false);
+        }
+        m_pOwner->Trail_End();
+        m_pOwner->bTrailOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
             m_pOwner->Weapon_ptr->bUpdateOBBOff();
         m_pOwner->Trail_End();
         m_pOwner->GetTrailObj()->Set_Active(false);
-        m_pOwner->bTrailOff();
+        m_pOwner->bTrailOff();*/
         std::cout << "Trail Off" << "\n";
     }
 
@@ -541,7 +589,10 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         break;
     case State::Select_Idle: 
         if (m_pOwner != nullptr) {
-            m_pOwner->Weapon_ptr->Set_Active(true);
+            //m_pOwner->Weapon_ptr->Set_Active(true);
+            for (auto& w : m_pOwner->Weapon_ptr) {
+                w->Set_Active(true);
+            }
         }
     
         break;
@@ -606,6 +657,12 @@ void PlayerStateMachine::SetWeight()
 
         float newWeight = prev + (target - prev) * blendSpeed;
         animController->SetTrackWeight(i, newWeight);
+
+       /* float target = m_pOwner->targetWeights[i];
+        if (target == 0.0f) {
+            animController->SetTrackWeight(i, 0.0f);
+        }
+        else  animController->SetTrackWeight(i, 1.0f);*/
     }
 }
 
@@ -620,37 +677,37 @@ void MonsterStateMachine::update(float Elapsed_time)
 {
     OnPrepareUpdate(6.0f, Elapsed_time);
 
-    if (stateElapsedTime >= stateChangeTime) {
-        switch (Get_State()) {
-        case State::Idle:
-            changeState(State::Run, Key_Value::None);
-            break;
-        case State::Run:
-            changeState(State::Idle, Key_Value::None);
-            break;
-        case State::Dive:
-            break;
-        }
+    //if (stateElapsedTime >= stateChangeTime) {
+    //    switch (Get_State()) {
+    //    case State::Idle:
+    //        changeState(State::Run, Key_Value::None);
+    //        break;
+    //    case State::Run:
+    //        changeState(State::Idle, Key_Value::None);
+    //        break;
+    //    case State::Dive:
+    //        break;
+    //    }
 
-        stateElapsedTime = 0.0f;
-        stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
-    }
+    //    stateElapsedTime = 0.0f;
+    //    stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
+    //}
 
-    switch (Get_State()) {
-    case State::Idle:
-       // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
-        m_pOwner->targetWeights[0] = 1.0f;
-        break;
-    case State::Run:
-        m_pOwner->targetWeights[6] = 1.0f;
+    //switch (Get_State()) {
+    //case State::Idle:
+    //   // m_pOwner->targetWeights[TRACK_IDLE] = 1.0f;
+    //    m_pOwner->targetWeights[0] = 1.0f;
+    //    break;
+    //case State::Run:
+    //    m_pOwner->targetWeights[6] = 1.0f;
 
-        RootMotionMove(10.0f);
+    //    RootMotionMove(10.0f);
 
-        break;
-    case State::Attack2:
+    //    break;
+    //case State::Attack2:
 
-        break;
-    }
+    //    break;
+    //}
 
     SetWeight();
 }
@@ -673,13 +730,12 @@ void MonsterStateMachine::OnPrepareUpdate(float blendSpeedOffSet, float Elapsed_
         isFirstUpdate = false;
     }
     else {
-
         for (int i = 0; i < n_Ani; i++) {
             m_pOwner->prevWeights[i] = animController->m_pAnimationTracks[i].m_fWeight;
         }
     }
 
-    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+   // std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
 }
 
 void MonsterStateMachine::RootMotionMove(float scaleFactor, bool bUseNegative) {
@@ -716,11 +772,23 @@ void MonsterStateMachine::enterState(State state, Key_Value key_event)
 {
     if (IsInState({ State::Get_Hit })) {
         m_pOwner->SetOutlineColor(1);
-        m_pOwner->currentHP -= 30.0f;
+       /* m_pOwner->currentHP -= 30.0f;
         if (m_pOwner->currentHP < 0) {
             m_pOwner->currentHP = 0.0f;
             changeState(State::Knock_Down, Key_Value::None);
-        }
+        }*/
+    }
+
+
+    std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+    int currTrack = GetMonsterAnimationTrack(m_pOwner->mType, state);
+    if (m_pOwner->mType == Monster_Type::Anubis) {
+		cout << currTrack << "\n";
+    }
+    m_pOwner->targetWeights[currTrack] = 1.0f;
+    if (animController != nullptr) {
+        animController->m_pAnimationTracks[currTrack].m_bFinished = false;
+        animController->m_pAnimationTracks[currTrack].m_fPosition = 0.0f;
     }
 }
 
@@ -742,7 +810,7 @@ void MonsterStateMachine::SetWeight()
             continue;
 
         float newWeight = prev + (target - prev) * blendSpeed;
-        animController->SetTrackWeight(i, newWeight);
+        m_pOwner->GetSkinnedAnimationController()->SetTrackWeight(i, newWeight);
     }
 }
 
@@ -874,8 +942,11 @@ void FishManStateMachine::enterState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
     }
 
     switch (state)
@@ -898,8 +969,11 @@ void FishManStateMachine::exitState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
     }
 }
 
@@ -1016,8 +1090,11 @@ void AnubisStateMachine::enterState(State state, Key_Value key_event)
         ResetTrackForState(state, true);
     }
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
     }
     if (IsInState({ State::Attack3 })) {
         Skill1_ElapsedTime = 0.0f;
@@ -1036,8 +1113,11 @@ void AnubisStateMachine::exitState(State state, Key_Value key_event)
         ResetTrackForState(state, false);
     }
     if (IsInState({ State::Attack1, State::Attack2 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
     }
 }
 
@@ -1119,8 +1199,11 @@ void DragonStateMachine::enterState(State state, Key_Value key_event)
         ResetTrackForState(state, true);
     }
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
+       /* if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
     }
 }
 
@@ -1136,8 +1219,11 @@ void DragonStateMachine::exitState(State state, Key_Value key_event)
         ResetTrackForState(state, false);
     }
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-        if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
     }
 }
 

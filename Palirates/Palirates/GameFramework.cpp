@@ -754,7 +754,7 @@ void CGameFramework::ProcessInput()
 		if (!isRunning) {
 			if (!CScene::Screen_Fade) m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 		}
-
+		m_pPlayer->current_keyboard_inputFlags = current_keyboard_inputFlags;
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
 		if (bMouseLocked != last_mouse_state)
 		{
@@ -1385,7 +1385,7 @@ void CGameFramework::SendPacket()
 		int selected_index = characterScene->Get_Selected_Character_Index();
 		int select_status = characterScene->Get_Character_Select_Status();
 
-		oss << "," + std::to_string(selected_index) << "," << std::to_string(select_status);
+		oss << "," << selected_index << "," << select_status;
 	}
 	break;
 
@@ -1420,21 +1420,12 @@ void CGameFramework::SendPacket()
 
 		oss << "," << to_string(current_keyboard_inputFlags) << ","
 			<< to_string(pos.x) << "," << to_string(pos.y) << "," << to_string(pos.z) << "," 
-			<< to_string(look.x) << "," << to_string(look.y) << "," << to_string(look.z) << ",";
+			<< to_string(look.x) << "," << to_string(look.y) << "," << to_string(look.z) /*<< ","*/;
 
 		auto controller = m_pPlayer->GetSkinnedAnimationController();
 		if (!controller) return;
 
 		auto sync_Data = m_pPlayer->MakeSyncData();
-		
-		oss << sync_Data.track_info_list.size();
-
-		for ( auto track_data : sync_Data.track_info_list)
-		{
-			oss << "," << to_string(track_data.track_index)
-				<< "," << to_string(track_data.weight)
-				<< "," << to_string(track_data.track_position);
-		}
 
 		oss << "," << (sync_Data.bStateChange ? "1" : "0");
 		oss << "," << sync_Data.changedStateNum;
@@ -1582,19 +1573,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		}
 		else if (cmd == "P_S_CMD") {
 			ProcessReceivedData_Change_State_Command(tokens);
-			/*int pID = std::stoi(tokens[3]);
-			int stateNum = std::stoi(tokens[4]);
-			cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
-			if (pID == Client_ID)
-				m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
-			else {
-				if (Connected_Player_List[pID]) {
-					if (scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]) {
-						scene_manager->Get_Active_Scene()->obj_manager->player_map[pID]->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
-					}
-				}
-			}
-			cout << "change State : " << stateNum << "\n";*/
 		}
 
 	}
@@ -1675,7 +1653,7 @@ void CGameFramework::ProcessReceivedData_Board(shared_ptr<Board_Scene> board_sce
 	}
 }
 
-void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
+void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
 	if (tokens.size() < 2) return;
 
@@ -1685,8 +1663,7 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 	for (int i = 0; i < playerCount; ++i)
 	{
 		int base = startIndex;
-
-		if (base + 9 > tokens.size()) break;
+		if (base + 12 > tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
 		int modelId = std::stoi(tokens[base + 1]);
@@ -1696,58 +1673,42 @@ void CGameFramework::ProcessReceivedData_Stage(shared_ptr<CScene> stage_scene, c
 		float lx = std::stof(tokens[base + 5]);
 		float ly = std::stof(tokens[base + 6]);
 		float lz = std::stof(tokens[base + 7]);
-		int trackCount = std::stoi(tokens[base + 8]);
 
-		int trackStart = base + 9;
-		int expectedTrackTokenCount = trackCount * 3;
-
-		if (trackStart + expectedTrackTokenCount + 4 > tokens.size()) break;
-
-		std::vector<Animation_Sync> track_list;
-		for (int t = 0; t < trackCount; ++t)
-		{
-			int idx = trackStart + t * 3;
-			int trackIdx = std::stoi(tokens[idx]);
-			float weight = std::stof(tokens[idx + 1]);
-			float position = std::stof(tokens[idx + 2]);
-			track_list.push_back({ trackIdx, weight, position });
-		}
-
-		int stateFlagIndex = trackStart + expectedTrackTokenCount;
-
-		bool stateChanged = (tokens[stateFlagIndex++] == "1");
+		int idx = base + 8;
+		bool stateChanged = (tokens[idx++] == "1");
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-		syncData.track_info_list = track_list;
+		syncData.track_info_list.clear(); 
 		syncData.bStateChange = stateChanged;
 
-		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
+		int changedStateNum = std::stoi(tokens[idx++]);
 		syncData.changedStateNum = changedStateNum;
-		float hp = std::stof(tokens[stateFlagIndex++]);
+		float hp = std::stof(tokens[idx++]);
 		syncData.hp = hp;
-		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
+		bool bBreathHit = (tokens[idx++] == "1");
 		syncData.bBreathHit = bBreathHit;
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-
-		int consumed = 9 + (trackCount * 3) + 4;
+		int consumed = 12;
 		startIndex = base + consumed;
 	}
 }
 
-
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
 	if (tokens.size() < 3) return;
-	float list_size = std::stof(tokens[1]);
+	int list_size = std::stoi(tokens[1]);
+
+	static std::unordered_map<int, uint32_t> lastSeenVer;
 
 	int startIndex = 2;
-	for (int i = 0; i<int(list_size); ++i) 
+	for (int i = 0; i < list_size; ++i)
 	{
 		int base = startIndex;
+		if (base + 11 > (int)tokens.size()) break;
 
 		int monsterId = std::stoi(tokens[base + 0]);
 		float px = std::stof(tokens[base + 1]);
@@ -1756,52 +1717,45 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		float lx = std::stof(tokens[base + 4]);
 		float ly = std::stof(tokens[base + 5]);
 		float lz = std::stof(tokens[base + 6]);
-		int trackCount = std::stoi(tokens[base + 7]);
-
-		int trackStart = base + 8;
-
-		int expectedTrackTokenCount = trackCount * 3;
-
-		std::vector<Animation_Sync> track_list;
-
-		for (int t = 0; t < trackCount; ++t)
-		{
-			int idx = trackStart + t * 3;
-			int trackIdx = std::stoi(tokens[idx]);
-			float weight = std::stof(tokens[idx + 1]);
-			float position = std::stof(tokens[idx + 2]);
-			track_list.push_back({ trackIdx, weight, position });
-		}
-
-		int stateFlagIndex = trackStart + expectedTrackTokenCount;
+		bool bStateChange = (tokens[base + 7] == "1" || tokens[base + 7] == "true");
+		float hp = std::stof(tokens[base + 8]);
+		uint32_t stateVer = static_cast<uint32_t>(std::stoul(tokens[base + 9])); 
+		int stateEnum = std::stoi(tokens[base + 10]);
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
+		syncData.bStateChange = false;
+		syncData.hp = hp;
+		syncData.track_info_list.clear();
+		syncData.stateEnum = stateEnum;
 
-		syncData.track_info_list = track_list;
-		syncData.bStateChange = std::stoi(tokens[stateFlagIndex++]);
-		syncData.hp = std::stoi(tokens[stateFlagIndex]);
+		auto& seen = lastSeenVer[monsterId];
+		if (seen != stateVer) {
+			seen = stateVer;
+			syncData.bStateChange = true;     
+
+			/*if (monsterId == 16777217) {
+				cout << "seen : " << seen << ", stateVer: " << stateVer << ", stateEnum: " << stateEnum << endl;
+			}*/
+		}
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
 		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
-
 		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
 		float zView = XMVectorGetZ(viewSpacePos);
-		//std::cout << zView << "\n";
-		if (zView >= 800.0f) {
+
+		syncData.animMode = DecideMode(zView);
+		/*if (zView >= 800.0f) {
 			stage_scene->Monster_Set_Active_False(monsterId);
 		}
-		else if (zView >= -50.0f)
-		{
+		else if (zView >= -50.0f) {
 			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
-		}
-
-		startIndex = stateFlagIndex + 1;
+		}*/
+		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
+		startIndex = base + 11;
 	}
 }
-
-
 
 void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
@@ -2120,9 +2074,32 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	new_Player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
+	std::vector<shared_ptr<CGameObject>> trail_target = new_Player->Weapon_ptr;
+	if (!trail_target.empty()) {
+		XMFLOAT3 player_color = GetColorById(playerId + 1);
 
+		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
+		for (auto& target : trail_target) {
+			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
+
+			trail_obj->Set_Main_Color(trail_main_color);
+			trail_obj->Set_SubColor(trail_sub_color);
+
+			trail_obj->Set_Trail_Target(target, false);
+			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+			scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+			new_Player->SetTrailObj(trail_obj);
+			new_Player->bTrailOff();
+		}
+
+		for (auto& t_obj : new_Player->GetTrailObj()) {
+			t_obj->Set_Active(false);
+		}
+	}
+
+	/*shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
 	if (trail_target)
 	{
 		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
@@ -2141,7 +2118,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		new_Player->SetTrailObj(trail_obj);
 		new_Player->bTrailOff();
 		new_Player->GetTrailObj()->Set_Active(false);
-	}
+	}*/
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 

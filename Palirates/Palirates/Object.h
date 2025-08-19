@@ -51,6 +51,8 @@ struct ServerSyncData
     int changedStateNum = -1;
     float hp;
     bool bBreathHit;
+    int stateEnum;
+    AnimUpdateMode animMode = AnimUpdateMode::Full;
 };
 
 class CTexture
@@ -618,7 +620,7 @@ public:
 public:
     char                     m_pstrFrameName[64];
     EObjectType type = EObjectType::None;
-
+    Monster_Type mType = Monster_Type::ETC;
     bool HasType(EObjectType mask) const
     {
         return (type & mask) != EObjectType::None;
@@ -667,7 +669,8 @@ public:
     XMFLOAT3 m_TargetPosition{ 0.0f,0.0f,0.0f };
 
     bool bUpdateOBB{ true };
-    std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
+    //std::shared_ptr<CGameObject> Weapon_ptr = nullptr;
+    std::vector<std::shared_ptr<CGameObject>> Weapon_ptr;
 
     bool Test_Mode{ false };
 
@@ -1158,6 +1161,9 @@ protected:
 public:
     int test_num{ 0 };
     int Hit_Track_idx = -1;
+    AnimUpdateMode animMode = AnimUpdateMode::Full;
+    int            poseSkipCounter = 0;
+
     CMonsterObject() {};
     virtual ~CMonsterObject();
 

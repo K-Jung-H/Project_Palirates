@@ -610,6 +610,65 @@ enum class Monster_Type : int
 	ETC
 };
 
+enum class AnimUpdateMode : uint8_t {
+	Full,      
+	PoseOnly,   
+	TimeOnly,  
+	Frozen   
+};
+
+static AnimUpdateMode DecideMode(float zView) {
+	if (zView < -50.0f || zView > 800.0f) {
+		return AnimUpdateMode::TimeOnly;
+	}
+
+	return AnimUpdateMode::Full;
+	/*if (dist <= 40.0f) {
+		return AnimUpdateMode::Full;
+	}
+	else if (dist <= 100.0f) {
+		return AnimUpdateMode::PoseOnly;
+	}
+	else if (dist <= 200.0f) {
+		return AnimUpdateMode::TimeOnly;
+	}
+	else {
+		return AnimUpdateMode::Frozen;
+	}*/
+}
+
+enum KeyIndex
+{
+	KEY_INDEX_W = 0,
+	KEY_INDEX_S = 1,
+	KEY_INDEX_A = 2,
+	KEY_INDEX_D = 3,
+	KEY_INDEX_Q = 4,
+	KEY_INDEX_E = 5,
+	KEY_INDEX_SHIFT = 6,
+	KEY_INDEX_ENTER = 7,
+	KEY_INDEX_MOUSE_LEFT = 8,
+	KEY_INDEX_MOUSE_RIGHT = 9,
+	KEY_INDEX_F2 = 10,
+	KEY_INDEX_F3 = 11
+};
+
+enum InputFlags : uint32_t
+{
+	INPUT_NONE = 0,
+	INPUT_W = 1 << KEY_INDEX_W,
+	INPUT_S = 1 << KEY_INDEX_S,
+	INPUT_A = 1 << KEY_INDEX_A,
+	INPUT_D = 1 << KEY_INDEX_D,
+	INPUT_Q = 1 << KEY_INDEX_Q,
+	INPUT_E = 1 << KEY_INDEX_E,
+	INPUT_SHIFT = 1 << KEY_INDEX_SHIFT,
+	INPUT_ENTER = 1 << KEY_INDEX_ENTER,
+	INPUT_MOUSE_LEFT = 1 << KEY_INDEX_MOUSE_LEFT,
+	INPUT_MOUSE_RIGHT = 1 << KEY_INDEX_MOUSE_RIGHT,
+	INPUT_F2 = 1 << KEY_INDEX_F2,
+	INPUT_F3 = 1 << KEY_INDEX_F3
+};
 
 //#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"

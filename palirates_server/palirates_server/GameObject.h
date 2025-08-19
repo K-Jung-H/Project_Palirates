@@ -203,7 +203,8 @@ public:
     std::vector<float> targetWeights;
 
     char* WeaponName = "";
-    std::shared_ptr<GameObject> Weapon_ptr = nullptr;
+    //std::shared_ptr<GameObject> Weapon_ptr = nullptr;
+    std::vector<std::shared_ptr<GameObject>> Weapon_ptr;
 
     bool bDead = false;
     int currStateTrackIdx = 0;

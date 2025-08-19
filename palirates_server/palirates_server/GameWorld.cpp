@@ -38,7 +38,10 @@ void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
     if (boss->attackPhase == -1) 
         return;
 
-    auto boss_weapon = boss->Weapon_ptr;
+    if (boss->Weapon_ptr.empty())
+        return;
+
+    auto boss_weapon = boss->Weapon_ptr[0];
 
     if (ctx.out_zoom_object) 
     {

@@ -45,6 +45,8 @@ public:
             std::cout << "fail enter" << std::endl;
     }
 
+    uint32_t m_stateVer = 0;
+
     void update(float deltaTime) override;
     virtual void SetWeight(float deltaTime);
 

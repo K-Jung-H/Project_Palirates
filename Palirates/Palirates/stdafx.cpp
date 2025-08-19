@@ -505,4 +505,3 @@ void ShowCursorFix()
 {
 	while (ShowCursor(TRUE) < 0) {}
 }
-
