@@ -533,7 +533,12 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
                 if (worldWeaponOBB->Intersects(worldPlayerOBB)) {
                     std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-
+                    XMFLOAT3 toMonter = Vector3::Subtract(m->GetPosition(), player_ptr->GetPosition());
+                    toMonter.y = 0.0f;
+                    if (Vector3::LengthSquared(toMonter) > 0.0001f) {
+                        toMonter = Vector3::Normalize(toMonter);
+                        player_ptr->SetLook(toMonter);
+                    }
                     float damage;
 
                     if (w->BreathObject)
