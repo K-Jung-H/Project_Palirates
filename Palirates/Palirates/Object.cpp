@@ -1323,18 +1323,18 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		XMVECTOR q = XMQuaternionNormalize(accQ[j]);
 
-		const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
+		/*const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
 		if (boneName && std::strcmp(boneName, "Shoulder_R") == 0)
 		{
 			static const XMVECTOR qOffset = QFromEulerDeg(
 				0.0f,  
 				0.0f, 
-				0.0f   
+				-30.0f   
 			);
 
 			q = XMQuaternionNormalize(XMQuaternionMultiply(q, qOffset));
 		}
-		/*if (boneName && std::strcmp(boneName, "Shoulder_L") == 0)
+		if (boneName && std::strcmp(boneName, "Shoulder_L") == 0)
 		{
 			static const XMVECTOR qOffset = QFromEulerDeg(
 				10.0f,
