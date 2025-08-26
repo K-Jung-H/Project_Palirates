@@ -1234,6 +1234,14 @@ inline XMVECTOR XM_CALLCONV XMQuaternionNegate(FXMVECTOR Q) noexcept
 	return XMVectorNegate(Q); // ( -x, -y, -z, -w )
 }
 
+inline DirectX::XMVECTOR QFromEulerDeg(float pitchX, float yawY, float rollZ) {
+	using namespace DirectX;
+	return XMQuaternionRotationRollPitchYaw(
+		XMConvertToRadians(pitchX),
+		XMConvertToRadians(yawY),
+		XMConvertToRadians(rollZ));
+}
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
@@ -1314,6 +1322,49 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		}
 
 		XMVECTOR q = XMQuaternionNormalize(accQ[j]);
+
+		const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
+		if (boneName && std::strcmp(boneName, "Shoulder_R") == 0)
+		{
+			static const XMVECTOR qOffset = QFromEulerDeg(
+				0.0f,  
+				0.0f, 
+				0.0f   
+			);
+
+			q = XMQuaternionNormalize(XMQuaternionMultiply(q, qOffset));
+		}
+		/*if (boneName && std::strcmp(boneName, "Shoulder_L") == 0)
+		{
+			static const XMVECTOR qOffset = QFromEulerDeg(
+				10.0f,
+				0.0f,
+				-40.0f
+			);
+
+			q = XMQuaternionNormalize(XMQuaternionMultiply(q, qOffset));
+		}
+		if (boneName && std::strcmp(boneName, "Elbow_L") == 0)
+		{
+			static const XMVECTOR qOffset = QFromEulerDeg(
+				-20.0f,
+				0.0f,
+				-50.0f
+			);
+
+			q = XMQuaternionNormalize(XMQuaternionMultiply(q, qOffset));
+		}
+		if (boneName && std::strcmp(boneName, "Hand_L") == 0)
+		{
+			static const XMVECTOR qOffset = QFromEulerDeg(
+				0.0f,
+				0.0f,
+				-50.0f
+			);
+
+			q = XMQuaternionNormalize(XMQuaternionMultiply(q, qOffset));
+		}*/
+
 		XMVECTOR s = XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
 		XMMATRIX M = XMMatrixScalingFromVector(s)
 			* XMMatrixRotationQuaternion(q)
