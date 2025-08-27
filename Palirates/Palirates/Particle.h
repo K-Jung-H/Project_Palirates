@@ -32,6 +32,7 @@ enum class Particle_Type
 	sand = 4,
 	sand_storm = 5,
 	heal = 6,
+	orbit = 7,
 	//=======================
 	bleed = 10,
 	//=======================

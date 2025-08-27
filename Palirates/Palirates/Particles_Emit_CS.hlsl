@@ -58,14 +58,32 @@ cbuffer CB_Particle_Update_Info : register(b0)
     float2 padding0;
 };
 
-RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
+RWStructuredBuffer<Particle_Info> Particle_Info_Buffer : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
 
 StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 
+cbuffer Grid_Info : register(b1)
+{
+    float3 worldMin;
+    float cellSize;
+    int3 gridDim;
+    float padding;
+};
+
+struct CellInfo
+{
+    uint startIndex; // g_OBBIndices[] start index
+    uint count; // OBB num
+};
+
+StructuredBuffer<CellInfo> g_CellInfos : register(t1);
+StructuredBuffer<uint> g_OBBIndices : register(t2);
+
 
 #define XM_PI 3.14159265359f
+#define FLT_MAX 3.402823466e+38f	
 
 #define FACE_LEFT    0 // -X
 #define FACE_RIGHT   1 // +X
@@ -73,6 +91,20 @@ StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 #define FACE_TOP     3 // +Y
 #define FACE_BACK    4 // -Z
 #define FACE_FRONT   5 // +Z
+
+
+#define PARTICLE_TYPE_SNOW     0
+#define PARTICLE_TYPE_SPLASH    1
+#define PARTICLE_TYPE_DRAGON_FIRE 2
+#define PARTICLE_TYPE_PARTY      3
+
+#define PARTICLE_TYPE_SAND      4
+#define PARTICLE_TYPE_SAND_STORM 5
+#define PARTICLE_TYPE_HEAL 6
+#define PARTICLE_TYPE_ORBIT 7
+
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
+
 
 float3 GetEmitFaceCenter(int face, float3 min, float3 max)
 {
@@ -139,6 +171,22 @@ float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
 
     float3 dir = normalize(baseDir + offset);
     return dir;
+}
+
+float Hash11(uint n)
+{
+    n = (n << 13u) ^ n;
+    return 1.0 - ((n * (n * n * 15731u + 789221u) + 1376312589u) & 0x7fffffff) / 1073741824.0;
+}
+
+float3 HashToDirection(uint id)
+{
+    float u1 = Hash11(id ^ 0x9e3779b9u);
+    float u2 = Hash11(id ^ 0x7f4a7c15u);
+    float phi = 6.2831853f * u1;
+    float z = 2.0f * u2 - 1.0f;
+    float r = sqrt(max(0.0f, 1.0f - z * z));
+    return float3(r * cos(phi), z, r * sin(phi));
 }
 
 float3 ConeEmitDirection(uint id, float3 baseDir, float coneAngle)
@@ -280,6 +328,27 @@ void Emit_Heal(inout Particle_Info p, uint index)
     p.Rotate_Value = 0.0f;
 }
 
+void Emit_Orbit(inout Particle_Info p, uint index)
+{
+    float angleNorm = Hash11(index);
+    p.Velocity.x = angleNorm; // angleNorm
+    p.Velocity.y = lerp(Init_Velocity_Value * 0.8f, Init_Velocity_Value * 1.2f, Hash11(index ^ 0xA4C3u)); // angularSpeed
+    p.Acceleration = HashToDirection(index); // orbitNormal
+
+    float theta = angleNorm * 6.2831853f;
+    float3 localPos = float3(cos(theta), 0, sin(theta)) * focus_strength;
+
+    float3 up = p.Acceleration;
+    float3 right = normalize(cross(up, float3(0, 1, 0)));
+    if (length(right) < 1e-3)
+        right = normalize(cross(up, float3(1, 0, 0)));
+    float3 forward = normalize(cross(up, right));
+
+    float3 rotatedPos = right * localPos.x + forward * localPos.z;
+    p.Position = focus_point + rotatedPos;
+    p.Type = PARTICLE_TYPE_ORBIT;
+}
+
 
 //===============================================================
 // Interval
@@ -292,21 +361,6 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
     p.Acceleration = p.Velocity;
     p.Color = float3(1.0f, 0.3f, 0.0f);
 }
-
-//===============================================================
-
-
-
-#define PARTICLE_TYPE_SNOW     0
-#define PARTICLE_TYPE_SPLASH    1
-#define PARTICLE_TYPE_DRAGON_FIRE 2
-#define PARTICLE_TYPE_PARTY      3
-
-#define PARTICLE_TYPE_SAND      4
-#define PARTICLE_TYPE_SAND_STORM 5
-#define PARTICLE_TYPE_HEAL 6
-
-#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
 //===============================================================
 
@@ -360,7 +414,7 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
 
     InterlockedAdd(debug_buffer[0], 1); // 호출 카운트
 
-    Particle_Info p = ParticleBuffer_Emit[index];
+    Particle_Info p = Particle_Info_Buffer[index];
     if (p.Active == 1)
         return;
 
@@ -391,5 +445,5 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     ApplyDelayByType(p, index);
     InterlockedAdd(debug_buffer[1], 1); // emit 카운트
     
-    ParticleBuffer_Emit[index] = p;
+    Particle_Info_Buffer[index] = p;
 }
