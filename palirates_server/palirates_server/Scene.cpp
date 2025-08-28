@@ -1174,15 +1174,10 @@ void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
 
-    /*if (!bStageClear)
-    {
-        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
-        Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
-    }*/
     if (!bStageClear)
     {
-        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
-        cout << "°¡°íÀÏ id :" << id << "\n";
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        //int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
         Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
     }
 
