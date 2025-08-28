@@ -884,7 +884,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    //return;
+    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;
