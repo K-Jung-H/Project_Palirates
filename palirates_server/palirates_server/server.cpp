@@ -588,20 +588,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
 
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
-                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z); //<< ","
-                //<< std::to_string(track_list.size());
-
-            /*if (!XMVector3Equal(XMLoadFloat3(&player_ptr->CommandSetLook), XMVectorZero())) {
-                XMStoreFloat3(&player_ptr->CommandSetLook, XMVectorZero());
-                cout << "cmd set look reset" << "\n";
-            }*/
-
-            /*for (const auto& track : track_list)
-            {
-                players_data << "," << std::to_string(track.track_index)
-                    << "," << std::to_string(track.weight)
-                    << "," << std::to_string(track.track_position);
-            }*/
+                << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z); 
 
             players_data << "," << (state_changed ? "1" : "0");
 

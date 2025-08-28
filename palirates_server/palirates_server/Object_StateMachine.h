@@ -82,3 +82,11 @@ public:
     }
     ~DragonStateMachine() override = default;
 };
+
+class GargoyleStateMachine : public MonsterStateMachine {
+public:
+    GargoyleStateMachine(Monster* owner)
+        : MonsterStateMachine(owner) {
+    }
+    ~GargoyleStateMachine() override = default;
+};

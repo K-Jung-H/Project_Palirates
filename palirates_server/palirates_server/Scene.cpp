@@ -533,7 +533,12 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 
                 if (worldWeaponOBB->Intersects(worldPlayerOBB)) {
                     std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-
+                    XMFLOAT3 toMonter = Vector3::Subtract(m->GetPosition(), player_ptr->GetPosition());
+                    toMonter.y = 0.0f;
+                    if (Vector3::LengthSquared(toMonter) > 0.0001f) {
+                        toMonter = Vector3::Normalize(toMonter);
+                        player_ptr->SetLook(toMonter);
+                    }
                     float damage;
 
                     if (w->BreathObject)
@@ -935,6 +940,10 @@ std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, 
     else if (mType == static_cast<int>(Monster_Type::Dragon)) {
         m = std::make_shared<Dragon>(1);
     }
+    else if (mType == static_cast<int>(Monster_Type::Gargoyle)) {
+        m = std::make_shared<Gargoyle>(1);
+        cout << "가고일 생성" << "\n";
+    }
     else if (mType == static_cast<int>(Monster_Type::ETC)) {
         m = std::make_shared<TestPlayer>(1);
     }
@@ -1168,6 +1177,7 @@ void Stage_4_Scene::Init()
     if (!bStageClear)
     {
         int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        //int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
         Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
     }
 

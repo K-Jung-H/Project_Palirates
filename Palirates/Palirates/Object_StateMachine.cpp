@@ -1239,3 +1239,142 @@ void DragonStateMachine::ResetTrackForState(State state, bool posReset)
         }
     }
 }
+
+void GargoyleStateMachine::update(float Elapsed_time)
+{
+    OnPrepareUpdate(6.0f, Elapsed_time);
+
+    if (!GetTargetSet()) {
+        if (stateElapsedTime >= stateChangeTime) {
+            switch (Get_State()) {
+            case State::Idle:
+                //changeState(State::Run, Key_Value::None);
+                break;
+            case State::Run:
+                changeState(State::Idle, Key_Value::None);
+                break;
+            }
+
+            stateElapsedTime = 0.0f;
+            stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
+        }
+    }
+
+    switch (Get_State()) {
+    case State::Idle:
+        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
+        if (TargetSet)  changeState(State::Run, Key_Value::None);
+        m_pOwner->targetWeights[TRACK_GARGOYLE_IDLE] = 1.0f;
+        break;
+    case State::Run:
+        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
+        m_pOwner->targetWeights[TRACK_GARGOYLE_WALK] = 1.0f;
+        RootMotionMove(10.0f);
+        {
+            std::uniform_int_distribution<int> dist(0, 1);
+            State attackState = (dist(m_Rng) == 0) ? State::Attack1 : State::Attack2;
+            ChangeIfNear(attackState, 20.0f);
+        }
+        break;
+    case State::Get_Hit:
+        if (animController->m_pAnimationTracks[TRACK_GARGOYLE_GET_HIT].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_GARGOYLE_GET_HIT] = 1.0f;
+        RootMotionMove(0.0f, true);
+        break;
+    case State::Attack1:
+        if (animController->m_pAnimationTracks[TRACK_GARGOYLE_ATTACK1].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_GARGOYLE_ATTACK1] = 1.0f;
+        RootMotionMove(20.0f);
+        break;
+    case State::Attack2:
+        if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_1].m_bFinished) {
+            changeState(State::Idle, Key_Value::None);
+        }
+        m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_1] = 1.0f;
+        RootMotionMove(20.0f);
+        break;
+    case State::Knock_Down:
+        m_pOwner->targetWeights[TRACK_GARGOYLE_DEAD] = 1.0f;
+        RootMotionMove(10.0f);
+        break;
+    }
+
+    SetWeight();
+}
+
+void GargoyleStateMachine::enterState(State state, Key_Value key_event)
+{
+    MonsterStateMachine::enterState(state, key_event);
+
+    if (GetGargoyleRootMotionStateToTrackMap().contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = false;
+        }
+
+        ResetTrackForState(state, true);
+    }
+    if (IsInState({ State::Attack1/*, State::Attack2*/ })) {
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOn();
+        }
+    }
+
+    //const auto& map = GetGargoyleRootMotionStateToTrackMap();
+    //auto it = map.find(state);
+    //if (it != map.end()) {
+    //    int trackIndex = it->second;  
+    //    //m_pOwner->targetWeights[trackIndex] = 1.0f;
+
+    //    if (m_pOwner != nullptr) {
+    //        m_pOwner->bIsControllable = false;
+    //    }
+    //    ResetTrackForState(state, true);
+    //}
+
+    //if (IsInState({ State::Attack1/*, State::Attack2, State::Attack3*/ })) {
+    //    /* if (m_pOwner->Weapon_ptr != nullptr)
+    //         m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+    //    for (auto& w : m_pOwner->Weapon_ptr) {
+    //        w->bUpdateOBBOn();
+    //    }
+    //}
+}
+
+void GargoyleStateMachine::exitState(State state, Key_Value key_event)
+{
+    MonsterStateMachine::exitState(state, key_event);
+
+    if (GetGargoyleRootMotionStateToTrackMap().contains(state)) {
+        if (m_pOwner != nullptr) {
+            m_pOwner->bIsControllable = true;
+        }
+
+        ResetTrackForState(state, false);
+    }
+    if (IsInState({ State::Attack1/*, State::Attack2, State::Attack3*/ })) {
+        /*if (m_pOwner->Weapon_ptr != nullptr)
+            m_pOwner->Weapon_ptr->bUpdateOBBOff();*/
+        for (auto& w : m_pOwner->Weapon_ptr) {
+            w->bUpdateOBBOff();
+        }
+    }
+}
+
+void GargoyleStateMachine::ResetTrackForState(State state, bool posReset)
+{
+    auto it = GetGargoyleRootMotionStateToTrackMap().find(state);
+    if (it != GetGargoyleRootMotionStateToTrackMap().end()) {
+        int track = it->second;
+        if (animController != nullptr) {
+            animController->m_pAnimationTracks[track].m_bFinished = false;
+            if (posReset)
+                animController->m_pAnimationTracks[track].m_fPosition = 0.0f;
+        }
+    }
+}

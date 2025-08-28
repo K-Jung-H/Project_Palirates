@@ -63,9 +63,9 @@ ServerSyncData Monster::MakeSyncData() {
     ServerSyncData data;
     data.position = GetPosition();
     data.lookVector = GetLook();
-    if (m_pSkinnedAnimationController) {
+    /*if (m_pSkinnedAnimationController) {
         data.track_info_list = m_pSkinnedAnimationController->MakeSyncData();
-    }
+    }*/
     data.hp = GetHP();
     return data;
 }
@@ -260,6 +260,47 @@ Dragon::Dragon(int id) : Monster(id) {
     };
 
     InitAnimationController("Model/Dragon_LP.bin", 13, 16, OnceType);
+
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
+    m_fScale = 15.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 1.0f, -1.6f),
+        XMFLOAT3(0.8f, 1.0f, 2.8f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);
+}
+
+// ---------------- Dragon ----------------
+
+Gargoyle::Gargoyle(int id) : Monster(id) {
+    detectionRange = 100.0f;
+    attackRange = 50.0f;
+    type = Monster_Type::Gargoyle;
+    SetType(Object_Type::monster);
+    WeaponName = "Wings_LP";
+    RootMotionTrackSet = {
+        TRACK_GARGOYLE_WALK,
+        TRACK_GARGOYLE_WALK_BACK,
+        TRACK_GARGOYLE_GET_HIT,
+        TRACK_GARGOYLE_DEAD,
+        TRACK_GARGOYLE_ATTACK1,
+        TRACK_GARGOYLE_SKILL_1,
+        TRACK_GARGOYLE_SKILL_2,
+        TRACK_GARGOYLE_SKILL_3
+    };
+
+    std::unordered_set<int> OnceType = {
+        TRACK_GARGOYLE_GET_HIT,
+        TRACK_GARGOYLE_DEAD,
+        TRACK_GARGOYLE_ATTACK1,
+        TRACK_GARGOYLE_SKILL_1,
+        TRACK_GARGOYLE_SKILL_3
+    };
+
+    InitAnimationController("Model/Gargoyle_LP.bin", 10, 0, OnceType);
 
     m_StateMachine = std::make_unique<FishManStateMachine>(this);
     InitStateMachine();

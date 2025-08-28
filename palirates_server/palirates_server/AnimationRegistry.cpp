@@ -19,6 +19,7 @@ int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) 
         case State::Idle:        return TRACK_ANUBIS_IDLE;
         case State::Attack1:     return TRACK_ANUBIS_ATTACK1;
         case State::Attack2:     return TRACK_ANUBIS_ATTACK2;
+        case State::Attack3:     return TRACK_ANUBIS_SKILL;
         case State::Get_Hit:     return TRACK_ANUBIS_GET_HIT;
         case State::Run:         return TRACK_ANUBIS_WALK;
         case State::Knock_Down:  return TRACK_ANUBIS_DEAD;
@@ -35,6 +36,16 @@ int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) 
         case State::Run:         return TRACK_DRAGON_RUN;
         case State::Knock_Down:  return TRACK_DRAGON_DEAD;
         default: return TRACK_DRAGON_IDLE;
+        }
+    case Monster_Type::Gargoyle:
+        switch (state) {
+        case State::Idle:        return TRACK_GARGOYLE_IDLE;
+        case State::Attack1:     return TRACK_GARGOYLE_ATTACK1;
+        case State::Attack2:     return TRACK_GARGOYLE_SKILL_1;
+        case State::Get_Hit:     return TRACK_GARGOYLE_GET_HIT;
+        case State::Run:         return TRACK_GARGOYLE_WALK;
+        case State::Knock_Down:  return TRACK_GARGOYLE_DEAD;
+        default: return TRACK_GARGOYLE_IDLE;
         }
     case Monster_Type::ETC:
         switch (state) {

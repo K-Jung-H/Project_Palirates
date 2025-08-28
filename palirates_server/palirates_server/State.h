@@ -35,13 +35,31 @@ public:
     State GetStateEnum() const override { return State::Run; }
 };
 
-class AttackState : public MonsterState {
+class Attack1State : public MonsterState {
 public:
     void Enter(Monster* monster, MonsterStateMachine* sm) override;
     void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
     void Exit(Monster* monster) override;
     State GetStateEnum() const override { return State::Attack1; }
 };
+
+class Attack2State : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Attack2; }
+};
+
+
+class Attack3State : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Attack3; }
+};
+
 
 class GetHitState : public MonsterState {
 public:
@@ -65,4 +83,12 @@ public:
     void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
     void Exit(Monster* monster) override;
     State GetStateEnum() const override { return State::Attack2; }
+};
+
+class AnubisSkillState : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Attack3; }
 };

@@ -1203,3 +1203,12 @@ public:
 
     DragonStateMachine* GetStateMachine() override { return static_cast<DragonStateMachine*>(m_StateMachine.get()); }
 };
+
+class CGargoyleObject : public CMonsterObject
+{
+public:
+    CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+    virtual ~CGargoyleObject() {};
+
+    GargoyleStateMachine* GetStateMachine() override { return static_cast<GargoyleStateMachine*>(m_StateMachine.get()); }
+};

@@ -56,7 +56,8 @@ Player::Player(int playerId) : Skinned_GameObject()
     }
 
     char* modelPaths[] = {
-        "Model/Captain_v17.bin",
+        //"Model/Captain_v17.bin",
+        "Model/2HandedMan.bin",
         "Model/Captain_v17.bin",
         "Model/Captain_v17.bin",
         "Model/Captain_v17.bin",

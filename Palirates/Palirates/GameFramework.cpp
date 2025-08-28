@@ -1729,7 +1729,7 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.hp = hp;
 		syncData.track_info_list.clear();
 		syncData.stateEnum = stateEnum;
-
+		
 		auto& seen = lastSeenVer[monsterId];
 		if (seen != stateVer) {
 			seen = stateVer;
@@ -1996,7 +1996,20 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
+		//XMFLOAT3& localLook = m_pPlayer->GetLook();
+
+		//XMVECTOR v1 = XMVector3Normalize(XMLoadFloat3(&localLook));
+		//XMVECTOR v2 = XMVector3Normalize(XMLoadFloat3(&syncData.lookVector));
+
+		//float dot = XMVectorGetX(XMVector3Dot(v1, v2));
+
+		//if (dot < 0.99) {
+		//	m_pPlayer->SetLookDirection(syncData.lookVector);
+		//}
+
 		m_pPlayer->SetPosition(syncData.position);
+
+		
 		/*if (!XMVector3Equal(XMLoadFloat3(&syncData.lookVector), XMVectorZero())) {
 			m_pPlayer->SetLookDirection(syncData.lookVector);
 			cout << "set look: " << syncData.lookVector.x << ", " << syncData.lookVector.y << ", " << syncData.lookVector.z << "\n";

@@ -41,7 +41,7 @@ void IdleState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
             sm->ChangeState(std::make_unique<WalkState>());
         else {
             if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange)
-                sm->ChangeState(std::make_unique<AttackState>());
+                sm->ChangeState(std::make_unique<Attack1State>());
             else sm->ChangeState(std::make_unique<DragonBreatheState>());
         }
     }
@@ -89,8 +89,20 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
     auto nearestPos = monster->FindNearestPlayerInRange(monster->detectionRange);
     if (nearestPos) {
         monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 80.0f);
-        if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
-            sm->ChangeState(std::make_unique<AttackState>());
+        if (GET_MONSTER_TYPE(monster->GetID()) == int(Monster_Type::Anubis)) {
+            if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
+                if (RandomFloat() < 0.5f) {
+                    sm->ChangeState(std::make_unique<Attack1State>());
+                }
+                else {
+                    sm->ChangeState(std::make_unique<AnubisSkillState>());
+                }
+            }
+        }
+        else {
+            if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
+                sm->ChangeState(std::make_unique<Attack1State>());
+            }
         }
     }
     else {
@@ -123,9 +135,9 @@ void WalkState::Exit(Monster* monster) {
 }
 
 // -------------------------
-// AttackState
+// Attack1State
 // -------------------------
-void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
+void Attack1State::Enter(Monster* monster, MonsterStateMachine* sm) {
     if (!monster) return;
     currentTrackIdx = monster->PlayAnimation(State::Attack1);
     monster->StartAttackCooldown();
@@ -136,7 +148,7 @@ void AttackState::Enter(Monster* monster, MonsterStateMachine* sm) {
     }
 }
 
-void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+void Attack1State::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
     if (!monster || !sm || !sm->animController) return;
     XMFLOAT3 pos = monster->GetPosition();
     if (pos.y > 0.0f) {
@@ -157,7 +169,7 @@ void AttackState::Update(Monster* monster, float deltaTime, MonsterStateMachine*
     }
 }
 
-void AttackState::Exit(Monster* monster) {
+void Attack1State::Exit(Monster* monster) {
     /*if (monster->Weapon_ptr)
         monster->Weapon_ptr->SetCanCollide(false);*/
     for (auto& w : monster->Weapon_ptr) {
@@ -290,6 +302,59 @@ void DragonBreatheState::Update(Monster* monster, float deltaTime, MonsterStateM
 }
 
 void DragonBreatheState::Exit(Monster* monster) {
+    for (auto& w : monster->Weapon_ptr) {
+        w->SetCanCollide(false);
+        w->BreathObject = false;
+        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+    }
+    monster->attackPhase = -1;
+    /*if (monster->Weapon_ptr)
+    {
+        monster->Weapon_ptr->SetCanCollide(false);
+        monster->attackPhase = -1;
+    }
+    monster->Weapon_ptr->BreathObject = false;
+    monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);*/
+}
+
+// -------------------------
+// AnubisSkillState
+// -------------------------
+
+void AnubisSkillState::Enter(Monster* monster, MonsterStateMachine* sm) {
+    if (!monster) return;
+    monster->attackPhase = 1;
+    currentTrackIdx = monster->PlayAnimation(State::Attack3);
+    /*monster->Weapon_ptr->BreathObject = true;
+    monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);*/
+    for (auto& w : monster->Weapon_ptr) {
+        w->BreathObject = true;
+        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);
+        w->SetCanCollide(true);
+    }
+}
+
+void AnubisSkillState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    if (!monster || !sm || !sm->animController) return;
+
+    if (monster->attackPhase == 1) {
+        if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+            sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
+            for (auto& w : monster->Weapon_ptr) {
+                w->SetCanCollide(false);
+            }
+            sm->ChangeState(std::make_unique<IdleState>());
+        }
+    }
+    else if (monster->attackPhase == 2) {
+    }
+    else if (monster->attackPhase == 3) {
+    }
+
+
+}
+
+void AnubisSkillState::Exit(Monster* monster) {
     for (auto& w : monster->Weapon_ptr) {
         w->SetCanCollide(false);
         w->BreathObject = false;
