@@ -1729,7 +1729,7 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		syncData.hp = hp;
 		syncData.track_info_list.clear();
 		syncData.stateEnum = stateEnum;
-
+		
 		auto& seen = lastSeenVer[monsterId];
 		if (seen != stateVer) {
 			seen = stateVer;

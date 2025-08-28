@@ -5112,12 +5112,19 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
 	if (syncData.bStateChange) {
+		if (mType == Monster_Type::Gargoyle) {
+			cout << "가고일 상태 전환 " << "\n";
+		}
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
+		
 	}
 	currentHP = syncData.hp;
 	this->animMode = syncData.animMode;
 	if (int(GetStateMachine()->Get_State()) != syncData.stateEnum) {
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
+		if (mType == Monster_Type::Gargoyle) {
+			cout << "가고일 상태 전환 " << "\n";
+		}
 	}
 }
 
@@ -5300,4 +5307,66 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	Set_Name("Dragon");
 
 	WeaponName = "HeadA_LP";
+}
+
+///////////////////////////////////////////////////////////////////
+
+CGargoyleObject::CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		TRACK_GARGOYLE_WALK,
+		TRACK_GARGOYLE_WALK_BACK,
+		TRACK_GARGOYLE_GET_HIT,
+		TRACK_GARGOYLE_DEAD,
+		TRACK_GARGOYLE_ATTACK1,
+		TRACK_GARGOYLE_SKILL_1,
+		TRACK_GARGOYLE_SKILL_2,
+		TRACK_GARGOYLE_SKILL_3
+	};
+
+	std::unordered_set<int> OnceType = {
+		TRACK_GARGOYLE_GET_HIT,
+		TRACK_GARGOYLE_DEAD,
+		TRACK_GARGOYLE_ATTACK1,
+		TRACK_GARGOYLE_SKILL_1,
+		TRACK_GARGOYLE_SKILL_3
+	};
+	Hit_Track_idx = TRACK_GARGOYLE_GET_HIT;
+	n_Animation = 10;
+	RootIndex = 0;
+
+	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
+
+	type = EObjectType::Monster;
+	mType = Monster_Type::Gargoyle;
+
+	CLoadedModelInfo* pGargoyleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Gargoyle_LP.bin", NULL);
+
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+	m_pRootModel = pGargoyleModel->m_pModelRootObject;
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pGargoyleModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+
+	for (int i = 0; i < n_Animation; ++i) {
+		if (OnceType.contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	SetScale(15.0f, 15.0f, 15.0f);
+
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 1.0f, -1.6f),
+		XMFLOAT3(0.8f, 1.0f, 2.8f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
+
+	Set_Name("Gargoyle");
+
+	WeaponName = "Wings_LP";
 }

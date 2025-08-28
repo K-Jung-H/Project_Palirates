@@ -940,6 +940,10 @@ std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, 
     else if (mType == static_cast<int>(Monster_Type::Dragon)) {
         m = std::make_shared<Dragon>(1);
     }
+    else if (mType == static_cast<int>(Monster_Type::Gargoyle)) {
+        m = std::make_shared<Gargoyle>(1);
+        cout << "啊绊老 积己" << "\n";
+    }
     else if (mType == static_cast<int>(Monster_Type::ETC)) {
         m = std::make_shared<TestPlayer>(1);
     }
@@ -1170,9 +1174,15 @@ void Stage_4_Scene::Init()
 {
     Stage_Scene::Init();
 
-    if (!bStageClear)
+    /*if (!bStageClear)
     {
         int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
+    }*/
+    if (!bStageClear)
+    {
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
+        cout << "啊绊老 id :" << id << "\n";
         Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
     }
 

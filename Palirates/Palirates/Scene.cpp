@@ -2339,7 +2339,7 @@ void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 {
 	auto& id2idx = obj_manager->Get_Monster_Map();
 	auto found = id2idx.find(monsterID);
-
+	
 	if (found != id2idx.end())
 	{
 		size_t idx = found->second;
@@ -2354,6 +2354,7 @@ void CScene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 			}
 		}
 	}
+	
 	SpawnMonster(pd3dDevice, pd3dCommandList, monsterID);
 	if (monsterID == 50331651) std::cout << "testplayer spawn" << std::endl;
 
@@ -2396,6 +2397,9 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
+	else if (mType == static_cast<int>(Monster_Type::Gargoyle)) {
+		m = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
 	else if (mType == static_cast<int>(Monster_Type::ETC)) {
 		m = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
@@ -4171,6 +4175,10 @@ void Stage_Scene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+		boss = true;
+	}
+	else if (mType == static_cast<int>(Monster_Type::Gargoyle)) {
+		m = std::make_shared<CGargoyleObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		boss = true;
 	}
 	else if (mType == static_cast<int>(Monster_Type::ETC)) {

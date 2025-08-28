@@ -36,6 +36,16 @@ int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) 
         case State::Knock_Down:  return TRACK_DRAGON_DEAD;
         default: return TRACK_DRAGON_IDLE;
         }
+    case Monster_Type::Gargoyle:
+        switch (state) {
+        case State::Idle:        return TRACK_GARGOYLE_IDLE;
+        case State::Attack1:     return TRACK_GARGOYLE_ATTACK1;
+        case State::Attack2:     return TRACK_GARGOYLE_SKILL_1;
+        case State::Get_Hit:     return TRACK_GARGOYLE_GET_HIT;
+        case State::Run:         return TRACK_GARGOYLE_WALK;
+        case State::Knock_Down:  return TRACK_GARGOYLE_DEAD;
+        default: return TRACK_GARGOYLE_IDLE;
+        }
     case Monster_Type::ETC:
         switch (state) {
         case State::Idle:        return TRACK_IDLE;

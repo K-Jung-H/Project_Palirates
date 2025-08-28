@@ -607,6 +607,7 @@ enum class Monster_Type : int
 	Fishman,
 	Anubis,
 	Dragon,
+	Gargoyle,
 	ETC
 };
 
