@@ -1580,6 +1580,7 @@ void CLoadedModelInfo::PrepareSkinning()
 CGameObject::CGameObject(const std::string_view& name)
 {
 	Set_Name(name);
+	m_eTransformMode = TransformMode::Inherit;
 	m_xmf4x4Parent = Matrix4x4::Identity();
 	m_xmf4x4World = Matrix4x4::Identity();
 
@@ -2142,12 +2143,42 @@ std::shared_ptr<CGameObject> CGameObject::FindFrame(const char* pstrFrameName)
 	return nullptr;
 }
 
+
+
 void CGameObject::UpdateTransform(XMFLOAT4X4* pxmf4x4Parent)
 {
-	m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Parent, *pxmf4x4Parent) : m_xmf4x4Parent;
+	switch (m_eTransformMode)
+	{
+	case TransformMode::Inherit:
+	{
+		m_xmf4x4World = (pxmf4x4Parent) ? Matrix4x4::Multiply(m_xmf4x4Parent, *pxmf4x4Parent) : m_xmf4x4Parent;
 
-	if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
-	if (m_pChild) m_pChild->UpdateTransform(&m_xmf4x4World);
+		if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
+		if (m_pChild)   m_pChild->UpdateTransform(&m_xmf4x4World);
+	}
+		break;
+
+	case TransformMode::Independent:
+	{
+		m_xmf4x4World = m_xmf4x4Parent;
+
+		if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
+		if (m_pChild)   m_pChild->UpdateTransform(&m_xmf4x4World);
+	}
+		break;
+
+	case TransformMode::Disabled:
+	{
+		if (m_pSibling) m_pSibling->UpdateTransform(pxmf4x4Parent);
+
+		return;
+	}
+		break;
+
+	default:
+		break;
+	}
+
 }
 
 void CGameObject::SetTrackAnimationSet(int nAnimationTrack, int nAnimationSet)
@@ -2575,23 +2606,29 @@ void CGameObject::SetScale(XMFLOAT3 scale, bool keepPosition)
 void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 {
 	XMVECTOR worldPosBefore = XMVectorZero();
+
 	if (keepPosition)
 	{
 		XMMATRIX worldMatrixBefore = XMLoadFloat4x4(&m_xmf4x4World);
 		worldPosBefore = XMVector3TransformCoord(XMVectorZero(), worldMatrixBefore);
 	}
 
+	// Decompose local(parent) matrix
 	XMVECTOR scale, rotation, translation;
 	XMMATRIX parentMat = XMLoadFloat4x4(&m_xmf4x4Parent);
 	XMMatrixDecompose(&scale, &rotation, &translation, parentMat);
 
+	// Apply new scale
 	scale = XMVectorSet(x, y, z, 0.0f);
-	XMMATRIX newParent = XMMatrixScalingFromVector(scale) *
+	XMMATRIX newParent =
+		XMMatrixScalingFromVector(scale) *
 		XMMatrixRotationQuaternion(rotation) *
 		XMMatrixTranslationFromVector(translation);
+
 	XMStoreFloat4x4(&m_xmf4x4Parent, newParent);
 
-	UpdateTransform(m_pParent ? &m_pParent->m_xmf4x4World : nullptr);
+	// **Always call with nullptr, let UpdateTransform decide how to handle parent**
+	UpdateTransform(nullptr);
 
 	if (keepPosition)
 	{
@@ -2600,11 +2637,13 @@ void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 
 		XMVECTOR offset = worldPosBefore - worldPosAfter;
 
+		// Apply correction so world position stays the same
 		XMMATRIX correction = XMMatrixTranslationFromVector(offset);
 		worldMatrixAfter = correction * worldMatrixAfter;
 
+		// Convert back to local (depending on parent mode)
 		XMMATRIX parentInv = XMMatrixIdentity();
-		if (m_pParent)
+		if (m_eTransformMode == TransformMode::Inherit && m_pParent)
 		{
 			parentInv = XMMatrixInverse(nullptr, XMLoadFloat4x4(&m_pParent->m_xmf4x4World));
 		}
@@ -2612,7 +2651,7 @@ void CGameObject::SetScale(float x, float y, float z, bool keepPosition)
 		XMMATRIX correctedLocal = worldMatrixAfter * parentInv;
 		XMStoreFloat4x4(&m_xmf4x4Parent, correctedLocal);
 
-		UpdateTransform(m_pParent ? &m_pParent->m_xmf4x4World : nullptr);
+		UpdateTransform(nullptr); // again, always nullptr
 	}
 }
 

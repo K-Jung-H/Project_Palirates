@@ -536,7 +536,7 @@ D3D12_SHADER_BYTECODE Weapon_Skill_ParticleShader::CreateComputeShader(ID3DBlob*
 	else if (nPipelineState == 1)
 		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 2)
-		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
+		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_2_CS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 3)
 		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
 }
@@ -605,9 +605,9 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	ParticleShader* interval_shader = new Interval_ParticleShader();
 	interval_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
-
 	ParticleShader* weapon_skill_shader = new Weapon_Skill_ParticleShader();
 	weapon_skill_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
 	//===================================================================
 
 	particle_shader_map[Particle_Shader_Type::continuous] = continuous_shader;
@@ -845,7 +845,7 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
-			if (type == Particle_Shader_Type::sand)
+			if (type == Particle_Shader_Type::sand || type == Particle_Shader_Type::skill)
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Get_Particle_State());
 
 

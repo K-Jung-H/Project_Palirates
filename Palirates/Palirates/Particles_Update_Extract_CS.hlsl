@@ -150,6 +150,16 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
+        
+        case PARTICLE_TYPE_DIFFUSE:
+            if (CheckCollisionWithGridOBBs(world_pos))
+            {
+                p.Velocity = float3(0, -1, 0);
+                if (p.Lifetime < p.MaxLifetime - 5.0f)
+                    p.Lifetime = p.MaxLifetime - 5.0f;
+            }
+            break;
+        
         case PARTICLE_TYPE_INTERVAL_BLEEDING:
         {
                 if (CheckCollisionWithGridOBBs(world_pos))
@@ -222,6 +232,17 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
                 p.Position.y += 0.5f;
             }
             break;
+        
+        case PARTICLE_TYPE_DIFFUSE:
+        {
+                if (world_pos.y < 1.0f)
+                {
+                    p.Position.y += 0.5f;
+                    p.Velocity.y = abs(p.Velocity.y);
+                }
+            }
+            break;
+        
         default:
         {
                 p.Active = 0;
@@ -381,8 +402,11 @@ void Update_Orbit(inout Particle_Info p, uint index)
     p.Position = focus_point + localPos;
 }
 
-void Update_Spread(inout Particle_Info p, uint index)
+void Update_RadialDiffuse(inout Particle_Info p, uint index)
 {
+    p.Velocity += p.Acceleration * ElapsedTime;
+    p.Position += p.Velocity * ElapsedTime;
+    p.Rotate_Value += 4.0f * ElapsedTime;
 }
 
 void Update_Blow_up(inout Particle_Info p, uint index)

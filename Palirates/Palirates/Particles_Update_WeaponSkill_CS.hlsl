@@ -82,22 +82,18 @@ void Spear_Skill_State_2_CS(uint3 DTid : SV_DispatchThreadID)
     
     p.Lifetime += ElapsedTime;
     
-
-    p.Type = p.Type = PARTICLE_TYPE_DIFFUSE;
-    p.Acceleration = float3(0.0f, -9.8f, 0.0f);
-
-    Emit_RadialDiffuse(p, index); // 원형으로 파장 생성
-    
-    float3 worldPos = mul(float4(p.Position, 1.0f), gWorldMatrix).xyz;
-    if (CheckCollisionWithGridOBBs(worldPos))
+    if (p.Type != PARTICLE_TYPE_DIFFUSE)
     {
-        p.Color = float3(1.0f, 0.5f, 0.0f);
-        p.Lifetime = p.MaxLifetime;
+        p.Type = PARTICLE_TYPE_DIFFUSE;
         p.Active = 0;
         Particle_Info_Buffer[index] = p;
         return;
     }
     
+   
+    Update_RadialDiffuse(p, index); 
+    
+    Check_Collisions(p);
     Extract_Instance(p);
 
     Particle_Info_Buffer[index] = p;

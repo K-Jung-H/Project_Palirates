@@ -230,6 +230,16 @@ float3 AddNoiseAroundDirection(float3 dir, uint index, float maxAngle)
     return n;
 }
 
+float3 RandomHemisphereUp(uint id)
+{
+    float u1 = Hash11(id ^ 0x27d4eb2fu);
+    float u2 = Hash11(id ^ 0x165667b1u);
+    float phi = 6.2831853f * u1; // 2π*u1
+    float cosTheta = u2; // [0,1] for +Y hemisphere
+    float sinTheta = sqrt(saturate(1.0f - cosTheta * cosTheta));
+    return float3(cos(phi) * sinTheta, cosTheta, sin(phi) * sinTheta);
+}
+
 
 float3 MakeOrbitNormal(uint index)
 {
@@ -393,10 +403,21 @@ void Emit_Orbit(inout Particle_Info p, uint index)
 
     float3 localPos = focus_strength * (cos(theta) * right + sin(theta) * forward);
     p.Position = focus_point + localPos;
+    p.Color = float3(0, 0, 1);
+
 }
 
 void Emit_RadialDiffuse(inout Particle_Info p, uint index)
 {
+    float3 dir = RandomHemisphereUp(index);
+    float speed = lerp(Velocity_Value * 3.0f, Velocity_Value * 4.0f, Hash11(index ^ 0xA4C3u));
+    if (abs(speed) < 0.01f)
+        speed = 0.01f;
+
+    p.Color = float3(1, 0, 0);
+    p.Position = focus_point; 
+    p.Velocity = dir * speed; 
+    p.Acceleration = float3(0.0f, -9.8f / 2, 0.0f);
 }
 
 
@@ -443,8 +464,8 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     {
         p.Lifetime = 0.0f;
     }
+    
 
-    p.Active = 1;
     
     
 }
@@ -465,6 +486,7 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     InterlockedAdd(debug_buffer[0], 1); // 호출 카운트
 
     Particle_Info p = Particle_Info_Buffer[index];
+    
     if (p.Active == 1)
         return;
 
@@ -484,15 +506,16 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Heal(p, index);
     else if (p.Type == PARTICLE_TYPE_ORBIT)
         Emit_Orbit(p, index);
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE)
+        Emit_RadialDiffuse(p, index);
 
-    else
-    if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
+    else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
     {
         Emit_Bleeding(p, index);
     }
     
     
-    p.Active = 1;
+    p.Active = 1; 
     p.Lifetime = 0.0f;
     
     ApplyDelayByType(p, index);

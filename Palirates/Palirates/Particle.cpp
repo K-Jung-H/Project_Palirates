@@ -1000,7 +1000,7 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void ParticleObject::Update_Particle_State()
 {
-	if (shader_type == Particle_Shader_Type::sand)
+	if (shader_type == Particle_Shader_Type::sand || shader_type == Particle_Shader_Type::skill)
 	{
 		Particle_State_Func_Index += 1;
 		Particle_State_Func_Index %= 3;

@@ -4115,8 +4115,8 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 
 		case 'T':
 		{
-			if (anubis_sand_particle)
-				anubis_sand_particle->Update_Particle_State();
+			if (test_orbit)
+				test_orbit->Update_Particle_State();
 		}
 		break;
 
@@ -4250,6 +4250,7 @@ void Stage_Scene::DespawnMonster(int id)
 	plist->pop_back();
 	mMap.erase(it);
 }
+
 void Stage_Scene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
 {
 	auto& id2idx = obj_manager->Get_Monster_Map();
@@ -4551,7 +4552,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		orbit_info.max_particles = 500;
 		orbit_info.MaxLifetime = 100.0f;
 
-		orbit_info.area_xyz = XMFLOAT3(500, 500, 500);
+		orbit_info.area_xyz = XMFLOAT3(5000, 500, 5000);
 		orbit_info.EmitFaceIndex = FACE_TOP;
 
 		orbit_info.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -4593,7 +4594,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	heal_effect_sample = make_shared<CGameObject>(0);
 	heal_effect_sample->Set_Child(test_player_aura);
 	heal_effect_sample->Set_Child(test_heal);
-	
+	heal_effect_sample->Set_Active(false);
 	//===============================================================================
 
 
@@ -4681,6 +4682,23 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		m_pPlayer->Weapon_ptr.back()->Set_Child(test_orbit);
 		done = true;
 	}
+
+	if (test_orbit->Get_Particle_State() == 0)
+	{
+		test_orbit->Set_TransformMode(TransformMode::Inherit);
+		test_orbit->SetPosition(0,1,0);
+		test_orbit->SetScale(0.1, 0.1, 0.1);
+	}
+
+	if (test_orbit->Get_Particle_State() == 1)
+	{
+		XMFLOAT3 world_pos = test_orbit->GetPosition();
+		test_orbit->Set_TransformMode(TransformMode::Independent);
+		test_orbit->SetScale(1.0, 1.0, 1.0);
+		test_orbit->SetPosition(world_pos);
+	}
+
+
 }
 
 //===============================================================================
