@@ -600,6 +600,46 @@ Particle::~Particle()
 	ReleaseBuffers();
 }
 
+Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
+{
+	auto RandomColorOffset = [](float base, float range = 0.2f) -> float {
+		float offset = ((float)rand() / RAND_MAX) * 2.0f * range - range; 
+		float result = base + offset;
+		return std::clamp(result, 0.0f, 1.0f); 
+		};
+
+	UINT particle_Type = static_cast<UINT>(particle_format.particle_type);
+
+	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
+	for (UINT i = 0; i < m_nMaxParticles; ++i)
+	{
+		particle_info[i].Active = 0;
+		particle_info[i].Type = particle_Type;
+
+		particle_info[i].MaxLifetime = particle_format.MaxLifetime;
+		particle_info[i].Lifetime = 0.0f;
+
+		particle_info[i].Position = XMFLOAT3{};
+		particle_info[i].Velocity = XMFLOAT3{};
+		particle_info[i].Acceleration = particle_format.acceleration;
+		particle_info[i].Rotate_Value = 0.0f;
+		particle_info[i].Sleep = 0;
+
+		XMFLOAT3 baseColor = particle_format.color;
+		particle_info[i].Color = XMFLOAT3(
+			RandomColorOffset(baseColor.x),
+			RandomColorOffset(baseColor.y),
+			RandomColorOffset(baseColor.z)
+		);
+		particle_info[i].Size = particle_format.size;
+
+		particle_info[i].EmitFaceIndex = particle_format.EmitFaceIndex;
+	}
+
+	return particle_info;
+}
+
+
 void Particle::Create_Resource_Buffers(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, Particle_Format particle_format)
 {
 	particle_buffer_texture = new CTexture(4, RESOURCE_STRUCTURED_BUFFER, 0, 0, 4, 0, 0, 4, 0);
@@ -677,44 +717,6 @@ void Particle::ReleaseBuffers()
 	if (Debug_Reset_Buffer) { Debug_Reset_Buffer->Release(); Debug_Reset_Buffer = nullptr; }
 }
 
-Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
-{ 
-	auto RandomOffset = [](float base, float range = 0.03f) -> float {
-		float offset = ((float)rand() / RAND_MAX) * 2.0f * range - range;
-		float result = base + offset;
-		return std::clamp(result, 0.0f, 1.0f); 
-		};
-
-	UINT particle_Type = static_cast<UINT>(particle_format.particle_type);
-
-	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
-	for (UINT i = 0; i < m_nMaxParticles; ++i)
-	{
-		particle_info[i].Active = 0;
-		particle_info[i].Type = particle_Type;
-
-		particle_info[i].MaxLifetime = particle_format.MaxLifetime;
-		particle_info[i].Lifetime = 0.0f;
-
-		particle_info[i].Position = XMFLOAT3{};
-		particle_info[i].Velocity = XMFLOAT3{};
-		particle_info[i].Acceleration = particle_format.acceleration;
-		particle_info[i].Rotate_Value = 0.0f;
-		particle_info[i].Sleep = 0;
-
-		XMFLOAT3 baseColor = particle_format.color;
-		particle_info[i].Color = XMFLOAT3(
-			RandomOffset(baseColor.x),
-			RandomOffset(baseColor.y),
-			RandomOffset(baseColor.z)
-		);
-		particle_info[i].Size = particle_format.size;
-
-		particle_info[i].EmitFaceIndex = particle_format.EmitFaceIndex;
-	}
-
-	return particle_info;
-}
 
 void Particle::Copy_CounterBuffer_Particle_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -910,7 +912,7 @@ void ParticleObject::Set_Main_Direction(const XMFLOAT3& input)
 	XMVECTOR dirVec = XMLoadFloat3(&input);
 	if (XMVector3Equal(dirVec, XMVectorZero()))
 	{
-		direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		direction = XMFLOAT3(0.0f, 0.0f, 0.0f); 
 		return;
 	}
 
@@ -923,7 +925,7 @@ XMFLOAT3 ParticleObject::Get_Main_Direction()
 	XMVECTOR dirVec = XMLoadFloat3(&direction);
 
 	if (XMVector3Equal(dirVec, XMVectorZero()))
-		return XMFLOAT3(0.0f, 1.0f, 0.0f);
+		return XMFLOAT3(0.0f, 0.0f, 0.0f);
 	
 	XMVECTOR normalizedDir = XMVector3Normalize(dirVec);
 	XMFLOAT3 result;
@@ -1022,11 +1024,6 @@ CB_Particle_Update_Info ParticleObject::Get_Particle_Update_Info(float fTimeElap
 		XMStoreFloat3(&aabb_pos.first, XMVectorMin(vMin, vMax));
 		XMStoreFloat3(&aabb_pos.second, XMVectorMax(vMin, vMax));
 		update_info.world_matrix = Matrix4x4::Identity();
-
-		//DebugOutput("\n");
-		//DebugOutput("X1: " + to_string(aabb_pos.first.x) + "Y1: " + to_string(aabb_pos.first.y) + "Z1: " + to_string(aabb_pos.first.z) + "\n");
-		//DebugOutput("X2: " + to_string(aabb_pos.second.x) + "Y2: " + to_string(aabb_pos.second.y) + "Z2: " + to_string(aabb_pos.second.z) + "\n");
-
 	}
 
 

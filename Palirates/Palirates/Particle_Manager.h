@@ -61,6 +61,11 @@ class Continuous_ParticleShader : public ParticleShader
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
+class Interval_ParticleShader : public ParticleShader
+{
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+};
+
 class Sand_ParticleShader : public ParticleShader
 {
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
@@ -68,8 +73,9 @@ class Sand_ParticleShader : public ParticleShader
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
-class Interval_ParticleShader : public ParticleShader
+class Weapon_Skill_ParticleShader : public ParticleShader
 {
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };

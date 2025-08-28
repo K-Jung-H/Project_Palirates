@@ -422,6 +422,8 @@ public:
 	shared_ptr<ParticleObject> test_heal = NULL;
 	shared_ptr<Aura_Object>test_player_aura = NULL;
 
+	shared_ptr<ParticleObject> test_orbit = NULL;
+
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}

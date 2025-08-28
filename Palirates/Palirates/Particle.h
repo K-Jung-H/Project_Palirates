@@ -20,6 +20,7 @@ enum class Particle_Shader_Type
 	continuous,
 	interval,
 	sand,
+	skill,
 	etc
 };
 

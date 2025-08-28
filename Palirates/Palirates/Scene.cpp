@@ -4520,33 +4520,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	env_sand_particle->SetPosition(Scene_center);
 	env_sand_particle->Set_Area(Scene_area);
 
-	//Particle_Format anubis_sand_info;
-	//{
-	//	anubis_sand_info.shader_type = Particle_Shader_Type::sand;
-	//	anubis_sand_info.particle_type = Particle_Type::sand;
-	//	anubis_sand_info.max_particles = 20000;
-	//	anubis_sand_info.MaxLifetime = 10.0f;
-
-	//	anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
-	//	anubis_sand_info.EmitFaceIndex = FACE_FRONT;
-
-	//	anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-	//	anubis_sand_info.init_velocity_value = 100.0f;
-	//	anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
-
-	//	anubis_sand_info.size = 0.3f;
-	//	anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
-	//}
-
-	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	//anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
-	//anubis_sand_particle->Set_Local_Coordinate();
-	//anubis_sand_particle->SetPosition(Scene_center);
-	//anubis_sand_particle->Set_Area(Scene_area);
-
-	//anubis_sand_particle->Set_Focus_Point(Scene_center);
-
-
 	Particle_Format heal_info;
 	{
 		heal_info.shader_type = Particle_Shader_Type::continuous;
@@ -4569,6 +4542,34 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	test_heal = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
 	test_heal->SetPosition(0, 0, 0);
 	test_heal->Set_Focus_Strength(20);
+
+
+	Particle_Format orbit_info;
+	{
+		orbit_info.shader_type = Particle_Shader_Type::skill;
+		orbit_info.particle_type = Particle_Type::orbit;
+		orbit_info.max_particles = 500;
+		orbit_info.MaxLifetime = 100.0f;
+
+		orbit_info.area_xyz = XMFLOAT3(500, 500, 500);
+		orbit_info.EmitFaceIndex = FACE_TOP;
+
+		orbit_info.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		orbit_info.init_velocity_value = 5.0f;
+		orbit_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		orbit_info.size = 0.1f;
+		orbit_info.color = XMFLOAT3(0.3f, 0.3f, 0.8f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+	test_orbit = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, orbit_info);
+	test_orbit->SetScale(0.1, 0.1, 0.1);
+	test_orbit->SetPosition(0, 1, 0);
+
+	test_orbit->Set_Focus_Strength(5);
+
+	
 #endif
 
 	//===============================================================================
@@ -4592,8 +4593,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	heal_effect_sample = make_shared<CGameObject>(0);
 	heal_effect_sample->Set_Child(test_player_aura);
 	heal_effect_sample->Set_Child(test_heal);
-
-
+	
 	//===============================================================================
 
 
@@ -4675,42 +4675,11 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		if(heal_effect_sample->Get_Active())
 			heal_effect_sample->SetPosition(m_pPlayer->GetPosition());
 	}
-
-	if (anubis_sand_particle)
+	static bool done = false;
+	if (m_pPlayer && !done)
 	{
-		UINT particle_state = anubis_sand_particle->Get_Particle_State();
-		if (particle_state == 0)
-		{
-			anubis_sand_particle->SetPosition(Scene_center);
-			anubis_sand_particle->Set_Area(Scene_area);
-			anubis_sand_particle->Set_Focus_Point(Scene_center);
-			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
-
-			anubis_sand_particle->Set_Speed(0.0f);
-		}
-		else if (particle_state == 1)
-		{
-			anubis_sand_particle->SetPosition(Scene_center);
-			anubis_sand_particle->Set_Area(Scene_area);
-			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition()); // anubis
-
-			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
-
-			anubis_sand_particle->Set_Speed(0.0f);
-
-		}
-		else if (particle_state == 2)
-		{
-			anubis_sand_particle->SetPosition(m_pPlayer->GetPosition()); // anubis
-			anubis_sand_particle->Set_Area(Scene_area);
-			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition());
-			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
-
-			// move
-			anubis_sand_particle->Set_Speed(100.0f);
-			anubis_sand_particle->Set_Direction(m_pPlayer->GetLook());
-		}
-		
+		m_pPlayer->Weapon_ptr.back()->Set_Child(test_orbit);
+		done = true;
 	}
 }
 

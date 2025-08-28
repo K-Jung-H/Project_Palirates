@@ -2312,8 +2312,6 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 	if (Active && m_pMesh)
 	{
-		//if (!IsVisible(pCamera))
-			//return;
 
 		// 객체의 셰이더 변수 업데이트
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
@@ -2344,11 +2342,14 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 		}
 	}
 
-	if (m_pSibling)
+	auto IsParticle = [](CGameObject* n) { return dynamic_cast<ParticleObject*>(n) != nullptr; };
+
+
+	if (m_pSibling && !IsParticle(m_pSibling.get()))
 		m_pSibling->Render(pd3dCommandList, pCamera);
 
 
-	if (m_pChild)
+	if (m_pChild && !IsParticle(m_pChild.get()))
 		m_pChild->Render(pd3dCommandList, pCamera);
 
 }

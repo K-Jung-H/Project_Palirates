@@ -364,22 +364,30 @@ void Update_Orbit(inout Particle_Info p, uint index)
     float angularSpeed = p.Velocity.y;
     float3 orbitNormal = p.Acceleration;
 
-    angleNorm = frac(angleNorm + (angularSpeed * ElapsedTime) / 6.2831853f);
-    p.Velocity.x = angleNorm; // store back
+    angleNorm += (angularSpeed * ElapsedTime) / 6.2831853f;
+    angleNorm = fmod(angleNorm, 1.0f);
+    if (angleNorm < 0.0f)
+        angleNorm += 1.0f; 
+    p.Velocity.x = angleNorm;
 
     float theta = angleNorm * 6.2831853f;
-    float3 localPos = float3(cos(theta), 0, sin(theta)) * focus_strength;
 
     float3 up = orbitNormal;
-    float3 right = normalize(cross(up, float3(0, 1, 0)));
-    if (length(right) < 1e-3)
-        right = normalize(cross(up, float3(1, 0, 0)));
+    float3 ref = (abs(up.y) > 0.99f) ? float3(1, 0, 0) : float3(0, 1, 0);
+    float3 right = normalize(cross(up, ref));
     float3 forward = normalize(cross(up, right));
 
-    float3 rotatedPos = right * localPos.x + forward * localPos.z;
-    p.Position = focus_point + rotatedPos;
+    float3 localPos = focus_strength * (cos(theta) * right + sin(theta) * forward);
+    p.Position = focus_point + localPos;
 }
 
+void Update_Spread(inout Particle_Info p, uint index)
+{
+}
+
+void Update_Blow_up(inout Particle_Info p, uint index)
+{    
+}
 
 //===============================================================
 // 인스턴싱 정보 추출
