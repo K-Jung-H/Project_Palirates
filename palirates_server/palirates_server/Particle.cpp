@@ -129,7 +129,7 @@ void ParticleManager::Update_Particle(float elapsed_time)
                 continue;
             }
 
-            if (particle->IsContinuousSyncType())
+            if (particle->Get_Synchronize_Type())
                 pos_updated_this_frame.push_back(particle);
         }
     }

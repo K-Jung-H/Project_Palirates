@@ -40,8 +40,6 @@ void Spear_Skill_State_1_CS(uint3 DTid : SV_DispatchThreadID)
     
     p.Lifetime += ElapsedTime;
 
-    
-    
     if (p.Lifetime >= p.MaxLifetime)
     {
         p.Active = 0;
@@ -81,10 +79,10 @@ void Spear_Skill_State_2_CS(uint3 DTid : SV_DispatchThreadID)
         Particle_Info_Buffer[index] = p;
         return;
     }
-    
-    if (p.Type != PARTICLE_TYPE_DIFFUSE)
+
+    if (p.Type != PARTICLE_TYPE_DIFFUSE_Burst)
     {
-        p.Type = PARTICLE_TYPE_DIFFUSE;
+        p.Type = PARTICLE_TYPE_DIFFUSE_Burst;
         p.Active = 0;
         Particle_Info_Buffer[index] = p;
         return;
@@ -93,73 +91,21 @@ void Spear_Skill_State_2_CS(uint3 DTid : SV_DispatchThreadID)
     if (p.Active == 0)
         return;
 
-    p.Lifetime += ElapsedTime;
     
-    Update_RadialDiffuse(p, index); 
+    p.Lifetime += ElapsedTime;
+
+    if (p.Lifetime >= p.MaxLifetime)
+    {
+        p.Active = 0;
+        Particle_Info_Buffer[index] = p;
+        return;
+    }
+
+    
+    Update_RadialDiffuse(p, index, true); 
     
     Check_Collisions(p);
     Extract_Instance(p);
-
-    Particle_Info_Buffer[index] = p;
-}
-
-//=============================================================
-
-[numthreads(64, 1, 1)]
-void Spear_Skill_State_3_CS(uint3 DTid : SV_DispatchThreadID)
-{
-    uint index = DTid.x;
-    if (index >= Max_Particle_N)
-        return;
-
-    Particle_Info p = Particle_Info_Buffer[index];
-
-    // Check Reset Flag
-    if (Reset_Flag != 0)
-    {
-        p.Active = 0;
-        Particle_Info_Buffer[index] = p;
-        return;
-    }
-
-    // Check Delay    
-    bool isDelayed = DelayActive(p);
-    if (isDelayed)
-    {
-        Particle_Info_Buffer[index] = p;
-        return;
-    }
-
-    if (p.Active == 0)
-        return;
-    
-    
-    p.Lifetime += ElapsedTime;
-
-
-    if (p.Type == PARTICLE_TYPE_SAND_STORM)
-    {
-        if (p.Lifetime >= p.MaxLifetime)
-        {
-            p.Active = 0;
-        }
-        else
-        {
-            Update_Blow_up(p, index); // À§·Î »ó½Â
-            
-            float3 worldPos = mul(float4(p.Position, 1.0f), gWorldMatrix).xyz;
-            if (CheckCollisionWithGridOBBs(worldPos))
-            {
-                p.Color = float3(1.0f, 0.5f, 0.0f);
-                p.Lifetime = p.MaxLifetime;
-                p.Active = 0;
-                Particle_Info_Buffer[index] = p;
-                return;
-            }
-            
-            Extract_Instance(p);
-        }
-    }
 
     Particle_Info_Buffer[index] = p;
 }
@@ -191,32 +137,40 @@ void Twin_Sword_Skill_State_1_CS(uint3 DTid : SV_DispatchThreadID)
         return;
     }
 
-    if (p.Type != PARTICLE_TYPE_ORBIT)
+    if (p.Type != PARTICLE_TYPE_DIFFUSE_Continuous)
     {
-        p.Type = PARTICLE_TYPE_ORBIT;
+        p.Type = PARTICLE_TYPE_DIFFUSE_Continuous;
         p.Active = 0;
         Particle_Info_Buffer[index] = p;
         return;
     }
-
+    
     if (p.Active == 0)
         return;
+    
+    bool out_of_bounds = IsOutOfBounds(p.Position, EmitRegionMin, EmitRegionMax);
 
     
     p.Lifetime += ElapsedTime;
 
-    
-    
-    if (p.Lifetime >= p.MaxLifetime)
+
+
+    if (p.Lifetime >= p.MaxLifetime || out_of_bounds)
     {
         p.Active = 0;
         Particle_Info_Buffer[index] = p;
         return;
     }
-
-    Update_Orbit(p, index);
+    
+    Update_RadialDiffuse(p, index, false);
+    
+    Check_Collisions(p);
+    
+    
+    Particle_Info p_render = p;
+    p_render.Color = RadialDiffuse_ColorGradient(p);
+    Extract_Instance(p_render);
+    
     
     Particle_Info_Buffer[index] = p;
-    Extract_Instance(p);
 }
-

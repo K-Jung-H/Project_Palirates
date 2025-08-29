@@ -102,7 +102,8 @@ StructuredBuffer<uint> g_OBBIndices : register(t2);
 #define PARTICLE_TYPE_SAND_STORM 5
 #define PARTICLE_TYPE_HEAL 6
 #define PARTICLE_TYPE_ORBIT 7
-#define PARTICLE_TYPE_DIFFUSE 8
+#define PARTICLE_TYPE_DIFFUSE_Burst 8
+#define PARTICLE_TYPE_DIFFUSE_Continuous 9
 
 #define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
@@ -416,9 +417,14 @@ void Emit_RadialDiffuse(inout Particle_Info p, uint index)
     if (abs(speed) < 0.01f)
         speed = 0.01f;
 
-    p.Position = focus_point; 
+    p.Position = (EmitRegionMin + EmitRegionMax) * 0.5f;
+
     p.Velocity = dir * speed; 
     p.Acceleration = float3(0.0f, -9.8f / 2, 0.0f);
+    
+    if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
+        p.Color = float3(1, 0, 0);
+
 }
 
 
@@ -464,6 +470,11 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     else if (p.Type == PARTICLE_TYPE_ORBIT)
     {
         float delay = 1.3f + seed * 10.0f;
+        p.Lifetime = -delay;
+    }
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
+    {
+        float delay = seed * 1.5f;
         p.Lifetime = -delay;
     }
     else
@@ -512,8 +523,11 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Heal(p, index);
     else if (p.Type == PARTICLE_TYPE_ORBIT)
         Emit_Orbit(p, index);
-    else if (p.Type == PARTICLE_TYPE_DIFFUSE)
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE_Burst)
         Emit_RadialDiffuse(p, index);
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
+        Emit_RadialDiffuse(p, index);   
+        
 
     else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
     {

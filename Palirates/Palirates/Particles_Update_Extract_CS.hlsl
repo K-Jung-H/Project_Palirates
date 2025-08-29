@@ -151,7 +151,8 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
             }
             break;
         
-        case PARTICLE_TYPE_DIFFUSE:
+        case PARTICLE_TYPE_DIFFUSE_Continuous:
+        case PARTICLE_TYPE_DIFFUSE_Burst:
             if (CheckCollisionWithGridOBBs(world_pos))
             {
                 p.Velocity = float3(0, -1, 0);
@@ -233,7 +234,8 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
             }
             break;
         
-        case PARTICLE_TYPE_DIFFUSE:
+        case PARTICLE_TYPE_DIFFUSE_Continuous:
+        case PARTICLE_TYPE_DIFFUSE_Burst:
         {
                 if (world_pos.y < 1.0f)
                 {
@@ -402,15 +404,29 @@ void Update_Orbit(inout Particle_Info p, uint index)
     p.Position = focus_point + localPos;
 }
 
-void Update_RadialDiffuse(inout Particle_Info p, uint index)
+
+float3 RadialDiffuse_ColorGradient(inout Particle_Info p)
 {
-    p.Velocity += p.Acceleration * ElapsedTime;
-    p.Position += p.Velocity * ElapsedTime;
-    p.Rotate_Value += 4.0f * ElapsedTime;
+    float3 main_color = p.Color;
+    float t = saturate(p.Lifetime / p.MaxLifetime);
+    // t = smoothstep(0.0, 1.0, t);          // 또는: t = t * t;
+
+    return lerp(main_color, float3(1.0, 1.0, 1.0), t);
 }
 
-void Update_Blow_up(inout Particle_Info p, uint index)
-{    
+void Update_RadialDiffuse(inout Particle_Info p, uint index, bool add_acceleration)
+{
+    if (add_acceleration)
+    {
+        p.Velocity += p.Acceleration * ElapsedTime;
+    }
+
+    p.Position += p.Velocity * ElapsedTime;
+    p.Rotate_Value += 4.0f * ElapsedTime;
+    
+    
+    float lifeRatio = saturate(p.Lifetime / p.MaxLifetime);
+    
 }
 
 //===============================================================

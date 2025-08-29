@@ -69,7 +69,7 @@ void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
         if (!dragon_fire) 
         {
             dragon_fire = p_mg->Create_Particle_Object(p);
-            dragon_fire->Set_Continuous_SyncType(true);
+            dragon_fire->Set_Synchronize_Type(true);
         }
         dragon_fire->SetActive(true);
     }
@@ -150,7 +150,7 @@ void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
 
         sand_anubis_effect = p_mg->Create_Particle_Object(anubis_sand);
         sand_anubis_effect->Set_Particle_Status(0);
-        sand_anubis_effect->Set_Continuous_SyncType(true);
+        sand_anubis_effect->Set_Synchronize_Type(true);
         sand_anubis_effect->SetPosition(scene_center);
         sand_anubis_effect->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
     }
@@ -474,7 +474,7 @@ void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
     p.particle_type = Particle_Type::bleed;
 
     std::shared_ptr<Particle_Object> new_bleeding_particle = particle_manager.Create_Particle_Object(p);
-    new_bleeding_particle->Set_Continuous_SyncType(false);
+    new_bleeding_particle->Set_Synchronize_Type(false);
     new_bleeding_particle->SetPosition(pos);
     new_bleeding_particle->SetLook(main_direction);
 
@@ -503,7 +503,7 @@ void GameWorld::Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, 
                 p.particle_type = Particle_Type::party; 
 
                 party_effect[id] = particle_manager.Create_Particle_Object(p);
-                party_effect[id]->Set_Continuous_SyncType(true);
+                party_effect[id]->Set_Synchronize_Type(true);
                 party_effect[id]->SetPosition(player_pos);
                 party_effect[id]->SetLook(XMFLOAT3{ 0,1,0 });
 

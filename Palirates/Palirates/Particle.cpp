@@ -619,7 +619,7 @@ Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_form
 
 	if (p_type == Particle_Type::weapon_twin_sword_skill_1)
 	{
-		p_type = Particle_Type::energy;
+		p_type = Particle_Type::diffuse_continuous;
 	}
 
 

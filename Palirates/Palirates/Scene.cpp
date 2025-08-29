@@ -4555,7 +4555,7 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		spear_skill_info.area_xyz = XMFLOAT3(5000, 500, 5000);
 		spear_skill_info.EmitFaceIndex = FACE_TOP;
 
-		spear_skill_info.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		spear_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
 		spear_skill_info.init_velocity_value = 5.0f;
 		spear_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
@@ -4576,26 +4576,25 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	{
 		twin_sword_skill_info.shader_type = Particle_Shader_Type::twin_sword_skill;
 		twin_sword_skill_info.particle_type = Particle_Type::weapon_twin_sword_skill_1;
-		twin_sword_skill_info.max_particles = 3000;
-		twin_sword_skill_info.MaxLifetime = 5.0f;
+		twin_sword_skill_info.max_particles = 1000;
+		twin_sword_skill_info.MaxLifetime = 1.0f;
 
-		twin_sword_skill_info.area_xyz = XMFLOAT3(5000, 500, 5000);
+		twin_sword_skill_info.area_xyz = XMFLOAT3(10, 10, 10);
 		twin_sword_skill_info.EmitFaceIndex = FACE_TOP;
 
-		twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		twin_sword_skill_info.init_velocity_value = 5.0f;
+		twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		twin_sword_skill_info.init_velocity_value = 1.0f;
 		twin_sword_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-		twin_sword_skill_info.size = 0.2f;
+		twin_sword_skill_info.size = 0.2f; 
 		twin_sword_skill_info.color = XMFLOAT3(0.3f, 0.3f, 0.8f);
 	}
 
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube");
+	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_twin_sword_skill_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
-	test_twin_sword_skill_particle->SetScale(0.1, 0.1, 0.1);
-	test_twin_sword_skill_particle->SetPosition(0, 1, 0);
 
-	test_twin_sword_skill_particle->Set_Focus_Strength(5);
+
+	test_twin_sword_skill_particle->Set_World_Coordinate();
 
 #endif
 
@@ -4690,7 +4689,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
-
 }
 
 void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -4706,28 +4704,33 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 
 	if (m_pPlayer && !done)
 	{
-		//		m_pPlayer->Weapon_ptr.back()->Set_Child(test_spear_skill_particle);
+		m_pPlayer->Weapon_ptr.back()->Set_Child(test_spear_skill_particle);
 		m_pPlayer->Weapon_ptr.back()->Set_Child(test_twin_sword_skill_particle);
 		done = true;
 	}
 
-	//if (test_spear_skill_particle->Get_Particle_State() == 0)
-	//{
-	//	test_spear_skill_particle->Set_TransformMode(TransformMode::Inherit);
-	//	test_spear_skill_particle->SetPosition(0,1,0);
-	//	test_spear_skill_particle->SetScale(0.1, 0.1, 0.1);
-	//	test_spear_skill_particle->Set_Init_Velocity_Value(1);
-	//}
+	if (test_twin_sword_skill_particle)
+	{
+		test_twin_sword_skill_particle->Set_TransformMode(TransformMode::Inherit);
+		test_twin_sword_skill_particle->Set_Focus_Point(m_pPlayer->Weapon_ptr.back()->GetPosition());
+	}
 
-	//if (test_spear_skill_particle->Get_Particle_State() == 1)
-	//{
-	//	XMFLOAT3 world_pos = test_spear_skill_particle->GetPosition();
-	//	test_spear_skill_particle->Set_TransformMode(TransformMode::Independent);
-	//	test_spear_skill_particle->SetScale(1.0, 1.0, 1.0);
-	//	test_spear_skill_particle->SetPosition(world_pos);
-	//	test_spear_skill_particle->Set_Init_Velocity_Value(100);
-	//}
+	if (test_spear_skill_particle->Get_Particle_State() == 0)
+	{
+		test_spear_skill_particle->Set_TransformMode(TransformMode::Inherit);
+		test_spear_skill_particle->SetPosition(0,1,0);
+		test_spear_skill_particle->SetScale(0.1, 0.1, 0.1);
+		test_spear_skill_particle->Set_Init_Velocity_Value(1);
+	}
 
+	if (test_spear_skill_particle->Get_Particle_State() == 1)
+	{
+		XMFLOAT3 world_pos = test_spear_skill_particle->GetPosition();
+		test_spear_skill_particle->Set_TransformMode(TransformMode::Independent);
+		test_spear_skill_particle->SetScale(1.0, 1.0, 1.0);
+		test_spear_skill_particle->SetPosition(world_pos);
+		test_spear_skill_particle->Set_Init_Velocity_Value(100);
+	}
 
 }
 

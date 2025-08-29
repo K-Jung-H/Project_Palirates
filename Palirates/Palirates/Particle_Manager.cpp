@@ -516,13 +516,12 @@ void Spear_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12Gr
 
 	//==================================================
 
-	m_ncomputePipelineStates = 4;
+	m_ncomputePipelineStates = 3;
 	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
 
 	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 0); // Emit
 	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 1);
 	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 2);
-	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 3);
 
 	m_cxThreadGroups = 1;
 	m_cyThreadGroups = 1;
@@ -537,8 +536,6 @@ D3D12_SHADER_BYTECODE Spear_Skill_ParticleShader::CreateComputeShader(ID3DBlob**
 		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 2)
 		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_2_CS", "cs_5_1", ppd3dShaderBlob);
-	else if (nPipelineState == 3)
-		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
 //------------------------------------------------------------------------------------------------
