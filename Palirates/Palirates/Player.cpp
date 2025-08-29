@@ -376,7 +376,8 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	char* modelPaths[] = {
 	//"Model/Captain_v17.bin",
 	"Model/2HandedMan.bin",
-	"Model/Deckhand_v17.bin",
+	//"Model/Deckhand_v17.bin",
+	"Model/HammerMan.bin",
 	//"Model/Female_Pirate_v17.bin",
 	"Model/KarateGirl.bin",
 	//"Model/First_Mate_v17.bin",
