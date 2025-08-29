@@ -4545,26 +4545,26 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	test_heal->Set_Focus_Strength(20);
 
 
-	Particle_Format orbit_info;
+	Particle_Format spear_skill_info;
 	{
-		orbit_info.shader_type = Particle_Shader_Type::skill;
-		orbit_info.particle_type = Particle_Type::orbit;
-		orbit_info.max_particles = 500;
-		orbit_info.MaxLifetime = 100.0f;
+		spear_skill_info.shader_type = Particle_Shader_Type::spear_skill;
+		spear_skill_info.particle_type = Particle_Type::weapon_spear_skill_1;
+		spear_skill_info.max_particles = 3000;
+		spear_skill_info.MaxLifetime = 5.0f;
 
-		orbit_info.area_xyz = XMFLOAT3(5000, 500, 5000);
-		orbit_info.EmitFaceIndex = FACE_TOP;
+		spear_skill_info.area_xyz = XMFLOAT3(5000, 500, 5000);
+		spear_skill_info.EmitFaceIndex = FACE_TOP;
 
-		orbit_info.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
-		orbit_info.init_velocity_value = 5.0f;
-		orbit_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		spear_skill_info.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		spear_skill_info.init_velocity_value = 5.0f;
+		spear_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
-		orbit_info.size = 0.1f;
-		orbit_info.color = XMFLOAT3(0.3f, 0.3f, 0.8f);
+		spear_skill_info.size = 0.2f;
+		spear_skill_info.color = XMFLOAT3(0.3f, 0.3f, 0.8f);
 	}
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	test_orbit = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, orbit_info);
+	test_orbit = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, spear_skill_info);
 	test_orbit->SetScale(0.1, 0.1, 0.1);
 	test_orbit->SetPosition(0, 1, 0);
 
@@ -4688,6 +4688,7 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		test_orbit->Set_TransformMode(TransformMode::Inherit);
 		test_orbit->SetPosition(0,1,0);
 		test_orbit->SetScale(0.1, 0.1, 0.1);
+		test_orbit->Set_Init_Velocity_Value(1);
 	}
 
 	if (test_orbit->Get_Particle_State() == 1)
@@ -4696,6 +4697,7 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		test_orbit->Set_TransformMode(TransformMode::Independent);
 		test_orbit->SetScale(1.0, 1.0, 1.0);
 		test_orbit->SetPosition(world_pos);
+		test_orbit->Set_Init_Velocity_Value(100);
 	}
 
 

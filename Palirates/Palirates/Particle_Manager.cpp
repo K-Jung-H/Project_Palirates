@@ -613,7 +613,7 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	particle_shader_map[Particle_Shader_Type::continuous] = continuous_shader;
 	particle_shader_map[Particle_Shader_Type::interval] = interval_shader;
 	particle_shader_map[Particle_Shader_Type::sand] = sand_shader;
-	particle_shader_map[Particle_Shader_Type::skill] = weapon_skill_shader;
+	particle_shader_map[Particle_Shader_Type::spear_skill] = weapon_skill_shader;
 }
 
 void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -780,10 +780,6 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
 
 	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
-	
-	int a = particle_object_list_map[Particle_Shader_Type::interval].size();
-	//cout << a << endl;
-
 }
 
 void Particle_Manager::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -845,7 +841,7 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
-			if (type == Particle_Shader_Type::sand || type == Particle_Shader_Type::skill)
+			if (type == Particle_Shader_Type::sand || type == Particle_Shader_Type::spear_skill)
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Get_Particle_State());
 
 
@@ -958,7 +954,7 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::continuous);
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::interval);
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::sand);
-	Render(pd3dCommandList, pCamera, Particle_Shader_Type::skill);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::spear_skill);
 
 }
 
@@ -1122,6 +1118,21 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			break;
 
 		case Particle_Type::party:
+			format.shader_type = Particle_Shader_Type::continuous;
+			format.particle_type = Particle_Type::party;
+			format.max_particles = 3000;
+			format.MaxLifetime = 100.0f;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 150;
+			format.acceleration = XMFLOAT3(0, -10.0f, 0);
+			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.size = 1.0f;
+			mesh = particle_mesh_map["chip"];
+			break;
+
+		case Particle_Type::orbit:
 			format.shader_type = Particle_Shader_Type::continuous;
 			format.particle_type = Particle_Type::party;
 			format.max_particles = 3000;

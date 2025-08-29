@@ -602,13 +602,29 @@ Particle::~Particle()
 
 Particle_Info* Particle::Init_Particle_Data(const Particle_Format& particle_format)
 {
-	auto RandomColorOffset = [](float base, float range = 0.2f) -> float {
-		float offset = ((float)rand() / RAND_MAX) * 2.0f * range - range; 
-		float result = base + offset;
-		return std::clamp(result, 0.0f, 1.0f); 
+	auto RandomColorOffset = [](float base, float range = 0.2f) -> float
+		{
+			float offset = ((float)rand() / RAND_MAX) * 2.0f * range - range;
+			float result = base + offset;
+			return std::clamp(result, 0.0f, 1.0f);
 		};
 
-	UINT particle_Type = static_cast<UINT>(particle_format.particle_type);
+
+	Particle_Type p_type = particle_format.particle_type;
+
+	if (p_type == Particle_Type::weapon_spear_skill_1)
+	{
+		p_type = Particle_Type::orbit;
+	}
+
+	if (p_type == Particle_Type::weapon_twin_sword_skill_1)
+	{
+		p_type = Particle_Type::energy;
+	}
+
+
+	UINT particle_Type = static_cast<UINT>(p_type);
+
 
 	Particle_Info* particle_info = new Particle_Info[m_nMaxParticles];
 	for (UINT i = 0; i < m_nMaxParticles; ++i)
@@ -1000,10 +1016,16 @@ void ParticleObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera*
 
 void ParticleObject::Update_Particle_State()
 {
-	if (shader_type == Particle_Shader_Type::sand || shader_type == Particle_Shader_Type::skill)
+	if (shader_type == Particle_Shader_Type::sand)
 	{
 		Particle_State_Func_Index += 1;
 		Particle_State_Func_Index %= 3;
+	}
+	
+	if(shader_type == Particle_Shader_Type::spear_skill)
+	{
+		Particle_State_Func_Index += 1;
+		Particle_State_Func_Index %= 2;
 	}
 }
 

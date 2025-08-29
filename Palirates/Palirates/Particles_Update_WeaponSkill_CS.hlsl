@@ -40,6 +40,8 @@ void Spear_Skill_State_1_CS(uint3 DTid : SV_DispatchThreadID)
     
     p.Lifetime += ElapsedTime;
 
+    
+    
     if (p.Lifetime >= p.MaxLifetime)
     {
         p.Active = 0;
@@ -80,8 +82,6 @@ void Spear_Skill_State_2_CS(uint3 DTid : SV_DispatchThreadID)
         return;
     }
     
-    p.Lifetime += ElapsedTime;
-    
     if (p.Type != PARTICLE_TYPE_DIFFUSE)
     {
         p.Type = PARTICLE_TYPE_DIFFUSE;
@@ -90,7 +90,11 @@ void Spear_Skill_State_2_CS(uint3 DTid : SV_DispatchThreadID)
         return;
     }
     
-   
+    if (p.Active == 0)
+        return;
+
+    p.Lifetime += ElapsedTime;
+    
     Update_RadialDiffuse(p, index); 
     
     Check_Collisions(p);

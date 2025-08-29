@@ -381,6 +381,9 @@ void Emit_Heal(inout Particle_Info p, uint index)
 
 void Emit_Orbit(inout Particle_Info p, uint index)
 {
+    p.Velocity = float3(0, 0, 0);
+    p.Acceleration = float3(0, 0, 0);
+    
     float angleNorm = Hash11(index);
     p.Velocity.x = angleNorm;
 
@@ -403,7 +406,6 @@ void Emit_Orbit(inout Particle_Info p, uint index)
 
     float3 localPos = focus_strength * (cos(theta) * right + sin(theta) * forward);
     p.Position = focus_point + localPos;
-    p.Color = float3(0, 0, 1);
 
 }
 
@@ -414,7 +416,6 @@ void Emit_RadialDiffuse(inout Particle_Info p, uint index)
     if (abs(speed) < 0.01f)
         speed = 0.01f;
 
-    p.Color = float3(1, 0, 0);
     p.Position = focus_point; 
     p.Velocity = dir * speed; 
     p.Acceleration = float3(0.0f, -9.8f / 2, 0.0f);
@@ -459,7 +460,12 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     {
         float delay = 1.3f + seed * 10.0f;
         p.Lifetime = -delay;
-    } 
+    }
+    else if (p.Type == PARTICLE_TYPE_ORBIT)
+    {
+        float delay = 1.3f + seed * 10.0f;
+        p.Lifetime = -delay;
+    }
     else
     {
         p.Lifetime = 0.0f;
