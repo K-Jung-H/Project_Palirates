@@ -422,7 +422,8 @@ public:
 	shared_ptr<ParticleObject> test_heal = NULL;
 	shared_ptr<Aura_Object>test_player_aura = NULL;
 
-	shared_ptr<ParticleObject> test_orbit = NULL;
+	shared_ptr<ParticleObject> test_spear_skill_particle = NULL;
+	shared_ptr<ParticleObject> test_twin_sword_skill_particle = NULL;
 
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}

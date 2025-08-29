@@ -501,7 +501,7 @@ D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dS
 
 //------------------------------------------------------------------------------------------------
 
-void Weapon_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+void Spear_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
 {
 	//==================================================
 	// Common Variables Part
@@ -529,7 +529,7 @@ void Weapon_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12G
 	m_czThreadGroups = 1;
 }
 
-D3D12_SHADER_BYTECODE Weapon_Skill_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+D3D12_SHADER_BYTECODE Spear_Skill_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
@@ -541,6 +541,41 @@ D3D12_SHADER_BYTECODE Weapon_Skill_ParticleShader::CreateComputeShader(ID3DBlob*
 		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
+//------------------------------------------------------------------------------------------------
+
+void Twin_Sword_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	//==================================================
+	// Common Variables Part
+
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0); // Polygon_Mesh
+
+	if (common_ComputeRootSignature == NULL)
+		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
+
+	//==================================================
+
+	m_ncomputePipelineStates = 2;
+	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
+
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 0); // Emit
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 1);
+
+	m_cxThreadGroups = 1;
+	m_cyThreadGroups = 1;
+	m_czThreadGroups = 1;
+}
+
+D3D12_SHADER_BYTECODE Twin_Sword_Skill_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Twin_Sword_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
+}
 
 
 //===================================================================
@@ -605,15 +640,21 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 	ParticleShader* interval_shader = new Interval_ParticleShader();
 	interval_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
 
-	ParticleShader* weapon_skill_shader = new Weapon_Skill_ParticleShader();
-	weapon_skill_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+	ParticleShader* spear_skill_shader = new Spear_Skill_ParticleShader();
+	spear_skill_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	ParticleShader* twin_sword_skill_shader = new Twin_Sword_Skill_ParticleShader();
+	twin_sword_skill_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
 
 	//===================================================================
 
 	particle_shader_map[Particle_Shader_Type::continuous] = continuous_shader;
 	particle_shader_map[Particle_Shader_Type::interval] = interval_shader;
 	particle_shader_map[Particle_Shader_Type::sand] = sand_shader;
-	particle_shader_map[Particle_Shader_Type::spear_skill] = weapon_skill_shader;
+	particle_shader_map[Particle_Shader_Type::spear_skill] = spear_skill_shader;
+	particle_shader_map[Particle_Shader_Type::twin_sword_skill] = twin_sword_skill_shader;
+	
 }
 
 void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -955,6 +996,7 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::interval);
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::sand);
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::spear_skill);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::twin_sword_skill);
 
 }
 

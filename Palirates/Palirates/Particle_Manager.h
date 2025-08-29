@@ -75,11 +75,24 @@ class Sand_ParticleShader : public ParticleShader
 
 class Weapon_Skill_ParticleShader : public ParticleShader
 {
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature) {}
+
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState) { return D3D12_SHADER_BYTECODE{}; }
+};
+
+class Spear_Skill_ParticleShader : public Weapon_Skill_ParticleShader
+{
 	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
 
 	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
 };
 
+class Twin_Sword_Skill_ParticleShader : public Weapon_Skill_ParticleShader
+{
+	virtual void CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState);
+};
 
 //==============================================================================
 

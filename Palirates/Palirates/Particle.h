@@ -21,6 +21,7 @@ enum class Particle_Shader_Type
 	interval,
 	sand,
 	spear_skill,
+	twin_sword_skill,
 	etc
 };
 
