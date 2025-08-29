@@ -303,3 +303,41 @@ void CS_ZoomBlur(uint3 tid : SV_GroupThreadID, uint3 gid : SV_DispatchThreadID)
     gtxtRWOutput[gid.xy] = finalColor;
 }
 
+
+[numthreads(CX_THREADS, CY_THREADS, 1)]
+void CS_MosaicBlur(uint3 DTid : SV_DispatchThreadID)
+{
+    int MosaicBlockSize = 10;
+    
+    uint2 p = DTid.xy;
+
+    uint w, h;
+    gtxtInput.GetDimensions(w, h);
+    if (p.x >= w || p.y >= h)
+        return;
+
+
+    const uint maxAllowed = min(w, h);
+    uint blockSize = clamp(max(MosaicBlockSize, 1u), 1u, maxAllowed);
+
+    if (blockSize == 1u)
+    {
+        float4 color = gtxtInput.Load(int3(p, 0));
+        gtxtRWOutput[p] = color;
+        return;
+    }
+
+    uint2 blockOrigin = (p / blockSize) * blockSize; 
+    uint2 centerCoord = blockOrigin + (blockSize / 2);
+
+
+    centerCoord = min(centerCoord, uint2(w - 1, h - 1));
+
+    float2 uv = (float2(centerCoord) + 0.5f) / float2(w, h);
+    float4 color = gtxtInput.SampleLevel(samplerLinearClamp, uv, 0);
+
+    gtxtRWOutput[p] = color;
+}
+
+
+
