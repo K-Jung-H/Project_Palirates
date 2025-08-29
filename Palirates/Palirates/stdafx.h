@@ -608,6 +608,7 @@ enum class Monster_Type : int
 	Anubis,
 	Dragon,
 	Gargoyle,
+	Creature1,
 	ETC
 };
 

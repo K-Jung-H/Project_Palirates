@@ -1212,3 +1212,12 @@ public:
 
     GargoyleStateMachine* GetStateMachine() override { return static_cast<GargoyleStateMachine*>(m_StateMachine.get()); }
 };
+
+class CCreature1Object : public CMonsterObject
+{
+public:
+    CCreature1Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature);
+    virtual ~CCreature1Object() {};
+
+    Creature1StateMachine* GetStateMachine() override { return static_cast<Creature1StateMachine*>(m_StateMachine.get()); }
+};

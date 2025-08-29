@@ -2395,6 +2395,9 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
 		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
+	else if (mType == static_cast<int>(Monster_Type::Creature1)) {
+		m = std::make_shared<CCreature1Object>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
@@ -4168,6 +4171,9 @@ void Stage_Scene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	if (mType == static_cast<int>(Monster_Type::Fishman)) {
 		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		y_offset = 20.0f;
+	}
+	else if (mType == static_cast<int>(Monster_Type::Creature1)) {
+		m = std::make_shared<CCreature1Object>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
 	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
 		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);

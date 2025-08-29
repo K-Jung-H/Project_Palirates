@@ -29,6 +29,7 @@ enum class Monster_Type : int {
     Anubis,
     Dragon,
     Gargoyle,
+    Creature1,
     ETC
 };
 
@@ -103,6 +104,12 @@ public:
 class Gargoyle : public Monster {
 public:
     Gargoyle(int id);
+    // void update() override;
+};
+
+class Creature1 : public Monster {
+public:
+    Creature1(int id);
     // void update() override;
 };
 

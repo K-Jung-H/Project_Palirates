@@ -884,7 +884,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    return;
+    //return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;
@@ -897,7 +897,8 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
         pos.y = 0;
         if (name.find("Fishman") != string::npos)
         {
-            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
+            //m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
+            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Creature1), index++);
             moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
         }
         else if (name.find("Anubis") != string::npos)
@@ -934,6 +935,9 @@ std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, 
     if (mType == static_cast<int>(Monster_Type::Fishman)) {
         m = std::make_shared<Fishman>(1);
     }
+    else if (mType == static_cast<int>(Monster_Type::Creature1)) {
+        m = std::make_shared<Creature1>(1);
+    }
     else if (mType == static_cast<int>(Monster_Type::Anubis)) {
         m = std::make_shared<Anubis>(1);
     }
@@ -942,7 +946,6 @@ std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, 
     }
     else if (mType == static_cast<int>(Monster_Type::Gargoyle)) {
         m = std::make_shared<Gargoyle>(1);
-        cout << "가고일 생성" << "\n";
     }
     else if (mType == static_cast<int>(Monster_Type::ETC)) {
         m = std::make_shared<TestPlayer>(1);

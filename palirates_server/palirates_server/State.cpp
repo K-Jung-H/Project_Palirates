@@ -101,7 +101,7 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
         }
         else {
             if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
-                sm->ChangeState(std::make_unique<Attack1State>());
+                sm->ChangeState(std::make_unique<Attack2State>());
             }
         }
     }
@@ -170,6 +170,49 @@ void Attack1State::Update(Monster* monster, float deltaTime, MonsterStateMachine
 }
 
 void Attack1State::Exit(Monster* monster) {
+    /*if (monster->Weapon_ptr)
+        monster->Weapon_ptr->SetCanCollide(false);*/
+    for (auto& w : monster->Weapon_ptr) {
+        w->SetCanCollide(false);
+    }
+}
+
+// -------------------------
+// Attack2State
+// -------------------------
+void Attack2State::Enter(Monster* monster, MonsterStateMachine* sm) {
+    if (!monster) return;
+    currentTrackIdx = monster->PlayAnimation(State::Attack2);
+    monster->StartAttackCooldown();
+    /* if (monster->Weapon_ptr)
+         monster->Weapon_ptr->SetCanCollide(true);*/
+    for (auto& w : monster->Weapon_ptr) {
+        w->SetCanCollide(true);
+    }
+}
+
+void Attack2State::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    if (!monster || !sm || !sm->animController) return;
+    XMFLOAT3 pos = monster->GetPosition();
+    if (pos.y > 0.0f) {
+        pos.y -= deltaTime * 30.0f;
+        if (pos.y < 0.0f)
+            pos.y = 0.0f;
+        monster->SetPosition(pos);
+    }
+    auto nearestPos = monster->FindNearestPlayerInRange(monster->attackRange);
+    if (nearestPos) {
+        monster->SetTarget(*nearestPos);
+        monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
+    }
+
+    if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+        sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
+        sm->ChangeState(std::make_unique<IdleState>());
+    }
+}
+
+void Attack2State::Exit(Monster* monster) {
     /*if (monster->Weapon_ptr)
         monster->Weapon_ptr->SetCanCollide(false);*/
     for (auto& w : monster->Weapon_ptr) {

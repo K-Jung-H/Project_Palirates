@@ -273,7 +273,7 @@ Dragon::Dragon(int id) : Monster(id) {
     Set_Collider_OBB(body);
 }
 
-// ---------------- Dragon ----------------
+// ---------------- Gargoyle ----------------
 
 Gargoyle::Gargoyle(int id) : Monster(id) {
     detectionRange = 100.0f;
@@ -309,6 +309,43 @@ Gargoyle::Gargoyle(int id) : Monster(id) {
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 1.0f, -1.6f),
         XMFLOAT3(0.8f, 1.0f, 2.8f),
+        XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+    );
+    Set_Collider_OBB(body);
+}
+
+// ---------------- Creature1 ----------------
+
+Creature1::Creature1(int id) : Monster(id) {
+    detectionRange = 100.0f;
+    attackRange = 20.0f;
+    type = Monster_Type::Creature1;
+    SetType(Object_Type::monster);
+    WeaponName = "Hand_L_4";
+    RootMotionTrackSet = {
+        TRACK_CREATURE1_ATTACK1,
+        TRACK_CREATURE1_ATTACK2,
+        TRACK_CREATURE1_GET_HIT,
+        TRACK_CREATURE1_WALK,
+        TRACK_CREATURE1_DEAD
+    };
+
+    std::unordered_set<int> OnceType = {
+        TRACK_CREATURE1_ATTACK1,
+        TRACK_CREATURE1_ATTACK2,
+        TRACK_CREATURE1_GET_HIT,
+        TRACK_CREATURE1_DEAD
+    };
+
+    InitAnimationController("Model/MonsterCreature1_LP.bin", 6, 0, OnceType);
+
+    m_StateMachine = std::make_unique<FishManStateMachine>(this);
+    InitStateMachine();
+    m_fScale = 10.0f;
+    SetScale(m_fScale, m_fScale, m_fScale);
+    auto body = std::make_shared<BoundingOrientedBox>(
+        XMFLOAT3(0.0f, 0.8f, 0.0f),
+        XMFLOAT3(0.4f, 0.8f, 0.4f),
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
     );
     Set_Collider_OBB(body);
