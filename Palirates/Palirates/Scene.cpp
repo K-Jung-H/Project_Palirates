@@ -4182,6 +4182,35 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 	case 4:
 	{
+		Particle_Format twin_sword_skill_info;
+		{
+			twin_sword_skill_info.shader_type = Particle_Shader_Type::twin_sword_skill;
+			twin_sword_skill_info.particle_type = Particle_Type::weapon_twin_sword_skill_1;
+			twin_sword_skill_info.max_particles = 1000;
+			twin_sword_skill_info.MaxLifetime = 0.3f;
+
+			twin_sword_skill_info.area_xyz = XMFLOAT3(100, 100, 100);
+			twin_sword_skill_info.EmitFaceIndex = FACE_TOP;
+
+			twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			twin_sword_skill_info.init_velocity_value = 0.8f;
+			twin_sword_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			twin_sword_skill_info.size = 0.2f;
+			twin_sword_skill_info.color = player_color;
+		}
+
+		particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+		for (shared_ptr<CGameObject> w_obj : weapon_list)
+		{
+			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
+			weapon_particle_obj->Set_World_Coordinate();
+
+			w_obj->Set_Child(weapon_particle_obj);
+			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
+			
+		}
+
 	}
 	break;
 
@@ -4206,13 +4235,17 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		}
 
 		particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-		weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, spear_skill_info);
-		weapon_particle_obj->SetScale(0.1, 0.1, 0.1);
-		weapon_particle_obj->SetPosition(0, 1, 0);
+		for (shared_ptr<CGameObject> w_obj : weapon_list)
+		{
+			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, spear_skill_info);
+			weapon_particle_obj->SetScale(0.1, 0.1, 0.1);
+			weapon_particle_obj->SetPosition(0, 1, 0);
 
-		weapon_particle_obj->Set_Focus_Strength(1.0f);
-		new_player_ptr->Weapon_ptr.back()->Set_Child(weapon_particle_obj);
-		new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
+			weapon_particle_obj->Set_Focus_Strength(1.0f);
+			w_obj->Set_Child(weapon_particle_obj);
+
+			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
+		}
 	}
 	break;
 
@@ -4663,13 +4696,13 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 		twin_sword_skill_info.shader_type = Particle_Shader_Type::twin_sword_skill;
 		twin_sword_skill_info.particle_type = Particle_Type::weapon_twin_sword_skill_1;
 		twin_sword_skill_info.max_particles = 1000;
-		twin_sword_skill_info.MaxLifetime = 1.0f;
+		twin_sword_skill_info.MaxLifetime = 0.3f;
 
 		twin_sword_skill_info.area_xyz = XMFLOAT3(100, 100, 100);
 		twin_sword_skill_info.EmitFaceIndex = FACE_TOP;
 
 		twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		twin_sword_skill_info.init_velocity_value = 1.0f;
+		twin_sword_skill_info.init_velocity_value = 0.8f;
 		twin_sword_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 		twin_sword_skill_info.size = 0.2f; 
@@ -4678,8 +4711,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
 	test_twin_sword_skill_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
-
-
 	test_twin_sword_skill_particle->Set_World_Coordinate();
 
 #endif
@@ -4786,23 +4817,6 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		if(heal_effect_sample->Get_Active())
 			heal_effect_sample->SetPosition(m_pPlayer->GetPosition());
 	}
-	static bool done = false;
-
-	if (m_pPlayer && !done)
-	{
-//		m_pPlayer->Weapon_ptr.back()->Set_Child(test_spear_skill_particle);
-//		m_pPlayer->Weapon_ptr.back()->Set_Child(test_twin_sword_skill_particle);
-		done = true;
-	}
-
-	if (test_twin_sword_skill_particle)
-	{
-		test_twin_sword_skill_particle->Set_TransformMode(TransformMode::Inherit);
-		test_twin_sword_skill_particle->Set_Focus_Point(m_pPlayer->Weapon_ptr.back()->GetPosition());
-	}
-
-
-
 }
 
 //===============================================================================

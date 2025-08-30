@@ -422,9 +422,6 @@ void Emit_RadialDiffuse(inout Particle_Info p, uint index)
     p.Velocity = dir * speed; 
     p.Acceleration = float3(0.0f, -9.8f / 2, 0.0f);
     
-    if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
-        p.Color = float3(1, 0, 0);
-
 }
 
 
@@ -474,7 +471,7 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     }
     else if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
     {
-        float delay = seed * 1.5f;
+        float delay = seed;
         p.Lifetime = -delay;
     }
     else

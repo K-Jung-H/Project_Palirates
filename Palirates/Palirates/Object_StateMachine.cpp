@@ -334,18 +334,22 @@ void PlayerStateMachine::update(float Elapsed_time)
 
     case State::Attack3: {
 
-        if (animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition > 0.82f)
+        int model_num = m_pOwner->Get_Model_Num();
+        if (model_num == 5) // Spear
         {
-            vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
-
-            for (shared_ptr<ParticleObject> p_obj : p_list)
+            if (animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition > 0.82f)
             {
-                p_obj->Set_Particle_State(1);
-                XMFLOAT3 world_pos = p_obj->GetPosition();
-                p_obj->Set_TransformMode(TransformMode::Independent);
-                p_obj->SetScale(1.0, 1.0, 1.0);
-                p_obj->SetPosition(world_pos);
-                p_obj->Set_Init_Velocity_Value(100);
+                vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
+
+                for (shared_ptr<ParticleObject> p_obj : p_list)
+                {
+                    p_obj->Set_Particle_State(1);
+                    XMFLOAT3 world_pos = p_obj->GetPosition();
+                    p_obj->Set_TransformMode(TransformMode::Independent);
+                    p_obj->SetScale(1.0, 1.0, 1.0);
+                    p_obj->SetPosition(world_pos);
+                    p_obj->Set_Init_Velocity_Value(100);
+                }
             }
         }
     }
@@ -492,9 +496,10 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     if (IsInState({ State::Attack3 }))
     {
         vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
-
+        int model_num = m_pOwner->Get_Model_Num();
         for (shared_ptr<ParticleObject> p_obj : p_list)
         {
+
             p_obj->Set_Active(true);
             p_obj->Set_TransformMode(TransformMode::Inherit);
             p_obj->Set_Particle_State(0);
@@ -576,20 +581,17 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         }
         m_pOwner->Trail_End();
         m_pOwner->bTrailOff();
-        /*if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOff();
-        m_pOwner->Trail_End();
-        m_pOwner->GetTrailObj()->Set_Active(false);
-        m_pOwner->bTrailOff();*/
+
         std::cout << "Trail Off" << "\n";
     }
 
     if (IsInState({ State::Attack3 }))
     {
         vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
-
+        int model_num = m_pOwner->Get_Model_Num();
         for (shared_ptr<ParticleObject> p_obj : p_list)
         {
+            p_obj->Set_Particle_State(0);
             p_obj->Set_Active(false);
         }
     }
