@@ -450,6 +450,7 @@ public:
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
 
 	void Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
+	void Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 
