@@ -92,13 +92,13 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     if (index >= Max_Particle_N)
         return;
 
-    Particle_Info p = ParticleBuffer_Update[index];
+    Particle_Info p = Particle_Info_Buffer[index];
 
     // Check Reset Flag
     if (Reset_Flag != 0)
     {
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -106,7 +106,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -114,7 +114,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     {
         p.Type = PARTICLE_TYPE_SAND;
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -127,7 +127,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
     if (p.Lifetime >= p.MaxLifetime)
     {
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -142,7 +142,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         p.Color = float3(1.0f, 0.5f, 0.0f);
         p.Lifetime = p.MaxLifetime;
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
         else if (worldPos.y <= 10.0f)
@@ -152,7 +152,7 @@ void Sand_Spread_CS(uint3 DTid : SV_DispatchThreadID)
         p.MaxLifetime = 10.0f;
     }
 
-    ParticleBuffer_Update[index] = p;
+    Particle_Info_Buffer[index] = p;
     Extract_Instance(p);
 }
 
@@ -165,13 +165,13 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
     if (index >= Max_Particle_N)
         return;
 
-    Particle_Info p = ParticleBuffer_Update[index];
+    Particle_Info p = Particle_Info_Buffer[index];
 
     // Check Reset Flag
     if (Reset_Flag != 0)
     {
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -179,7 +179,7 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
     
@@ -195,7 +195,7 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
         p.Active = 1;
         p.EmitFaceIndex = 2;
         p.Acceleration = float3(0.0f, 0.0f, 0.0f);
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -211,13 +211,13 @@ void Sand_Gathering_CS(uint3 DTid : SV_DispatchThreadID)
         p.Color = float3(1.0f, 0.5f, 0.0f);
         p.Lifetime = p.MaxLifetime;
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
     
     Extract_Instance(p);
 
-    ParticleBuffer_Update[index] = p;
+    Particle_Info_Buffer[index] = p;
 }
 
 //=============================================================
@@ -229,13 +229,13 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
     if (index >= Max_Particle_N)
         return;
 
-    Particle_Info p = ParticleBuffer_Update[index];
+    Particle_Info p = Particle_Info_Buffer[index];
 
     // Check Reset Flag
     if (Reset_Flag != 0)
     {
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -243,7 +243,7 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -262,7 +262,7 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
         {
             p.Type = PARTICLE_TYPE_SAND_STORM;
             p.Active = 0;
-            ParticleBuffer_Update[index] = p;
+            Particle_Info_Buffer[index] = p;
             return;
         }
         else
@@ -274,7 +274,7 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
             {
                 p.Type = PARTICLE_TYPE_SAND_STORM;
                 p.Active = 0;
-                ParticleBuffer_Update[index] = p;
+                Particle_Info_Buffer[index] = p;
                 return;
             }
         }
@@ -295,7 +295,7 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
                 p.Color = float3(1.0f, 0.5f, 0.0f);
                 p.Lifetime = p.MaxLifetime;
                 p.Active = 0;
-                ParticleBuffer_Update[index] = p;
+                Particle_Info_Buffer[index] = p;
                 return;
             }
             
@@ -303,5 +303,5 @@ void Sand_Storm_CS(uint3 DTid : SV_DispatchThreadID)
         }
     }
 
-    ParticleBuffer_Update[index] = p;
+    Particle_Info_Buffer[index] = p;
 }

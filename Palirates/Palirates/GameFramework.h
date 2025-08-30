@@ -268,7 +268,6 @@ public:
 
     shared_ptr<CPlayer> Create_Player(int playerId, int characterId);
 
-
     void ProcessReceivedData(const std::string& receivedData);
 
     void ProcessReceivedData_Lobby(shared_ptr<Character_Select_Scene> lobby_scene, const std::string& command, const std::vector<std::string>& tokens);
@@ -284,7 +283,5 @@ public:
     bool bClientIdAssigned = false;
 
     uint32_t current_keyboard_inputFlags = 0;
-
-    //=================SERVER=================
 
 };

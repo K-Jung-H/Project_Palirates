@@ -283,7 +283,7 @@ public:
 	virtual void Bind_Player_UI_Callback();
 	virtual void Bind_Player_UI_Updata_Callback();
 
-	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	virtual void Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
 	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
@@ -422,6 +422,9 @@ public:
 	shared_ptr<ParticleObject> test_heal = NULL;
 	shared_ptr<Aura_Object>test_player_aura = NULL;
 
+	shared_ptr<ParticleObject> test_spear_skill_particle = NULL;
+	shared_ptr<ParticleObject> test_twin_sword_skill_particle = NULL;
+
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -442,10 +445,11 @@ public:
 	//=============================================================
 	// Server Sync Func
 
-	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	void Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
 
+	void Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 
