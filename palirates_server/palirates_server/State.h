@@ -92,3 +92,11 @@ public:
     void Exit(Monster* monster) override;
     State GetStateEnum() const override { return State::Attack3; }
 };
+
+class GargoyleSkillState : public MonsterState {
+public:
+    void Enter(Monster* monster, MonsterStateMachine* sm) override;
+    void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
+    void Exit(Monster* monster) override;
+    State GetStateEnum() const override { return State::Attack2; }
+};

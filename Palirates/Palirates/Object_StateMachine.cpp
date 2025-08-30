@@ -1291,11 +1291,27 @@ void GargoyleStateMachine::update(float Elapsed_time)
         RootMotionMove(20.0f);
         break;
     case State::Attack2:
-        if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_1].m_bFinished) {
+        /*if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_1].m_bFinished) {
             changeState(State::Idle, Key_Value::None);
         }
         m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_1] = 1.0f;
-        RootMotionMove(20.0f);
+        RootMotionMove(20.0f);*/
+
+        if (m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_1] == 1.0f) {
+            if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_1].m_bFinished) {
+                std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+                m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_3] = 1.0f;
+                animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_bFinished = false;
+                animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_fPosition = 0.0f;
+                cout << "가고일 스킬3 전환" << "\n";
+            }
+        }
+        if (m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_3] == 1.0f) {
+            if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_bFinished) {
+                changeState(State::Idle, Key_Value::None);
+            }
+        }
+       
         break;
     case State::Knock_Down:
         m_pOwner->targetWeights[TRACK_GARGOYLE_DEAD] = 1.0f;
@@ -1399,49 +1415,6 @@ void Creature1StateMachine::update(float Elapsed_time)
             stateElapsedTime = 0.0f;
             stateChangeTime = 1.0f + static_cast<float>(rand() % 10);
         }
-    }
-
-    switch (Get_State()) {
-    case State::Idle:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
-        if (TargetSet)  changeState(State::Run, Key_Value::None);
-        m_pOwner->targetWeights[TRACK_CREATURE1_IDLE] = 1.0f;
-        break;
-    case State::Run:
-        RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
-        m_pOwner->targetWeights[TRACK_CREATURE1_WALK] = 1.0f;
-        RootMotionMove(10.0f);
-        {
-            std::uniform_int_distribution<int> dist(0, 1);
-            State attackState = (dist(m_Rng) == 0) ? State::Attack1 : State::Attack2;
-            ChangeIfNear(attackState, 20.0f);
-        }
-        break;
-    case State::Get_Hit:
-        if (animController->m_pAnimationTracks[TRACK_CREATURE1_GET_HIT].m_bFinished) {
-            changeState(State::Idle, Key_Value::None);
-        }
-        m_pOwner->targetWeights[TRACK_CREATURE1_GET_HIT] = 1.0f;
-        RootMotionMove(0.0f, true);
-        break;
-    case State::Attack1:
-        if (animController->m_pAnimationTracks[TRACK_CREATURE1_ATTACK1].m_bFinished) {
-            changeState(State::Idle, Key_Value::None);
-        }
-        m_pOwner->targetWeights[TRACK_CREATURE1_ATTACK1] = 1.0f;
-        RootMotionMove(20.0f);
-        break;
-    case State::Attack2:
-        if (animController->m_pAnimationTracks[TRACK_CREATURE1_ATTACK2].m_bFinished) {
-            changeState(State::Idle, Key_Value::None);
-        }
-        m_pOwner->targetWeights[TRACK_CREATURE1_ATTACK2] = 1.0f;
-        RootMotionMove(20.0f);
-        break;
-    case State::Knock_Down:
-        m_pOwner->targetWeights[TRACK_CREATURE1_DEAD] = 1.0f;
-        RootMotionMove(10.0f);
-        break;
     }
 
     SetWeight();

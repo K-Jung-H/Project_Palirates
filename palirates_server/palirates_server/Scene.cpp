@@ -532,46 +532,46 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 auto worldPlayerOBB = *player_ptr->Get_Collider_OBB();
 
                 if (worldWeaponOBB->Intersects(worldPlayerOBB)) {
-                    std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
-                    XMFLOAT3 toMonter = Vector3::Subtract(m->GetPosition(), player_ptr->GetPosition());
-                    toMonter.y = 0.0f;
-                    if (Vector3::LengthSquared(toMonter) > 0.0001f) {
-                        toMonter = Vector3::Normalize(toMonter);
-                        player_ptr->SetLook(toMonter);
-                    }
-                    float damage;
+                    //std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
+                    //XMFLOAT3 toMonter = Vector3::Subtract(m->GetPosition(), player_ptr->GetPosition());
+                    //toMonter.y = 0.0f;
+                    //if (Vector3::LengthSquared(toMonter) > 0.0001f) {
+                    //    toMonter = Vector3::Normalize(toMonter);
+                    //    player_ptr->SetLook(toMonter);
+                    //}
+                    //float damage;
 
-                    if (w->BreathObject)
-                    {
-                        damage = 10.0f;
-                        player_ptr->BreathHit = true;
-                    }
-                    else // Normal Hit
-                    {
-                        damage = 30.0f;
+                    //if (w->BreathObject)
+                    //{
+                    //    damage = 10.0f;
+                    //    player_ptr->BreathHit = true;
+                    //}
+                    //else // Normal Hit
+                    //{
+                    //    damage = 30.0f;
 
-                        XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB->Center);
-                        XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
+                    //    XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB->Center);
+                    //    XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
 
-                        XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
+                    //    XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
 
-                        XMFLOAT3 contactPos;
-                        XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
+                    //    XMFLOAT3 contactPos;
+                    //    XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
 
-                        XMFLOAT3 contactDir;
-                        XMStoreFloat3(&contactDir, direction);
+                    //    XMFLOAT3 contactDir;
+                    //    XMStoreFloat3(&contactDir, direction);
 
-                        game_world->Add_Bleeding_Particle(contactPos, contactDir);
-                    }
+                    //    game_world->Add_Bleeding_Particle(contactPos, contactDir);
+                    //}
 
-                    player_ptr->HitDamage(damage);
+                    //player_ptr->HitDamage(damage);
 
-                    float hp = player_ptr->GetHP();
+                    //float hp = player_ptr->GetHP();
 
-                    if (hp <= 0.0f)
-                        player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
-                    else
-                        player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+                    //if (hp <= 0.0f)
+                    //    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+                    //else
+                    //    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
 
                 }
             }
@@ -1179,8 +1179,8 @@ void Stage_4_Scene::Init()
 
     if (!bStageClear)
     {
-        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
-        //int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
+        //int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
         Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
     }
 

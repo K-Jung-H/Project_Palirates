@@ -5113,7 +5113,6 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	CGameObject::ApplySyncData(syncData);
 	if (syncData.bStateChange) {
 		if (mType == Monster_Type::Creature1) {
-			cout << "Creature1 상태 전환 " << "\n";
 		}
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
 		
@@ -5123,7 +5122,6 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	if (int(GetStateMachine()->Get_State()) != syncData.stateEnum) {
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
 		if (mType == Monster_Type::Creature1) {
-			cout << "Creature1 상태 전환 " << "\n";
 		}
 	}
 }
@@ -5335,7 +5333,7 @@ CGargoyleObject::CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	n_Animation = 10;
 	RootIndex = 0;
 
-	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
+	m_StateMachine = std::make_unique<GargoyleStateMachine>(this);
 
 	type = EObjectType::Monster;
 	mType = Monster_Type::Gargoyle;
