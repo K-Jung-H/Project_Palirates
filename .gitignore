@@ -31,7 +31,7 @@
 *.exe
 *.out
 *.app
-
+*.meta
 
 
 /Palirates/.vs
@@ -42,6 +42,7 @@
 
 /palirates_server/.vs
 /palirates_server/palirates_server/x64
+/palirates_server/palirates_server/.vs
 /palirates_server/x64
 
 
