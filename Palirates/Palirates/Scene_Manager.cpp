@@ -253,7 +253,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
         in_stage_scene->Set_Weapon_Particle(pd3dDevice, pd3dCommandList, pPlayer);
-
+        in_stage_scene->Set_Heal_Effect(pd3dDevice, pd3dCommandList, pPlayer);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
         in_stage_scene->Bind_Player_UI_Updata_Callback();

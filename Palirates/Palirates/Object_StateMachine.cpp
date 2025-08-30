@@ -332,11 +332,23 @@ void PlayerStateMachine::update(float Elapsed_time)
     }
                    break;
 
+    case State::Knock_Down:    {
+        if (animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_bFinished)
+        {
+            shared_ptr<CGameObject> heal_effect = m_pOwner->Get_Heal_Effect();
+            XMFLOAT3 Player_pos = m_pOwner->GetPosition();
+            heal_effect->Set_Active(true);
+            heal_effect->SetPosition(Player_pos);
+        }
+    }
+                          break;
+
     case State::Attack3: {
 
         int model_num = m_pOwner->Get_Model_Num();
         if (model_num == 5) // Spear
         {
+
             if (animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition > 0.82f)
             {
                 vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
@@ -513,7 +525,8 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         m_pOwner->bIsInvincible = true;
         m_pOwner->Set_Color_Blending(GetColorById(Client_ID));
 
-        onGetHitEffect(true);
+        if (onGetHitEffect)
+            onGetHitEffect(true);
         for (int i = 0; i < n_Ani; i++)
         {
             if (i == TRACK_GET_HIT_F2) {
@@ -596,6 +609,12 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         }
     }
 
+    if (IsInState({ State::Get_Up }))
+    {
+        shared_ptr<CGameObject> heal_effect = m_pOwner->Get_Heal_Effect();
+        heal_effect->Set_Active(false);
+    }
+
     switch (state)
     {
     case State::Idle:
@@ -608,7 +627,8 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
     case State::Knock_Down:
         break;
     case State::Get_Up:
-        onUpdateUI(true);
+        if(onUpdateUI)
+            onUpdateUI(true);
         m_pOwner->bIsInvincible = false;
         break;
     case State::Attack1:

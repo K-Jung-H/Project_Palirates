@@ -4111,26 +4111,6 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'Q':
-		{
-			XMFLOAT3 new_pos = m_pPlayer->GetPosition();
-			effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, new_pos);
-		}	break;
-
-		case 'T':
-		{
-			if (test_spear_skill_particle)
-				test_spear_skill_particle->Update_Particle_State();
-		}
-		break;
-
-		case 'H':
-		{
-			static bool b_test_state = true;
-			b_test_state = !b_test_state;
-			heal_effect_sample->Set_Active(b_test_state);
-		}
-		break;
 		default:
 			break;
 		}
@@ -4142,6 +4122,7 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 void Stage_Scene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
 	Set_Weapon_Particle(pd3dDevice, pd3dCommandList, new_player_ptr);
+	Set_Heal_Effect(pd3dDevice, pd3dCommandList, new_player_ptr);
 	new_player_ptr->SetBlurMask(true);
 
 	obj_manager->Add_Player(new_player_ptr);
@@ -4204,6 +4185,7 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		for (shared_ptr<CGameObject> w_obj : weapon_list)
 		{
 			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
+			weapon_particle_obj->Set_Active(false);
 			weapon_particle_obj->Set_World_Coordinate();
 
 			w_obj->Set_Child(weapon_particle_obj);
@@ -4238,9 +4220,9 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		for (shared_ptr<CGameObject> w_obj : weapon_list)
 		{
 			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, spear_skill_info);
+			weapon_particle_obj->Set_Active(false);
 			weapon_particle_obj->SetScale(0.1, 0.1, 0.1);
 			weapon_particle_obj->SetPosition(0, 1, 0);
-
 			weapon_particle_obj->Set_Focus_Strength(1.0f);
 			w_obj->Set_Child(weapon_particle_obj);
 
@@ -4254,6 +4236,73 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		break;
 	}
 }
+
+void Stage_Scene::Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
+{
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+	shared_ptr<ParticleObject> heal_particle_obj;
+	shared_ptr<Aura_Object> aura_object;
+	shared_ptr<CGameObject> heal_effect;
+
+	Particle_Format heal_info;
+	{
+		heal_info.shader_type = Particle_Shader_Type::continuous;
+		heal_info.particle_type = Particle_Type::heal;
+		heal_info.max_particles = 50;
+		heal_info.MaxLifetime = 10.0f;
+
+		heal_info.area_xyz = XMFLOAT3(500, 500, 500);
+		heal_info.EmitFaceIndex = FACE_TOP;
+
+		heal_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		heal_info.init_velocity_value = 10.0f;
+		heal_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		heal_info.size = 0.3f;
+		heal_info.color = XMFLOAT3(0.3f, 0.7f, 0.3f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
+	heal_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
+	heal_particle_obj->Set_Focus_Strength(20);
+	heal_particle_obj->Set_Active(false);
+
+	aura_object = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 22, 10);
+	aura_object->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
+
+	aura_object->Set_Sprite_Info(test_sprite_info);
+	obj_manager->Add_Object(aura_object, Object_Type::aura);
+
+	heal_effect = make_shared<CGameObject>(0);
+	heal_effect->Set_Child(aura_object);
+	heal_effect->Set_Child(heal_particle_obj);
+	heal_effect->Set_Active(false);
+
+	new_player_ptr->Add_Heal_Effect(heal_effect);
+
+}
+
+void Stage_Scene::Set_Sprite_Effect(XMFLOAT3 pos)
+{
+	static bool toggle = false;
+
+	XMFLOAT3 effect_pos = pos;
+	effect_pos.y += 10.0f;
+
+	if (toggle)
+		effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, effect_pos);
+	else
+		effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, effect_pos);
+
+	toggle = !toggle; 
+}
+
 
 void Stage_Scene::Remove_Multi_Player(int player_id)
 {
