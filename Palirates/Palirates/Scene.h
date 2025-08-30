@@ -417,14 +417,6 @@ public:
 	XMFLOAT3 Scene_area;
 	XMFLOAT3 Scene_center;
 
-	shared_ptr<ParticleObject> anubis_sand_particle = NULL;
-
-	shared_ptr<CGameObject> heal_effect_sample = NULL;
-	shared_ptr<ParticleObject> test_heal = NULL;
-	shared_ptr<Aura_Object>test_player_aura = NULL;
-
-	shared_ptr<ParticleObject> test_spear_skill_particle = NULL;
-	shared_ptr<ParticleObject> test_twin_sword_skill_particle = NULL;
 
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}

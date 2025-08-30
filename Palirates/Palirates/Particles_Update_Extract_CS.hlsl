@@ -514,6 +514,8 @@ void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Party(p, index);
         else if (p.Type == PARTICLE_TYPE_HEAL)
             Update_Heal(p, index);
+        else if (p.Type == PARTICLE_TYPE_ORBIT)
+            Update_Orbit(p, index);
 
         Check_Collisions(p);
         Extract_Instance(p);

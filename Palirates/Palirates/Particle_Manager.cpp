@@ -1170,20 +1170,20 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.size = 1.0f;
 			mesh = particle_mesh_map["chip"];
 			break;
-
+			
 		case Particle_Type::orbit:
 			format.shader_type = Particle_Shader_Type::continuous;
-			format.particle_type = Particle_Type::party;
+			format.particle_type = Particle_Type::orbit;
 			format.max_particles = 3000;
 			format.MaxLifetime = 100.0f;
 			format.area_xyz = data.area_extent;
 			format.EmitFaceIndex = FACE_FRONT;
 			format.main_direction = data.main_direction;
-			format.init_velocity_value = 150;
+			format.init_velocity_value = 10;
 			format.acceleration = XMFLOAT3(0, -10.0f, 0);
 			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 			format.size = 1.0f;
-			mesh = particle_mesh_map["chip"];
+			mesh = particle_mesh_map["cube_dust"];
 			break;
 
 		default:
@@ -1211,8 +1211,8 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
 			obj->Set_Name(std::to_string(data.particle_ID));
-			obj->Set_Focus_Point(data.focus_point);
-
+			obj->Set_Focus_Strength(100.0f);
+	
 			if (format.particle_type == Particle_Type::sand)
 			{
 				obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");

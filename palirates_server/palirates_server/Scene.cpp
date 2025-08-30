@@ -799,6 +799,8 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     if (bFog_State || bStageClear)
         effect_data.fog_trigger = false;
 
+    effect_data.fog_trigger = false;
+
     return effect_data;
 }
 
@@ -884,7 +886,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-//    return;
+    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;

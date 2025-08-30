@@ -125,20 +125,6 @@ void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
 {
     SceneLogic::init(pm);
 
-    //if (!sand_env)
-    //{
-    //    Particle_Format env_sand;
-    //    env_sand.area_xyz = XMFLOAT3{ scene_center };
-    //    env_sand.lifetime = 10000.0f;
-    //    env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-    //    env_sand.particle_type = Particle_Type::sand;
-
-    //    sand_env = p_mg->Create_Particle_Object(env_sand);
-    //    sand_env->Set_Particle_Status(0);
-    //    sand_env->Set_Continuous_SyncType(true);
-    //    sand_env->SetPosition(scene_center);
-    //    sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
-    //}
 
     if (!sand_anubis_effect)
     {
@@ -206,6 +192,64 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     }
 }
 
+void Gargoyle_Stage_SceneLogic::onExit()
+{
+    if (gargoyle_skill_effect)
+    {
+        gargoyle_skill_effect->SetActive(false);
+        gargoyle_skill_effect.reset();
+    }
+}
+
+void Gargoyle_Stage_SceneLogic::init(ParticleManager& pm)
+{
+    SceneLogic::init(pm);
+
+    if (!gargoyle_skill_effect)
+    {
+        Particle_Format gargoyle_skill;
+        gargoyle_skill.area_xyz = XMFLOAT3{ scene_center };
+        gargoyle_skill.lifetime = 1000.0f;
+        gargoyle_skill.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+        gargoyle_skill.particle_type = Particle_Type::orbit;
+
+        gargoyle_skill_effect = p_mg->Create_Particle_Object(gargoyle_skill);
+        gargoyle_skill_effect->Set_Particle_Status(0);
+        gargoyle_skill_effect->Set_Synchronize_Type(true);
+        gargoyle_skill_effect->SetPosition(scene_center);
+        gargoyle_skill_effect->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    }
+
+}
+
+void Gargoyle_Stage_SceneLogic::update(const UpdateContext& ctx)
+{
+    auto boss = boss_ptr.lock();
+    if (!boss)
+        return;
+
+    //if (boss->attackPhase == -1)
+    //    return;
+
+    if (gargoyle_skill_effect)
+    {
+        UINT particle_state = gargoyle_skill_effect->Get_Particle_Status();
+
+        Particle_Format particle_format = gargoyle_skill_effect->Get_Format();
+
+        if (particle_state == 0)
+        {
+            gargoyle_skill_effect->SetPosition(boss->GetPosition());
+        }
+        else if (particle_state == 1)
+        {
+            gargoyle_skill_effect->SetPosition(scene_center);
+        }
+
+        gargoyle_skill_effect->Set_Format(particle_format);
+
+    }
+}
 
 GameWorld::GameWorld(Scene_Type new_scene_type)
 {
@@ -242,9 +286,15 @@ void GameWorld::Init(Scene_Type new_scene_type)
         scene_logic = std::make_unique<Anubis_Stage_SceneLogic>(scene_area, scene_center);
     }
         break;
+
     case Stage_3:
         break;
+
     case Stage_4:
+        scene_area = { 3072.0f, 1000.0f,  4352.0f };
+        scene_center = { 3072.0f / 2, 500.0f,  4352.0f / 2 };
+        scene_logic = std::make_unique<Gargoyle_Stage_SceneLogic>(scene_area, scene_center);
+        
         break;
     case Stage_5:
         break;

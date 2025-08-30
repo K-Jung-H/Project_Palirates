@@ -1566,7 +1566,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
 		else if (cmd == "POST_EFFECT") {
-			//ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
 		}
 		else if (cmd == "STAGE_CLEAR") {
 			stage_scene->bStageClear = true;
@@ -1873,7 +1873,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 {
 	int pID = std::stoi(tokens[3]);
 	int stateNum = std::stoi(tokens[4]);
-	//cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
 	if (pID == Client_ID)
 		m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
 	else {
@@ -1883,7 +1882,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 			}
 		}
 	}
-	//cout << "change State : " << stateNum << "\n";
 }
 
 void CGameFramework::HandleClientIdAssignment()
