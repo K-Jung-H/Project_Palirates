@@ -1735,9 +1735,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 			seen = stateVer;
 			syncData.bStateChange = true;     
 
-			/*if (monsterId == 16777217) {
-				cout << "seen : " << seen << ", stateVer: " << stateVer << ", stateEnum: " << stateEnum << endl;
-			}*/
+			if (State(syncData.stateEnum) == State::Get_Hit)
+				stage_scene->Set_Sprite_Effect(syncData.position);
 		}
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
@@ -1754,6 +1753,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		}*/
 		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
 		startIndex = base + 11;
+
+
 	}
 }
 

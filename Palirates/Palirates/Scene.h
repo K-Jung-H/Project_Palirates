@@ -290,6 +290,7 @@ public:
 
 	XMFLOAT3 Get_Start_Position_List(int player_id);
 
+	virtual void Set_Sprite_Effect(XMFLOAT3 pos) {}
 
 	void Create_Particle_Object(const Particle_Sync_Data& syncData);
 	void Update_Particle_Object(const Particle_Sync_Data& syncData);
@@ -451,6 +452,7 @@ public:
 
 	void Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
+	virtual void Set_Sprite_Effect(XMFLOAT3 pos);
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 

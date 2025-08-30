@@ -4111,26 +4111,6 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'Q':
-		{
-			XMFLOAT3 new_pos = m_pPlayer->GetPosition();
-			effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, new_pos);
-		}	break;
-
-		case 'T':
-		{
-			if (test_spear_skill_particle)
-				test_spear_skill_particle->Update_Particle_State();
-		}
-		break;
-
-		case 'H':
-		{
-			static bool b_test_state = true;
-			b_test_state = !b_test_state;
-			heal_effect_sample->Set_Active(b_test_state);
-		}
-		break;
 		default:
 			break;
 		}
@@ -4256,6 +4236,7 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		break;
 	}
 }
+
 void Stage_Scene::Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
 	shared_ptr<Particle_Shape_Mesh> particle_mesh;
@@ -4306,6 +4287,22 @@ void Stage_Scene::Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsComman
 	new_player_ptr->Add_Heal_Effect(heal_effect);
 
 }
+
+void Stage_Scene::Set_Sprite_Effect(XMFLOAT3 pos)
+{
+	static bool toggle = false;
+
+	XMFLOAT3 effect_pos = pos;
+	effect_pos.y += 10.0f;
+
+	if (toggle)
+		effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, effect_pos);
+	else
+		effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, effect_pos);
+
+	toggle = !toggle; 
+}
+
 
 void Stage_Scene::Remove_Multi_Player(int player_id)
 {
