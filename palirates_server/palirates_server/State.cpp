@@ -450,20 +450,35 @@ void GargoyleSkillState::Update(Monster* monster, float deltaTime, MonsterStateM
             for (auto& w : monster->Weapon_ptr) {
                 w->SetCanCollide(true);
             }
+            currentTrackIdx = TRACK_GARGOYLE_SKILL_2;
+            monster->currStateTrackIdx = TRACK_GARGOYLE_SKILL_2;
+            
+            for (int i = 0; i < monster->n_Animation; ++i) {
+                monster->targetWeights[i] = 0.0f;
+            }
+            monster->targetWeights[TRACK_GARGOYLE_SKILL_2] = 1.0f;
+            sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_2].m_bFinished = false;
+            sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_2].m_fPosition = 0.0f;
+            
+            monster->attackPhase = 2;
+        }
+    }
+    else if (monster->attackPhase == 2) {
+        static float timer = 0.0f;
+        timer += deltaTime;
+        if (timer >= 3.0f) {
             currentTrackIdx = TRACK_GARGOYLE_SKILL_3;
             monster->currStateTrackIdx = TRACK_GARGOYLE_SKILL_3;
-            
+
             for (int i = 0; i < monster->n_Animation; ++i) {
                 monster->targetWeights[i] = 0.0f;
             }
             monster->targetWeights[TRACK_GARGOYLE_SKILL_3] = 1.0f;
             sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_bFinished = false;
             sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_fPosition = 0.0f;
-            
+            timer = 0.0f;
             monster->attackPhase = 3;
         }
-    }
-    else if (monster->attackPhase == 2) {
     }
     else if (monster->attackPhase == 3) {
         if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {

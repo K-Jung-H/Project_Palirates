@@ -1261,7 +1261,7 @@ void GargoyleStateMachine::update(float Elapsed_time)
     }
 
     switch (Get_State()) {
-    case State::Idle:
+    /*case State::Idle:
         RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 70.0f);
         if (TargetSet)  changeState(State::Run, Key_Value::None);
         m_pOwner->targetWeights[TRACK_GARGOYLE_IDLE] = 1.0f;
@@ -1289,7 +1289,7 @@ void GargoyleStateMachine::update(float Elapsed_time)
         }
         m_pOwner->targetWeights[TRACK_GARGOYLE_ATTACK1] = 1.0f;
         RootMotionMove(20.0f);
-        break;
+        break;*/
     case State::Attack2:
         /*if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_1].m_bFinished) {
             changeState(State::Idle, Key_Value::None);
@@ -1300,10 +1300,20 @@ void GargoyleStateMachine::update(float Elapsed_time)
         if (m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_1] == 1.0f) {
             if (animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_1].m_bFinished) {
                 std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+                m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_2] = 1.0f;
+                animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_2].m_bFinished = false;
+                animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_2].m_fPosition = 0.0f;
+            }
+        }
+        if (m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_2] == 1.0f) {
+			static float timer = 0.0f;
+			timer += Elapsed_time;
+            if (timer >= 3.0f) {
+                std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
                 m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_3] = 1.0f;
                 animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_bFinished = false;
                 animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_fPosition = 0.0f;
-                cout << "가고일 스킬3 전환" << "\n";
+				timer = 0.0f;
             }
         }
         if (m_pOwner->targetWeights[TRACK_GARGOYLE_SKILL_3] == 1.0f) {
@@ -1313,10 +1323,10 @@ void GargoyleStateMachine::update(float Elapsed_time)
         }
        
         break;
-    case State::Knock_Down:
+    /*case State::Knock_Down:
         m_pOwner->targetWeights[TRACK_GARGOYLE_DEAD] = 1.0f;
         RootMotionMove(10.0f);
-        break;
+        break;*/
     }
 
     SetWeight();
