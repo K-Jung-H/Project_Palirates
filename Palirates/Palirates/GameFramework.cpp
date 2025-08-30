@@ -1898,7 +1898,7 @@ void CGameFramework::HandleClientIdAssignment()
 		m_pPlayer->SetID(Client_ID);
 		m_pPlayer->Set_Name("LocalPlayer_" + std::to_string(Client_ID));
 		m_pPlayer->Set_Active(true);
-		scene_manager->Add_Player(m_pPlayer);
+		scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, m_pPlayer);
 	}
 	else
 		m_pPlayer->SetID(Client_ID);
@@ -2038,13 +2038,13 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			if (player_exist == false) 
 			{
 				auto newPlayer = Create_Player(player_ID, character_model_ID);
-				scene_manager->Add_Player(newPlayer);
+				scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, newPlayer);
 			}
 		}
 		else 
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
-			scene_manager->Add_Player(newPlayer);
+			scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, newPlayer);
 			Connected_Player_List[player_ID] = true;
 
 		}
@@ -2074,51 +2074,34 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	new_Player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
-	std::vector<shared_ptr<CGameObject>> trail_target = new_Player->Weapon_ptr;
-	if (!trail_target.empty()) {
+	std::vector<shared_ptr<CGameObject>> weapon_list = new_Player->Weapon_ptr;
+	if (!weapon_list.empty()) 
+	{
 		XMFLOAT3 player_color = GetColorById(playerId + 1);
 
 		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
 		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-		for (auto& target : trail_target) {
+		for (auto& trail_target : weapon_list) 
+		{
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
 
 			trail_obj->Set_Main_Color(trail_main_color);
 			trail_obj->Set_SubColor(trail_sub_color);
 
-			trail_obj->Set_Trail_Target(target, false);
+			trail_obj->Set_Trail_Target(trail_target, false);
 			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
 			scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
 			new_Player->SetTrailObj(trail_obj);
 			new_Player->bTrailOff();
 		}
 
-		for (auto& t_obj : new_Player->GetTrailObj()) {
+		for (auto& t_obj : new_Player->GetTrailObj()) 
+		{
 			t_obj->Set_Active(false);
 		}
 	}
 
-	/*shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
-	if (trail_target)
-	{
-		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
-
-		XMFLOAT3 player_color = GetColorById(playerId + 1);
-
-		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
-		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		trail_obj->Set_Main_Color(trail_main_color);
-		trail_obj->Set_SubColor(trail_sub_color);
-
-		trail_obj->Set_Trail_Target(trail_target, false);
-		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-		scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
-		new_Player->SetTrailObj(trail_obj);
-		new_Player->bTrailOff();
-		new_Player->GetTrailObj()->Set_Active(false);
-	}*/
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 

@@ -10,6 +10,7 @@
 #include "Object_StateMachine.h"
 #include "Object.h"
 #include "Camera.h"
+#include "Particle.h"
 
 enum Player_Model
 {
@@ -63,6 +64,8 @@ protected:
 	std::vector<std::shared_ptr<Trail_Object>> trail_obj;
 	bool TrailOn{ false };
 	bool TrailStart{ false };
+
+	vector<shared_ptr<ParticleObject>> weapon_particle_list;
 
 	//=================¼­¹ö=================
 	int id;  
@@ -204,6 +207,10 @@ public:
 
 	std::string Serialize();
 	virtual void SetupWeaponCollider();
+
+	virtual int Get_Model_Num() { return 0; }
+	void Add_Weapon_Particle(std::shared_ptr<ParticleObject>p_obj) { weapon_particle_list.push_back(p_obj); }
+	vector<shared_ptr<ParticleObject>> Get_Weapon_Particle_List() { return weapon_particle_list; }
 };
 
 
@@ -221,11 +228,14 @@ class CTerrainPlayer : public CPlayer
 {
 private:
 	bool On_Ground = false;
+	int model_num;
 
 public:
 	CTerrainPlayer(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void* pContext = NULL, int ModelNum = 0);
 	CTerrainPlayer() {}
 	virtual ~CTerrainPlayer();
+
+	virtual int Get_Model_Num() { return model_num; }
 
 public:
 	virtual shared_ptr<CCamera> ChangeCamera(DWORD nNewCameraMode, float fTimeElapsed);

@@ -1948,7 +1948,8 @@ void CGameObject::SetBlurMask(bool value)
 	if (Material_list.size())
 	{
 		for (std::shared_ptr<CMaterial> material_ptr : Material_list)
-			material_ptr->Blur_Mask_ID = value;
+			if(material_ptr)
+				material_ptr->Blur_Mask_ID = value;
 	}
 
 	if (m_pSibling)

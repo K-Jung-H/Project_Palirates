@@ -331,6 +331,25 @@ void PlayerStateMachine::update(float Elapsed_time)
         m_pOwner->targetWeights[GetRunTrackFromInput(m_pOwner->current_keyboard_inputFlags)] = 1.0f;
     }
                    break;
+
+    case State::Attack3: {
+
+        if (animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition > 0.82f)
+        {
+            vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
+
+            for (shared_ptr<ParticleObject> p_obj : p_list)
+            {
+                p_obj->Set_Particle_State(1);
+                XMFLOAT3 world_pos = p_obj->GetPosition();
+                p_obj->Set_TransformMode(TransformMode::Independent);
+                p_obj->SetScale(1.0, 1.0, 1.0);
+                p_obj->SetPosition(world_pos);
+                p_obj->Set_Init_Velocity_Value(100);
+            }
+        }
+    }
+                       break;
     }
     //switch (Get_State()) {
     ///*case State::Idle:
@@ -457,13 +476,6 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
     }
 
     if (IsInState({ State::Attack1, State::Attack2, State::Attack3 })) {
-       /* if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();
-        m_pOwner->Trail_Start();
-        m_pOwner->GetTrailObj()->Set_Active(true);
-        m_pOwner->GetTrailObj()->GetTrailMesh()->ResetTrail();
-        m_pOwner->bTrailOn();
-        std::cout << "Trail On" << "\n";*/
 
         for (auto& w : m_pOwner->Weapon_ptr) {
             w->bUpdateOBBOn();
@@ -477,16 +489,25 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         std::cout << "Trail On" << "\n";
     }
 
+    if (IsInState({ State::Attack3 }))
+    {
+        vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
+
+        for (shared_ptr<ParticleObject> p_obj : p_list)
+        {
+            p_obj->Set_Active(true);
+            p_obj->Set_TransformMode(TransformMode::Inherit);
+            p_obj->Set_Particle_State(0);
+            p_obj->SetPosition(0, 1, 0);
+            p_obj->SetScale(0.1, 0.1, 0.1);
+            p_obj->Set_Init_Velocity_Value(1);
+        }
+    }
+
     if (IsInState({ State::Get_Hit_F2 })) {
         m_pOwner->bIsInvincible = true;
-        //m_pOwner->SetOutlineColor(1);
         m_pOwner->Set_Color_Blending(GetColorById(Client_ID));
-       // m_pOwner->currentHP -= 30.0f;
-        //if (m_pOwner->currentHP < 0) {
-        //    //m_pOwner->currentHP = 0.0f;
-        //    changeState(State::Knock_Down, Key_Value::None);
-        //    //m_pOwner->currentHP = 100.0f;
-        //}
+
         onGetHitEffect(true);
         for (int i = 0; i < n_Ani; i++)
         {
@@ -561,6 +582,16 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         m_pOwner->GetTrailObj()->Set_Active(false);
         m_pOwner->bTrailOff();*/
         std::cout << "Trail Off" << "\n";
+    }
+
+    if (IsInState({ State::Attack3 }))
+    {
+        vector<shared_ptr<ParticleObject>> p_list = m_pOwner->Get_Weapon_Particle_List();
+
+        for (shared_ptr<ParticleObject> p_obj : p_list)
+        {
+            p_obj->Set_Active(false);
+        }
     }
 
     switch (state)
