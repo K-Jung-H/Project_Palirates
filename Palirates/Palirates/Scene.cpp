@@ -4787,8 +4787,6 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
-
-
 }
 
 //===============================================================================
@@ -4880,7 +4878,7 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("map3");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
+	test_scene->SetPosition(2000.0f, 0.0f, 2000.0f);
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 	test_scene->UpdateTransform(NULL);
 
@@ -4919,6 +4917,10 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 }
 
+void Stage_3_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
+}
 
 //===============================================================================
 
@@ -4948,7 +4950,6 @@ void Stage_4_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12Graph
 
 	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
 }
-
 
 void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
@@ -5047,6 +5048,10 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 }
 
+void Stage_4_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
+}
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
