@@ -174,6 +174,7 @@ public:
     void server_X_Ray_Control();
     void server_bleeding();
     void server_Sand_Control();
+    void server_Mosaic_Control();
 
     bool bStageClear = false;
     bool bMonster_x_ray_State = false;

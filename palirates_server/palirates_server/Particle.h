@@ -12,8 +12,8 @@ enum class Particle_Type
     sand_storm = 5,
     heal = 6,
     orbit = 7,
-    diffuse = 8,
-    energy = 9,
+    diffuse_burst = 8,
+    diffuse_continuous = 9,
     //=======================
     bleed = 10,
     //=======================

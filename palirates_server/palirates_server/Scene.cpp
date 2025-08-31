@@ -36,8 +36,6 @@ Effect_Sync_Data Scene::Get_Effect_Status()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
     Effect_Sync_Data effect_data{};
-    effect_data.motion_blur_active = true;
-    effect_data.zoom_blur_active = true;
     return effect_data;
 }
 
@@ -719,17 +717,13 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
     Effect_Sync_Data effect_data;
     
-    effect_data.motion_blur_active = false;
 
     int Player_ID = 0;
     for (std::shared_ptr<Player> player_ptr : player_list)
     {
-        effect_data.motion_blur_apply[Player_ID] = false;
-
         if (player_ptr)
         {
-            effect_data.motion_blur_apply[Player_ID] = player_ptr->motion_blur;
-            effect_data.motion_blur_active = true;
+            effect_data.mosaic_value[Player_ID] = player_ptr->mosaic_value;
         }
 
         ++Player_ID;
@@ -798,6 +792,8 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
 
     if (bFog_State || bStageClear)
         effect_data.fog_trigger = false;
+
+    effect_data.fog_trigger = false;
 
     return effect_data;
 }
@@ -884,7 +880,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-//    return;
+    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;
@@ -1068,6 +1064,16 @@ void Stage_Scene::server_Sand_Control()
     game_world->Sand_Update();
 }
 
+void Stage_Scene::server_Mosaic_Control()
+{
+    for (std::shared_ptr<Player> player_ptr : player_list)
+    {
+        if (player_ptr)
+        {
+            player_ptr->mosaic_value += 1;
+        }
+    }
+}
 //=========================================================
 
 

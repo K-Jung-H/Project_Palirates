@@ -415,13 +415,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					if (!Change_Screen)
 						Change_Screen = true;
-					//WaitForGpuComplete(GPU_Stage::Compute);
-					//WaitForGpuComplete(GPU_Stage::Render);
-					//WaitForGpuComplete(GPU_Stage::Post);
-
-					//ChangeSwapChainState();
 				}
 					break;
+
 				default:
 					break;
 			}
@@ -1166,13 +1162,20 @@ void CGameFramework::FrameAdvance()
 
 		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Outline, outline_blur);
 
-		if (post_effect_sync_data.motion_blur_active)
-		{
-			Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-			Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
 
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_1);
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
+		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_1);
+		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
+
+
+		UINT mosaic_value = post_effect_sync_data.mosaic_value[Client_ID];
+		if (post_effect_sync_data.mosaic_value[Client_ID] > 0)
+		{
+			Resource_Bind_Set mosaic_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+			post_effect_manager->Set_Mosaic_Value(mosaic_value);
+			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Mosaic, mosaic_blur);
 		}
 
 		if (post_effect_sync_data.zoom_blur_active)
@@ -1566,7 +1569,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
 		else if (cmd == "POST_EFFECT") {
-			//ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
 		}
 		else if (cmd == "STAGE_CLEAR") {
 			stage_scene->bStageClear = true;
@@ -1823,48 +1826,50 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 
 void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
-	if (tokens.size() < 12) return;
+	if (tokens.size() < (10 + MaxPlayer)) return;
 
+	size_t idx = 1;
 
-	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
-
-	for (int player_id = 0; player_id < MaxPlayer; ++player_id)
+	post_effect_sync_data.zoom_blur_active = (std::stoi(tokens[idx++]) != 0);
+	if (post_effect_sync_data.zoom_blur_active)
 	{
-		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
-		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
-		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
-
-		if (player_id == Client_ID)
-		{
-			m_pPlayer->SetBlurMask(player_motion_blur_active);
-		}
-	}
-	
-	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
-	if (post_effect_sync_data.zoom_blur_active) {
 		scene_manager->Get_Active_Scene()->CameraZoomOutAnime = true;
 	}
+
 	post_effect_sync_data.zoom_w_position =
 	{
-		(std::stof(tokens[9])),
-		(std::stof(tokens[10])),
-		(std::stof(tokens[11]))
+		std::stof(tokens[idx++]),
+		std::stof(tokens[idx++]),
+		std::stof(tokens[idx++])
 	};
 
 	if (post_effect_sync_data.zoom_w_position.x != 0.0f || post_effect_sync_data.zoom_w_position.y != 0.0f || post_effect_sync_data.zoom_w_position.z != 0.0f)
 	{
-		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f) {
+		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f)
+		{
 			post_effect_sync_data.zoom_blur_active = false;
 			scene_manager->Get_Active_Scene()->CameraZoomOutAnime = false;
 		}
 	}
-	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
+
+	for (UINT i = 0; i < MaxPlayer; ++i)
+	{
+		post_effect_sync_data.mosaic_value[i] = std::stoul(tokens[idx++]);
+	}
+
+	post_effect_sync_data.monster_x_ray = (std::stoi(tokens[idx++]) != 0);
+	Stage_Scene::Monster_Depth_Render = post_effect_sync_data.monster_x_ray;
+
+	post_effect_sync_data.fog_trigger = (std::stoi(tokens[idx++]) != 0);
+	post_effect_sync_data.fogStart = std::stof(tokens[idx++]);
+	post_effect_sync_data.fogEnd = std::stof(tokens[idx++]);
+	post_effect_sync_data.fogDensity = std::stof(tokens[idx++]);
 
 	Fog_Info server_fog_info;
-	server_fog_info.Fog_Trigger = std::stoi(tokens[13]);
-	server_fog_info.fogStart = std::stof(tokens[14]);
-	server_fog_info.fogEnd = std::stof(tokens[15]);
-	server_fog_info.fogDensity = std::stof(tokens[16]);
+	server_fog_info.Fog_Trigger = post_effect_sync_data.fog_trigger;
+	server_fog_info.fogStart = post_effect_sync_data.fogStart;
+	server_fog_info.fogEnd = post_effect_sync_data.fogEnd;
+	server_fog_info.fogDensity = post_effect_sync_data.fogDensity;
 
 	stage_scene->Fog_Sync(server_fog_info);
 }
@@ -1873,7 +1878,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 {
 	int pID = std::stoi(tokens[3]);
 	int stateNum = std::stoi(tokens[4]);
-	//cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
 	if (pID == Client_ID)
 		m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
 	else {
@@ -1883,7 +1887,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 			}
 		}
 	}
-	//cout << "change State : " << stateNum << "\n";
 }
 
 void CGameFramework::HandleClientIdAssignment()
@@ -2082,6 +2085,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	new_Player->SetState(0);
 	new_Player->SetOutlineColor(playerId+1);
+	new_Player->SetBlurMask(false);
 	new_Player->SetRotationSpeed(1.0f);
 	new_Player->SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 	new_Player->SetupWeaponCollider();

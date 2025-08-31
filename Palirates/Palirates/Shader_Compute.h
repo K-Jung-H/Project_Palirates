@@ -5,7 +5,9 @@
 #define BLUR_INFO_SRV_ROOT_PARAMETER_INDEX 1 // 블러 정보 G 버퍼
 #define VELOCITY_SRV_ROOT_PARAMETER_INDEX 2 // 속도 G 버퍼
 #define RESULT_ROOT_PARAMETER_INDEX 3 // CS 동작 후 결과물
-#define ZOOM_INFO_PARAMETER_INDEX 4 // ZoomBlur에 필요한 정보
+#define ZOOM_INFO_PARAMETER_INDEX 4 // Zoom Blur에 필요한 정보
+#define MOSAIC_INFO_PARAMETER_INDEX 5 // Mosaic Blur에 필요한 정보
+
 
 class Post_ComputeShader : public PostProcessBaseShader
 {
@@ -96,6 +98,18 @@ public:
 
 };
 
+class Mosaic_Shader : public Post_ComputeShader
+{
+public:
+	Mosaic_Shader();
+	virtual ~Mosaic_Shader();
+
+	virtual D3D12_SHADER_BYTECODE CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState = 0);
+
+	virtual void CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups = 1, UINT cyThreadGroups = 1, UINT czThreadGroups = 1, int nPipelineState = 0, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM);
+
+};
+
 
 //=======================================================================
 
@@ -148,24 +162,35 @@ struct ZoomBlurInfo_CB
 	XMFLOAT2 padding0;
 };
 
+struct MosaicBlurInfo_CB
+{
+	int mosaic_value = 1;
+};
+
 
 enum class Post_Effect_Type
 {
 	Motion_Blur,
 	Outline,
 	Zoom,
-	 etc,
+	Mosaic,
+	etc,
 };
 
 struct Effect_Sync_Data
 {
-	bool motion_blur_active;
-	std::array<bool, MaxPlayer> motion_blur_apply;
-	
 	bool zoom_blur_active;
 	XMFLOAT3 zoom_w_position;
-};
 
+	std::array<UINT, MaxPlayer> mosaic_value;
+
+	bool monster_x_ray;
+
+	bool fog_trigger;
+	float fogStart;
+	float fogEnd;
+	float fogDensity;
+};
 
 struct Resource_Bind_Set
 {
@@ -190,6 +215,10 @@ private:
 	ZoomBlurInfo_CB* m_pcb_Mapped_zoomblur_info = NULL;
 	float Accumulated_Time = 0.0f;
 
+	ID3D12Resource* m_pd3dcb_mosaicblur_info = NULL;
+	MosaicBlurInfo_CB* m_pcb_Mapped_mosaicblur_info = NULL;
+	UINT mosaic_value = 1;
+
 public:
 	CTextureToFullScreenShader* fullscreen_shader = NULL;
 	Post_Effect_Manager(ID3D12Device* device);
@@ -208,6 +237,10 @@ public:
 	void Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
 	void Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList);
 
+	void Create_MosaicBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
+	void Update_MosaicBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList);
+
+	void Set_Mosaic_Value(UINT n) { mosaic_value = n; }
 };
 
 //========================================================================

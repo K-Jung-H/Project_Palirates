@@ -98,13 +98,13 @@ struct StateChangeInfo
     int stateNum;
 };
 
+
 struct Effect_Sync_Data
 {
-    bool motion_blur_active;
-    std::array<bool, MaxPlayer> motion_blur_apply;
-
     bool zoom_blur_active;
     XMFLOAT3 zoom_w_position;
+
+    std::array<UINT, MaxPlayer> mosaic_value;
 
     bool monster_x_ray;
 

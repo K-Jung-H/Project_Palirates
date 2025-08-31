@@ -2307,8 +2307,6 @@ Change_Signal CScene::Get_Change_Signal()
 void CScene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
 	obj_manager->Add_Player(new_player_ptr);
-	new_player_ptr->SetBlurMask(true);
-
 }
 
 void CScene::Remove_Multi_Player(int player_id)
@@ -2320,11 +2318,6 @@ void CScene::Remove_Multi_Player(int player_id)
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	return obj_manager->Sync_Player_Data(player_id, syncData, main_Camera.get());
-}
-
-bool CScene::Sync_Player_Blur(int player_id, bool motion_blur_active)
-{
-	return obj_manager->Sync_Player_Blur(player_id, motion_blur_active); 
 }
 
 XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
@@ -4123,7 +4116,6 @@ void Stage_Scene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	Set_Weapon_Particle(pd3dDevice, pd3dCommandList, new_player_ptr);
 	Set_Heal_Effect(pd3dDevice, pd3dCommandList, new_player_ptr);
-	new_player_ptr->SetBlurMask(true);
 
 	obj_manager->Add_Player(new_player_ptr);
 }
@@ -4308,6 +4300,7 @@ void Stage_Scene::Remove_Multi_Player(int player_id)
 {
 	obj_manager->Remove_Player(player_id);
 }
+
 void Stage_Scene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	obj_manager->Sync_Player_Data(player_id, syncData);
@@ -4689,103 +4682,10 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	env_sand_particle->SetPosition(Scene_center);
 	env_sand_particle->Set_Area(Scene_area);
 
-	Particle_Format heal_info;
-	{
-		heal_info.shader_type = Particle_Shader_Type::continuous;
-		heal_info.particle_type = Particle_Type::heal;
-		heal_info.max_particles = 50;
-		heal_info.MaxLifetime = 10.0f;
 
-		heal_info.area_xyz = XMFLOAT3(500,500,500);
-		heal_info.EmitFaceIndex = FACE_TOP;
-
-		heal_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		heal_info.init_velocity_value = 10.0f;
-		heal_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-		heal_info.size = 0.3f;
-		heal_info.color = XMFLOAT3(0.3f, 0.7f, 0.3f);
-	}
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
-	test_heal = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
-	test_heal->SetPosition(0, 0, 0);
-	test_heal->Set_Focus_Strength(20);
-
-
-	//Particle_Format spear_skill_info;
-	//{
-	//	spear_skill_info.shader_type = Particle_Shader_Type::spear_skill;
-	//	spear_skill_info.particle_type = Particle_Type::weapon_spear_skill_1;
-	//	spear_skill_info.max_particles = 3000;
-	//	spear_skill_info.MaxLifetime = 5.0f;
-
-	//	spear_skill_info.area_xyz = XMFLOAT3(5000, 500, 5000);
-	//	spear_skill_info.EmitFaceIndex = FACE_TOP;
-
-	//	spear_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-	//	spear_skill_info.init_velocity_value = 5.0f;
-	//	spear_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-	//	spear_skill_info.size = 0.2f;
-	//	spear_skill_info.color = XMFLOAT3(0.3f, 0.3f, 0.8f);
-	//}
-
-	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	//test_spear_skill_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, spear_skill_info);
-	//test_spear_skill_particle->SetScale(0.1, 0.1, 0.1);
-	//test_spear_skill_particle->SetPosition(0, 1, 0);
-
-	//test_spear_skill_particle->Set_Focus_Strength(5);
-	
-	//=========================================================
-		
-	Particle_Format twin_sword_skill_info;
-	{
-		twin_sword_skill_info.shader_type = Particle_Shader_Type::twin_sword_skill;
-		twin_sword_skill_info.particle_type = Particle_Type::weapon_twin_sword_skill_1;
-		twin_sword_skill_info.max_particles = 1000;
-		twin_sword_skill_info.MaxLifetime = 0.3f;
-
-		twin_sword_skill_info.area_xyz = XMFLOAT3(100, 100, 100);
-		twin_sword_skill_info.EmitFaceIndex = FACE_TOP;
-
-		twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		twin_sword_skill_info.init_velocity_value = 0.8f;
-		twin_sword_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-		twin_sword_skill_info.size = 0.2f; 
-		twin_sword_skill_info.color = XMFLOAT3(0.3f, 0.3f, 0.8f);
-	}
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	test_twin_sword_skill_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
-	test_twin_sword_skill_particle->Set_World_Coordinate();
 
 #endif
 
-	//===============================================================================
-
-	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 22, 10);
-
-	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
-
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
-
-	test_player_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
-
-	heal_effect_sample = make_shared<CGameObject>(0);
-	heal_effect_sample->Set_Child(test_player_aura);
-	heal_effect_sample->Set_Child(test_heal);
-	heal_effect_sample->Set_Active(false);
 	//===============================================================================
 
 
@@ -4861,11 +4761,7 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
 
-	if (heal_effect_sample)
-	{
-		if(heal_effect_sample->Get_Active())
-			heal_effect_sample->SetPosition(m_pPlayer->GetPosition());
-	}
+
 }
 
 //===============================================================================

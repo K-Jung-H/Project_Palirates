@@ -230,10 +230,6 @@ void Player::key_input(uint32_t keyState)
         GetStateMachine()->lastMoveMask = 0; // ÀÔ·Â ²÷±è ¡æ Ä³½Ã ¸®¼Â
     }
 
-    if (keyState & INPUT_Q)
-    {
-        motion_blur = !motion_blur;
-    }
 }
 
 void Player::animate(float Elapsedtime)
