@@ -889,7 +889,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    return;
+//    return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;
@@ -902,25 +902,22 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
         pos.y = 0;
         if (name.find("Fishman") != string::npos)
         {
-            //m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
-            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Creature1), index++);
+            if(index % 2 == 0)
+                m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
+            else
+                m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Creature1), index++);
+
             moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
         }
         else if (name.find("Anubis") != string::npos)
         {
 //            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
 //            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
-
-//            if (!Boss_Monster)
-//                Boss_Monster = moster_ptr;
         }
         else if (name.find("Dragon") != string::npos)
         {
 //            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
 //            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
-
-//            if (!Boss_Monster)
-//                Boss_Monster = moster_ptr;
         }
         else if (name.find("Monster") != string::npos)
             continue;
@@ -1161,12 +1158,6 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
 void Stage_3_Scene::Init()
 {
     Stage_Scene::Init();
-
-    if (!bStageClear)
-    {
-        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), 1);
-        Boss_Monster = SpawnMonster(id, XMFLOAT3(583.0f, 0.0f, 1332.0f), 100);
-    }
 }
 
 //=========================================================
@@ -1194,8 +1185,6 @@ void Stage_4_Scene::Init()
         int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
         Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
     }
-
-
 }
 
 //=========================================================
