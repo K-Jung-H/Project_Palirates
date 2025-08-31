@@ -170,6 +170,10 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
                 }
             }
             break;
+        
+        case PARTICLE_TYPE_ORBIT:
+            break;
+        
         default:
             if (CheckCollisionWithGridOBBs(world_pos))
             {

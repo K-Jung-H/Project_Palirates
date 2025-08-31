@@ -30,6 +30,8 @@ enum class Particle_Type
 struct Particle_Format
 {
     Particle_Type particle_type;
+    XMFLOAT3 particle_color;
+
     float lifetime;
     XMFLOAT3 area_xyz{};
     XMFLOAT3 main_direction{};

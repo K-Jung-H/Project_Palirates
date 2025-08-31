@@ -1120,7 +1120,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 50;
 			format.acceleration = XMFLOAT3(0, -9.8f, 0);
-			format.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+			format.color = data.color;
 			format.size = 0.3f;
 			mesh = particle_mesh_map["sphere"];
 			break;
@@ -1135,7 +1135,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 100;
 			format.acceleration = XMFLOAT3(0, 0, 0);
-			format.color = XMFLOAT3(1,0,0);
+			format.color = data.color;
 
 			format.size = 0.3f;
 			mesh = particle_mesh_map["billboard"];
@@ -1151,7 +1151,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 100;
 			format.acceleration = XMFLOAT3(0, 10.0f, 0);
-			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.color = data.color;
 			format.size = 1.0f;
 			mesh = particle_mesh_map["cube"];
 			break;
@@ -1166,7 +1166,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 150;
 			format.acceleration = XMFLOAT3(0, -10.0f, 0);
-			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.color = data.color;
 			format.size = 1.0f;
 			mesh = particle_mesh_map["chip"];
 			break;
@@ -1174,14 +1174,14 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 		case Particle_Type::orbit:
 			format.shader_type = Particle_Shader_Type::continuous;
 			format.particle_type = Particle_Type::orbit;
-			format.max_particles = 3000;
+			format.max_particles = 10000;
 			format.MaxLifetime = 100.0f;
 			format.area_xyz = data.area_extent;
 			format.EmitFaceIndex = FACE_FRONT;
 			format.main_direction = data.main_direction;
-			format.init_velocity_value = 10;
-			format.acceleration = XMFLOAT3(0, -10.0f, 0);
-			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.init_velocity_value = 5;
+			format.acceleration = XMFLOAT3(0, 0, 0);
+			format.color = data.color;
 			format.size = 1.0f;
 			mesh = particle_mesh_map["cube_dust"];
 			break;
@@ -1211,14 +1211,11 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
 			obj->Set_Name(std::to_string(data.particle_ID));
-			obj->Set_Focus_Strength(100.0f);
+			obj->Set_Focus_Strength(50.0f);
 	
 			if (format.particle_type == Particle_Type::sand)
 			{
 				obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
-				XMFLOAT3 Scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
-				obj->Set_Area(Scene_area);
-
 				obj->Set_Local_Coordinate();
 			}
 
