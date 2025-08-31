@@ -167,6 +167,10 @@ void Player::key_input(uint32_t keyState)
         return;
     }
 
+    auto sm = GetStateMachine();
+    if (sm->GetCurrentState()->GetStateEnum() == State::Dive || sm->GetCurrentState()->GetStateEnum() == State::Attack1 || sm->GetCurrentState()->GetStateEnum() == State::Attack2
+        || sm->GetCurrentState()->GetStateEnum() == State::Attack3) return;
+
     if (keyState == INPUT_NONE)
     {
         // cout << "key none" << "\n";
@@ -188,15 +192,17 @@ void Player::key_input(uint32_t keyState)
         if (BuildMoveVector(moveMask, mv)) {
             RunDir dir = Quantize8Way(mv);
             CommandSetLook = kDirVecByRunDir[(int)dir];
-            cout << CommandSetLook.x << ", " << CommandSetLook.y << ", " << CommandSetLook.z << "\n";
+            //cout << CommandSetLook.x << ", " << CommandSetLook.y << ", " << CommandSetLook.z << "\n";
         }
         if (attack1or2) {
             GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
             attack1or2 = !attack1or2;
+            return;
         }
         else {
             GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
             attack1or2 = !attack1or2;
+            return;
         }
         
     }
@@ -206,6 +212,7 @@ void Player::key_input(uint32_t keyState)
         cout << "input" << "\n";
         // if (GetStateMachine()->GetCurrentState() == std::make_unique<PlayerDiveState>)
         GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+        return;
     }
 
     if (moveMask) {
@@ -280,6 +287,18 @@ void Player::update(float deltaTime)
             if (invincibleTimeRemaining >= invincibleDuration) {
                 bIsInvincible = false;
                 invincibleTimeRemaining = 0.0f;
+            }
+        }
+    }
+
+    if (mosaic_value > 0) {
+        currTimeStore += deltaTime;
+        if (currTimeStore - lastTimeStore > 3.0f) {
+            static float time = 0.0f;
+            time += deltaTime;
+            if (time >= 1.0f) {
+                mosaic_value -= 3;
+                time = 0.0f;
             }
         }
     }

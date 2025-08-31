@@ -36,6 +36,8 @@ public:
     bool bCanControll = true;
     XMFLOAT3 CommandSetLook = XMFLOAT3(0.0f, 0.0f, 0.0f);
     uint32_t currkeyState;
+    float lastTimeStore = 0.0f;
+    float currTimeStore = 0.0f;
     Player(int model_index);
     virtual ~Player() {}
 

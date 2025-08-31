@@ -804,6 +804,7 @@ void Server::Server_Update()
     {
         m_gameTimer.Tick(FPS);
         float elapsedTime = m_gameTimer.GetTimeElapsed();
+        float totalTime = m_gameTimer.GetTotalTime();
 
         Scene::active_client_num = activeClientCount;
         Check_Connected_Player();
@@ -813,7 +814,7 @@ void Server::Server_Update()
 
 
         scene->Update_Scene(elapsedTime);
-
+        scene->totalTime = totalTime;
         //==============================================
         // Handle Scene Chnage
         Scene_Type new_scene_type = scene->CheckSceneTransition();

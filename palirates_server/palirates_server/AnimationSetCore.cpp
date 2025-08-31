@@ -450,8 +450,8 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 
 		if (!blocked) {
 			pos += deltaVec_full;
-			if (monster->currStateTrackIdx == TRACK_DIVEROLL_FORWARD)
-				cout << "deltaMove Pos : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
+			//if (monster->currStateTrackIdx == TRACK_DIVEROLL_FORWARD)
+				//cout << "deltaMove Pos : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
 			XMFLOAT3 newPos;
 			XMStoreFloat3(&newPos, pos);
 			pRootGameObject->SetPosition(newPos);
