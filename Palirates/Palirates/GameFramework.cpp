@@ -807,15 +807,15 @@ void CGameFramework::Animate_Scene()
 		if (!dead) 
 		{
 			if (m_pPlayer->GetStateMachine()->Get_State() == State::Knock_Down) {
-				auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
-				scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
+				//auto sword = m_pPlayer->DropWeapon("SM_Wep_Cutlass_01");
+				//scene_manager->Get_Active_Scene()->obj_manager->Add_Object(sword, Object_Type::non_skinned);
 				dead = true;
 			}
 		}
 		else 
 		{
 			if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down) {
-				m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
+				//m_pPlayer->RestoreWeapon("SM_Wep_Cutlass_01");
 				dead = false;
 			}
 		}

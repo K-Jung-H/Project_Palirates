@@ -1405,8 +1405,8 @@ void GargoyleStateMachine::enterState(State state, Key_Value key_event)
         ResetTrackForState(state, true);
     }
     if (IsInState({ State::Attack1/*, State::Attack2*/ })) {
-        /*if (m_pOwner->Weapon_ptr != nullptr)
-            m_pOwner->Weapon_ptr->bUpdateOBBOn();*/
+        //if (m_pOwner->Weapon_ptr != nullptr)
+        //m_pOwner->Weapon_ptr->bUpdateOBBOn();
         for (auto& w : m_pOwner->Weapon_ptr) {
             w->bUpdateOBBOn();
         }
