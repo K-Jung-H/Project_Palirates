@@ -180,7 +180,7 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
 
 	static bool skill_start = false;
 	static float skill_time = 0.0f;
-    *ctx.out_zoom_object = nullptr;
+    //*ctx.out_zoom_object = nullptr;
 
     if (skill_start) {
 		skill_time += elapsed_time;

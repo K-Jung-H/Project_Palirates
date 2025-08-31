@@ -599,11 +599,11 @@ void CGameFramework::Build_Default_Scenes()
 
 	Build_Scene(Scene_Type::Lobby, "Character_Select");
 	Build_Scene(Scene_Type::Board, "Game_Stage_Board");
-	Build_Scene(Scene_Type::Stage_1, "Stage_1");
-	Build_Scene(Scene_Type::Stage_2, "Stage_2");
+	//Build_Scene(Scene_Type::Stage_1, "Stage_1");
+	//Build_Scene(Scene_Type::Stage_2, "Stage_2");
 
 
-	scene_manager->Set_Active_Scene("Stage_2");
+	//scene_manager->Set_Active_Scene("Stage_2");
 //	Build_Scene(Scene_Type::Test, "Test_Scene");
 
 	scene_manager->Set_Active_Scene("Character_Select");
@@ -1906,7 +1906,7 @@ void CGameFramework::HandleClientIdAssignment()
 		m_pPlayer->SetID(Client_ID);
 		m_pPlayer->Set_Name("LocalPlayer_" + std::to_string(Client_ID));
 		m_pPlayer->Set_Active(true);
-		scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, m_pPlayer);
+		//scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, m_pPlayer);
 	}
 	else
 		m_pPlayer->SetID(Client_ID);

@@ -5323,7 +5323,7 @@ CDragonObject::CDragonObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList
 	n_Animation = 13;
 	RootIndex = 16;
 
-	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
+	m_StateMachine = std::make_unique<DragonStateMachine>(this);
 
 	type = EObjectType::Monster;
 	mType = Monster_Type::Dragon;
