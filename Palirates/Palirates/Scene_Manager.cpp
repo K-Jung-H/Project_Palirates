@@ -194,7 +194,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     case Stage_6:
     case Stage_7:
     {
-        std::shared_ptr<CScene> in_stage_scene = NULL;
+        std::shared_ptr<Stage_Scene> in_stage_scene = NULL;
         std::shared_ptr<CTerrainPlayer> pPlayer = NULL;
 
         static const array<Scene_Type, 4> stage1_list = { Stage_1, Stage_3, Stage_5, Stage_7 };
@@ -252,6 +252,8 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         pPlayer->SetPosition(new_position);
 
         in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        in_stage_scene->Set_Weapon_Particle(pd3dDevice, pd3dCommandList, pPlayer);
+        in_stage_scene->Set_Heal_Effect(pd3dDevice, pd3dCommandList, pPlayer);
         Set_Scene_Player(scene_name, pPlayer);
         in_stage_scene->Bind_Player_UI_Callback();
         in_stage_scene->Bind_Player_UI_Updata_Callback();
@@ -670,10 +672,10 @@ void Scene_Manager::ReleaseUploadBuffers()
 
 //===============¼­¹ö===============
 
-void Scene_Manager::Add_Player(shared_ptr<CPlayer> new_player_ptr)
+void Scene_Manager::Add_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
     if (activeScene)
-        activeScene->Add_Multi_Player(new_player_ptr);
+        activeScene->Add_Multi_Player(pd3dDevice, pd3dCommandList, new_player_ptr);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 
@@ -692,16 +694,6 @@ bool Scene_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncDa
 {
     if (activeScene)
         return activeScene->Sync_Player_Data(player_id, syncData);
-    else
-        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
-
-    return false;
-}
-
-bool Scene_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
-{
-    if (activeScene)
-        return activeScene->Sync_Player_Blur(player_id, motion_blur_active);
     else
         DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
 

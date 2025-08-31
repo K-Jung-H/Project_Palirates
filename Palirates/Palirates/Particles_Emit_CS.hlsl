@@ -48,7 +48,7 @@ cbuffer CB_Particle_Update_Info : register(b0)
     uint Max_Particle_N;
 
     float3 Main_Direction;
-    float Init_Velocity_Value;
+    float Velocity_Value;
 
     float3 focus_point; 
     float focus_strength; 
@@ -58,14 +58,32 @@ cbuffer CB_Particle_Update_Info : register(b0)
     float2 padding0;
 };
 
-RWStructuredBuffer<Particle_Info> ParticleBuffer_Emit : register(u0);
+RWStructuredBuffer<Particle_Info> Particle_Info_Buffer : register(u0);
 AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
 RWStructuredBuffer<uint> debug_buffer : register(u2);
 
 StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 
+cbuffer Grid_Info : register(b1)
+{
+    float3 worldMin;
+    float cellSize;
+    int3 gridDim;
+    float padding;
+};
+
+struct CellInfo
+{
+    uint startIndex; // g_OBBIndices[] start index
+    uint count; // OBB num
+};
+
+StructuredBuffer<CellInfo> g_CellInfos : register(t1);
+StructuredBuffer<uint> g_OBBIndices : register(t2);
+
 
 #define XM_PI 3.14159265359f
+#define FLT_MAX 3.402823466e+38f	
 
 #define FACE_LEFT    0 // -X
 #define FACE_RIGHT   1 // +X
@@ -73,6 +91,22 @@ StructuredBuffer<OBB_INFO> OBB_List : register(t0);
 #define FACE_TOP     3 // +Y
 #define FACE_BACK    4 // -Z
 #define FACE_FRONT   5 // +Z
+
+
+#define PARTICLE_TYPE_SNOW     0
+#define PARTICLE_TYPE_SPLASH    1
+#define PARTICLE_TYPE_DRAGON_FIRE 2
+#define PARTICLE_TYPE_PARTY      3
+
+#define PARTICLE_TYPE_SAND      4
+#define PARTICLE_TYPE_SAND_STORM 5
+#define PARTICLE_TYPE_HEAL 6
+#define PARTICLE_TYPE_ORBIT 7
+#define PARTICLE_TYPE_DIFFUSE_Burst 8
+#define PARTICLE_TYPE_DIFFUSE_Continuous 9
+
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
+
 
 float3 GetEmitFaceCenter(int face, float3 min, float3 max)
 {
@@ -158,6 +192,76 @@ float3 ConeEmitDirection(uint id, float3 baseDir, float coneAngle)
     );
 }
 
+float Hash11(uint n)
+{
+    n = (n << 13u) ^ n;
+    return 1.0 - ((n * (n * n * 15731u + 789221u) + 1376312589u) & 0x7fffffff) / 1073741824.0;
+}
+
+float3 RandomUnitVector(uint index)
+{
+    float u1 = Hash11(index ^ 0x1f123bb5u);
+    float u2 = Hash11(index ^ 0x7e6a5d11u);
+    float phi = 6.2831853f * u1;
+    float cosTheta = 2.0f * u2 - 1.0f;
+    float sinTheta = sqrt(max(0.0f, 1.0f - cosTheta * cosTheta));
+    return float3(cos(phi) * sinTheta, cosTheta, sin(phi) * sinTheta);
+}
+
+float3 AddNoiseAroundDirection(float3 dir, uint index, float maxAngle)
+{
+    dir = normalize(dir);
+
+    float minTilt = radians(2.0f);
+    float tilt = lerp(minTilt, maxAngle, Hash11(index ^ 0x1234u));
+    float azim = 6.2831853f * Hash11(index ^ 0x77ab45u);
+
+    float3 tangent = normalize(abs(dir.y) > 0.99f ? cross(dir, float3(1, 0, 0)) : cross(dir, float3(0, 1, 0)));
+    float3 bitangent = normalize(cross(dir, tangent));
+
+    float3 offset = cos(tilt) * dir + sin(tilt) * (cos(azim) * tangent + sin(azim) * bitangent);
+
+    float3 n = normalize(offset);
+
+    if (abs(n.y) > 0.999f)
+    {
+        n = normalize(n + float3(0.001f, 0.0f, 0.001f));
+    }
+
+    return n;
+}
+
+float3 RandomHemisphereUp(uint id)
+{
+    float u1 = Hash11(id ^ 0x27d4eb2fu);
+    float u2 = Hash11(id ^ 0x165667b1u);
+    float phi = 6.2831853f * u1; // 2π*u1
+    float cosTheta = u2; // [0,1] for +Y hemisphere
+    float sinTheta = sqrt(saturate(1.0f - cosTheta * cosTheta));
+    return float3(cos(phi) * sinTheta, cosTheta, sin(phi) * sinTheta);
+}
+
+
+float3 MakeOrbitNormal(uint index)
+{
+    if (all(Main_Direction == 0.0f))
+    {
+        float3 n = RandomUnitVector(index);
+
+
+        if (abs(n.y) > 0.95f)
+            n = RandomUnitVector(index ^ 0x5555u);
+
+        return normalize(n);
+    }
+    else
+    {
+        return AddNoiseAroundDirection(Main_Direction, index, radians(20.0f)); // case 2, 노이즈 각도 조절
+    }
+}
+
+
+
 static const float3 PARTY_COLORS[6] =
 {
     float3(1.0f, 0.0f, 0.0f), // Red
@@ -179,7 +283,7 @@ void Emit_Snow(inout Particle_Info p, uint index)
 {
     p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
     float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
-    p.Velocity = normalize(dir) * Init_Velocity_Value;
+    p.Velocity = normalize(dir) * Velocity_Value;
 
 }
 
@@ -195,7 +299,7 @@ void Emit_Water_Splash(inout Particle_Info p, uint index)
     float3 liftedBaseDir = normalize(baseDir + float3(0, 0.1f, 0));
     float3 spreadDir = normalize(liftedBaseDir + right * side * 0.5f);
     float3 finalDir = RandomSpreadDirection(index, spreadDir, 0.5f);
-    p.Velocity = normalize(finalDir) * Init_Velocity_Value;
+    p.Velocity = normalize(finalDir) * Velocity_Value;
     p.Color = float3(0.6f, 0.8f, 1.0f);
 }
 
@@ -203,7 +307,7 @@ void Emit_Sand(inout Particle_Info p, uint index)
 { 
     p.Position = RandomEmitPosition(index * (p.Type + 1), EmitRegionMin, EmitRegionMax, p.EmitFaceIndex);
     float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
-    p.Velocity = normalize(dir) * Init_Velocity_Value;
+    p.Velocity = normalize(dir) * Velocity_Value;
 
 }
 
@@ -217,11 +321,7 @@ void Emit_Sand_Storm(inout Particle_Info p, uint index)
     float3 tangent = normalize(cross(baseDir, offset));
     float3 initialDir = normalize(baseDir * 0.7f + tangent * 0.3f);
 
-    // float noise = frac(sin(index * 31.31f) * 6789.1234f); 
-    // initialDir += RandomSpreadDirection(index, baseDir, 0.2f) * 0.2f; // 방향 노이즈 (선택 적용)
-    // initialDir = normalize(initialDir);
-    
-    p.Velocity = initialDir * Init_Velocity_Value;
+    p.Velocity = initialDir * Velocity_Value;
     p.Color = float3(0.761f, 0.698f, 0.502f);
 
 }
@@ -238,7 +338,7 @@ void Emit_DragonFire(inout Particle_Info p, uint index)
     float t = saturate(angle_from_center / coneAngle);
     float speedMultiplier = lerp(1.5f, 0.7f, t); // center particles move faster
 
-    p.Velocity = normalize(dir) * Init_Velocity_Value * speedMultiplier;
+    p.Velocity = normalize(dir) * Velocity_Value * speedMultiplier;
     p.Color = float3(1.0f, 1.0f, 1.0f); // initial white
     p.Size = 0.1f; // start small
 }
@@ -254,7 +354,7 @@ void Emit_Party(inout Particle_Info p, uint index)
     float t = saturate(angle_from_center / coneAngle);
     float speedMultiplier = lerp(1.5f, 0.7f, t); 
 
-    p.Velocity = normalize(dir) * Init_Velocity_Value * speedMultiplier;
+    p.Velocity = normalize(dir) * Velocity_Value * speedMultiplier;
 
     p.Color = GetPartyColorByIndex(index);
 
@@ -274,10 +374,54 @@ void Emit_Heal(inout Particle_Info p, uint index)
 
     p.Position = float3(x, y, z);
 
-    p.Velocity = normalize(Main_Direction) * Init_Velocity_Value;
+    p.Velocity = normalize(Main_Direction) * Velocity_Value;
 
     p.Size = 1.0f;
     p.Rotate_Value = 0.0f;
+}
+
+void Emit_Orbit(inout Particle_Info p, uint index)
+{
+    p.Velocity = float3(0, 0, 0);
+    p.Acceleration = float3(0, 0, 0);
+    
+    float angleNorm = Hash11(index);
+    p.Velocity.x = angleNorm;
+
+    float omega = lerp(Velocity_Value * 0.8f, Velocity_Value * 1.2f, Hash11(index ^ 0xA4C3u));
+    if (abs(omega) < 0.01f)
+        omega = (omega >= 0.0f ? 0.01f : -0.01f);
+    p.Velocity.y = omega;
+
+    float3 n = MakeOrbitNormal(index);
+    if (length(n) < 1e-3)
+        n = float3(0, 1, 0);
+    p.Acceleration = normalize(n);
+
+    float theta = angleNorm * 6.2831853f;
+
+    float3 up = p.Acceleration;
+    float3 ref = (abs(up.y) > 0.99f) ? float3(1, 0, 0) : float3(0, 1, 0);
+    float3 right = normalize(cross(up, ref));
+    float3 forward = normalize(cross(up, right));
+
+    float3 localPos = focus_strength * (cos(theta) * right + sin(theta) * forward);
+    p.Position = focus_point + localPos;
+
+}
+
+void Emit_RadialDiffuse(inout Particle_Info p, uint index)
+{
+    float3 dir = RandomHemisphereUp(index);
+    float speed = lerp(Velocity_Value * 3.0f, Velocity_Value * 4.0f, Hash11(index ^ 0xA4C3u));
+    if (abs(speed) < 0.01f)
+        speed = 0.01f;
+
+    p.Position = (EmitRegionMin + EmitRegionMax) * 0.5f;
+
+    p.Velocity = dir * speed; 
+    p.Acceleration = float3(0.0f, -9.8f / 2, 0.0f);
+    
 }
 
 
@@ -288,25 +432,10 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
     float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
     p.Position = center;
     float3 dir = RandomSpreadDirection(index * (p.Type + 1), Main_Direction, 0.5f);
-    p.Velocity = normalize(dir) * Init_Velocity_Value;
+    p.Velocity = normalize(dir) * Velocity_Value;
     p.Acceleration = p.Velocity;
     p.Color = float3(1.0f, 0.3f, 0.0f);
 }
-
-//===============================================================
-
-
-
-#define PARTICLE_TYPE_SNOW     0
-#define PARTICLE_TYPE_SPLASH    1
-#define PARTICLE_TYPE_DRAGON_FIRE 2
-#define PARTICLE_TYPE_PARTY      3
-
-#define PARTICLE_TYPE_SAND      4
-#define PARTICLE_TYPE_SAND_STORM 5
-#define PARTICLE_TYPE_HEAL 6
-
-#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
 
 //===============================================================
 
@@ -334,13 +463,23 @@ void ApplyDelayByType(inout Particle_Info p, uint index)
     {
         float delay = 1.3f + seed * 10.0f;
         p.Lifetime = -delay;
-    } 
+    }
+    else if (p.Type == PARTICLE_TYPE_ORBIT)
+    {
+        float delay = 1.3f + seed * 10.0f;
+        p.Lifetime = -delay;
+    }
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
+    {
+        float delay = seed;
+        p.Lifetime = -delay;
+    }
     else
     {
         p.Lifetime = 0.0f;
     }
+    
 
-    p.Active = 1;
     
     
 }
@@ -360,7 +499,8 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
 
     InterlockedAdd(debug_buffer[0], 1); // 호출 카운트
 
-    Particle_Info p = ParticleBuffer_Emit[index];
+    Particle_Info p = Particle_Info_Buffer[index];
+    
     if (p.Active == 1)
         return;
 
@@ -378,6 +518,13 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_Party(p, index);
     else if (p.Type == PARTICLE_TYPE_HEAL)
         Emit_Heal(p, index);
+    else if (p.Type == PARTICLE_TYPE_ORBIT)
+        Emit_Orbit(p, index);
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE_Burst)
+        Emit_RadialDiffuse(p, index);
+    else if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
+        Emit_RadialDiffuse(p, index);   
+        
 
     else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
     {
@@ -385,11 +532,11 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     }
     
     
-    p.Active = 1;
+    p.Active = 1; 
     p.Lifetime = 0.0f;
     
     ApplyDelayByType(p, index);
     InterlockedAdd(debug_buffer[1], 1); // emit 카운트
     
-    ParticleBuffer_Emit[index] = p;
+    Particle_Info_Buffer[index] = p;
 }

@@ -446,6 +446,15 @@ D3D12_SHADER_BYTECODE Continuous_ParticleShader::CreateComputeShader(ID3DBlob** 
 		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Continuous_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
+//------------------------------------------------------------------------------------------------
+
+D3D12_SHADER_BYTECODE Interval_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Interval_CS", "cs_5_1", ppd3dShaderBlob);
+}
 
 //------------------------------------------------------------------------------------------------
 
@@ -492,16 +501,82 @@ D3D12_SHADER_BYTECODE Sand_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dS
 
 //------------------------------------------------------------------------------------------------
 
-D3D12_SHADER_BYTECODE Interval_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+void Spear_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	//==================================================
+	// Common Variables Part
+
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0); // Polygon_Mesh
+
+	if (common_ComputeRootSignature == NULL)
+		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
+
+	//==================================================
+
+	m_ncomputePipelineStates = 3;
+	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
+
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 0); // Emit
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 1);
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 2);
+
+	m_cxThreadGroups = 1;
+	m_cyThreadGroups = 1;
+	m_czThreadGroups = 1;
+}
+
+D3D12_SHADER_BYTECODE Spear_Skill_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
 {
 	if (nPipelineState == 0)
 		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
 	else if (nPipelineState == 1)
-		return CShader::CompileShaderFromFile(L"Particles_Update_Extract_CS.hlsl", "Update_Interval_CS", "cs_5_1", ppd3dShaderBlob);
+		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 2)
+		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Spear_Skill_State_2_CS", "cs_5_1", ppd3dShaderBlob);
+}
+
+//------------------------------------------------------------------------------------------------
+
+void Twin_Sword_Skill_ParticleShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	//==================================================
+	// Common Variables Part
+
+	m_ngraphicsPipelineStates = 1;
+	m_ppd3dgraphicsPipelineStates = new ID3D12PipelineState * [m_ngraphicsPipelineStates];
+
+	CreateGraphicsPipelineState(pd3dDevice, pd3dGraphicsRootSignature.get(), 0); // Polygon_Mesh
+
+	if (common_ComputeRootSignature == NULL)
+		common_ComputeRootSignature = CreateComputeRootSignature(pd3dDevice);
+
+	//==================================================
+
+	m_ncomputePipelineStates = 2;
+	m_ppd3dcomputePipelineStates = new ID3D12PipelineState * [m_ncomputePipelineStates];
+
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 0); // Emit
+	CreateComputePipelineState(pd3dDevice, common_ComputeRootSignature, 1);
+
+	m_cxThreadGroups = 1;
+	m_cyThreadGroups = 1;
+	m_czThreadGroups = 1;
+}
+
+D3D12_SHADER_BYTECODE Twin_Sword_Skill_ParticleShader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	if (nPipelineState == 0)
+		return CShader::CompileShaderFromFile(L"Particles_Emit_CS.hlsl", "EmitCS", "cs_5_1", ppd3dShaderBlob);
+	else if (nPipelineState == 1)
+		return CShader::CompileShaderFromFile(L"Particles_Update_WeaponSkill_CS.hlsl", "Twin_Sword_Skill_State_1_CS", "cs_5_1", ppd3dShaderBlob);
 }
 
 
 //===================================================================
+
  bool Particle_Manager::is_cs_shader_compiled = false;
  std::unordered_map<Particle_Shader_Type, ParticleShader*>Particle_Manager::particle_shader_map;
 
@@ -561,11 +636,22 @@ void Particle_Manager::Build_Shader(ID3D12Device* pd3dDevice, ID3D12GraphicsComm
 
 	ParticleShader* interval_shader = new Interval_ParticleShader();
 	interval_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	ParticleShader* spear_skill_shader = new Spear_Skill_ParticleShader();
+	spear_skill_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+	ParticleShader* twin_sword_skill_shader = new Twin_Sword_Skill_ParticleShader();
+	twin_sword_skill_shader->CreateShader(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature);
+
+
 	//===================================================================
 
 	particle_shader_map[Particle_Shader_Type::continuous] = continuous_shader;
 	particle_shader_map[Particle_Shader_Type::interval] = interval_shader;
 	particle_shader_map[Particle_Shader_Type::sand] = sand_shader;
+	particle_shader_map[Particle_Shader_Type::spear_skill] = spear_skill_shader;
+	particle_shader_map[Particle_Shader_Type::twin_sword_skill] = twin_sword_skill_shader;
+	
 }
 
 void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
@@ -732,10 +818,6 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
 
 	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
-	
-	int a = particle_object_list_map[Particle_Shader_Type::interval].size();
-	//cout << a << endl;
-
 }
 
 void Particle_Manager::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -797,7 +879,7 @@ void Particle_Manager::Update_and_Extract_Instance_Particles(ID3D12GraphicsComma
 
 		for (const auto& particle_obj : particle_object_list_map[type])
 		{
-			if (type == Particle_Shader_Type::sand)
+			if (type == Particle_Shader_Type::sand || type == Particle_Shader_Type::spear_skill)
 				shader_ptr->Set_Compute_Pipeline(pd3dCommandList, 1 + particle_obj->Get_Particle_State());
 
 
@@ -910,6 +992,8 @@ void Particle_Manager::Render_All(ID3D12GraphicsCommandList* pd3dCommandList, CC
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::continuous);
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::interval);
 	Render(pd3dCommandList, pCamera, Particle_Shader_Type::sand);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::spear_skill);
+	Render(pd3dCommandList, pCamera, Particle_Shader_Type::twin_sword_skill);
 
 }
 
@@ -1036,7 +1120,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 50;
 			format.acceleration = XMFLOAT3(0, -9.8f, 0);
-			format.color = XMFLOAT3(1.0f, 0.3f, 0.0f);
+			format.color = data.color;
 			format.size = 0.3f;
 			mesh = particle_mesh_map["sphere"];
 			break;
@@ -1051,7 +1135,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 100;
 			format.acceleration = XMFLOAT3(0, 0, 0);
-			format.color = XMFLOAT3(1,0,0);
+			format.color = data.color;
 
 			format.size = 0.3f;
 			mesh = particle_mesh_map["billboard"];
@@ -1067,7 +1151,7 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 100;
 			format.acceleration = XMFLOAT3(0, 10.0f, 0);
-			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.color = data.color;
 			format.size = 1.0f;
 			mesh = particle_mesh_map["cube"];
 			break;
@@ -1082,9 +1166,24 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 150;
 			format.acceleration = XMFLOAT3(0, -10.0f, 0);
-			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
+			format.color = data.color;
 			format.size = 1.0f;
 			mesh = particle_mesh_map["chip"];
+			break;
+			
+		case Particle_Type::orbit:
+			format.shader_type = Particle_Shader_Type::continuous;
+			format.particle_type = Particle_Type::orbit;
+			format.max_particles = 10000;
+			format.MaxLifetime = 100.0f;
+			format.area_xyz = data.area_extent;
+			format.EmitFaceIndex = FACE_FRONT;
+			format.main_direction = data.main_direction;
+			format.init_velocity_value = 5;
+			format.acceleration = XMFLOAT3(0, 0, 0);
+			format.color = data.color;
+			format.size = 1.0f;
+			mesh = particle_mesh_map["cube_dust"];
 			break;
 
 		default:
@@ -1112,14 +1211,11 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
 			obj->Set_Name(std::to_string(data.particle_ID));
-			obj->Set_Focus_Point(data.focus_point);
-
+			obj->Set_Focus_Strength(50.0f);
+	
 			if (format.particle_type == Particle_Type::sand)
 			{
 				obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
-				XMFLOAT3 Scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
-				obj->Set_Area(Scene_area);
-
 				obj->Set_Local_Coordinate();
 			}
 

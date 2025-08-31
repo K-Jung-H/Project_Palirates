@@ -1,4 +1,4 @@
-//------------------------------------------------------- ----------------------
+//-----------------------------------------------------------------------------
 // File: Object.h
 //-----------------------------------------------------------------------------
 
@@ -593,9 +593,14 @@ public:
     std::vector<std::shared_ptr<CGameObject>> pWeapon;
 };
 
+
+enum class TransformMode { Inherit, Independent, Disabled };
+
+
 class CGameObject : public std::enable_shared_from_this<CGameObject>
 {
 private:
+    TransformMode m_eTransformMode = TransformMode::Inherit;
     std::shared_ptr<CGameObject> m_pChild = nullptr;
     std::shared_ptr<CGameObject> m_pSibling = nullptr;
 
@@ -694,7 +699,7 @@ public:
 
     virtual ~CGameObject();
 
-
+    void Set_TransformMode(TransformMode new_TransformMode) { m_eTransformMode = new_TransformMode; }
 
     std::shared_ptr<CGameObject> Get_Child();
     std::shared_ptr<CGameObject> Get_Sibling();

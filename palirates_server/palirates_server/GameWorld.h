@@ -78,6 +78,23 @@ private:
 	std::shared_ptr<Particle_Object> sand_anubis_effect;
 };
 
+class Gargoyle_Stage_SceneLogic final : public SceneLogic
+{
+public:
+	Gargoyle_Stage_SceneLogic(XMFLOAT3 init_scene_area, XMFLOAT3 init_scene_center) :SceneLogic(init_scene_area, init_scene_center) {}
+
+	~Gargoyle_Stage_SceneLogic() override { onExit(); }
+	void onExit() override;
+
+
+
+	void init(ParticleManager& pm) override;
+	void update(const UpdateContext& ctx) override;
+
+private:
+	std::shared_ptr<Particle_Object> gargoyle_skill_effect;
+};
+
 //=========================================================
 
 struct XMINT3Hasher

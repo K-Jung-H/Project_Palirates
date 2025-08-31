@@ -415,13 +415,9 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					if (!Change_Screen)
 						Change_Screen = true;
-					//WaitForGpuComplete(GPU_Stage::Compute);
-					//WaitForGpuComplete(GPU_Stage::Render);
-					//WaitForGpuComplete(GPU_Stage::Post);
-
-					//ChangeSwapChainState();
 				}
 					break;
+
 				default:
 					break;
 			}
@@ -1167,13 +1163,20 @@ void CGameFramework::FrameAdvance()
 
 		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Outline, outline_blur);
 
-		if (post_effect_sync_data.motion_blur_active)
-		{
-			Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-			Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
 
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_1);
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
+		Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+		Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
+
+		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_1);
+		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
+
+
+		UINT mosaic_value = post_effect_sync_data.mosaic_value[Client_ID];
+		if (post_effect_sync_data.mosaic_value[Client_ID] > 0)
+		{
+			Resource_Bind_Set mosaic_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+			post_effect_manager->Set_Mosaic_Value(mosaic_value);
+			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Mosaic, mosaic_blur);
 		}
 
 		if (post_effect_sync_data.zoom_blur_active)
@@ -1567,7 +1570,7 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
 		else if (cmd == "POST_EFFECT") {
-			//ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
+			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
 		}
 		else if (cmd == "STAGE_CLEAR") {
 			stage_scene->bStageClear = true;
@@ -1736,9 +1739,8 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 			seen = stateVer;
 			syncData.bStateChange = true;     
 
-			/*if (monsterId == 16777217) {
-				cout << "seen : " << seen << ", stateVer: " << stateVer << ", stateEnum: " << stateEnum << endl;
-			}*/
+			if (State(syncData.stateEnum) == State::Get_Hit)
+				stage_scene->Set_Sprite_Effect(syncData.position);
 		}
 
 		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
@@ -1755,13 +1757,14 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		}*/
 		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
 		startIndex = base + 11;
+
+
 	}
 }
 
 void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
-	// id, type, pos(3), look(3), area(3), dir(3), lifetime, focus_point(3), state_index
-	constexpr int kPerParticleTokens = 19;
+	constexpr int kPerParticleTokens = 22;
 
 	if (command == "PARTICLE_CREATE" || command == "PARTICLE_UPDATE")
 	{
@@ -1775,33 +1778,32 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 			if (idx + (kPerParticleTokens - 1) >= static_cast<int>(tokens.size()))
 				break;
 
-
-
-			UINT id = static_cast<UINT>(std::stoul(tokens[idx + 0]));			// idx+0 : id
-			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1]));			// idx+1 : type
-			XMFLOAT3 pos{ std::stof(tokens[idx + 2]),  std::stof(tokens[idx + 3]),  std::stof(tokens[idx + 4]) };			// idx+2~4 : pos
-			XMFLOAT3 look{ std::stof(tokens[idx + 5]),  std::stof(tokens[idx + 6]),  std::stof(tokens[idx + 7]) };			// idx+5~7 : look
-			XMFLOAT3 area{ std::stof(tokens[idx + 8]),  std::stof(tokens[idx + 9]),  std::stof(tokens[idx + 10]) };			// idx+8~10 : area
-			XMFLOAT3 dir{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) };			// idx+11~13 : dir
-			float lifetime = std::stof(tokens[idx + 14]);			// idx+14 : lifetime
-			XMFLOAT3 focus{ std::stof(tokens[idx + 15]), std::stof(tokens[idx + 16]), std::stof(tokens[idx + 17]) };			// idx+15~17 : focus_point
-			UINT status_index = static_cast<UINT>(std::stoul(tokens[idx + 18]));			// idx+18 : state_index
+			UINT id = static_cast<UINT>(std::stoul(tokens[idx + 0])); // id
+			Particle_Type type = static_cast<Particle_Type>(std::stoi(tokens[idx + 1])); // type
+			XMFLOAT3 pos{ std::stof(tokens[idx + 2]), std::stof(tokens[idx + 3]), std::stof(tokens[idx + 4]) }; // pos
+			XMFLOAT3 look{ std::stof(tokens[idx + 5]), std::stof(tokens[idx + 6]), std::stof(tokens[idx + 7]) }; // look
+			XMFLOAT3 color{ std::stof(tokens[idx + 8]), std::stof(tokens[idx + 9]), std::stof(tokens[idx + 10]) }; // color
+			XMFLOAT3 area{ std::stof(tokens[idx + 11]), std::stof(tokens[idx + 12]), std::stof(tokens[idx + 13]) }; // area
+			XMFLOAT3 dir{ std::stof(tokens[idx + 14]), std::stof(tokens[idx + 15]), std::stof(tokens[idx + 16]) }; // dir
+			XMFLOAT3 focus{ std::stof(tokens[idx + 17]), std::stof(tokens[idx + 18]), std::stof(tokens[idx + 19]) }; // focus_point
+			UINT status_index = static_cast<UINT>(std::stoul(tokens[idx + 20])); // state_index
+			float lifetime = std::stof(tokens[idx + 21]); // lifetime
 
 			Particle_Sync_Data particle_sync_data{};
 			particle_sync_data.particle_ID = id;
 			particle_sync_data.particle_type = type;
 			particle_sync_data.obj_pos = pos;
 			particle_sync_data.obj_look = look;
+			particle_sync_data.color = color;
 			particle_sync_data.area_extent = area;
 			particle_sync_data.main_direction = dir;
-			particle_sync_data.LifeTime = lifetime;
 			particle_sync_data.focus_point = focus;
 			particle_sync_data.particle_status_index = status_index;
-
+			particle_sync_data.LifeTime = lifetime;
 
 			if (command == "PARTICLE_CREATE")
 				stage_scene->Create_Particle_Object(particle_sync_data);
-			else 
+			else
 				stage_scene->Update_Particle_Object(particle_sync_data);
 		}
 	}
@@ -1823,48 +1825,50 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 
 void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
-	if (tokens.size() < 12) return;
+	if (tokens.size() < (10 + MaxPlayer)) return;
 
+	size_t idx = 1;
 
-	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
-
-	for (int player_id = 0; player_id < MaxPlayer; ++player_id)
+	post_effect_sync_data.zoom_blur_active = (std::stoi(tokens[idx++]) != 0);
+	if (post_effect_sync_data.zoom_blur_active)
 	{
-		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
-		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
-		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
-
-		if (player_id == Client_ID)
-		{
-			m_pPlayer->SetBlurMask(player_motion_blur_active);
-		}
-	}
-	
-	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
-	if (post_effect_sync_data.zoom_blur_active) {
 		scene_manager->Get_Active_Scene()->CameraZoomOutAnime = true;
 	}
+
 	post_effect_sync_data.zoom_w_position =
 	{
-		(std::stof(tokens[9])),
-		(std::stof(tokens[10])),
-		(std::stof(tokens[11]))
+		std::stof(tokens[idx++]),
+		std::stof(tokens[idx++]),
+		std::stof(tokens[idx++])
 	};
 
 	if (post_effect_sync_data.zoom_w_position.x != 0.0f || post_effect_sync_data.zoom_w_position.y != 0.0f || post_effect_sync_data.zoom_w_position.z != 0.0f)
 	{
-		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f) {
+		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f)
+		{
 			post_effect_sync_data.zoom_blur_active = false;
 			scene_manager->Get_Active_Scene()->CameraZoomOutAnime = false;
 		}
 	}
-	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
+
+	for (UINT i = 0; i < MaxPlayer; ++i)
+	{
+		post_effect_sync_data.mosaic_value[i] = std::stoul(tokens[idx++]);
+	}
+
+	post_effect_sync_data.monster_x_ray = (std::stoi(tokens[idx++]) != 0);
+	Stage_Scene::Monster_Depth_Render = post_effect_sync_data.monster_x_ray;
+
+	post_effect_sync_data.fog_trigger = (std::stoi(tokens[idx++]) != 0);
+	post_effect_sync_data.fogStart = std::stof(tokens[idx++]);
+	post_effect_sync_data.fogEnd = std::stof(tokens[idx++]);
+	post_effect_sync_data.fogDensity = std::stof(tokens[idx++]);
 
 	Fog_Info server_fog_info;
-	server_fog_info.Fog_Trigger = std::stoi(tokens[13]);
-	server_fog_info.fogStart = std::stof(tokens[14]);
-	server_fog_info.fogEnd = std::stof(tokens[15]);
-	server_fog_info.fogDensity = std::stof(tokens[16]);
+	server_fog_info.Fog_Trigger = post_effect_sync_data.fog_trigger;
+	server_fog_info.fogStart = post_effect_sync_data.fogStart;
+	server_fog_info.fogEnd = post_effect_sync_data.fogEnd;
+	server_fog_info.fogDensity = post_effect_sync_data.fogDensity;
 
 	stage_scene->Fog_Sync(server_fog_info);
 }
@@ -1873,7 +1877,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 {
 	int pID = std::stoi(tokens[3]);
 	int stateNum = std::stoi(tokens[4]);
-	//cout << "cmd ID : " << pID << ", my ID : " << Client_ID << "\n";
 	if (pID == Client_ID)
 		m_pPlayer->GetStateMachine()->changeState(State(stateNum), Key_Value::None);
 	else {
@@ -1883,7 +1886,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 			}
 		}
 	}
-	//cout << "change State : " << stateNum << "\n";
 }
 
 void CGameFramework::HandleClientIdAssignment()
@@ -1899,7 +1901,7 @@ void CGameFramework::HandleClientIdAssignment()
 		m_pPlayer->SetID(Client_ID);
 		m_pPlayer->Set_Name("LocalPlayer_" + std::to_string(Client_ID));
 		m_pPlayer->Set_Active(true);
-		scene_manager->Add_Player(m_pPlayer);
+		scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, m_pPlayer);
 	}
 	else
 		m_pPlayer->SetID(Client_ID);
@@ -2052,13 +2054,13 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			if (player_exist == false) 
 			{
 				auto newPlayer = Create_Player(player_ID, character_model_ID);
-				scene_manager->Add_Player(newPlayer);
+				scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, newPlayer);
 			}
 		}
 		else 
 		{
 			auto newPlayer = Create_Player(player_ID, character_model_ID);
-			scene_manager->Add_Player(newPlayer);
+			scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, newPlayer);
 			Connected_Player_List[player_ID] = true;
 
 		}
@@ -2082,57 +2084,41 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->SetRotationAxis(XMFLOAT3(0.0f, 1.0f, 0.0f));
 	new_Player->SetState(0);
 	new_Player->SetOutlineColor(playerId+1);
+	new_Player->SetBlurMask(false);
 	new_Player->SetRotationSpeed(1.0f);
 	new_Player->SetScale(XMFLOAT3(10.0f, 10.0f, 10.0f));
 	new_Player->SetupWeaponCollider();
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	new_Player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
-	std::vector<shared_ptr<CGameObject>> trail_target = new_Player->Weapon_ptr;
-	if (!trail_target.empty()) {
+	std::vector<shared_ptr<CGameObject>> weapon_list = new_Player->Weapon_ptr;
+	if (!weapon_list.empty()) 
+	{
 		XMFLOAT3 player_color = GetColorById(playerId + 1);
 
 		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
 		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-		for (auto& target : trail_target) {
+		for (auto& trail_target : weapon_list) 
+		{
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
 
 			trail_obj->Set_Main_Color(trail_main_color);
 			trail_obj->Set_SubColor(trail_sub_color);
 
-			trail_obj->Set_Trail_Target(target, false);
+			trail_obj->Set_Trail_Target(trail_target, false);
 			trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
 			scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
 			new_Player->SetTrailObj(trail_obj);
 			new_Player->bTrailOff();
 		}
 
-		for (auto& t_obj : new_Player->GetTrailObj()) {
+		for (auto& t_obj : new_Player->GetTrailObj()) 
+		{
 			t_obj->Set_Active(false);
 		}
 	}
 
-	/*shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
-	if (trail_target)
-	{
-		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
-
-		XMFLOAT3 player_color = GetColorById(playerId + 1);
-
-		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
-		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		trail_obj->Set_Main_Color(trail_main_color);
-		trail_obj->Set_SubColor(trail_sub_color);
-
-		trail_obj->Set_Trail_Target(trail_target, false);
-		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-		scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
-		new_Player->SetTrailObj(trail_obj);
-		new_Player->bTrailOff();
-		new_Player->GetTrailObj()->Set_Active(false);
-	}*/
 
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 

@@ -2304,11 +2304,9 @@ Change_Signal CScene::Get_Change_Signal()
 	return c_signal;
 }
 
-void CScene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
+void CScene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
 	obj_manager->Add_Player(new_player_ptr);
-	new_player_ptr->SetBlurMask(true);
-
 }
 
 void CScene::Remove_Multi_Player(int player_id)
@@ -2320,11 +2318,6 @@ void CScene::Remove_Multi_Player(int player_id)
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	return obj_manager->Sync_Player_Data(player_id, syncData, main_Camera.get());
-}
-
-bool CScene::Sync_Player_Blur(int player_id, bool motion_blur_active)
-{
-	return obj_manager->Sync_Player_Blur(player_id, motion_blur_active); 
 }
 
 XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
@@ -4125,26 +4118,6 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 		}
 		break;
 
-		case 'Q':
-		{
-			XMFLOAT3 new_pos = m_pPlayer->GetPosition();
-			effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, new_pos);
-		}	break;
-
-		case 'T':
-		{
-			if (anubis_sand_particle)
-				anubis_sand_particle->Update_Particle_State();
-		}
-		break;
-
-		case 'H':
-		{
-			static bool b_test_state = true;
-			b_test_state = !b_test_state;
-			heal_effect_sample->Set_Active(b_test_state);
-		}
-		break;
 		default:
 			break;
 		}
@@ -4153,15 +4126,195 @@ bool Stage_Scene::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPARAM
 	return(false);
 }
 
-void Stage_Scene::Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr)
+void Stage_Scene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
+	Set_Weapon_Particle(pd3dDevice, pd3dCommandList, new_player_ptr);
+	Set_Heal_Effect(pd3dDevice, pd3dCommandList, new_player_ptr);
+
 	obj_manager->Add_Player(new_player_ptr);
-	new_player_ptr->SetBlurMask(true);
 }
+
+void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
+{
+	std::vector<shared_ptr<CGameObject>> weapon_list  = new_player_ptr->Weapon_ptr;
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+	shared_ptr<ParticleObject> weapon_particle_obj;
+
+	int player_id = new_player_ptr->GetID();
+	int model_num = new_player_ptr->Get_Model_Num();
+	XMFLOAT3 player_color = GetColorById(player_id + 1);
+
+	switch (model_num)
+	{
+	case 0:
+	{
+	
+	}
+	break;
+
+	case 1:
+	{
+	}
+	break;
+
+	case 2:
+	{
+	}
+	break;
+
+	case 3:
+	{
+	}
+	break;
+
+	case 4:
+	{
+		Particle_Format twin_sword_skill_info;
+		{
+			twin_sword_skill_info.shader_type = Particle_Shader_Type::twin_sword_skill;
+			twin_sword_skill_info.particle_type = Particle_Type::weapon_twin_sword_skill_1;
+			twin_sword_skill_info.max_particles = 1000;
+			twin_sword_skill_info.MaxLifetime = 0.3f;
+
+			twin_sword_skill_info.area_xyz = XMFLOAT3(100, 100, 100);
+			twin_sword_skill_info.EmitFaceIndex = FACE_TOP;
+
+			twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			twin_sword_skill_info.init_velocity_value = 0.8f;
+			twin_sword_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			twin_sword_skill_info.size = 0.2f;
+			twin_sword_skill_info.color = player_color;
+		}
+
+		particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+		for (shared_ptr<CGameObject> w_obj : weapon_list)
+		{
+			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
+			weapon_particle_obj->Set_Active(false);
+			weapon_particle_obj->Set_World_Coordinate();
+
+			w_obj->Set_Child(weapon_particle_obj);
+			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
+			
+		}
+
+	}
+	break;
+
+	case 5:
+	{
+		Particle_Format spear_skill_info;
+		{
+			spear_skill_info.shader_type = Particle_Shader_Type::spear_skill;
+			spear_skill_info.particle_type = Particle_Type::weapon_spear_skill_1;
+			spear_skill_info.max_particles = 3000;
+			spear_skill_info.MaxLifetime = 5.0f;
+
+			spear_skill_info.area_xyz = XMFLOAT3(5000, 500, 5000);
+			spear_skill_info.EmitFaceIndex = FACE_TOP;
+
+			spear_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			spear_skill_info.init_velocity_value = 5.0f;
+			spear_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			spear_skill_info.size = 0.2f;
+			spear_skill_info.color = player_color;
+		}
+
+		particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+		for (shared_ptr<CGameObject> w_obj : weapon_list)
+		{
+			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, spear_skill_info);
+			weapon_particle_obj->Set_Active(false);
+			weapon_particle_obj->SetScale(0.1, 0.1, 0.1);
+			weapon_particle_obj->SetPosition(0, 1, 0);
+			weapon_particle_obj->Set_Focus_Strength(1.0f);
+			w_obj->Set_Child(weapon_particle_obj);
+
+			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
+		}
+	}
+	break;
+
+
+	default:
+		break;
+	}
+}
+
+void Stage_Scene::Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
+{
+	shared_ptr<Particle_Shape_Mesh> particle_mesh;
+	shared_ptr<ParticleObject> heal_particle_obj;
+	shared_ptr<Aura_Object> aura_object;
+	shared_ptr<CGameObject> heal_effect;
+
+	Particle_Format heal_info;
+	{
+		heal_info.shader_type = Particle_Shader_Type::continuous;
+		heal_info.particle_type = Particle_Type::heal;
+		heal_info.max_particles = 50;
+		heal_info.MaxLifetime = 10.0f;
+
+		heal_info.area_xyz = XMFLOAT3(500, 500, 500);
+		heal_info.EmitFaceIndex = FACE_TOP;
+
+		heal_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		heal_info.init_velocity_value = 10.0f;
+		heal_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+		heal_info.size = 0.3f;
+		heal_info.color = XMFLOAT3(0.3f, 0.7f, 0.3f);
+	}
+
+	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
+	heal_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
+	heal_particle_obj->Set_Focus_Strength(20);
+	heal_particle_obj->Set_Active(false);
+
+	aura_object = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 22, 10);
+	aura_object->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
+
+	SpriteInfo test_sprite_info;
+	test_sprite_info.frameCols = 5;
+	test_sprite_info.frameRows = 7;
+	test_sprite_info.totalFrames = 32;
+	test_sprite_info.frameTime = 0.05f;
+
+	aura_object->Set_Sprite_Info(test_sprite_info);
+	obj_manager->Add_Object(aura_object, Object_Type::aura);
+
+	heal_effect = make_shared<CGameObject>(0);
+	heal_effect->Set_Child(aura_object);
+	heal_effect->Set_Child(heal_particle_obj);
+	heal_effect->Set_Active(false);
+
+	new_player_ptr->Add_Heal_Effect(heal_effect);
+
+}
+
+void Stage_Scene::Set_Sprite_Effect(XMFLOAT3 pos)
+{
+	static bool toggle = false;
+
+	XMFLOAT3 effect_pos = pos;
+	effect_pos.y += 10.0f;
+
+	if (toggle)
+		effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, effect_pos);
+	else
+		effect_manager->Add_Effect(Sprite_Effect_Type::Hit_2, effect_pos);
+
+	toggle = !toggle; 
+}
+
+
 void Stage_Scene::Remove_Multi_Player(int player_id)
 {
 	obj_manager->Remove_Player(player_id);
 }
+
 void Stage_Scene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	obj_manager->Sync_Player_Data(player_id, syncData);
@@ -4275,6 +4428,7 @@ void Stage_Scene::DespawnMonster(int id)
 	plist->pop_back();
 	mMap.erase(it);
 }
+
 void Stage_Scene::Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData)
 {
 	auto& id2idx = obj_manager->Get_Monster_Map();
@@ -4545,79 +4699,9 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	env_sand_particle->SetPosition(Scene_center);
 	env_sand_particle->Set_Area(Scene_area);
 
-	//Particle_Format anubis_sand_info;
-	//{
-	//	anubis_sand_info.shader_type = Particle_Shader_Type::sand;
-	//	anubis_sand_info.particle_type = Particle_Type::sand;
-	//	anubis_sand_info.max_particles = 20000;
-	//	anubis_sand_info.MaxLifetime = 10.0f;
-
-	//	anubis_sand_info.area_xyz = XMFLOAT3(Scene_area);
-	//	anubis_sand_info.EmitFaceIndex = FACE_FRONT;
-
-	//	anubis_sand_info.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-	//	anubis_sand_info.init_velocity_value = 100.0f;
-	//	anubis_sand_info.acceleration = XMFLOAT3(0.0f, -10.0f, 0.0f);
-
-	//	anubis_sand_info.size = 0.3f;
-	//	anubis_sand_info.color = XMFLOAT3(0.761f, 0.698f, 0.502f);
-	//}
-
-	//particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
-	//anubis_sand_particle = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, anubis_sand_info);
-	//anubis_sand_particle->Set_Local_Coordinate();
-	//anubis_sand_particle->SetPosition(Scene_center);
-	//anubis_sand_particle->Set_Area(Scene_area);
-
-	//anubis_sand_particle->Set_Focus_Point(Scene_center);
 
 
-	Particle_Format heal_info;
-	{
-		heal_info.shader_type = Particle_Shader_Type::continuous;
-		heal_info.particle_type = Particle_Type::heal;
-		heal_info.max_particles = 50;
-		heal_info.MaxLifetime = 10.0f;
-
-		heal_info.area_xyz = XMFLOAT3(500,500,500);
-		heal_info.EmitFaceIndex = FACE_TOP;
-
-		heal_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
-		heal_info.init_velocity_value = 10.0f;
-		heal_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
-
-		heal_info.size = 0.3f;
-		heal_info.color = XMFLOAT3(0.3f, 0.7f, 0.3f);
-	}
-
-	particle_mesh = particle_manager->Get_Particle_Mesh("cross");
-	test_heal = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, heal_info);
-	test_heal->SetPosition(0, 0, 0);
-	test_heal->Set_Focus_Strength(20);
 #endif
-
-	//===============================================================================
-
-	test_player_aura = make_shared<Aura_Object>(pd3dDevice, pd3dCommandList, 20, 22, 10);
-
-	test_player_aura->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Effect/test_aura_2.dds");
-
-	SpriteInfo test_sprite_info;
-	test_sprite_info.frameCols = 5;
-	test_sprite_info.frameRows = 7;
-	test_sprite_info.totalFrames = 32;
-	test_sprite_info.frameTime = 0.05f;
-
-	test_player_aura->Set_Sprite_Info(test_sprite_info);
-	obj_manager->Add_Object(test_player_aura, Object_Type::aura);
-
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 100.0f, 2000.0f });
-	effect_manager->Add_Effect(Sprite_Effect_Type::Hit_1, { 2000.0f, 50.0f, 2000.0f });
-
-	heal_effect_sample = make_shared<CGameObject>(0);
-	heal_effect_sample->Set_Child(test_player_aura);
-	heal_effect_sample->Set_Child(test_heal);
-
 
 	//===============================================================================
 
@@ -4688,55 +4772,13 @@ void Stage_2_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
 
-
 }
 
 void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Stage_Scene::Update_Objects(pd3dDevice, pd3dCommandList);
 
-	if (heal_effect_sample)
-	{
-		if(heal_effect_sample->Get_Active())
-			heal_effect_sample->SetPosition(m_pPlayer->GetPosition());
-	}
 
-	if (anubis_sand_particle)
-	{
-		UINT particle_state = anubis_sand_particle->Get_Particle_State();
-		if (particle_state == 0)
-		{
-			anubis_sand_particle->SetPosition(Scene_center);
-			anubis_sand_particle->Set_Area(Scene_area);
-			anubis_sand_particle->Set_Focus_Point(Scene_center);
-			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
-
-			anubis_sand_particle->Set_Speed(0.0f);
-		}
-		else if (particle_state == 1)
-		{
-			anubis_sand_particle->SetPosition(Scene_center);
-			anubis_sand_particle->Set_Area(Scene_area);
-			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition()); // anubis
-
-			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 0.0f, -1.0f));
-
-			anubis_sand_particle->Set_Speed(0.0f);
-
-		}
-		else if (particle_state == 2)
-		{
-			anubis_sand_particle->SetPosition(m_pPlayer->GetPosition()); // anubis
-			anubis_sand_particle->Set_Area(Scene_area);
-			anubis_sand_particle->Set_Focus_Point(m_pPlayer->GetPosition());
-			anubis_sand_particle->Set_Main_Direction(XMFLOAT3(0.0f, 1.0f, 0.0f));
-
-			// move
-			anubis_sand_particle->Set_Speed(100.0f);
-			anubis_sand_particle->Set_Direction(m_pPlayer->GetLook());
-		}
-		
-	}
 }
 
 //===============================================================================

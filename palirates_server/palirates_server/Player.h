@@ -30,7 +30,7 @@ private:
     float hp = 100.0f;
 public:
     bool need_to_client_sync = false;
-    bool motion_blur = false;
+    UINT mosaic_value = 0;
     bool BreathHit = false;
     int Client_ID = -1;
     bool bCanControll = true;

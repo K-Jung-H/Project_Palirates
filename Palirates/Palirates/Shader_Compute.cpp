@@ -79,7 +79,7 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 		pd3dDescriptorRanges[3].OffsetInDescriptorsFromTableStart = 0;
 	}
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[5];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[6];
 	{
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 		pd3dRootParameters[BACK_BUFFER_SRV_ROOT_PARAMETER_INDEX].DescriptorTable.NumDescriptorRanges = 1;
@@ -105,6 +105,11 @@ ID3D12RootSignature* Post_ComputeShader::CreateComputeRootSignature(ID3D12Device
 		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].Descriptor.ShaderRegister = 0;
 		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].Descriptor.RegisterSpace = 0;
 		pd3dRootParameters[ZOOM_INFO_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+		pd3dRootParameters[MOSAIC_INFO_PARAMETER_INDEX].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+		pd3dRootParameters[MOSAIC_INFO_PARAMETER_INDEX].Descriptor.ShaderRegister = 1;
+		pd3dRootParameters[MOSAIC_INFO_PARAMETER_INDEX].Descriptor.RegisterSpace = 0;
+		pd3dRootParameters[MOSAIC_INFO_PARAMETER_INDEX].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_ROOT_SIGNATURE_FLAGS d3dRootSignatureFlags = 
@@ -338,6 +343,31 @@ void CZoomBlurShader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups
 	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
 }
 
+
+
+//==========================================================================================
+
+Mosaic_Shader::Mosaic_Shader()
+{
+}
+
+Mosaic_Shader::~Mosaic_Shader()
+{
+}
+
+
+D3D12_SHADER_BYTECODE Mosaic_Shader::CreateComputeShader(ID3DBlob** ppd3dShaderBlob, int nPipelineState)
+{
+	return(CShader::CompileShaderFromFile(L"Post_Compute_Shaders.hlsl", "CS_MosaicBlur", "cs_5_1", ppd3dShaderBlob));
+}
+
+void Mosaic_Shader::CreateShader(ID3D12Device* pd3dDevice, UINT cxThreadGroups, UINT cyThreadGroups, UINT czThreadGroups, int nPipelineState, DXGI_FORMAT format)
+{
+	Post_ComputeShader::CreateShader(pd3dDevice, cxThreadGroups, cyThreadGroups, czThreadGroups, nPipelineState);
+
+	CreateResourcesAndUavs(pd3dDevice, 1, RESULT_ROOT_PARAMETER_INDEX, format);
+}
+
 //==========================================================================================
 
 CTextureToFullScreenShader::CTextureToFullScreenShader()
@@ -523,6 +553,7 @@ Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 	CEdgeDetectCSShader* edge_detect_shader = new CEdgeDetectCSShader();
 	CMotionBlurShader* motion_blur_shader = new CMotionBlurShader();
 	CZoomBlurShader* zoom_shader = new CZoomBlurShader();
+	Mosaic_Shader* mosaic_shader = new Mosaic_Shader();
 
 	fullscreen_shader = new CTextureToFullScreenShader();
 
@@ -530,12 +561,14 @@ Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 	m_EffectMap[Post_Effect_Type::Motion_Blur] = motion_blur_shader;
 	m_EffectMap[Post_Effect_Type::Outline] = edge_detect_shader;
 	m_EffectMap[Post_Effect_Type::Zoom] = zoom_shader;
+	m_EffectMap[Post_Effect_Type::Mosaic] = mosaic_shader;	
 	m_EffectMap[Post_Effect_Type::etc] = NULL;
 
 
 	edge_detect_shader->CreateShader(pd3dDevice);
 	motion_blur_shader->CreateShader(pd3dDevice);
 	zoom_shader->CreateShader(pd3dDevice);
+	mosaic_shader->CreateShader(pd3dDevice);
 
 	fullscreen_shader->CreateShader(pd3dDevice);
 }
@@ -544,6 +577,9 @@ void Post_Effect_Manager::CreateShaderResource(ID3D12Device* pd3dDevice, ID3D12G
 {
 	if(m_EffectMap[Post_Effect_Type::Zoom] != NULL)
 		Create_ZoomBlur_Info(pd3dDevice, pd3dCommandList);
+
+	if (m_EffectMap[Post_Effect_Type::Mosaic] != NULL)
+		Create_MosaicBlur_Info(pd3dDevice, pd3dCommandList);
 }
 
 void Post_Effect_Manager::Clear_Reserved_Effect()
@@ -580,6 +616,8 @@ void Post_Effect_Manager::Apply_Post_Effect(ID3D12GraphicsCommandList* pd3dComma
 
 		if (reserved_type == Post_Effect_Type::Zoom)
 			Update_ZoomBlur_Info(pd3dCommandList);
+		else if (reserved_type == Post_Effect_Type::Mosaic)
+			Update_MosaicBlur_Info(pd3dCommandList);
 
 		SynchronizeResourceTransition(pd3dCommandList, shader->GetOutputTextureResource(),
 			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
@@ -648,7 +686,6 @@ void Post_Effect_Manager::Create_ZoomBlur_Info(ID3D12Device* pd3dDevice, ID3D12G
 	m_pd3dcb_zoomblur_info->Map(0, NULL, (void**)&m_pcb_Mapped_zoomblur_info);
 }
 
-
 void Post_Effect_Manager::Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	if (!m_pcb_Mapped_zoomblur_info) 
@@ -670,6 +707,25 @@ void Post_Effect_Manager::Update_ZoomBlur_Info(ID3D12GraphicsCommandList* pd3dCo
 
 	pd3dCommandList->SetComputeRootConstantBufferView(ZOOM_INFO_PARAMETER_INDEX, m_pd3dcb_zoomblur_info->GetGPUVirtualAddress());
 }
+
+void Post_Effect_Manager::Create_MosaicBlur_Info(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	UINT ncbElementBytes = ((sizeof(MosaicBlurInfo_CB) + 255) & ~255); //256 * N
+	m_pd3dcb_mosaicblur_info = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_FLAG_NONE, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
+
+	m_pd3dcb_mosaicblur_info->Map(0, NULL, (void**)&m_pcb_Mapped_mosaicblur_info);
+}
+
+void Post_Effect_Manager::Update_MosaicBlur_Info(ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	if (!m_pcb_Mapped_mosaicblur_info)
+		return;
+
+	m_pcb_Mapped_mosaicblur_info->mosaic_value = mosaic_value;
+
+	pd3dCommandList->SetComputeRootConstantBufferView(MOSAIC_INFO_PARAMETER_INDEX, m_pd3dcb_mosaicblur_info->GetGPUVirtualAddress());
+}
+
 
 //=====================================================================
 float CS_Wave_Shader::total_time = 0.0f;

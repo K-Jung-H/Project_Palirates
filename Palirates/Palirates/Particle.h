@@ -20,6 +20,8 @@ enum class Particle_Shader_Type
 	continuous,
 	interval,
 	sand,
+	spear_skill,
+	twin_sword_skill,
 	etc
 };
 
@@ -32,11 +34,18 @@ enum class Particle_Type
 	sand = 4,
 	sand_storm = 5,
 	heal = 6,
+	orbit = 7,
+	diffuse_burst = 8,
+	diffuse_continuous = 9,
 	//=======================
 	bleed = 10,
 	//=======================
 	env_snow = 20,
 	env_sand = 21,
+	//=======================
+	weapon_spear_skill_1 = 30,
+	weapon_twin_sword_skill_1 = 31,
+
 	//=======================
 	etc = -1
 };
@@ -48,11 +57,12 @@ struct Particle_Sync_Data
 	XMFLOAT3 obj_look;
 
 	Particle_Type particle_type;
-	float LifeTime;
+	XMFLOAT3 color;
 	XMFLOAT3 area_extent;
 	XMFLOAT3 main_direction;
 	XMFLOAT3 focus_point;
 	UINT particle_status_index;
+	float LifeTime;
 };
 
 struct Particle_Format
@@ -372,6 +382,7 @@ public:
 	void Set_Main_Direction(const XMFLOAT3& input);
 	XMFLOAT3 Get_Main_Direction();
 
+	void Set_Init_Velocity_Value(int new_velocity_value) { Init_Velocity_Value = new_velocity_value; }
 	int Get_Init_Velocity_Value() { return Init_Velocity_Value; }
 
 	std::pair<XMFLOAT3, XMFLOAT3> GetAABB() { return ::GetAABB(XMFLOAT3(0.0f,0.0f,0.0f), local_area_xyz); }

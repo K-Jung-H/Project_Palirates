@@ -10,6 +10,7 @@
 #include "Object_StateMachine.h"
 #include "Object.h"
 #include "Camera.h"
+#include "Particle.h"
 
 enum Player_Model
 {
@@ -63,6 +64,10 @@ protected:
 	std::vector<std::shared_ptr<Trail_Object>> trail_obj;
 	bool TrailOn{ false };
 	bool TrailStart{ false };
+
+	vector<shared_ptr<ParticleObject>> weapon_particle_list;
+	shared_ptr<CGameObject> heal_effect;
+	int model_num;
 
 	//=================¼­¹ö=================
 	int id;  
@@ -204,6 +209,16 @@ public:
 
 	std::string Serialize();
 	virtual void SetupWeaponCollider();
+
+	virtual int Get_Model_Num() { return model_num; }
+
+	void Add_Weapon_Particle(std::shared_ptr<ParticleObject>p_obj) { weapon_particle_list.push_back(p_obj); }
+	vector<shared_ptr<ParticleObject>> Get_Weapon_Particle_List() { return weapon_particle_list; }
+	
+	void Add_Heal_Effect(std::shared_ptr<CGameObject>obj) { heal_effect = obj; }
+	shared_ptr<CGameObject> Get_Heal_Effect() { return heal_effect; }
+
+	
 };
 
 
