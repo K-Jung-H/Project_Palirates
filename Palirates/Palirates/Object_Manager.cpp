@@ -976,7 +976,7 @@ void Object_Manager::Add_Object_To_Unordered_Map(std::shared_ptr<CGameObject> ob
 {
 	string name = obj_ptr->Get_Mesh_Name();
 
-	if (name != "None") 
+	if (name != "None" && name != "SM_Env_Flat_Sand_01")
 	{
 		container[name].fixed_obj_list.push_back(obj_ptr);
 

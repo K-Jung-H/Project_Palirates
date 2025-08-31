@@ -4818,7 +4818,6 @@ void Stage_3_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12Graph
 	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
 }
 
-
 void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
@@ -4826,17 +4825,8 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	//===============================================================================
-
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
-
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	obj_manager->Set_Wave_Object(wave_obj);
 #endif
-
 	//===============================================================================
 
 #ifdef USING_OBB
@@ -4849,9 +4839,7 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-
 	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
-
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -4878,7 +4866,7 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("map3");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(2000.0f, 0.0f, 2000.0f);
+	test_scene->SetPosition(2000.0f, -70.0f, 2000.0f);
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 	test_scene->UpdateTransform(NULL);
 
@@ -4960,13 +4948,6 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	//===============================================================================
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
-
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	obj_manager->Set_Wave_Object(wave_obj);
 #endif
 
 	//===============================================================================
@@ -4977,14 +4958,12 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 
 #ifdef RENDER_PARTICLE
-
 #endif
 
 	//===============================================================================
 
 
-	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
-
+	XMFLOAT3 xmf3Scale(20.0f, 0.0f, 20.0f); // y = 0 -> flat
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -5011,8 +4990,8 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("map4");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
-	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->SetPosition(2000.0f, 140.0f, 2000.0f);
+	test_scene->SetScale({ 20.0f, 20.0f, 20.0f }, true);
 	test_scene->UpdateTransform(NULL);
 
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
