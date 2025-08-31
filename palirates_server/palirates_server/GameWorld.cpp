@@ -211,28 +211,6 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
         else
             return;
     }
-    /*if (boss->GetStateMachine()->GetCurrentStateEnum() == State::Attack3) {
-        *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
-        sand_anubis_effect->Set_Particle_Status(1);
-    }
-    else  *ctx.out_zoom_object = nullptr;
-
-    if (boss->attackPhase == 0)
-        sand_anubis_effect->Set_Particle_Status(0);
-
-    if (boss->attackPhase == 1)
-    {
-        *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
-        sand_anubis_effect->Set_Particle_Status(1);
-    }
-    else
-    {
-        *ctx.out_zoom_object = nullptr;
-    }
-
-    if (boss->attackPhase == 2)
-        sand_anubis_effect->Set_Particle_Status(2);*/
-
 
     if (sand_anubis_effect)
     {
@@ -295,7 +273,7 @@ void Gargoyle_Stage_SceneLogic::init(ParticleManager& pm)
         Particle_Format gargoyle_skill;
         gargoyle_skill.area_xyz = XMFLOAT3{ scene_center };
         gargoyle_skill.lifetime = 1000.0f;
-        gargoyle_skill.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+        gargoyle_skill.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
         gargoyle_skill.particle_type = Particle_Type::orbit;
         gargoyle_skill.particle_color = XMFLOAT3(0.2745f, 0.1490f, 0.4745f);
 
@@ -314,28 +292,67 @@ void Gargoyle_Stage_SceneLogic::update(const UpdateContext& ctx)
     if (!boss)
         return;
 
-    //if (boss->attackPhase == -1)
-    //    return;
+    auto gargoyle = dynamic_cast<Gargoyle*>(boss.get());
+    if (!gargoyle) 
+        return;
 
-    if (gargoyle_skill_effect)
+
+
+    if (boss->Weapon_ptr.empty())
+        return;
+
+    auto boss_weapon = boss->Weapon_ptr[0];
+
+    if (ctx.out_zoom_object)
     {
-        UINT particle_state = gargoyle_skill_effect->Get_Particle_Status();
-
-        Particle_Format particle_format = gargoyle_skill_effect->Get_Format();
-
-        if (particle_state == 0)
+        if (boss->attackPhase == 1)
         {
-            gargoyle_skill_effect->SetPosition(boss->GetPosition());
+            *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
         }
-        else if (particle_state == 1)
+        else
         {
-            gargoyle_skill_effect->SetPosition(scene_center);
+            *ctx.out_zoom_object = nullptr;
         }
+    }
 
-        gargoyle_skill_effect->Set_Format(particle_format);
 
+
+    if (boss->attackPhase == 1 || boss->attackPhase == 2)
+    {
+        if (!gargoyle_skill_effect)
+        {
+            Particle_Format gargoyle_skill;
+            gargoyle_skill.area_xyz = XMFLOAT3{ scene_center };
+            gargoyle_skill.lifetime = 1000.0f;
+            gargoyle_skill.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+            gargoyle_skill.particle_type = Particle_Type::orbit;
+            gargoyle_skill.particle_color = XMFLOAT3(0.2745f, 0.1490f, 0.4745f);
+
+            gargoyle_skill_effect = p_mg->Create_Particle_Object(gargoyle_skill);
+            gargoyle_skill_effect->Set_Synchronize_Type(true);
+        }
+        else // exist
+        {
+            Particle_Format particle_format = gargoyle_skill_effect->Get_Format();
+            XMFLOAT3 particle_pos = boss->GetPosition();
+            particle_pos.y += 30.0f;
+
+            gargoyle_skill_effect->SetPosition(particle_pos);
+            gargoyle_skill_effect->Set_Format(particle_format);
+        }
+    }
+    else // Idle & Walk
+    {     
+        if (gargoyle_skill_effect)
+        {
+            gargoyle_skill_effect->SetActive(false);
+            gargoyle_skill_effect.reset();
+        }
     }
 }
+
+
+
 
 GameWorld::GameWorld(Scene_Type new_scene_type)
 {
