@@ -3800,21 +3800,31 @@ void Board_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 	Yesblock->onClick = [this]()
 		{
 			c_signal.change = true;
-			
-			if (nearest_stage_index == 0 || nearest_stage_index == 2 || nearest_stage_index == 4 || nearest_stage_index == 6)
+
+			if (nearest_stage_index == 0  || nearest_stage_index == 4)
 			{
-			c_signal.scene_name = "Stage_1";
-			c_signal.type = Scene_Type::Stage_1;
+				c_signal.scene_name = "Stage_1";
+				c_signal.type = Scene_Type::Stage_1;
 			}
-			else if (nearest_stage_index == 1 || nearest_stage_index == 3 || nearest_stage_index == 5)
+			else if (nearest_stage_index == 1 || nearest_stage_index == 5)
 			{
 				c_signal.scene_name = "Stage_2";
 				c_signal.type = Scene_Type::Stage_2;
 			}
+			else if (nearest_stage_index == 2 || nearest_stage_index == 6)
+			{
+				c_signal.scene_name = "Stage_3";
+				c_signal.type = Scene_Type::Stage_3;
+			}
+			else if (nearest_stage_index == 3)
+			{
+				c_signal.scene_name = "Stage_4";
+				c_signal.type = Scene_Type::Stage_4;
+			}
 			std::cout << c_signal.scene_name << "\n";
 			is_stage_select = true;
-			
-			
+
+
 			std::vector<TextureBlock*> blocks = texture_ui_manager->GetTextureBlockPtrs();
 			if (!blocks.empty())
 			{
@@ -4782,6 +4792,260 @@ void Stage_2_Scene::Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 }
 
 //===============================================================================
+
+void Stage_3_Scene::BuildDefaultLightsAndMaterials()
+{
+	m_nLights = 1;
+	m_pLights = new LIGHT[m_nLights];
+	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
+
+	m_xmf4GlobalAmbient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+
+}
+
+void Stage_3_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	CScene::Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
+	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
+}
+
+
+void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//===============================================================================
+
+#ifdef RENDER_WAVE
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	wave_obj->Set_Name("in_game_wave");
+	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	obj_manager->Set_Wave_Object(wave_obj);
+#endif
+
+	//===============================================================================
+
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
+#ifdef RENDER_PARTICLE
+#endif
+
+	//===============================================================================
+
+
+	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
+
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	//==================================
+	// 나중에 시도할 것
+	//xmf3Scale.x = 5;
+	//xmf3Scale.y = 5;
+	//xmf3Scale.z = 5;
+	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
+
+	//m_pTerrain->Set_Child(test_Terrain);
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+	//===============================================================================
+
+
+#ifdef LOAD_SCENE
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map3.bin", NULL);
+
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("map3");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
+	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->UpdateTransform(NULL);
+
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	std::shared_ptr<CGameObject> player_start_position = test_scene->FindFrame("Players");
+	CGameObject::FlattenGameObjectHierarchy(player_start_position, player_start_position_list);
+
+	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
+	{
+		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
+			it = player_start_position_list.erase(it);
+		else
+			++it;
+	}
+
+#endif
+
+	//===============================================================================
+
+	Object_Manager::Reserve_Update();
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
+
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
+
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+
+
+
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+}
+
+
+//===============================================================================
+
+void Stage_4_Scene::BuildDefaultLightsAndMaterials()
+{
+	m_nLights = 1;
+	m_pLights = new LIGHT[m_nLights];
+	::ZeroMemory(m_pLights, sizeof(LIGHT) * m_nLights);
+
+	m_xmf4GlobalAmbient = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+
+	m_pLights[0].m_bEnable = true;
+	m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.5f, 0.5f, 0.5f, 0.0f);
+	m_pLights[0].m_xmf4Specular = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+	m_pLights[0].m_xmf3Direction = XMFLOAT3(0.0f, -0.707f, -0.707f);
+
+}
+
+void Stage_4_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	CScene::Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	m_pSkyBox = make_shared<CSkyBox>(pd3dDevice, pd3dCommandList);
+	m_pSkyBox->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"SkyBox/Fluffball.dds");
+
+	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
+}
+
+
+void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
+{
+	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
+
+	CreateShaderVariables(pd3dDevice, pd3dCommandList);
+
+	//===============================================================================
+
+#ifdef RENDER_WAVE
+	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
+	wave_obj->Set_Name("in_game_wave");
+	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
+
+	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
+	obj_manager->Set_Wave_Object(wave_obj);
+#endif
+
+	//===============================================================================
+
+#ifdef USING_OBB
+	obj_manager->Create_OBB_Manager(pd3dDevice, pd3dCommandList, m_Transparent_GraphicsRootSignature);
+#endif
+
+
+#ifdef RENDER_PARTICLE
+
+#endif
+
+	//===============================================================================
+
+
+	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
+
+	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
+	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	m_pTerrain->SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+
+	//==================================
+	// 나중에 시도할 것
+	//xmf3Scale.x = 5;
+	//xmf3Scale.y = 5;
+	//xmf3Scale.z = 5;
+	//shared_ptr<CHeightMapTerrain> test_Terrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
+	//test_Terrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
+	//test_Terrain->SetPosition(XMFLOAT3(2500.0f, 0.0f, 2500.0f));
+
+	//m_pTerrain->Set_Child(test_Terrain);
+	obj_manager->Set_Terrain_Object(m_pTerrain);
+
+	//===============================================================================
+
+
+#ifdef LOAD_SCENE
+	CLoadedModelInfo* Test_Scene_Model = CGameObject::Load_Scene_File(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, "Scene/Scene_File_7/map4.bin", NULL);
+
+	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
+	test_scene->Set_Name("map4");
+	test_scene = Test_Scene_Model->m_pModelRootObject;
+	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
+	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->UpdateTransform(NULL);
+
+	obj_manager->Add_Object(test_scene, Object_Type::fixed);
+
+	std::shared_ptr<CGameObject> player_start_position = test_scene->FindFrame("Players");
+	CGameObject::FlattenGameObjectHierarchy(player_start_position, player_start_position_list);
+
+	for (auto it = player_start_position_list.begin(); it != player_start_position_list.end(); )
+	{
+		if (const char* name = (*it)->Get_Name(); name && strstr(name, "Players"))
+			it = player_start_position_list.erase(it);
+		else
+			++it;
+	}
+
+#endif
+
+	//===============================================================================
+
+	Object_Manager::Reserve_Update();
+	Light_Material_Manager::Update(pd3dDevice, pd3dCommandList);
+	obj_manager->Update_ShadowMap_Fixed_Instance(pd3dDevice, pd3dCommandList);
+
+#ifdef USING_OBB
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::etc);
+	obj_manager->Update_OBB_Data(pd3dDevice, pd3dCommandList, Object_Type::fixed);
+#endif
+
+	obj_manager->ReBuild_Fixed_Info(pd3dDevice, pd3dCommandList); // Forward Update for ParticleManager's fixed obb data
+	obj_manager->Update_Fixed_OBBs();
+	particle_manager->Create_OBB_Data_ShaderVariables(pd3dDevice, pd3dCommandList, obj_manager->Get_Fixed_OBBs());
+
+	Build_Texture_UI(pd3dDevice, pd3dCommandList, m_UI_GraphicsRootSignature);
+}
 
 
 void Test_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
