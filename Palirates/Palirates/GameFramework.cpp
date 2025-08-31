@@ -728,6 +728,7 @@ void CGameFramework::ProcessInput()
 		if ((pKeysBuffer[VK_PRIOR] & 0xF0) || (pKeysBuffer[0x51] & 0xF0)) { current_keyboard_inputFlags |= INPUT_Q; }
 		if ((pKeysBuffer[VK_NEXT] & 0xF0) || (pKeysBuffer[0x45] & 0xF0)) { current_keyboard_inputFlags |= INPUT_E; }
 		if (pKeysBuffer[VK_RETURN] & 0xF0) { current_keyboard_inputFlags |= INPUT_ENTER; }
+		if (pKeysBuffer[VK_CONTROL] & 0xF0) { current_keyboard_inputFlags |= INPUT_CTRL; }
 
 		bool currShiftDown = (GetAsyncKeyState(VK_SHIFT) & 0x8000);
 		if (!prevShiftDown && currShiftDown) { current_keyboard_inputFlags |= INPUT_SHIFT; }

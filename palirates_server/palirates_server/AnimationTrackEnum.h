@@ -18,6 +18,7 @@ enum AnimationTrack {
     TRACK_ATTACK3 = 14,
     TRACK_GET_HIT_F2 = 15,
     TRACK_SELECT_IDLE = 16,
+    TRACK_RUN_FAST = 17,
 
     TRACK_ANUBIS_IDLE = 0,
     TRACK_ANUBIS_IDLE_BREAK = 1,

@@ -291,3 +291,17 @@ void PlayerObserverState::Exit(Player* player) {
 	currPos.y = 0.0f;
 	player->SetPosition(currPos);
 }
+
+/////////////////////////// FastRun ///////////////////////////////
+
+void PlayerFastRunState::Enter(Player* player, PlayerStateMachine* sm) {
+	PrepareForStateEnter(State::Run_Fast, player, sm);
+}
+
+void PlayerFastRunState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
+
+}
+
+void PlayerFastRunState::Exit(Player* player) {
+
+}

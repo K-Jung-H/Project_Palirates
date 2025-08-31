@@ -386,7 +386,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                 if (!w->CanCollide()) continue;
                 w->UpdateWorldOBB();
                 auto worldWeaponOBB = w->Get_Collider_OBB();
-                cout << worldWeaponOBB->Center.x << ", " << worldWeaponOBB->Center.y << ", " << worldWeaponOBB->Center.z << "\n";
+                //cout << worldWeaponOBB->Center.x << ", " << worldWeaponOBB->Center.y << ", " << worldWeaponOBB->Center.z << "\n";
                 for (auto m : Monster_List) {
                     if (!m) continue;
                     if (!m->CanCollide()) continue;

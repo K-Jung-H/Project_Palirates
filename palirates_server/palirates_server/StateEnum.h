@@ -14,5 +14,6 @@ enum class State {
     Select_Idle,
     Jump,
     Attack_Normal,
+    Run_Fast,
     ETC
 };
