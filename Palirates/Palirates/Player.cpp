@@ -392,6 +392,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	"Model/swordman_test.bin",
 	//"Model/Seaman_v17.bin",
 	"Model/spear_test.bin",
+	"Model/2HandedMan.bin",
 	//"Model/Skeleton_v17.bin"
 	};
 

@@ -112,8 +112,8 @@ void Server::Start()
                     else if (GetAsyncKeyState(VK_OEM_PERIOD) & 0x8000)  // . key
                         stage_scene->server_Fog_Control();
                     else if (GetAsyncKeyState(VK_OEM_2) & 0x8000)  // / key
-                        //stage_scene->server_X_Ray_Control();
-                        stage_scene->server_Sand_Control();
+                        stage_scene->server_X_Ray_Control();
+                        //stage_scene->server_Sand_Control();
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
