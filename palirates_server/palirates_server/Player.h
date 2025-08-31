@@ -28,6 +28,7 @@ private:
 
     std::unique_ptr<PlayerStateMachine> m_StateMachine;
     float hp = 100.0f;
+
 public:
     bool need_to_client_sync = false;
     UINT mosaic_value = 0;

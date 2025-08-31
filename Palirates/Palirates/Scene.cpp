@@ -4153,27 +4153,67 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	int player_id = new_player_ptr->GetID();
 	int model_num = new_player_ptr->Get_Model_Num();
 	XMFLOAT3 player_color = GetColorById(player_id + 1);
+	XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+	XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+	XMFLOAT3 LocalOffset_1 = { 0,0,0 };
+	XMFLOAT3 LocalOffset_2 = { 0,0,0 };
 
 	switch (model_num)
 	{
 	case 0:
 	{
-	
+		LocalOffset_1 = { 0,9,0 };
+		LocalOffset_2 = { 0,0,0 };
 	}
 	break;
 
 	case 1:
 	{
+		LocalOffset_1 = { 0,9,0 };
+		LocalOffset_2 = { 0,0,0 };
 	}
 	break;
 
 	case 2:
 	{
+		Particle_Format twin_sword_skill_info;
+		{
+			twin_sword_skill_info.shader_type = Particle_Shader_Type::twin_sword_skill;
+			twin_sword_skill_info.particle_type = Particle_Type::weapon_twin_sword_skill_1;
+			twin_sword_skill_info.max_particles = 1000;
+			twin_sword_skill_info.MaxLifetime = 0.3f;
+
+			twin_sword_skill_info.area_xyz = XMFLOAT3(100, 100, 100);
+			twin_sword_skill_info.EmitFaceIndex = FACE_TOP;
+
+			twin_sword_skill_info.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			twin_sword_skill_info.init_velocity_value = 0.8f;
+			twin_sword_skill_info.acceleration = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+			twin_sword_skill_info.size = 0.2f;
+			twin_sword_skill_info.color = player_color;
+		}
+
+		particle_mesh = particle_manager->Get_Particle_Mesh("cube_dust");
+		for (shared_ptr<CGameObject> w_obj : weapon_list)
+		{
+			weapon_particle_obj = particle_manager->Add_Particle(pd3dDevice, pd3dCommandList, particle_mesh, twin_sword_skill_info);
+			weapon_particle_obj->Set_Active(false);
+			weapon_particle_obj->Set_World_Coordinate();
+
+			w_obj->Set_Child(weapon_particle_obj);
+			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
+		}
+
+		LocalOffset_1 = { 0, 2, 0 };
+		LocalOffset_2 = { 0, 0, 0 };
 	}
 	break;
 
 	case 3:
 	{
+		LocalOffset_1 = { 0,0,0 };
+		LocalOffset_2 = { 0,0,0 };
 	}
 	break;
 
@@ -4205,10 +4245,11 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 			weapon_particle_obj->Set_World_Coordinate();
 
 			w_obj->Set_Child(weapon_particle_obj);
-			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
-			
+			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);		
 		}
 
+		LocalOffset_1 = { 0,9,0 };
+		LocalOffset_2 = { 0,0,0 };
 	}
 	break;
 
@@ -4244,6 +4285,9 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 			new_player_ptr->Add_Weapon_Particle(weapon_particle_obj);
 		}
+
+		LocalOffset_1 = { 0,9,0 };
+		LocalOffset_2 = { 0,5,0 };
 	}
 	break;
 
@@ -4251,6 +4295,22 @@ void Stage_Scene::Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	default:
 		break;
 	}
+
+	for (shared_ptr<CGameObject> w_obj : weapon_list)
+	{
+		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+
+		trail_obj->Set_Main_Color(trail_main_color);
+		trail_obj->Set_SubColor(trail_sub_color);
+
+		trail_obj->Set_Trail_Target(w_obj, false);
+		trail_obj->Set_Trail_LocalOffset(LocalOffset_1, LocalOffset_2);
+		obj_manager->Add_Object(trail_obj, Object_Type::trail);
+		new_player_ptr->SetTrailObj(trail_obj);
+		new_player_ptr->bTrailOff();
+		trail_obj->Set_Active(false);
+	}
+
 }
 
 void Stage_Scene::Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
@@ -4818,7 +4878,6 @@ void Stage_3_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12Graph
 	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
 }
 
-
 void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);
@@ -4826,17 +4885,8 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
 	//===============================================================================
-
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
-
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	obj_manager->Set_Wave_Object(wave_obj);
 #endif
-
 	//===============================================================================
 
 #ifdef USING_OBB
@@ -4849,9 +4899,7 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 	//===============================================================================
 
-
 	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
-
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -4878,7 +4926,7 @@ void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("map3");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(2000.0f, 0.0f, 2000.0f);
+	test_scene->SetPosition(2000.0f, -70.0f, 2000.0f);
 	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
 	test_scene->UpdateTransform(NULL);
 
@@ -4960,13 +5008,6 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	//===============================================================================
 
 #ifdef RENDER_WAVE
-	std::shared_ptr<Wave_Object> wave_obj = std::make_shared<Wave_Object>(pd3dDevice, pd3dCommandList, m_Plane_GraphicsRootSignature, 3000, 10, false);
-	wave_obj->Set_Name("in_game_wave");
-	wave_obj->SetPosition(XMFLOAT3(1500.0f, -25.0f, 1500.0f));
-
-	wave_obj->Set_BaseTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	wave_obj->Set_DetailTexture(pd3dDevice, pd3dCommandList, L"Terrain/Wave_2.dds");
-	obj_manager->Set_Wave_Object(wave_obj);
 #endif
 
 	//===============================================================================
@@ -4977,14 +5018,12 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 
 
 #ifdef RENDER_PARTICLE
-
 #endif
 
 	//===============================================================================
 
 
-	XMFLOAT3 xmf3Scale(17.0f, 0.0f, 12.0f); // y = 0 -> flat
-
+	XMFLOAT3 xmf3Scale(20.0f, 0.0f, 20.0f); // y = 0 -> flat
 	XMFLOAT4 xmf4Color(0.0f, 0.3f, 0.0f, 0.0f); // HeightMap
 	m_pTerrain = make_shared<CHeightMapTerrain>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), 0, 0, 257, 257, xmf3Scale, xmf4Color, 8, 3);
 	m_pTerrain->DivideIntoChildren(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature, _T("Terrain/HeightMap.raw"), xmf3Scale, 8);
@@ -5011,8 +5050,8 @@ void Stage_4_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	std::shared_ptr<CGameObject> test_scene = std::make_shared<CGameObject>();
 	test_scene->Set_Name("map4");
 	test_scene = Test_Scene_Model->m_pModelRootObject;
-	test_scene->SetPosition(2000.0f, 35.0f, 2000.0f);
-	test_scene->SetScale({ 10.0f, 10.0f ,10.0f }, true);
+	test_scene->SetPosition(2000.0f, 135.0f, 2000.0f);
+	test_scene->SetScale({ 20.0f, 20.0f, 20.0f }, true);
 	test_scene->UpdateTransform(NULL);
 
 	obj_manager->Add_Object(test_scene, Object_Type::fixed);
