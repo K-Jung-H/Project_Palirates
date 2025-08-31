@@ -4818,7 +4818,6 @@ void Stage_3_Scene::Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12Graph
 	fog_info->fogColor = { 0.72f, 0.525f, 0.2f };
 }
 
-
 void Stage_3_Scene::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList)
 {
 	Prepare_Basic_Elements(pd3dDevice, pd3dCommandList);

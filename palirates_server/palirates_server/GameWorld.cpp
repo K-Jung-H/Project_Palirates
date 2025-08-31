@@ -169,8 +169,30 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     if (!boss)
         return;
 
-    //if (boss->attackPhase == -1)
-    //    return;
+    float elapsed_time = ctx.dt;
+
+
+    if (boss->attackPhase == -1)
+        return;
+
+
+    auto boss_weapon = boss->Weapon_ptr[0];
+
+    if (boss->attackPhase == 0)
+
+    if (boss->attackPhase == 1)
+    {
+        *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
+        sand_anubis_effect->Set_Particle_Status(0);
+    }
+    else
+    {
+        *ctx.out_zoom_object = nullptr;
+    }
+
+    if (boss->attackPhase == 2)
+        sand_anubis_effect->Set_Particle_Status(2);
+
 
     if (sand_anubis_effect)
     {
@@ -190,20 +212,26 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
             sand_anubis_effect->SetPosition(boss->GetPosition());
             particle_format.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
             particle_format.area_xyz = scene_area;
-            particle_format.focus_point = boss->GetPosition(); // anubis
+            particle_format.focus_point = boss->GetPosition(); 
         }
         else if (particle_state == 2)
         {
+            static float orbit_angle = 0.0f;
+            XMFLOAT3 bossPos = boss->GetPosition();
+            XMFLOAT3 skill_pos = { 0,0,0 };
+            orbit_angle += elapsed_time * XM_PI * 0.25f; 
 
-            sand_anubis_effect->SetPosition(boss->GetPosition()); // anubis
+            float radius = 50.0f; 
+            skill_pos.x = bossPos.x + cosf(orbit_angle) * radius;
+            skill_pos.z = bossPos.z + sinf(orbit_angle) * radius;
+            skill_pos.y = bossPos.y; 
+
+            sand_anubis_effect->SetPosition(skill_pos);
             particle_format.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
             particle_format.area_xyz = scene_area;
-            particle_format.focus_point = boss->GetPosition(); // anubis
-
-            // move
-//            sand_anubis_effect->Set_Speed(100.0f);
-//            sand_anubis_effect->Set_Direction(boss->GetLook());
+            particle_format.focus_point = skill_pos;
         }
+
         sand_anubis_effect->Set_Format(particle_format);
         
     }
