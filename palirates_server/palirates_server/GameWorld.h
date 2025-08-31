@@ -184,5 +184,6 @@ const std::unordered_set<std::string> kExcludedNames =
 	"SM_Env_Rock_Large_06.bin",
 	"SM_Env_Rock_Large_07.bin",
 	"SM_Env_Rock_Large_08.bin",
+	"SM_Env_Rock_Large_011.bin",
 	"SM_Env_Rock_Skull_01.bin"
 };
