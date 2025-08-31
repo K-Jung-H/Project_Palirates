@@ -179,11 +179,12 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     auto boss_weapon = boss->Weapon_ptr[0];
 
     if (boss->attackPhase == 0)
+        sand_anubis_effect->Set_Particle_Status(0);
 
     if (boss->attackPhase == 1)
     {
         *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
-        sand_anubis_effect->Set_Particle_Status(0);
+        sand_anubis_effect->Set_Particle_Status(1);
     }
     else
     {
