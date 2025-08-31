@@ -884,6 +884,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     player_list[clientId]->SetLook(lookDirection);
     
     player_list[clientId]->key_input(inputFlags);
+    player_list[clientId]->currkeyState = inputFlags;
 }
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()

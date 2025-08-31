@@ -1667,7 +1667,7 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 	for (int i = 0; i < playerCount; ++i)
 	{
 		int base = startIndex;
-		if (base + 12 > tokens.size()) break;
+		if (base + 13 > tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
 		int modelId = std::stoi(tokens[base + 1]);
@@ -1693,6 +1693,8 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 		syncData.hp = hp;
 		bool bBreathHit = (tokens[idx++] == "1");
 		syncData.bBreathHit = bBreathHit;
+		uint32_t currkeyState  = std::stoul(tokens[idx++]);
+		syncData.keyState = currkeyState;
 
 		HandlePlayerSync(playerId, modelId, syncData);
 

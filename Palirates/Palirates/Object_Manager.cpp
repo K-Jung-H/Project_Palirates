@@ -1482,6 +1482,7 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 				//player_map[player_id]->ApplySyncData(syncData);
 				player_map[player_id]->SetLookDirection(syncData.lookVector);
 				player_map[player_id]->SetPosition(syncData.position);
+				player_map[player_id]->current_keyboard_inputFlags = syncData.keyState;
 
 				/*if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
 					std::cout << "Attack State" << "\n";
