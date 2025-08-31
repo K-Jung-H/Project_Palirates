@@ -321,7 +321,7 @@ Creature1::Creature1(int id) : Monster(id) {
     attackRange = 20.0f;
     type = Monster_Type::Creature1;
     SetType(Object_Type::monster);
-    WeaponName = "Hand_L_4";
+    WeaponName = "Hand_R_4";
     RootMotionTrackSet = {
         TRACK_CREATURE1_ATTACK1,
         TRACK_CREATURE1_ATTACK2,

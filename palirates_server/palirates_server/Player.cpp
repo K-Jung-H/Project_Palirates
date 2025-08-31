@@ -217,7 +217,7 @@ void Player::key_input(uint32_t keyState)
         const uint32_t wasdMask = keyState & (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
         const bool wOnly = (wasdMask == INPUT_W);
         const bool ctrlDown = (keyState & INPUT_CTRL) != 0;
-        cout << "wOnly : " << wOnly << "ctrlDown : " << ctrlDown << '\n';
+
         if (wOnly && ctrlDown)
         {
             auto sm = GetStateMachine();

@@ -5413,7 +5413,7 @@ CCreature1Object::CCreature1Object(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 		}
 	}
 	SetScale(10.0f, 10.0f, 10.0f);
-	WeaponName = "Hand_L_4";
+	WeaponName = "Hand_R_4";
 	BoundingOrientedBox* body = new BoundingOrientedBox(
 		XMFLOAT3(0.0f, 0.8f, 0.0f),
 		XMFLOAT3(0.4f, 0.8f, 0.4f),
