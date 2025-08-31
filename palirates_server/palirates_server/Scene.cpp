@@ -808,7 +808,6 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     if (bFog_State || bStageClear)
         effect_data.fog_trigger = false;
 
-    effect_data.fog_trigger = false;
 
     return effect_data;
 }

@@ -188,6 +188,7 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
         cout << "skill_time - " << skill_time << endl;
         if (status_num == 1) {
             if (skill_time >= 4.0f) {
+                *ctx.out_zoom_object =  nullptr;
                 sand_anubis_effect->Set_Particle_Status(2);
                 skill_time = 0.0f;
 				cout << "skill phase 2" << endl;
@@ -204,6 +205,7 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     }
     else {
         if (boss->GetStateMachine()->GetCurrentStateEnum() == State::Attack3) {
+            *ctx.out_zoom_object = boss ? boss : nullptr;
             skill_start = true;
             sand_anubis_effect->Set_Particle_Status(1);
             cout << "skill phase 1" << endl;
