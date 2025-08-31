@@ -1005,7 +1005,7 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
 {
 
     scene_obj = std::make_shared<GameObject>();
-    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map3.bin");
     g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -1034,7 +1034,7 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
 {
 
     scene_obj = std::make_shared<GameObject>();
-    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map4.bin");
     g_mapSize = XMFLOAT2(3072.0f, 4352.0f);
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
@@ -1122,7 +1122,7 @@ void Stage_6_Scene::Init()
 Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
 {
     scene_obj = std::make_shared<GameObject>();
-    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map3.bin");
     g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
