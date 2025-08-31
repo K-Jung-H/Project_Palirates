@@ -36,7 +36,8 @@ Player::Player(int playerId) : Skinned_GameObject()
         TRACK_ATTACK1,
         TRACK_ATTACK2,
         TRACK_ATTACK3,
-        TRACK_GET_HIT_F2
+        TRACK_GET_HIT_F2,
+        TRACK_RUN_FAST
     };
 
     std::unordered_set<int> OnceType = {
@@ -58,9 +59,12 @@ Player::Player(int playerId) : Skinned_GameObject()
     char* modelPaths[] = {
         //"Model/Captain_v17.bin",
         "Model/2HandedMan.bin",
-        "Model/Captain_v17.bin",
-        "Model/Captain_v17.bin",
-        "Model/Captain_v17.bin",
+        //"Model/Captain_v17.bin",
+        "Model/HammerMan.bin",
+        //"Model/Captain_v17.bin",
+        "Model/KarateGirl.bin",
+        //"Model/Captain_v17.bin",
+        "Model/KnightMan.bin",
         "Model/swordman_test.bin",
        //"Model/Seaman_v17.bin",
         "Model/spear_test.bin",
@@ -70,7 +74,7 @@ Player::Player(int playerId) : Skinned_GameObject()
     if (model_index < 0 || model_index >= modelCount)
         model_index = 0;
     //InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
-    InitAnimationController(modelPaths[model_index], 17, 2, OnceType);
+    InitAnimationController(modelPaths[model_index], 18, 2, OnceType);
    
     m_StateMachine = std::make_unique<PlayerStateMachine>(this);
     InitStateMachine();
@@ -134,9 +138,15 @@ void Player::key_input(uint32_t keyState)
 {
    // cout << keyState << "\n";
     constexpr uint32_t MOVE_MASK = (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
+
     uint32_t moveMask = keyState & MOVE_MASK;
 
     static bool F2_Mode = false;
+
+    if (keyState & INPUT_Q)
+    {
+        motion_blur = !motion_blur;
+    }
 
     if (keyState & INPUT_F2)
     {
@@ -165,15 +175,13 @@ void Player::key_input(uint32_t keyState)
     if (keyState == INPUT_NONE)
     {
         // cout << "key none" << "\n";
-        if (GetStateMachine()->GetCurrentState()->GetStateEnum() == State::Run) {
+        if (GetStateMachine()->GetCurrentState()->GetStateEnum() == State::Run || GetStateMachine()->GetCurrentState()->GetStateEnum() == State::Run_Fast) {
             cout << "change normal" << "\n";
             GetStateMachine()->ChangeState(std::make_unique<PlayerNormalState>());
         }
     }
     if (keyState & INPUT_SHIFT)
     {
-       
-        // WASD가 아무것도 없으면 현재 Look 유지
         GetStateMachine()->ChangeState(std::make_unique<PlayerDiveState>());
         return;
     }
@@ -206,6 +214,20 @@ void Player::key_input(uint32_t keyState)
     }
 
     if (moveMask) {
+        const uint32_t wasdMask = keyState & (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
+        const bool wOnly = (wasdMask == INPUT_W);
+        const bool ctrlDown = (keyState & INPUT_CTRL) != 0;
+
+        if (wOnly && ctrlDown)
+        {
+            auto sm = GetStateMachine();
+
+            if (sm->GetCurrentState()->GetStateEnum() != State::Run_Fast) {
+                sm->ChangeState(std::make_unique<PlayerFastRunState>());
+                return;
+            }
+        }
+
         XMFLOAT2 mv;
         if (BuildMoveVector(keyState, mv)) {
             RunDir dir = Quantize8Way(mv);
@@ -223,13 +245,17 @@ void Player::key_input(uint32_t keyState)
                     sm->lastMoveMask = moveMask;
                 }
             }
+            else if ((sm->GetCurrentState()->GetStateEnum() == State::Run_Fast) && (!ctrlDown || !wOnly)) {
+                sm->ChangeState(std::make_unique<PlayerRunState>());
+                SetRunDirectionTrack(track);
+                sm->lastMoveMask = moveMask;
+            }
             return;
         }
     }
     else {
-        GetStateMachine()->lastMoveMask = 0; // 입력 끊김 → 캐시 리셋
+        GetStateMachine()->lastMoveMask = 0; 
     }
-
 }
 
 void Player::animate(float Elapsedtime)

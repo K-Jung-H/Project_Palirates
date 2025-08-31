@@ -375,12 +375,14 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	char* modelPaths[] = {
-	//"Model/spear_test.bin",
 	//"Model/Captain_v17.bin",
 	"Model/2HandedMan.bin",
-	"Model/Deckhand_v17.bin",
-	"Model/Female_Pirate_v17.bin",
-	"Model/First_Mate_v17.bin",
+	//"Model/Deckhand_v17.bin",
+	"Model/HammerMan.bin",
+	//"Model/Female_Pirate_v17.bin",
+	"Model/KarateGirl.bin",
+	//"Model/First_Mate_v17.bin",
+	"Model/KnightMan.bin",
 	"Model/swordman_test.bin",
 	//"Model/Seaman_v17.bin",
 	"Model/spear_test.bin",
@@ -394,7 +396,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 		pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelPaths[ModelNum], NULL);
 	m_pRootModel = pAngrybotModel->m_pModelRootObject;
 
-	n_Animation = 17;
+	n_Animation = 18;
 	RootIndex = 2;
 	prevWeights.resize(n_Animation, 0.0f);
 	targetWeights.resize(n_Animation, 0.0f);

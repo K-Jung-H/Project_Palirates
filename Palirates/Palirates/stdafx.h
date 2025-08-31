@@ -608,6 +608,7 @@ enum class Monster_Type : int
 	Anubis,
 	Dragon,
 	Gargoyle,
+	Creature1,
 	ETC
 };
 
@@ -651,7 +652,8 @@ enum KeyIndex
 	KEY_INDEX_MOUSE_LEFT = 8,
 	KEY_INDEX_MOUSE_RIGHT = 9,
 	KEY_INDEX_F2 = 10,
-	KEY_INDEX_F3 = 11
+	KEY_INDEX_F3 = 11,
+	KEY_INDEX_CTRL = 12,
 };
 
 enum InputFlags : uint32_t
@@ -668,7 +670,8 @@ enum InputFlags : uint32_t
 	INPUT_MOUSE_LEFT = 1 << KEY_INDEX_MOUSE_LEFT,
 	INPUT_MOUSE_RIGHT = 1 << KEY_INDEX_MOUSE_RIGHT,
 	INPUT_F2 = 1 << KEY_INDEX_F2,
-	INPUT_F3 = 1 << KEY_INDEX_F3
+	INPUT_F3 = 1 << KEY_INDEX_F3,
+	INPUT_CTRL = 1 << KEY_INDEX_CTRL
 };
 
 //#define SERVER_IP "1.242.69.251"

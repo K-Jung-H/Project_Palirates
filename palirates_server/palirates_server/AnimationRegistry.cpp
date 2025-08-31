@@ -47,6 +47,16 @@ int AnimationRegistry::GetMonsterAnimationTrack(Monster_Type type, State state) 
         case State::Knock_Down:  return TRACK_GARGOYLE_DEAD;
         default: return TRACK_GARGOYLE_IDLE;
         }
+    case Monster_Type::Creature1:
+        switch (state) {
+        case State::Idle:        return TRACK_CREATURE1_IDLE;
+        case State::Attack1:     return TRACK_CREATURE1_ATTACK1;
+        case State::Attack2:     return TRACK_CREATURE1_ATTACK2;
+        case State::Get_Hit:     return TRACK_CREATURE1_GET_HIT;
+        case State::Run:         return TRACK_CREATURE1_WALK;
+        case State::Knock_Down:  return TRACK_CREATURE1_DEAD;
+        default: return TRACK_CREATURE1_IDLE;
+        }
     case Monster_Type::ETC:
         switch (state) {
         case State::Idle:        return TRACK_IDLE;
@@ -74,6 +84,7 @@ int AnimationRegistry::GetPlayerAnimationTrack(State state) {
     case State::Dive:         return TRACK_DIVEROLL_FORWARD;
     case State::Knock_Down:  return TRACK_KNOCK_DOWN;
     case State::Get_Up:  return TRACK_GET_UP;
+    case State::Run_Fast:  return TRACK_RUN_FAST;
     default: return TRACK_IDLE;
     }
     return 0;

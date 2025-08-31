@@ -2388,6 +2388,9 @@ void CScene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* p
 	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
 		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
+	else if (mType == static_cast<int>(Monster_Type::Creature1)) {
+		m = std::make_shared<CCreature1Object>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
+	}
 	else if (mType == static_cast<int>(Monster_Type::Dragon)) {
 		m = std::make_shared<CDragonObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
@@ -3033,6 +3036,17 @@ void Character_Select_Scene::Build_Texture_UI(ID3D12Device* pd3dDevice, ID3D12Gr
 	STTblock->tintColor = XMFLOAT4(1.2f, 1.2f, 1.2f, 1.0f);
 	STTblock->hoverGlowColor = XMFLOAT4(1.0f, 0.4f, 0.4f, 1.0f);
 	texture_ui_manager->Add_TextureBlock(std::move(STTblock));
+
+	CTexture* LoadingTexture = new CTexture(1, RESOURCE_TEXTURE2D, 1, 1, 0, 0, 1, 0, 0);
+	LoadingTexture->LoadTextureFromDDSFile(pd3dDevice, pd3dCommandList, L"UITexture/start_img.dds", RESOURCE_TEXTURE2D, 0);
+	CDescriptor_Heap::CreateGraphicsShaderResourceViews(pd3dDevice, LoadingTexture, 0, 0);
+	D2D1_RECT_F LoadscreenRect = MakeNormalizedRect(0.5f, 0.5f, 1.0f, LoadingTexture);
+	std::unique_ptr<TextureBlock> Loadblock = std::make_unique<TextureBlock>(LoadingTexture, LoadscreenRect, mesh, UILayer::Load);
+	Loadblock->ui_type = UI_EFFECT_FADE_OUT;
+	Loadblock->hp = 5.0f;
+	Loadblock->bActive = true;
+	//Loadblock->start_time = current_time;
+	texture_ui_manager->Add_TextureBlock(std::move(Loadblock));
 }
 
 void Character_Select_Scene::SetEnableCharactorSelectButton(bool Enable)
@@ -4321,6 +4335,9 @@ void Stage_Scene::SpawnMonster(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	if (mType == static_cast<int>(Monster_Type::Fishman)) {
 		m = std::make_shared<CFishManObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 		y_offset = 20.0f;
+	}
+	else if (mType == static_cast<int>(Monster_Type::Creature1)) {
+		m = std::make_shared<CCreature1Object>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);
 	}
 	else if (mType == static_cast<int>(Monster_Type::Anubis)) {
 		m = std::make_shared<CAnubisObject>(pd3dDevice, pd3dCommandList, m_MRT_GraphicsRootSignature);

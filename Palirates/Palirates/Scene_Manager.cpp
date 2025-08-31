@@ -670,7 +670,7 @@ void Scene_Manager::ReleaseUploadBuffers()
     }
 }
 
-//===============¼­¹ö===============
+//===============Â¼Â­Â¹Ã¶===============
 
 void Scene_Manager::Add_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {

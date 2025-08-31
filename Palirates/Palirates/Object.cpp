@@ -5153,8 +5153,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
 	if (syncData.bStateChange) {
-		if (mType == Monster_Type::Gargoyle) {
-			cout << "가고일 상태 전환 " << "\n";
+		if (mType == Monster_Type::Creature1) {
 		}
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
 		
@@ -5163,8 +5162,7 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 	this->animMode = syncData.animMode;
 	if (int(GetStateMachine()->Get_State()) != syncData.stateEnum) {
 		GetStateMachine()->changeState(State(syncData.stateEnum), Key_Value::None);
-		if (mType == Monster_Type::Gargoyle) {
-			cout << "가고일 상태 전환 " << "\n";
+		if (mType == Monster_Type::Creature1) {
 		}
 	}
 }
@@ -5376,7 +5374,7 @@ CGargoyleObject::CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	n_Animation = 10;
 	RootIndex = 0;
 
-	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
+	m_StateMachine = std::make_unique<GargoyleStateMachine>(this);
 
 	type = EObjectType::Monster;
 	mType = Monster_Type::Gargoyle;
@@ -5410,4 +5408,62 @@ CGargoyleObject::CGargoyleObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommand
 	Set_Name("Gargoyle");
 
 	WeaponName = "Wings_LP";
+}
+
+///////////////////////////////////////////////////////////////////
+
+CCreature1Object::CCreature1Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature)
+{
+	RootMotionTrackSet = {
+		TRACK_CREATURE1_ATTACK1,
+		TRACK_CREATURE1_ATTACK2,
+		TRACK_CREATURE1_GET_HIT,
+		TRACK_CREATURE1_WALK,
+		TRACK_CREATURE1_DEAD
+	};
+
+	std::unordered_set<int> OnceType = {
+		TRACK_CREATURE1_ATTACK1,
+		TRACK_CREATURE1_ATTACK2,
+		TRACK_CREATURE1_GET_HIT,
+		TRACK_CREATURE1_DEAD
+	};
+
+	Hit_Track_idx = TRACK_CREATURE1_GET_HIT;
+	m_StateMachine = std::make_unique<Creature1StateMachine>(this);
+
+	type = EObjectType::Monster;
+	mType = Monster_Type::Creature1;
+
+	CLoadedModelInfo* pFishManModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/MonsterCreature1_LP.bin", NULL);
+
+	n_Animation = 6;
+	RootIndex = 0;
+	prevWeights.resize(n_Animation, 0.0f);
+	targetWeights.resize(n_Animation, 0.0f);
+	m_pRootModel = pFishManModel->m_pModelRootObject;
+	m_pSkinnedAnimationController = std::make_shared<CAnimationController>(pd3dDevice, pd3dCommandList, n_Animation, pFishManModel);
+	m_pSkinnedAnimationController->RootIndex = RootIndex;
+	for (int i = 0; i < n_Animation; ++i) {
+		m_pSkinnedAnimationController->SetTrackAnimationSet(i, i);
+		m_pSkinnedAnimationController->SetTrackEnable(i, true);
+	}
+	for (int i = 0; i < n_Animation; ++i) {
+		if (OnceType.contains(i)) {
+			m_pSkinnedAnimationController->m_pAnimationTracks[i].m_nType = ANIMATION_TYPE_ONCE;
+		}
+	}
+	SetScale(10.0f, 10.0f, 10.0f);
+	WeaponName = "Hand_R_4";
+	BoundingOrientedBox* body = new BoundingOrientedBox(
+		XMFLOAT3(0.0f, 0.8f, 0.0f),
+		XMFLOAT3(0.4f, 0.8f, 0.4f),
+		XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
+	);
+	Set_Collider(body);
+
+	Set_Name("Creature1");
+
+
+
 }

@@ -99,9 +99,20 @@ void WalkState::Update(Monster* monster, float deltaTime, MonsterStateMachine* s
                 }
             }
         }
+        else if (GET_MONSTER_TYPE(monster->GetID()) == int(Monster_Type::Gargoyle)) {
+            if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
+                /*if (RandomFloat() < 0.5f) {
+                    sm->ChangeState(std::make_unique<Attack1State>());
+                }
+                else {
+                    sm->ChangeState(std::make_unique<GargoyleSkillState>());
+                }*/
+                sm->ChangeState(std::make_unique<GargoyleSkillState>());
+            }
+        }
         else {
             if (Vector3::Distance(nearestPos.value(), monster->GetPosition()) <= monster->attackRange) {
-                sm->ChangeState(std::make_unique<Attack1State>());
+                sm->ChangeState(std::make_unique<Attack2State>());
             }
         }
     }
@@ -170,6 +181,49 @@ void Attack1State::Update(Monster* monster, float deltaTime, MonsterStateMachine
 }
 
 void Attack1State::Exit(Monster* monster) {
+    /*if (monster->Weapon_ptr)
+        monster->Weapon_ptr->SetCanCollide(false);*/
+    for (auto& w : monster->Weapon_ptr) {
+        w->SetCanCollide(false);
+    }
+}
+
+// -------------------------
+// Attack2State
+// -------------------------
+void Attack2State::Enter(Monster* monster, MonsterStateMachine* sm) {
+    if (!monster) return;
+    currentTrackIdx = monster->PlayAnimation(State::Attack2);
+    monster->StartAttackCooldown();
+    /* if (monster->Weapon_ptr)
+         monster->Weapon_ptr->SetCanCollide(true);*/
+    for (auto& w : monster->Weapon_ptr) {
+        w->SetCanCollide(true);
+    }
+}
+
+void Attack2State::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    if (!monster || !sm || !sm->animController) return;
+    XMFLOAT3 pos = monster->GetPosition();
+    if (pos.y > 0.0f) {
+        pos.y -= deltaTime * 30.0f;
+        if (pos.y < 0.0f)
+            pos.y = 0.0f;
+        monster->SetPosition(pos);
+    }
+    auto nearestPos = monster->FindNearestPlayerInRange(monster->attackRange);
+    if (nearestPos) {
+        monster->SetTarget(*nearestPos);
+        monster->RotateTowardsTarget(nearestPos.value(), deltaTime, 100.0f);
+    }
+
+    if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+        sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
+        sm->ChangeState(std::make_unique<IdleState>());
+    }
+}
+
+void Attack2State::Exit(Monster* monster) {
     /*if (monster->Weapon_ptr)
         monster->Weapon_ptr->SetCanCollide(false);*/
     for (auto& w : monster->Weapon_ptr) {
@@ -370,3 +424,83 @@ void AnubisSkillState::Exit(Monster* monster) {
     monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);*/
 }
 
+// -------------------------
+// GargoyleSkillState
+// -------------------------
+
+void GargoyleSkillState::Enter(Monster* monster, MonsterStateMachine* sm) {
+    if (!monster) return;
+    monster->attackPhase = 1;
+    currentTrackIdx = monster->PlayAnimation(State::Attack2);
+    /*monster->Weapon_ptr->BreathObject = true;
+    monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);*/
+    for (auto& w : monster->Weapon_ptr) {
+        w->BreathObject = true;
+        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);
+        //w->SetCanCollide(true);
+    }
+}
+
+void GargoyleSkillState::Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) {
+    if (!monster || !sm || !sm->animController) return;
+
+    if (monster->attackPhase == 1) {
+        if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+            sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
+            for (auto& w : monster->Weapon_ptr) {
+                w->SetCanCollide(true);
+            }
+            currentTrackIdx = TRACK_GARGOYLE_SKILL_2;
+            monster->currStateTrackIdx = TRACK_GARGOYLE_SKILL_2;
+            
+            for (int i = 0; i < monster->n_Animation; ++i) {
+                monster->targetWeights[i] = 0.0f;
+            }
+            monster->targetWeights[TRACK_GARGOYLE_SKILL_2] = 1.0f;
+            sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_2].m_bFinished = false;
+            sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_2].m_fPosition = 0.0f;
+            
+            monster->attackPhase = 2;
+        }
+    }
+    else if (monster->attackPhase == 2) {
+        static float timer = 0.0f;
+        timer += deltaTime;
+        if (timer >= 3.0f) {
+            currentTrackIdx = TRACK_GARGOYLE_SKILL_3;
+            monster->currStateTrackIdx = TRACK_GARGOYLE_SKILL_3;
+
+            for (int i = 0; i < monster->n_Animation; ++i) {
+                monster->targetWeights[i] = 0.0f;
+            }
+            monster->targetWeights[TRACK_GARGOYLE_SKILL_3] = 1.0f;
+            sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_bFinished = false;
+            sm->animController->m_pAnimationTracks[TRACK_GARGOYLE_SKILL_3].m_fPosition = 0.0f;
+            timer = 0.0f;
+            monster->attackPhase = 3;
+        }
+    }
+    else if (monster->attackPhase == 3) {
+        if (sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished) {
+            sm->ChangeState(std::make_unique<IdleState>());
+        }
+    }
+
+
+}
+
+void GargoyleSkillState::Exit(Monster* monster) {
+    for (auto& w : monster->Weapon_ptr) {
+        w->SetCanCollide(false);
+        w->BreathObject = false;
+        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+    }
+    monster->attackPhase = -1;
+    /*if (monster->Weapon_ptr)
+    {
+        monster->Weapon_ptr->SetCanCollide(false);
+        monster->attackPhase = -1;
+    }
+    monster->Weapon_ptr->BreathObject = false;
+    monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);*/
+}
