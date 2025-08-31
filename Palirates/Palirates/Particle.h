@@ -57,11 +57,12 @@ struct Particle_Sync_Data
 	XMFLOAT3 obj_look;
 
 	Particle_Type particle_type;
-	float LifeTime;
+	XMFLOAT3 color;
 	XMFLOAT3 area_extent;
 	XMFLOAT3 main_direction;
 	XMFLOAT3 focus_point;
 	UINT particle_status_index;
+	float LifeTime;
 };
 
 struct Particle_Format
