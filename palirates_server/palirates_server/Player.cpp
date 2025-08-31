@@ -143,7 +143,6 @@ void Player::key_input(uint32_t keyState)
 
     static bool F2_Mode = false;
 
-
     if (keyState & INPUT_F2)
     {
         if (!F2_Mode) {

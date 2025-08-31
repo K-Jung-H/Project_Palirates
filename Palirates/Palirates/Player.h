@@ -69,7 +69,6 @@ protected:
 	shared_ptr<CGameObject> heal_effect;
 	int model_num;
 
-	//=================¼­¹ö=================
 	int id;  
 	int state;
 
@@ -95,7 +94,7 @@ public:
 	bool m_bSliding = false;
 	XMFLOAT3 m_xmf3SlideVector = XMFLOAT3(0, 0, 0);
 	uint32_t current_keyboard_inputFlags = 0;
-
+	int currStateTrackIdx = -1;
 	void EnableSliding(const XMFLOAT3& slideVec)
 	{
 		m_xmf3SlideVector = slideVec;

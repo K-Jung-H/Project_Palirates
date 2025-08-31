@@ -53,6 +53,7 @@ struct ServerSyncData
     bool bBreathHit;
     int stateEnum;
     AnimUpdateMode animMode = AnimUpdateMode::Full;
+    int currStateTrackIdx;
 };
 
 class CTexture
@@ -615,6 +616,8 @@ public:
     std::shared_ptr<CMesh> m_pMesh = NULL;
 
     std::vector<std::shared_ptr<CMaterial>>  Material_list;
+
+    bool bNoRander = false;
 
 
 public:

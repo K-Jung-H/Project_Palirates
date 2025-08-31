@@ -1667,7 +1667,7 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 	for (int i = 0; i < playerCount; ++i)
 	{
 		int base = startIndex;
-		if (base + 12 > tokens.size()) break;
+		if (base + 13 > tokens.size()) break;
 
 		int playerId = std::stoi(tokens[base + 0]);
 		int modelId = std::stoi(tokens[base + 1]);
@@ -1693,10 +1693,12 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 		syncData.hp = hp;
 		bool bBreathHit = (tokens[idx++] == "1");
 		syncData.bBreathHit = bBreathHit;
+		int currStateTrackIdx = std::stoi(tokens[idx++]);
+		syncData.currStateTrackIdx = currStateTrackIdx;
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-		int consumed = 12;
+		int consumed = 13;
 		startIndex = base + consumed;
 	}
 }
@@ -2011,7 +2013,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		//}
 
 		m_pPlayer->SetPosition(syncData.position);
-
+		m_pPlayer->currStateTrackIdx = syncData.currStateTrackIdx;
 		
 		/*if (!XMVector3Equal(XMLoadFloat3(&syncData.lookVector), XMVectorZero())) {
 			m_pPlayer->SetLookDirection(syncData.lookVector);

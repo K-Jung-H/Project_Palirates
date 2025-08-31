@@ -328,7 +328,8 @@ void PlayerStateMachine::update(float Elapsed_time)
     switch (Get_State()) {
     case State::Run: {
         std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
-        m_pOwner->targetWeights[GetRunTrackFromInput(m_pOwner->current_keyboard_inputFlags)] = 1.0f;
+       // m_pOwner->targetWeights[GetRunTrackFromInput(m_pOwner->current_keyboard_inputFlags)] = 1.0f;
+        m_pOwner->targetWeights[m_pOwner->currStateTrackIdx] = 1.0f;
     }
                    break;
 

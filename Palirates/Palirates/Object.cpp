@@ -2389,6 +2389,7 @@ bool CGameObject::IsVisible(CCamera* pCamera)
 
 void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	if (bNoRander) return;
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
@@ -2439,6 +2440,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pC
 
 void CGameObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	if (bNoRander) return;
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
@@ -2477,6 +2479,7 @@ void CGameObject::Render_Shadow(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 
 void CGameObject::Render_Depth(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	if (bNoRander) return;
 	if (m_pSkinnedAnimationController)
 		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
 
@@ -5146,6 +5149,14 @@ void CMonsterObject::SetupWeaponCollider()
 	//model->bUpdateOBBOff();
 	model->bUpdateOBBOn();
 	//Weapon_ptr = model;
+	if (WeaponName == "Hand_R_4") {
+		model->bNoRander = true;
+
+		std::shared_ptr<CGameObject> model2 = FindFrame("Hand_L_4");
+		if (model2) {
+			model2->bNoRander = true;
+		}
+	}
 	Weapon_ptr.push_back(model);
 }
 
