@@ -184,7 +184,6 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
             particle_format.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
             particle_format.area_xyz = scene_area;
             particle_format.focus_point = scene_center;
-//            sand_anubis_effect->Set_Speed(0.0f);
         }
         else if (particle_state == 1)
         {
@@ -192,11 +191,10 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
             particle_format.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
             particle_format.area_xyz = scene_area;
             particle_format.focus_point = boss->GetPosition(); // anubis
-//            sand_anubis_effect->Set_Speed(0.0f);
-
         }
         else if (particle_state == 2)
         {
+
             sand_anubis_effect->SetPosition(boss->GetPosition()); // anubis
             particle_format.main_direction = XMFLOAT3(0.0f, 1.0f, 0.0f);
             particle_format.area_xyz = scene_area;
