@@ -1,100 +1,4 @@
-struct Particle_Info
-{
-    float3 Position;
-    float Lifetime;
-
-    float3 Velocity;
-    float MaxLifetime;
-
-    float3 Acceleration;
-    float Rotate_Value;
-
-    float3 Color;
-    uint EmitFaceIndex;
-
-    float Size;
-    uint Type;
-    uint Active;
-    uint Sleep;
-};
-
-struct Render_Instance
-{
-    float4 Position_and_Scale;
-    float4 Velocity_and_Rotate;
-    float4 Color;
-};
-
-struct OBB_INFO
-{
-    float3 Center;
-    uint Active;
-
-    float3 Extents;
-    uint Type;
-
-    float4 Rotation;
-};
-
-struct CellInfo
-{
-    uint startIndex; // g_OBBIndices[] start index
-    uint count; // OBB num
-};
-
-#define PARTICLE_TYPE_SNOW     0
-#define PARTICLE_TYPE_SPLASH    1
-#define PARTICLE_TYPE_DRAGON_FIRE 2
-#define PARTICLE_TYPE_PARTY      3
-
-#define PARTICLE_TYPE_SAND      4
-#define PARTICLE_TYPE_SAND_STORM 5
-#define PARTICLE_TYPE_HEAL 6
-
-
-
-#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
-
-#define FLT_MAX 3.402823466e+38f	
-
-cbuffer CB_Particle_Update_Info : register(b0)
-{
-    matrix gWorldMatrix;
-
-    float3 EmitRegionMin;
-    float ElapsedTime;
-
-    float3 EmitRegionMax;
-    uint Max_Particle_N;
-
-    float3 Main_Direction;
-    float Init_Velocity_Value;
-
-    float3 focus_point;
-    float focus_strength;
-
-    uint obb_num;
-    uint Reset_Flag;
-    float2 padding0;
-};
-
-RWStructuredBuffer<Particle_Info> ParticleBuffer_Update : register(u0);
-AppendStructuredBuffer<Render_Instance> RenderInstanceBuffer : register(u1);
-RWStructuredBuffer<uint> debug_buffer : register(u2);
-
-StructuredBuffer<OBB_INFO> OBB_List : register(t0);
-
-cbuffer Grid_Info : register(b1)
-{
-    float3 worldMin;
-    float cellSize;
-    int3 gridDim;
-    float padding;
-};
-
-
-StructuredBuffer<CellInfo> g_CellInfos : register(t1);
-StructuredBuffer<uint> g_OBBIndices : register(t2);
+#include "Particles_Emit_CS.hlsl"
 
 //===============================================================
 
@@ -246,6 +150,17 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
                     p.Lifetime = p.MaxLifetime - 5.0f;
             }
             break;
+        
+        case PARTICLE_TYPE_DIFFUSE_Continuous:
+        case PARTICLE_TYPE_DIFFUSE_Burst:
+            if (CheckCollisionWithGridOBBs(world_pos))
+            {
+                p.Velocity = float3(0, -1, 0);
+                if (p.Lifetime < p.MaxLifetime - 5.0f)
+                    p.Lifetime = p.MaxLifetime - 5.0f;
+            }
+            break;
+        
         case PARTICLE_TYPE_INTERVAL_BLEEDING:
         {
                 if (CheckCollisionWithGridOBBs(world_pos))
@@ -255,6 +170,10 @@ bool Check_Collision_OBB(inout Particle_Info p, float3 world_pos)
                 }
             }
             break;
+        
+        case PARTICLE_TYPE_ORBIT:
+            break;
+        
         default:
             if (CheckCollisionWithGridOBBs(world_pos))
             {
@@ -318,6 +237,18 @@ bool Check_Collision_Ground(inout Particle_Info p, float3 world_pos)
                 p.Position.y += 0.5f;
             }
             break;
+        
+        case PARTICLE_TYPE_DIFFUSE_Continuous:
+        case PARTICLE_TYPE_DIFFUSE_Burst:
+        {
+                if (world_pos.y < 1.0f)
+                {
+                    p.Position.y += 0.5f;
+                    p.Velocity.y = abs(p.Velocity.y);
+                }
+            }
+            break;
+        
         default:
         {
                 p.Active = 0;
@@ -340,47 +271,6 @@ void Check_Collisions(inout Particle_Info p)
     Check_Collision_OBB(p, worldPos);
 }
 //===============================================================
-
-float3 GetEmitFaceCenter(int face, float3 min, float3 max)
-{
-    float3 c = (min + max) * 0.5f;
-
-    // FACE_X → 중심에서 해당 축만 min/max
-    switch (face)
-    {
-        case 0:
-            return float3(min.x, c.y, c.z); // LEFT (-X)
-        case 1:
-            return float3(max.x, c.y, c.z); // RIGHT (+X)
-        case 2:
-            return float3(c.x, min.y, c.z); // BOTTOM (-Y)
-        case 3:
-            return float3(c.x, max.y, c.z); // TOP (+Y)
-        case 4:
-            return float3(c.x, c.y, min.z); // BACK (-Z)
-        case 5:
-            return float3(c.x, c.y, max.z); // FRONT (+Z)
-        default:
-            return c;
-    }
-}
-
-
-// 랜덤 퍼짐 방향 계산
-float3 RandomSpreadDirection(uint id, float3 baseDir, float spreadAmount)
-{
-    float seedX = frac(sin(id * 17.17) * 12345.6789);
-    float seedY = frac(sin(id * 31.31) * 98765.4321);
-    float seedZ = frac(sin(id * 73.73) * 45678.1234);
-
-    float3 offset = float3(
-        (seedX - 0.5f) * spreadAmount,
-        (seedY - 0.5f) * spreadAmount,
-        (seedZ - 0.5f) * spreadAmount
-    );
-
-    return normalize(baseDir + offset);
-}
 
 bool IsOutOfBounds(float3 pos, float3 minBound, float3 maxBound)
 {
@@ -495,6 +385,53 @@ void Update_Heal(inout Particle_Info p, uint index)
     p.Rotate_Value += 2.5f * ElapsedTime;
 }
 
+void Update_Orbit(inout Particle_Info p, uint index)
+{
+    float angleNorm = p.Velocity.x;
+    float angularSpeed = p.Velocity.y;
+    float3 orbitNormal = p.Acceleration;
+
+    angleNorm += (angularSpeed * ElapsedTime) / 6.2831853f;
+    angleNorm = fmod(angleNorm, 1.0f);
+    if (angleNorm < 0.0f)
+        angleNorm += 1.0f; 
+    p.Velocity.x = angleNorm;
+
+    float theta = angleNorm * 6.2831853f;
+
+    float3 up = orbitNormal;
+    float3 ref = (abs(up.y) > 0.99f) ? float3(1, 0, 0) : float3(0, 1, 0);
+    float3 right = normalize(cross(up, ref));
+    float3 forward = normalize(cross(up, right));
+
+    float3 localPos = focus_strength * (cos(theta) * right + sin(theta) * forward);
+    p.Position = focus_point + localPos;
+}
+
+
+float3 RadialDiffuse_ColorGradient(inout Particle_Info p)
+{
+    float3 main_color = p.Color;
+    float t = saturate(p.Lifetime / p.MaxLifetime);
+    // t = smoothstep(0.0, 1.0, t);          // 또는: t = t * t;
+
+    return lerp(main_color, float3(1.0, 1.0, 1.0), t);
+}
+
+void Update_RadialDiffuse(inout Particle_Info p, uint index, bool add_acceleration)
+{
+    if (add_acceleration)
+    {
+        p.Velocity += p.Acceleration * ElapsedTime;
+    }
+
+    p.Position += p.Velocity * ElapsedTime;
+    p.Rotate_Value += 4.0f * ElapsedTime;
+    
+    
+    float lifeRatio = saturate(p.Lifetime / p.MaxLifetime);
+    
+}
 
 //===============================================================
 // 인스턴싱 정보 추출
@@ -537,13 +474,13 @@ void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
     if (index >= Max_Particle_N)
         return;
 
-    Particle_Info p = ParticleBuffer_Update[index];
+    Particle_Info p = Particle_Info_Buffer[index];
 
     // Check Reset Flag
     if (Reset_Flag != 0)
     {
         p.Active = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
 
@@ -551,7 +488,7 @@ void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
     
@@ -581,12 +518,14 @@ void Update_Continuous_CS(uint3 DTid : SV_DispatchThreadID)
             Update_Party(p, index);
         else if (p.Type == PARTICLE_TYPE_HEAL)
             Update_Heal(p, index);
+        else if (p.Type == PARTICLE_TYPE_ORBIT)
+            Update_Orbit(p, index);
 
         Check_Collisions(p);
         Extract_Instance(p);
     }
 
-    ParticleBuffer_Update[index] = p;
+    Particle_Info_Buffer[index] = p;
 }
 
 
@@ -613,14 +552,14 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
     if (index >= Max_Particle_N)
         return;
 
-    Particle_Info p = ParticleBuffer_Update[index];
+    Particle_Info p = Particle_Info_Buffer[index];
 
     // Check Reset Flag
     if (Reset_Flag != 0)
     {
         p.Active = 0;
         p.Sleep = 0;
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
     
@@ -633,7 +572,7 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
     bool isDelayed = DelayActive(p);
     if (isDelayed)
     {
-        ParticleBuffer_Update[index] = p;
+        Particle_Info_Buffer[index] = p;
         return;
     }
     
@@ -666,6 +605,6 @@ void Update_Interval_CS(uint3 DTid : SV_DispatchThreadID)
         Extract_Instance(p);
     }
 
-    ParticleBuffer_Update[index] = p;
+    Particle_Info_Buffer[index] = p;
 }
 

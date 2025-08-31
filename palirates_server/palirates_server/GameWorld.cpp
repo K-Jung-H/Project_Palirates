@@ -23,6 +23,7 @@ void Dragon_Stage_SceneLogic::init(ParticleManager& pm)
         p.lifetime = 300;
         p.main_direction = XMFLOAT3{ 1,0,0 };
         p.particle_type = Particle_Type::dragon_breath;
+        p.particle_color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 
         dragon_fire = p_mg->Create_Particle_Object(p);
         dragon_fire->SetActive(false);
@@ -63,13 +64,14 @@ void Dragon_Stage_SceneLogic::update(const UpdateContext& ctx)
     p.lifetime = 300;
     p.main_direction = XMFLOAT3{ 0,0,1 };
     p.particle_type = Particle_Type::dragon_breath;
+    p.particle_color = XMFLOAT3(1.0f, 0.5f, 0.0f);
 
     if (boss->attackPhase == 2) 
     {
         if (!dragon_fire) 
         {
             dragon_fire = p_mg->Create_Particle_Object(p);
-            dragon_fire->Set_Continuous_SyncType(true);
+            dragon_fire->Set_Synchronize_Type(true);
         }
         dragon_fire->SetActive(true);
     }
@@ -125,20 +127,22 @@ void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
 {
     SceneLogic::init(pm);
 
-    //if (!sand_env)
-    //{
-    //    Particle_Format env_sand;
-    //    env_sand.area_xyz = XMFLOAT3{ scene_center };
-    //    env_sand.lifetime = 10000.0f;
-    //    env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
-    //    env_sand.particle_type = Particle_Type::sand;
+    if (!sand_env)
+    {
+        Particle_Format env_sand;
+        env_sand.area_xyz = XMFLOAT3{ scene_center };
+        env_sand.lifetime = 10000.0f;
+        env_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
+        env_sand.particle_type = Particle_Type::sand;
+        env_sand.particle_color = XMFLOAT3(0.75f, 0.7f, 0.45f);
 
-    //    sand_env = p_mg->Create_Particle_Object(env_sand);
-    //    sand_env->Set_Particle_Status(0);
-    //    sand_env->Set_Continuous_SyncType(true);
-    //    sand_env->SetPosition(scene_center);
-    //    sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
-    //}
+        sand_env = p_mg->Create_Particle_Object(env_sand);
+        sand_env->Set_Particle_Status(0);
+        sand_env->Set_Synchronize_Type(true);
+        sand_env->SetPosition(scene_center);
+        sand_env->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    }
+
 
     if (!sand_anubis_effect)
     {
@@ -147,10 +151,11 @@ void Anubis_Stage_SceneLogic::init(ParticleManager& pm)
         anubis_sand.lifetime = 10000.0f;
         anubis_sand.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
         anubis_sand.particle_type = Particle_Type::sand;
+        anubis_sand.particle_color = XMFLOAT3(0.75f, 0.7f, 0.45f);
 
         sand_anubis_effect = p_mg->Create_Particle_Object(anubis_sand);
         sand_anubis_effect->Set_Particle_Status(0);
-        sand_anubis_effect->Set_Continuous_SyncType(true);
+        sand_anubis_effect->Set_Synchronize_Type(true);
         sand_anubis_effect->SetPosition(scene_center);
         sand_anubis_effect->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
     }
@@ -183,7 +188,7 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
         }
         else if (particle_state == 1)
         {
-            sand_anubis_effect->SetPosition(scene_center);
+            sand_anubis_effect->SetPosition(boss->GetPosition());
             particle_format.main_direction = XMFLOAT3(0.0f, 0.0f, -1.0f);
             particle_format.area_xyz = scene_area;
             particle_format.focus_point = boss->GetPosition(); // anubis
@@ -206,6 +211,65 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     }
 }
 
+void Gargoyle_Stage_SceneLogic::onExit()
+{
+    if (gargoyle_skill_effect)
+    {
+        gargoyle_skill_effect->SetActive(false);
+        gargoyle_skill_effect.reset();
+    }
+}
+
+void Gargoyle_Stage_SceneLogic::init(ParticleManager& pm)
+{
+    SceneLogic::init(pm);
+
+    if (!gargoyle_skill_effect)
+    {
+        Particle_Format gargoyle_skill;
+        gargoyle_skill.area_xyz = XMFLOAT3{ scene_center };
+        gargoyle_skill.lifetime = 1000.0f;
+        gargoyle_skill.main_direction = XMFLOAT3(0.0f, 0.0f, 0.0f);
+        gargoyle_skill.particle_type = Particle_Type::orbit;
+        gargoyle_skill.particle_color = XMFLOAT3(0.2745f, 0.1490f, 0.4745f);
+
+        gargoyle_skill_effect = p_mg->Create_Particle_Object(gargoyle_skill);
+        gargoyle_skill_effect->Set_Particle_Status(0);
+        gargoyle_skill_effect->Set_Synchronize_Type(true);
+        gargoyle_skill_effect->SetPosition(scene_center);
+        gargoyle_skill_effect->SetLook(XMFLOAT3(0.0f, 0.0f, -1.0f));
+    }
+
+}
+
+void Gargoyle_Stage_SceneLogic::update(const UpdateContext& ctx)
+{
+    auto boss = boss_ptr.lock();
+    if (!boss)
+        return;
+
+    //if (boss->attackPhase == -1)
+    //    return;
+
+    if (gargoyle_skill_effect)
+    {
+        UINT particle_state = gargoyle_skill_effect->Get_Particle_Status();
+
+        Particle_Format particle_format = gargoyle_skill_effect->Get_Format();
+
+        if (particle_state == 0)
+        {
+            gargoyle_skill_effect->SetPosition(boss->GetPosition());
+        }
+        else if (particle_state == 1)
+        {
+            gargoyle_skill_effect->SetPosition(scene_center);
+        }
+
+        gargoyle_skill_effect->Set_Format(particle_format);
+
+    }
+}
 
 GameWorld::GameWorld(Scene_Type new_scene_type)
 {
@@ -237,14 +301,21 @@ void GameWorld::Init(Scene_Type new_scene_type)
         break;
     case Stage_2: 
     {
-        scene_area = { 3072.0f, 1000.0f,  4352.0f };
-        scene_center = { 3072.0f / 2, 500.0f,  4352.0f / 2};
+        scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+        scene_center = XMFLOAT3(2176.0f, 500.0f, 1536.0f);
+
         scene_logic = std::make_unique<Anubis_Stage_SceneLogic>(scene_area, scene_center);
     }
         break;
+
     case Stage_3:
         break;
+
     case Stage_4:
+        scene_area = XMFLOAT3(4352.0f, 1000.0f, 3072.0f);
+        scene_center = XMFLOAT3(2176.0f, 500.0f, 1536.0f);
+        scene_logic = std::make_unique<Gargoyle_Stage_SceneLogic>(scene_area, scene_center);
+        
         break;
     case Stage_5:
         break;
@@ -472,9 +543,10 @@ void GameWorld::Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction)
     p.lifetime = 3;
     p.main_direction = XMFLOAT3{ 0,1,0 };
     p.particle_type = Particle_Type::bleed;
+    p.particle_color = XMFLOAT3(1.0f, 0.3f, 0.0f);
 
     std::shared_ptr<Particle_Object> new_bleeding_particle = particle_manager.Create_Particle_Object(p);
-    new_bleeding_particle->Set_Continuous_SyncType(false);
+    new_bleeding_particle->Set_Synchronize_Type(false);
     new_bleeding_particle->SetPosition(pos);
     new_bleeding_particle->SetLook(main_direction);
 
@@ -503,7 +575,7 @@ void GameWorld::Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, 
                 p.particle_type = Particle_Type::party; 
 
                 party_effect[id] = particle_manager.Create_Particle_Object(p);
-                party_effect[id]->Set_Continuous_SyncType(true);
+                party_effect[id]->Set_Synchronize_Type(true);
                 party_effect[id]->SetPosition(player_pos);
                 party_effect[id]->SetLook(XMFLOAT3{ 0,1,0 });
 
@@ -519,7 +591,7 @@ FrameParticleChanges GameWorld::Get_Particle_Sync_Data()
 
 void GameWorld::Sand_Update()
 {
-    shared_ptr<Particle_Object> particle_obj = particle_manager.Get_Particle_Object(1);
+    shared_ptr<Particle_Object> particle_obj = particle_manager.Get_Particle_Object(2);
     UINT status = particle_obj->Get_Particle_Status();
 
     status += 1;

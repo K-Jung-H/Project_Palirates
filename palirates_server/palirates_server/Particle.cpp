@@ -32,16 +32,6 @@ void Particle_Object::Update(float elapsedtime)
 
 //====================================================
 
-//UINT ParticleManager::AllocateID()
-//{
-//    if (!reusable_ids.empty())
-//    {
-//        uint32_t id = reusable_ids.front();
-//        reusable_ids.pop();
-//        return id;
-//    }
-//    return next_id++;
-//}
 
 uint32_t ParticleManager::AllocateReusableID()
 {
@@ -129,7 +119,7 @@ void ParticleManager::Update_Particle(float elapsed_time)
                 continue;
             }
 
-            if (particle->IsContinuousSyncType())
+            if (particle->Get_Synchronize_Type())
                 pos_updated_this_frame.push_back(particle);
         }
     }

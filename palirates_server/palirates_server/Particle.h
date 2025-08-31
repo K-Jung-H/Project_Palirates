@@ -10,19 +10,28 @@ enum class Particle_Type
     party = 3,
     sand = 4,
     sand_storm = 5,
+    heal = 6,
+    orbit = 7,
+    diffuse_burst = 8,
+    diffuse_continuous = 9,
     //=======================
     bleed = 10,
     //=======================
     env_snow = 20,
     env_sand = 21,
     //=======================
+    weapon_spear_skill_1 = 30,
+    weapon_twin_sword_skill_1 = 31,
+
+    //=======================
     etc = -1
 };
-
 
 struct Particle_Format
 {
     Particle_Type particle_type;
+    XMFLOAT3 particle_color;
+
     float lifetime;
     XMFLOAT3 area_xyz{};
     XMFLOAT3 main_direction{};
@@ -38,7 +47,7 @@ protected:
     float LifeTime = 0.0f;
     bool Active = false;
 
-    bool is_need_to_sync = false; // 매 프레임마다 클라이언트에게 월드 정보 전송
+    bool synchronize = false; // 매 프레임마다 클라이언트에게 월드 정보 전송
 
 public:
     Particle_Object(UINT p_id, Particle_Format p_format);
@@ -55,8 +64,8 @@ public:
 
     UINT Get_Particle_Status() { return particle_status; }
 
-    void Set_Continuous_SyncType(bool enable) { is_need_to_sync = enable; }
-    bool IsContinuousSyncType() const { return is_need_to_sync; }
+    void Set_Synchronize_Type(bool enable) { synchronize = enable; }
+    bool Get_Synchronize_Type() const { return synchronize; }
 
     bool IsActive() { return Active; }
     void SetActive(bool active) { Active = active; }

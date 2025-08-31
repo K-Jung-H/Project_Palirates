@@ -1515,17 +1515,6 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 	return true;
 }
 
-bool Object_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
-{
-	if (player_map[player_id])
-	{
-		player_map[player_id]->SetBlurMask(motion_blur_active);
-		return true;
-	}
-	else
-		return false;
-}
-
 void Object_Manager::Post_Update_All()
 {
 	Post_Update(Object_Type::skinned);

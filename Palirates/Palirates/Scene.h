@@ -283,13 +283,13 @@ public:
 	virtual void Bind_Player_UI_Callback();
 	virtual void Bind_Player_UI_Updata_Callback();
 
-	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	virtual void Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
-	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
 
 	XMFLOAT3 Get_Start_Position_List(int player_id);
 
+	virtual void Set_Sprite_Effect(XMFLOAT3 pos) {}
 
 	void Create_Particle_Object(const Particle_Sync_Data& syncData);
 	void Update_Particle_Object(const Particle_Sync_Data& syncData);
@@ -416,11 +416,6 @@ public:
 	XMFLOAT3 Scene_area;
 	XMFLOAT3 Scene_center;
 
-	shared_ptr<ParticleObject> anubis_sand_particle = NULL;
-
-	shared_ptr<CGameObject> heal_effect_sample = NULL;
-	shared_ptr<ParticleObject> test_heal = NULL;
-	shared_ptr<Aura_Object>test_player_aura = NULL;
 
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
@@ -442,10 +437,13 @@ public:
 	//=============================================================
 	// Server Sync Func
 
-	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
+	void Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
 
+	void Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
+	void Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
+	virtual void Set_Sprite_Effect(XMFLOAT3 pos);
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 

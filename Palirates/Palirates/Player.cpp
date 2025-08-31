@@ -371,6 +371,7 @@ void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosi
 CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList, shared_ptr<ID3D12RootSignature> pd3dGraphicsRootSignature, void *pContext, int ModelNum) : CPlayer()
 {
 	type = EObjectType::MainPlayer;
+	model_num = ModelNum;
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	char* modelPaths[] = {

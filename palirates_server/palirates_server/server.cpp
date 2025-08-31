@@ -105,13 +105,15 @@ void Server::Start()
                 {
                     if (GetAsyncKeyState(VK_OEM_1) & 0x8000)  // ; key
                         stage_scene->server_DespawnMonster();
+                        //stage_scene->server_Mosaic_Control();
+
                     else if (GetAsyncKeyState(VK_OEM_7) & 0x8000)  // ' key
                         stage_scene->server_DespawnMonster_For_Clear();
                     else if (GetAsyncKeyState(VK_OEM_PERIOD) & 0x8000)  // . key
                         stage_scene->server_Fog_Control();
                     else if (GetAsyncKeyState(VK_OEM_2) & 0x8000)  // / key
-                        stage_scene->server_Sand_Control();
                         //stage_scene->server_X_Ray_Control();
+                        stage_scene->server_Sand_Control();
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -663,7 +665,6 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
     }
 
     //===================================================================
-
     const auto& particle_sync_data = stage->Get_Particle_Sync_Data();
 
     if (!particle_sync_data.created.empty())
@@ -679,22 +680,23 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             Particle_Format fmt = obj->Get_Format();
             UINT type = static_cast<int>(fmt.particle_type);
 
+            XMFLOAT3 color = fmt.particle_color;
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
-            float life = fmt.lifetime;
             XMFLOAT3 focus_point = fmt.focus_point;
-
             UINT status = obj->Get_Particle_Status();
+            float life = fmt.lifetime;
 
             temp_p_create << std::to_string(id) << ","
                 << std::to_string(type) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(color.x) << "," << std::to_string(color.y) << "," << std::to_string(color.z) << "," 
                 << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
                 << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
-                << std::to_string(life) << ","
                 << std::to_string(focus_point.x) << "," << std::to_string(focus_point.y) << "," << std::to_string(focus_point.z) << ","
-                << std::to_string(status) << ",";
+                << std::to_string(status) << ","
+                << std::to_string(life) << ",";
         }
 
         std::string line = temp_p_create.str();
@@ -717,21 +719,23 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             Particle_Format fmt = obj->Get_Format();
             UINT type = static_cast<int>(fmt.particle_type);
 
+            XMFLOAT3 color = fmt.particle_color;
             XMFLOAT3 area = fmt.area_xyz;
             XMFLOAT3 dir = fmt.main_direction;
-            float life = obj->Get_LifeTime();
             XMFLOAT3 focus_point = fmt.focus_point;
             UINT status = obj->Get_Particle_Status();
+            float life = obj->Get_LifeTime();
 
             temp_p_update << std::to_string(id) << ","
                 << std::to_string(type) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
                 << std::to_string(look.x) << "," << std::to_string(look.y) << "," << std::to_string(look.z) << ","
+                << std::to_string(color.x) << "," << std::to_string(color.y) << "," << std::to_string(color.z) << "," 
                 << std::to_string(area.x) << "," << std::to_string(area.y) << "," << std::to_string(area.z) << ","
                 << std::to_string(dir.x) << "," << std::to_string(dir.y) << "," << std::to_string(dir.z) << ","
-                << std::to_string(life) << ","
                 << std::to_string(focus_point.x) << "," << std::to_string(focus_point.y) << "," << std::to_string(focus_point.z) << ","
-                << std::to_string(status) << ",";
+                << std::to_string(status) << ","
+                << std::to_string(life) << ",";
         }
 
         std::string line = temp_p_update.str();
@@ -760,27 +764,25 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
         const auto& effect_status = stage->Get_Effect_Status();
 
         std::ostringstream temp_effect_status_data;
-        temp_effect_status_data << "POST_EFFECT," << to_string(static_cast<int>(effect_status.motion_blur_active)) << ",";
-
-        for (bool blur_active : effect_status.motion_blur_apply)
-        {
-            if (blur_active)
-                temp_effect_status_data << "1" << ",";
-            else
-                temp_effect_status_data << "0" << ",";
-        }
+        temp_effect_status_data << "POST_EFFECT,";
 
         temp_effect_status_data << std::to_string(static_cast<int>(effect_status.zoom_blur_active)) << ",";
         temp_effect_status_data << std::to_string(effect_status.zoom_w_position.x) << ",";
         temp_effect_status_data << std::to_string(effect_status.zoom_w_position.y) << ",";
         temp_effect_status_data << std::to_string(effect_status.zoom_w_position.z) << ",";
+
+        for (UINT i = 0; i < MaxPlayer; ++i)
+        {
+            temp_effect_status_data << std::to_string(effect_status.mosaic_value[i]) << ",";
+        }
+
         temp_effect_status_data << std::to_string(static_cast<int>(effect_status.monster_x_ray)) << ",";
         temp_effect_status_data << std::to_string(static_cast<int>(effect_status.fog_trigger)) << ",";
         temp_effect_status_data << std::to_string(effect_status.fogStart) << ",";
         temp_effect_status_data << std::to_string(effect_status.fogEnd) << ",";
         temp_effect_status_data << std::to_string(effect_status.fogDensity);
-        std::string line = temp_effect_status_data.str();
 
+        std::string line = temp_effect_status_data.str();
         oss << line << "\n";
     }
 
