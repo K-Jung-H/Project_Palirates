@@ -587,7 +587,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             int changedStateNum = anim_data.changedStateNum;
             float hp = player_ptr->GetHP();
             bool bBreathHit = player_ptr->BreathHit;
-            uint32_t keyState = player_ptr->currkeyState;
+            int currStateTrackIdx = player_ptr->currStateTrackIdx;
 
             players_data << std::to_string(id) << "," << std::to_string(Scene::player_model_list[id]) << ","
                 << std::to_string(pos.x) << "," << std::to_string(pos.y) << "," << std::to_string(pos.z) << ","
@@ -598,8 +598,7 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
             players_data << "," << changedStateNum;
             players_data << "," << hp;
             players_data << "," << bBreathHit;
-            players_data << "," << keyState << ",";
-            
+            players_data << "," << currStateTrackIdx << ",";
         }
     }
 

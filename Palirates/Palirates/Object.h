@@ -53,7 +53,7 @@ struct ServerSyncData
     bool bBreathHit;
     int stateEnum;
     AnimUpdateMode animMode = AnimUpdateMode::Full;
-    uint32_t keyState;
+    int currStateTrackIdx;
 };
 
 class CTexture
