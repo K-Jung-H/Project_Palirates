@@ -1149,7 +1149,7 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
     scene_obj = std::make_shared<GameObject>();
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map3.bin");
     g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
-    scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
+    scene_obj->SetPosition(2000.0f, 0.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
     game_world->Load_Scene_Data(scene_obj);

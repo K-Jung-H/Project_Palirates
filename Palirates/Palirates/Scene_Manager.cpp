@@ -197,8 +197,10 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         std::shared_ptr<Stage_Scene> in_stage_scene = NULL;
         std::shared_ptr<CTerrainPlayer> pPlayer = NULL;
 
-        static const array<Scene_Type, 4> stage1_list = { Stage_1, Stage_3, Stage_5, Stage_7 };
-        static const array<Scene_Type, 3> stage2_list = { Stage_2, Stage_4, Stage_6 };
+        static const array<Scene_Type, 1> stage1_list = { Stage_1};
+        static const array<Scene_Type, 1> stage2_list = { Stage_2};
+        static const array<Scene_Type, 1> stage3_list = { Stage_3};
+        static const array<Scene_Type, 1> stage4_list = { Stage_4};
 
         if (find(stage1_list.begin(), stage1_list.end(), scene_type) != stage1_list.end())
         {
@@ -207,6 +209,14 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
         else if (find(stage2_list.begin(), stage2_list.end(), scene_type) != stage2_list.end())
         {
             in_stage_scene = make_shared<Stage_2_Scene>();
+        }
+        else if (find(stage3_list.begin(), stage3_list.end(), scene_type) != stage3_list.end())
+        {
+            in_stage_scene = make_shared<Stage_3_Scene>();
+        }
+        else if (find(stage4_list.begin(), stage4_list.end(), scene_type) != stage4_list.end())
+        {
+            in_stage_scene = make_shared<Stage_4_Scene>();
         }
 
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);

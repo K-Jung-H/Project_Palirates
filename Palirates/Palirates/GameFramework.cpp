@@ -1171,12 +1171,15 @@ void CGameFramework::FrameAdvance()
 		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
 
 
-		UINT mosaic_value = post_effect_sync_data.mosaic_value[Client_ID];
-		if (post_effect_sync_data.mosaic_value[Client_ID] > 0)
+		if (Client_ID != -1)
 		{
-			Resource_Bind_Set mosaic_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-			post_effect_manager->Set_Mosaic_Value(mosaic_value);
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Mosaic, mosaic_blur);
+			UINT mosaic_value = post_effect_sync_data.mosaic_value[Client_ID];
+			if (post_effect_sync_data.mosaic_value[Client_ID] > 0)
+			{
+				Resource_Bind_Set mosaic_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
+				post_effect_manager->Set_Mosaic_Value(mosaic_value);
+				post_effect_manager->Add_Post_Effect(Post_Effect_Type::Mosaic, mosaic_blur);
+			}
 		}
 
 		if (post_effect_sync_data.zoom_blur_active)
