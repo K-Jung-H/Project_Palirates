@@ -172,28 +172,45 @@ void Anubis_Stage_SceneLogic::update(const UpdateContext& ctx)
     float elapsed_time = ctx.dt;
 
 
-    if (boss->attackPhase == -1)
-        return;
+    /*if (boss->attackPhase == -1)
+        return;*/
 
 
     auto boss_weapon = boss->Weapon_ptr[0];
 
-    /*if ()
-        sand_anubis_effect->Set_Particle_Status(0);
+	static bool skill_start = false;
+	static float skill_time = 0.0f;
+    *ctx.out_zoom_object = nullptr;
 
-    if ()
-    {
-        *ctx.out_zoom_object = boss_weapon ? boss_weapon : nullptr;
-        sand_anubis_effect->Set_Particle_Status(1);
+    if (skill_start) {
+		skill_time += elapsed_time;
+        int status_num = sand_anubis_effect->Get_Particle_Status();
+        cout << "skill_time - " << skill_time << endl;
+        if (status_num == 1) {
+            if (skill_time >= 4.0f) {
+                sand_anubis_effect->Set_Particle_Status(2);
+                skill_time = 0.0f;
+				cout << "skill phase 2" << endl;
+            }
+        }
+        else if (status_num == 2) {
+            if (skill_time >= 20.0f) {
+                sand_anubis_effect->Set_Particle_Status(0);
+                skill_time = 0.0f;
+                skill_start = false;
+                cout << "skill phase 0" << endl;
+            }
+        }
     }
-    else
-    {
-        *ctx.out_zoom_object = nullptr;
+    else {
+        if (boss->GetStateMachine()->GetCurrentStateEnum() == State::Attack3) {
+            skill_start = true;
+            sand_anubis_effect->Set_Particle_Status(1);
+            cout << "skill phase 1" << endl;
+        }
+        else
+            return;
     }
-
-    if ()
-        sand_anubis_effect->Set_Particle_Status(2);*/
-
 
     if (sand_anubis_effect)
     {

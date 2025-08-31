@@ -462,9 +462,9 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                     }
 
                     MonsterHitInfo data;
-                    
+
                     data.monsterID = m->GetID();
-                    
+
                     m->HitDamage(30.0f);
                     float hp = m->GetHP();
                     if (hp <= 0.0f) {
@@ -480,11 +480,18 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             }*/
         }
     }
-    for (auto m : Monster_List) 
+    for (auto m : Monster_List)
     {
         if (!m) continue;
         auto obbList = game_world->Get_Cell_OBBs(m->GetPosition());
         m->update(elapsedTime);
+        if (m->GetType() == Monster_Type::Anubis) {
+            if (m->GetStateMachine()) {
+                if (m->GetStateMachine()->GetCurrentStateEnum() == State::Attack3) {
+
+                }
+            }
+        }
         m->update_collision(elapsedTime, obbList);
        
         if (m->bDead) {
