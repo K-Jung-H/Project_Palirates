@@ -15,6 +15,7 @@ class Scene
 public:
     static int active_client_num;
     static std::array<int, MaxPlayer> player_model_list;
+    float totalTime = 0.0f;
 
 protected:
     mutable std::recursive_mutex sceneMutex;
