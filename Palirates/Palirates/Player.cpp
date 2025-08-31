@@ -591,11 +591,7 @@ void CTerrainPlayer::ClampPositionToTerrainBounds(CHeightMapTerrain*  terrain_ob
 
 		player_pos.x = std::clamp(player_pos.x, areaLT.x, areaRB.x);
 		player_pos.z = std::clamp(player_pos.z, areaLT.y, areaRB.y);
-<<<<<<< HEAD
 		//SetPosition(player_pos);
-=======
-		SetPosition(player_pos);
->>>>>>> server_0628
 		UpdateTransform(NULL);
 	}
 }
@@ -681,11 +677,7 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
 		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
 	}
-<<<<<<< HEAD
 	controller->ApplyCurrentAnimationPose(this);*/
-=======
-	controller->ApplyCurrentAnimationPose(this);
->>>>>>> server_0628
 }
 //º¸·ù
 

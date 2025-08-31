@@ -243,7 +243,6 @@ public:
 	std::shared_ptr<ParticleObject> test_sand = NULL;
 	std::shared_ptr<ParticleObject> test_dragon_particle = NULL;
 
-	std::shared_ptr<Aura_Object>test_player_aura = NULL;
 
 	std::shared_ptr<Object_Manager> obj_manager = NULL;
 	std::shared_ptr<Sprite_Effect_Manager> effect_manager = NULL;
@@ -287,12 +286,6 @@ public:
 	virtual void Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData);
-<<<<<<< HEAD
-=======
-	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
-
-	XMFLOAT3 Get_Start_Position_List(int player_id);
->>>>>>> server_0628
 
 	XMFLOAT3 Get_Start_Position_List(int player_id);
 
@@ -419,14 +412,11 @@ public:
 	static bool Change_Scene_Signal; // For send server
 	static bool Stage_Clear_Signal; // For Get server
 	static bool Monster_Depth_Render; // For Get server
-<<<<<<< HEAD
 
 	XMFLOAT3 Scene_area;
 	XMFLOAT3 Scene_center;
 
 
-=======
->>>>>>> server_0628
 private:
 	virtual void BuildDefaultLightsAndMaterials() {}
 	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList) {}
@@ -447,7 +437,6 @@ public:
 	//=============================================================
 	// Server Sync Func
 
-<<<<<<< HEAD
 	void Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Remove_Multi_Player(int player_id);
 	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
@@ -455,12 +444,6 @@ public:
 	void Set_Weapon_Particle(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	void Set_Heal_Effect(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr);
 	virtual void Set_Sprite_Effect(XMFLOAT3 pos);
-=======
-	void Add_Multi_Player(shared_ptr<CPlayer> new_player_ptr);
-	void Remove_Multi_Player(int player_id);
-	void Sync_Player_Data(int player_id, const ServerSyncData& syncData);
-
->>>>>>> server_0628
 
 	virtual void Sync_Monster_Data(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, int monsterID, const ServerSyncData& syncData);
 
@@ -478,10 +461,7 @@ private:
 
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-<<<<<<< HEAD
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-=======
->>>>>>> server_0628
 
 };
 
@@ -496,38 +476,7 @@ private:
 
 public:
 	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-<<<<<<< HEAD
 	virtual void Update_Objects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-=======
-
-};
-
-class Stage_3_Scene : public Stage_Scene
-{
-private:
-	shared_ptr<ParticleObject> env_sand_particle = NULL;
-
-
-	virtual void BuildDefaultLightsAndMaterials();
-	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
-public:
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
-};
-
-class Stage_4_Scene : public Stage_Scene
-{
-private:
-	shared_ptr<ParticleObject> env_sand_particle = NULL;
-
-
-	virtual void BuildDefaultLightsAndMaterials();
-	virtual void Prepare_Basic_Elements(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
-
-public:
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList);
->>>>>>> server_0628
 
 };
 

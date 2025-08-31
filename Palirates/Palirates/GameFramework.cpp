@@ -42,7 +42,7 @@ CGameFramework::CGameFramework()
 
 	m_pPlayer = NULL;
 
-	_tcscpy_s(m_pszFrameRate, _T("Palirates"));
+	_tcscpy_s(m_pszFrameRate, _T("Palirates - ("));
 
 	isRunning = false;
 }
@@ -415,14 +415,6 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 				{
 					if (!Change_Screen)
 						Change_Screen = true;
-<<<<<<< HEAD
-=======
-					//WaitForGpuComplete(GPU_Stage::Compute);
-					//WaitForGpuComplete(GPU_Stage::Render);
-					//WaitForGpuComplete(GPU_Stage::Post);
-
-					//ChangeSwapChainState();
->>>>>>> server_0628
 				}
 					break;
 
@@ -759,15 +751,7 @@ void CGameFramework::ProcessInput()
 		if (!isRunning) {
 			if (!CScene::Screen_Fade) m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
 		}
-<<<<<<< HEAD
 		m_pPlayer->current_keyboard_inputFlags = current_keyboard_inputFlags;
-=======
-
-		if (!CScene::Screen_Fade)
-			m_pPlayer->GetStateMachine()->handleEvent(pKeysBuffer);
-
-
->>>>>>> server_0628
 		bool bMouseLocked = scene_manager->Get_Active_Scene_Mouse_State();
 		if (bMouseLocked != last_mouse_state)
 		{
@@ -1174,7 +1158,6 @@ void CGameFramework::FrameAdvance()
 
 
 
-<<<<<<< HEAD
 
 		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 
@@ -1194,20 +1177,6 @@ void CGameFramework::FrameAdvance()
 			Resource_Bind_Set mosaic_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
 			post_effect_manager->Set_Mosaic_Value(mosaic_value);
 			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Mosaic, mosaic_blur);
-=======
-
-		Resource_Bind_Set outline_blur = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-
-		post_effect_manager->Add_Post_Effect(Post_Effect_Type::Outline, outline_blur);
-
-		if (post_effect_sync_data.motion_blur_active)
-		{
-			Resource_Bind_Set motion_blur_1 = { BLUR_INFO_SRV_ROOT_PARAMETER_INDEX, &Blur_Info_G_Buffer_SRV_handle };
-			Resource_Bind_Set motion_blur_2 = { VELOCITY_SRV_ROOT_PARAMETER_INDEX, &Velocity_G_Buffer_SRV_handle };
-
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_1);
-			post_effect_manager->Add_Post_Effect(Post_Effect_Type::Motion_Blur, motion_blur_2);
->>>>>>> server_0628
 		}
 
 		if (post_effect_sync_data.zoom_blur_active)
@@ -1311,7 +1280,7 @@ void CGameFramework::FrameAdvance()
 	// ====================== [8] Frame Sync ======================
 	MoveToNextFrame();
 
-//	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
+	m_GameTimer.GetFrameRate(m_pszFrameRate + 13, 37);
 	SetWindowText(m_hWnd, m_pszFrameRate);
 	
 	shared_ptr<Particle_Manager> active_scene_particle_manager = scene_manager->Get_Active_Scene_Particle_Manager();
@@ -1600,7 +1569,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		//ProcessReceivedData_Stage(stage_scene, cmd, tokens);
 		else if (cmd == "PARTICLE_CREATE" || cmd == "PARTICLE_UPDATE" || cmd == "PARTICLE_REMOVE")
 			ProcessReceivedData_Particle(stage_scene, cmd, tokens);
-<<<<<<< HEAD
 		else if (cmd == "POST_EFFECT") {
 			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
 		}
@@ -1609,22 +1577,6 @@ void CGameFramework::ProcessReceivedData(const std::string& receivedData)
 		}
 		else if (cmd == "P_S_CMD") {
 			ProcessReceivedData_Change_State_Command(tokens);
-=======
-		else if (cmd == "POST_EFFECT")
-			ProcessReceivedData_Post_Effect(stage_scene, cmd, tokens);
-		else if (cmd == "STAGE_CLEAR") {
-			stage_scene->bStageClear = true;
-		}
-		else if (receivedData.find("RETURN_TO_LOBBY") == 0)
-		{
-			auto scene = scene_manager->Get_Active_Scene();
-			if (scene)
-			{
-				scene->c_signal.change = true;
-				scene->c_signal.scene_name = "Character_Select";
-				scene->c_signal.type = Scene_Type::Lobby;
-			}
->>>>>>> server_0628
 		}
 
 	}
@@ -1715,12 +1667,7 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 	for (int i = 0; i < playerCount; ++i)
 	{
 		int base = startIndex;
-<<<<<<< HEAD
 		if (base + 12 > tokens.size()) break;
-=======
-
-		if (base + 9 > tokens.size()) break;
->>>>>>> server_0628
 
 		int playerId = std::stoi(tokens[base + 0]);
 		int modelId = std::stoi(tokens[base + 1]);
@@ -1731,34 +1678,12 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 		float ly = std::stof(tokens[base + 6]);
 		float lz = std::stof(tokens[base + 7]);
 
-<<<<<<< HEAD
 		int idx = base + 8;
 		bool stateChanged = (tokens[idx++] == "1");
-=======
-		int trackStart = base + 9;
-		int expectedTrackTokenCount = trackCount * 3;
-
-		if (trackStart + expectedTrackTokenCount + 4 > tokens.size()) break;
-
-		std::vector<Animation_Sync> track_list;
-		for (int t = 0; t < trackCount; ++t)
-		{
-			int idx = trackStart + t * 3;
-			int trackIdx = std::stoi(tokens[idx]);
-			float weight = std::stof(tokens[idx + 1]);
-			float position = std::stof(tokens[idx + 2]);
-			track_list.push_back({ trackIdx, weight, position });
-		}
-
-		int stateFlagIndex = trackStart + expectedTrackTokenCount;
-
-		bool stateChanged = (tokens[stateFlagIndex++] == "1");
->>>>>>> server_0628
 
 		ServerSyncData syncData;
 		syncData.position = XMFLOAT3(px, py, pz);
 		syncData.lookVector = XMFLOAT3(lx, ly, lz);
-<<<<<<< HEAD
 		syncData.track_info_list.clear(); 
 		syncData.bStateChange = stateChanged;
 
@@ -1767,30 +1692,14 @@ void CGameFramework::ProcessReceivedData_Stage(std::shared_ptr<CScene> stage_sce
 		float hp = std::stof(tokens[idx++]);
 		syncData.hp = hp;
 		bool bBreathHit = (tokens[idx++] == "1");
-=======
-		syncData.track_info_list = track_list;
-		syncData.bStateChange = stateChanged;
-
-		int changedStateNum = std::stoi(tokens[stateFlagIndex++]);
-		syncData.changedStateNum = changedStateNum;
-		float hp = std::stof(tokens[stateFlagIndex++]);
-		syncData.hp = hp;
-		bool bBreathHit = (tokens[stateFlagIndex++] == "1");
->>>>>>> server_0628
 		syncData.bBreathHit = bBreathHit;
 
 		HandlePlayerSync(playerId, modelId, syncData);
 
-<<<<<<< HEAD
 		int consumed = 12;
-=======
-
-		int consumed = 9 + (trackCount * 3) + 4;
->>>>>>> server_0628
 		startIndex = base + consumed;
 	}
 }
-
 
 void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens)
 {
@@ -1830,7 +1739,6 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 			seen = stateVer;
 			syncData.bStateChange = true;     
 
-<<<<<<< HEAD
 			if (State(syncData.stateEnum) == State::Get_Hit)
 				stage_scene->Set_Sprite_Effect(syncData.position);
 		}
@@ -1850,25 +1758,6 @@ void CGameFramework::ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_s
 		stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
 		startIndex = base + 11;
 
-=======
-		syncData.track_info_list = track_list;
-		syncData.bStateChange = std::stoi(tokens[stateFlagIndex++]);
-		syncData.hp = std::stoi(tokens[stateFlagIndex]);
-
-		XMMATRIX view = XMLoadFloat4x4(&m_pPlayer->GetCamera()->GetViewMatrix());
-		XMVECTOR monsterWorldPos = XMLoadFloat3(&syncData.position);
-
-		XMVECTOR viewSpacePos = XMVector3TransformCoord(monsterWorldPos, view);
-		float zView = XMVectorGetZ(viewSpacePos);
-		//std::cout << zView << "\n";
-		if (zView >= 800.0f) {
-			stage_scene->Monster_Set_Active_False(monsterId);
-		}
-		else if (zView >= -50.0f)
-		{
-			stage_scene->Sync_Monster_Data(m_pd3dDevice, Active_CommandList, monsterId, syncData);
-		}
->>>>>>> server_0628
 
 	}
 }
@@ -1936,15 +1825,10 @@ void CGameFramework::ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene
 
 void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens)
 {
-<<<<<<< HEAD
 	if (tokens.size() < (10 + MaxPlayer)) return;
-=======
-	if (tokens.size() < 12) return;
->>>>>>> server_0628
 
 	size_t idx = 1;
 
-<<<<<<< HEAD
 	post_effect_sync_data.zoom_blur_active = (std::stoi(tokens[idx++]) != 0);
 	if (post_effect_sync_data.zoom_blur_active)
 	{
@@ -1956,46 +1840,16 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 		std::stof(tokens[idx++]),
 		std::stof(tokens[idx++]),
 		std::stof(tokens[idx++])
-=======
-	post_effect_sync_data.motion_blur_active = std::stoi(tokens[1]);
-
-	for (int player_id = 0; player_id < MaxPlayer; ++player_id)
-	{
-		bool player_motion_blur_active = std::stoi(tokens[player_id + 2]);
-		post_effect_sync_data.motion_blur_apply[player_id] = player_motion_blur_active;
-		scene_manager->Sync_Player_Blur(player_id, player_motion_blur_active);
-
-		if (player_id == Client_ID)
-		{
-			m_pPlayer->SetBlurMask(player_motion_blur_active);
-		}
-	}
-	
-	post_effect_sync_data.zoom_blur_active = std::stoi(tokens[8]);
-	if (post_effect_sync_data.zoom_blur_active) {
-		scene_manager->Get_Active_Scene()->CameraZoomOutAnime = true;
-	}
-	post_effect_sync_data.zoom_w_position =
-	{
-		(std::stof(tokens[9])),
-		(std::stof(tokens[10])),
-		(std::stof(tokens[11]))
->>>>>>> server_0628
 	};
 
 	if (post_effect_sync_data.zoom_w_position.x != 0.0f || post_effect_sync_data.zoom_w_position.y != 0.0f || post_effect_sync_data.zoom_w_position.z != 0.0f)
 	{
-<<<<<<< HEAD
 		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f)
 		{
-=======
-		if (Vector3::Distance(m_pPlayer->GetPosition(), post_effect_sync_data.zoom_w_position) >= 500.0f) {
->>>>>>> server_0628
 			post_effect_sync_data.zoom_blur_active = false;
 			scene_manager->Get_Active_Scene()->CameraZoomOutAnime = false;
 		}
 	}
-<<<<<<< HEAD
 
 	for (UINT i = 0; i < MaxPlayer; ++i)
 	{
@@ -2015,20 +1869,10 @@ void CGameFramework::ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_sc
 	server_fog_info.fogStart = post_effect_sync_data.fogStart;
 	server_fog_info.fogEnd = post_effect_sync_data.fogEnd;
 	server_fog_info.fogDensity = post_effect_sync_data.fogDensity;
-=======
-	Stage_Scene::Monster_Depth_Render = std::stoi(tokens[12]);
-
-	Fog_Info server_fog_info;
-	server_fog_info.Fog_Trigger = std::stoi(tokens[13]);
-	server_fog_info.fogStart = std::stof(tokens[14]);
-	server_fog_info.fogEnd = std::stof(tokens[15]);
-	server_fog_info.fogDensity = std::stof(tokens[16]);
->>>>>>> server_0628
 
 	stage_scene->Fog_Sync(server_fog_info);
 }
 
-<<<<<<< HEAD
 void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<std::string>& tokens)
 {
 	int pID = std::stoi(tokens[3]);
@@ -2043,8 +1887,6 @@ void CGameFramework::ProcessReceivedData_Change_State_Command(const std::vector<
 		}
 	}
 }
-=======
->>>>>>> server_0628
 
 void CGameFramework::HandleClientIdAssignment()
 {
@@ -2157,7 +1999,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 
 	if (player_ID == Client_ID)
 	{
-<<<<<<< HEAD
 		//XMFLOAT3& localLook = m_pPlayer->GetLook();
 
 		//XMVECTOR v1 = XMVector3Normalize(XMLoadFloat3(&localLook));
@@ -2179,35 +2020,12 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 		//cout << syncData.position.x << ", " << syncData.position.y << ", " << syncData.position.z << "\n";
 		/*if (syncData.bStateChange)
 			m_pPlayer->SetPosition(syncData.position);*/
-=======
-		if (syncData.bStateChange)
-			m_pPlayer->SetPosition(syncData.position);
->>>>>>> server_0628
 		m_pPlayer->currentHP = syncData.hp;
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Get_Hit_F2 && syncData.changedStateNum == int(State::Get_Hit_F2)) {
 			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
 				m_pPlayer->GetStateMachine()->changeState(State::Get_Hit_F2, Key_Value::None);
 				//std::cout << "[DEBUG] Get_Hit_F2 State Change" << std::endl;
 			}
-<<<<<<< HEAD
-=======
-		}
-		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
-			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
-				m_pPlayer->GetStateMachine()->changeState(State::Knock_Down, Key_Value::None);
-				scene_manager->Get_Active_Scene()->bUpdateUI_HP = true;
-				//std::cout << "[DEBUG] Dead State Change" << std::endl;
-			}
-		}
-		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack1 && syncData.changedStateNum == int(State::Attack1)) {
-			m_pPlayer->GetStateMachine()->lastStateChange = 0;
-		}
-		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack2 && syncData.changedStateNum == int(State::Attack2)) {
-			m_pPlayer->GetStateMachine()->lastStateChange = 0;
-		}
-		if (m_pPlayer->GetStateMachine()->Get_State() == State::Attack3 && syncData.changedStateNum == int(State::Attack3)) {
-			m_pPlayer->GetStateMachine()->lastStateChange = 0;
->>>>>>> server_0628
 		}
 		if (m_pPlayer->GetStateMachine()->Get_State() != State::Knock_Down && syncData.changedStateNum == int(State::Knock_Down)) {
 			if (syncData.bBreathHit || (!syncData.bBreathHit && !m_pPlayer->bIsInvincible)) {
@@ -2236,11 +2054,7 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 			if (player_exist == false) 
 			{
 				auto newPlayer = Create_Player(player_ID, character_model_ID);
-<<<<<<< HEAD
 				scene_manager->Add_Player(m_pd3dDevice, Active_CommandList, newPlayer);
-=======
-				scene_manager->Add_Player(newPlayer);
->>>>>>> server_0628
 			}
 		}
 		else 
@@ -2277,25 +2091,14 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	new_Player->ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	new_Player->CreateShaderVariables(m_pd3dDevice, Active_CommandList);
 
-<<<<<<< HEAD
 	std::vector<shared_ptr<CGameObject>> weapon_list = new_Player->Weapon_ptr;
 	if (!weapon_list.empty()) 
 	{
-=======
-
-
-	shared_ptr<CGameObject> trail_target = new_Player->Weapon_ptr;
-	if (trail_target)
-	{
-		std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
-
->>>>>>> server_0628
 		XMFLOAT3 player_color = GetColorById(playerId + 1);
 
 		XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
 		XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-<<<<<<< HEAD
 		for (auto& trail_target : weapon_list) 
 		{
 			std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(m_pd3dDevice, Active_CommandList);
@@ -2317,19 +2120,6 @@ void CGameFramework::HandlePlayerSync(int player_ID, int character_model_ID, con
 	}
 
 
-=======
-		trail_obj->Set_Main_Color(trail_main_color);
-		trail_obj->Set_SubColor(trail_sub_color);
-
-		trail_obj->Set_Trail_Target(trail_target, false);
-		trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
-		scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
-		new_Player->SetTrailObj(trail_obj);
-		new_Player->bTrailOff();
-		new_Player->GetTrailObj()->Set_Active(false);
-	}
-
->>>>>>> server_0628
 	std::cout << "[SUCCESS] RemotePlayer creation completed: " << playerId << std::endl;
 
 	return new_Player; 

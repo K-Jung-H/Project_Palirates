@@ -27,7 +27,6 @@ public:
     State GetStateEnum() const override { return State::Idle; }
 };
 
-<<<<<<< HEAD
 class PlayerRunState : public PlayerState {
 public:
     void Enter(Player* monster, PlayerStateMachine* sm) override;
@@ -37,8 +36,6 @@ public:
     State GetStateEnum() const override { return State::Run; }
 };
 
-=======
->>>>>>> server_0628
 class PlayerAttack1State : public PlayerState {
 public:
     void Enter(Player* monster, PlayerStateMachine* sm) override;
@@ -93,7 +90,6 @@ public:
     State GetStateEnum() const override { return State::Get_Up; }
 };
 
-<<<<<<< HEAD
 class PlayerDiveState : public PlayerState {
 public:
     void Enter(Player* monster, PlayerStateMachine* sm) override;
@@ -120,6 +116,3 @@ public:
 
     State GetStateEnum() const override { return State::Run_Fast; }
 };
-=======
-
->>>>>>> server_0628

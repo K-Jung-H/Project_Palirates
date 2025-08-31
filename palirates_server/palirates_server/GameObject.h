@@ -53,11 +53,8 @@ public:
 	bool BreathObject = false;
     bool bHittingCmd{ false };
 
-<<<<<<< HEAD
     Scene* m_pOwnerScene = nullptr;
 
-=======
->>>>>>> server_0628
 public:
     GameObject()
         : obj_type(Object_Type::etc)
@@ -212,8 +209,6 @@ public:
     bool bDead = false;
     int currStateTrackIdx = 0;
     float stateElapsedTime = 0.0f;
-
-    bool bDead = false;
 
     virtual void update(float deltaTime) override {};
     void SetupWeaponCollider();

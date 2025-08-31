@@ -914,11 +914,7 @@ void ParticleObject::Set_BaseTexture(ID3D12Device* pd3dDevice, ID3D12GraphicsCom
 
 void ParticleObject::Init_Info(Particle_Format particle_format)
 {
-<<<<<<< HEAD
 	p_type = particle_format.particle_type;
-=======
-	p_type = particle_info.particle_type;
->>>>>>> server_0628
 
 	Set_Focus_Point(XMFLOAT3(0.0f, 0.0f, 0.0f));
 	Set_Area(particle_format.area_xyz);

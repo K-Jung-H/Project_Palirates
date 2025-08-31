@@ -116,12 +116,7 @@ protected:
 	bool Party_Start = false;
 
 private:
-<<<<<<< HEAD
 	std::unique_ptr<SceneLogic> scene_logic;
-=======
-	bool Stage_Clear = false;
-	bool Party_Start = false;
->>>>>>> server_0628
 
 	std::vector<shared_ptr<GameObject>> fixed_object_list;
 	ParticleManager particle_manager;
@@ -131,15 +126,10 @@ private:
 	float grid_cell_size = 100.0f;
 
 	//=======================
+
 	shared_ptr<Monster> boss_monster = NULL;
 	shared_ptr<GameObject> zoom_object = NULL;
 
-<<<<<<< HEAD
-	shared_ptr<Monster> boss_monster = NULL;
-	shared_ptr<GameObject> zoom_object = NULL;
-
-=======
->>>>>>> server_0628
 
 	std::array< shared_ptr<Particle_Object>, MaxPlayer> party_effect;
 	shared_ptr<Particle_Object> dragon_fire;
@@ -149,29 +139,18 @@ public:
 	GameWorld(Scene_Type scene_type);
 	~GameWorld();
 
-<<<<<<< HEAD
 	void Init(Scene_Type scene_type);
-=======
-	void Init();
->>>>>>> server_0628
 	bool Get_Clear_State() { return Stage_Clear; }
 	void Set_Clear_State(bool stage_clear) { Stage_Clear = stage_clear; }
 
 	shared_ptr<Monster> Get_Boss_Monster() { return boss_monster; }
-<<<<<<< HEAD
 	void Set_Boss_Moster(shared_ptr<Monster> boss_ptr);
-=======
-	void Set_Boss_Moster(shared_ptr<Monster> boss_ptr) { boss_monster = boss_ptr; }
-//	void Boss_Update();
-	void Boss_Update(shared_ptr<Monster>boss_monster);
->>>>>>> server_0628
 
 
 	shared_ptr<GameObject> Get_ZoomObject() { return zoom_object; }
 
 	void Load_Scene_Data(shared_ptr<GameObject> scene_obj);
 
-<<<<<<< HEAD
 	void Update_World(float dt);
 	void Update_Collision(shared_ptr<Player> player_obj);
 	void Update_Particle(float elapsed_time);
@@ -183,14 +162,6 @@ public:
 	FrameParticleChanges Get_Particle_Sync_Data();
 	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);
 
-=======
-	void Add_Bleeding_Particle(XMFLOAT3& pos, XMFLOAT3& main_direction);
-	void Update_Particle(float elapsed_time);
-	void Stage_Clear_Particle_Update(std::array<std::shared_ptr<Player>, MaxPlayer> player_list);
-
-	FrameParticleChanges Get_Particle_Sync_Data();
-	std::vector<BoundingOrientedBox> Get_Cell_OBBs(const XMFLOAT3& Pos);
->>>>>>> server_0628
 
 private:
 	void FlattenGameObjectHierarchy_Filter(std::shared_ptr<GameObject> node, std::vector<shared_ptr<GameObject>>& outList);

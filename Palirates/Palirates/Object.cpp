@@ -4250,13 +4250,9 @@ Wave_Object::Wave_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd
 	wave_general_data_texture->CreateTexture(pd3dDevice, pd3dCommandList, 2, RESOURCE_TEXTURE2D, tex_Length, tex_Length, 1, 1, DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr);
 
 	// Pos_Normal: index 3 (UAV)
-<<<<<<< HEAD
 	wave_general_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 1, sizeof(XMFLOAT4), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 
-=======
-	wave_data_texture->CreateStructuredBuffer(pd3dDevice, pd3dCommandList, 3, nullptr, 1, sizeof(XMFLOAT4), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
->>>>>>> server_0628
 	Pos_Normal_ReadBack_buffer = Create_Control_Buffer(pd3dDevice, BUFFER_READBACK, sizeof(UINT) * 4);
 
 
@@ -4401,24 +4397,15 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	// === 상태 전이 ===
 	SynchronizeResourceTransition(pd3dCommandList,
-<<<<<<< HEAD
 		wave_general_data_texture->GetResource(readIndex),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SynchronizeResourceTransition(pd3dCommandList,
 		wave_general_data_texture->GetResource(writeIndex),
-=======
-		wave_data_texture->GetResource(readIndex),
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(writeIndex),
->>>>>>> server_0628
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-<<<<<<< HEAD
 	{
 		pd3dCommandList->SetComputeRootConstantBufferView(1, wave_trail_info->GetGPUVirtualAddress()); // wave_trail_info_CBV
 
@@ -4429,10 +4416,6 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 		wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, writeIndex);  // UAV(u0)
 	}
 
-=======
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);   // SRV(t0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);  // UAV(u0)
->>>>>>> server_0628
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
@@ -4440,11 +4423,7 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 	{
 		D3D12_RESOURCE_BARRIER uavBarrier0 = {};
 		uavBarrier0.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-<<<<<<< HEAD
 		uavBarrier0.UAV.pResource = wave_general_data_texture->GetResource(writeIndex);
-=======
-		uavBarrier0.UAV.pResource = wave_data_texture->GetResource(writeIndex);
->>>>>>> server_0628
 		pd3dCommandList->ResourceBarrier(1, &uavBarrier0);
 	}
 
@@ -4468,11 +4447,7 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 	XMVECTOR normDir = XMVector2Normalize(XMLoadFloat2(&dirXZ));
 	XMStoreFloat2(&cs_wave_shader->update_wave_info->g_BoatDir, normDir);
 	cs_wave_shader->update_wave_info->g_BoatPos = boatTexel;
-<<<<<<< HEAD
 	cs_wave_shader->update_wave_info->g_WakeMaxDist = 50;
-=======
-	cs_wave_shader->update_wave_info->g_WakeMaxDist = World_Boat_Velocity;
->>>>>>> server_0628
 	cs_wave_shader->UpdateShaderVariables(pd3dCommandList);
 
 	// Step 6: Boat Wake Pass
@@ -4480,24 +4455,15 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	// === 상태 전이 ===
 	SynchronizeResourceTransition(pd3dCommandList,
-<<<<<<< HEAD
 		wave_general_data_texture->GetResource(writeIndex),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SynchronizeResourceTransition(pd3dCommandList,
 		wave_general_data_texture->GetResource(readIndex),
-=======
-		wave_data_texture->GetResource(writeIndex),
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(readIndex),
->>>>>>> server_0628
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-<<<<<<< HEAD
 	{
 		pd3dCommandList->SetComputeRootConstantBufferView(1, wave_trail_info->GetGPUVirtualAddress()); // wave_trail_info_CBV
 
@@ -4508,21 +4474,13 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 		wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, writeIndex);  // SRV(t0)
 		wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, readIndex);   // UAV(u0)
 	}
-=======
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, writeIndex);  // SRV(t0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, readIndex);   // UAV(u0)
->>>>>>> server_0628
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
 	// === UAV Barrier ===
 	{
 		D3D12_RESOURCE_BARRIER uavBarrier1 = {};
 		uavBarrier1.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-<<<<<<< HEAD
 		uavBarrier1.UAV.pResource = wave_general_data_texture->GetResource(readIndex);
-=======
-		uavBarrier1.UAV.pResource = wave_data_texture->GetResource(readIndex);
->>>>>>> server_0628
 		pd3dCommandList->ResourceBarrier(1, &uavBarrier1);
 	}
 
@@ -4531,34 +4489,19 @@ void Wave_Object::Animate(ID3D12GraphicsCommandList* pd3dCommandList, float fTim
 
 	// === 상태 전이 ===
 	SynchronizeResourceTransition(pd3dCommandList,
-<<<<<<< HEAD
 		wave_general_data_texture->GetResource(readIndex),
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	SynchronizeResourceTransition(pd3dCommandList,
 		wave_general_data_texture->GetResource(writeIndex),
-=======
-		wave_data_texture->GetResource(readIndex),
-		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-	SynchronizeResourceTransition(pd3dCommandList,
-		wave_data_texture->GetResource(writeIndex),
->>>>>>> server_0628
 		D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
 	// === 바인딩 및 Dispatch ===
-<<<<<<< HEAD
 	wave_general_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 3, readIndex);     // SRV(t0)
 	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, writeIndex);    // UAV(u0)
 	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 5, 2);             // UAV(u1: NormalMap)
 	wave_general_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 6, 3);             // UAV(u2: Pos+NormalBuffer)
-=======
-	wave_data_texture->BindComputeSrvToRootParameter(pd3dCommandList, 1, readIndex);     // SRV(t0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 2, writeIndex);    // UAV(u0)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 3, 2);             // UAV(u1: NormalMap)
-	wave_data_texture->BindComputeUavToRootParameter(pd3dCommandList, 4, 3);             // UAV(u2: Pos+NormalBuffer)
->>>>>>> server_0628
 	cs_wave_shader->Dispatch(pd3dCommandList, n, n, 1);
 
 	// Step 8: PingPong 전환
@@ -5202,19 +5145,13 @@ void CMonsterObject::SetupWeaponCollider()
 	model->Set_Collider(obb);
 	//model->bUpdateOBBOff();
 	model->bUpdateOBBOn();
-<<<<<<< HEAD
 	//Weapon_ptr = model;
 	Weapon_ptr.push_back(model);
-=======
-	Weapon_ptr = model;
-
->>>>>>> server_0628
 }
 
 void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 {
 	CGameObject::ApplySyncData(syncData);
-<<<<<<< HEAD
 	if (syncData.bStateChange) {
 		if (mType == Monster_Type::Creature1) {
 		}
@@ -5228,24 +5165,6 @@ void CMonsterObject::ApplySyncData(const ServerSyncData& syncData)
 		if (mType == Monster_Type::Creature1) {
 		}
 	}
-=======
-
-	auto controller = GetSkinnedAnimationController();
-	if (!controller) return;
-	controller->ResetWeight();
-	auto track = controller->m_pAnimationTracks;
-	vector<Animation_Sync> track_list = syncData.track_info_list;
-
-	for (Animation_Sync animation_track_info : track_list)
-	{
-		track[animation_track_info.track_index].m_fPosition = animation_track_info.track_position;
-		track[animation_track_info.track_index].m_fWeight = animation_track_info.weight;
-		//if (animation_track_info.track_index == Hit_Track_idx && track[animation_track_info.track_index].m_fWeight > 0.5f && )
-	}
-	currentHP = syncData.hp;
-	controller->ApplyCurrentAnimationPose(this);
-	//std::cout << "monster aplly, list size - " << track_list.size() << std::endl;
->>>>>>> server_0628
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -5269,11 +5188,7 @@ CFishManObject::CFishManObject(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandLi
 	};
 
 	Hit_Track_idx = TRACK_FISHMAN_GET_HIT;
-<<<<<<< HEAD
 	m_StateMachine = std::make_unique<MonsterStateMachine>(this);
-=======
-	m_StateMachine = std::make_unique<FishManStateMachine>(this);
->>>>>>> server_0628
 
 	type = EObjectType::Monster;
 	mType = Monster_Type::Fishman;

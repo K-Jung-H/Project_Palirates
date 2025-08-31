@@ -101,11 +101,8 @@ extern bool isRunning;
 
 #define FRAME_BUFFER_WIDTH				1920
 #define FRAME_BUFFER_HEIGHT				1080
-<<<<<<< HEAD
 //#define FRAME_BUFFER_WIDTH				960
 //#define FRAME_BUFFER_HEIGHT				540
-=======
->>>>>>> server_0628
 
 #define ANIMATION_TYPE_ONCE				0
 #define ANIMATION_TYPE_LOOP				1
@@ -169,11 +166,8 @@ extern bool isRunning;
 #define RENDER_PARTICLE
 #define RENDER_WAVE
 
-<<<<<<< HEAD
 #define TEST_MODE
 
-=======
->>>>>>> server_0628
 ///#define DEBUG_MESSAGE
 //#define DEBUG_MESSAGE_HEIGHT_POLYGON_INFO
 //#define DEBUG_MESSAGE_NORMAL_POLYGON_INFO
@@ -680,19 +674,13 @@ enum InputFlags : uint32_t
 	INPUT_CTRL = 1 << KEY_INDEX_CTRL
 };
 
-#define SERVER_IP "1.242.69.251"
+//#define SERVER_IP "1.242.69.251"
 //#define SERVER_IP "192.168.69.73"
 //#define SERVER_IP "172.30.1.13"
-<<<<<<< HEAD
 #define SERVER_IP "127.0.0.1"
 //#define SERVER_IP "10.30.2.21"
 //#define SERVER_IP "192.168.159.1"
 //#define SERVER_IP "121.171.77.91"
-=======
-//#define SERVER_IP "127.0.0.1"
-//#define SERVER_IP "10.30.2.21"
-//#define SERVER_IP "192.168.159.1"
->>>>>>> server_0628
 
 #define SERVER_PORT 9000
 

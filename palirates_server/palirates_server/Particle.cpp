@@ -32,19 +32,6 @@ void Particle_Object::Update(float elapsedtime)
 
 //====================================================
 
-<<<<<<< HEAD
-=======
-//UINT ParticleManager::AllocateID()
-//{
-//    if (!reusable_ids.empty())
-//    {
-//        uint32_t id = reusable_ids.front();
-//        reusable_ids.pop();
-//        return id;
-//    }
-//    return next_id++;
-//}
->>>>>>> server_0628
 
 uint32_t ParticleManager::AllocateReusableID()
 {

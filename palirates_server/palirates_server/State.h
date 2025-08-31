@@ -35,11 +35,7 @@ public:
     State GetStateEnum() const override { return State::Run; }
 };
 
-<<<<<<< HEAD
 class Attack1State : public MonsterState {
-=======
-class AttackState : public MonsterState {
->>>>>>> server_0628
 public:
     void Enter(Monster* monster, MonsterStateMachine* sm) override;
     void Update(Monster* monster, float deltaTime, MonsterStateMachine* sm) override;
@@ -88,7 +84,6 @@ public:
     void Exit(Monster* monster) override;
     State GetStateEnum() const override { return State::Attack2; }
 };
-<<<<<<< HEAD
 
 class AnubisSkillState : public MonsterState {
 public:
@@ -105,5 +100,3 @@ public:
     void Exit(Monster* monster) override;
     State GetStateEnum() const override { return State::Attack2; }
 };
-=======
->>>>>>> server_0628

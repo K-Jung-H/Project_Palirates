@@ -276,10 +276,7 @@ public:
     void ProcessReceivedData_Monster(std::shared_ptr<CScene> stage_scene, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Particle(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
     void ProcessReceivedData_Post_Effect(shared_ptr<CScene> stage_scene, const std::string& command, const std::vector<std::string>& tokens);
-<<<<<<< HEAD
     void ProcessReceivedData_Change_State_Command(const std::vector<std::string>& tokens);
-=======
->>>>>>> server_0628
 
     
     

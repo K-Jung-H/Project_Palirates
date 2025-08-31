@@ -31,13 +31,9 @@
 *.exe
 *.out
 *.app
-*.meta
 
 
-<<<<<<< HEAD
 
-=======
->>>>>>> server_0628
 /Palirates/.vs
 /Palirates/Palirates/x64
 /Palirates/x64
@@ -46,10 +42,6 @@
 
 /palirates_server/.vs
 /palirates_server/palirates_server/x64
-<<<<<<< HEAD
-=======
-/palirates_server/palirates_server/.vs
->>>>>>> server_0628
 /palirates_server/x64
 
 

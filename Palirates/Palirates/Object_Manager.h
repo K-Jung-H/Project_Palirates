@@ -280,10 +280,6 @@ public:
 	void Remove_Player(int player_id);
 
 
-<<<<<<< HEAD
-=======
-	bool Sync_Player_Blur(int player_id, bool motion_blur_active);
->>>>>>> server_0628
 	bool Sync_Player_Data(int player_id, const ServerSyncData& syncData, CCamera* camera = NULL);
 
 

@@ -33,13 +33,10 @@ enum class Particle_Type
 	party = 3,
 	sand = 4,
 	sand_storm = 5,
-<<<<<<< HEAD
 	heal = 6,
 	orbit = 7,
 	diffuse_burst = 8,
 	diffuse_continuous = 9,
-=======
->>>>>>> server_0628
 	//=======================
 	bleed = 10,
 	//=======================
@@ -403,11 +400,8 @@ public:
 
 	Particle_Type Get_Particle_Type() { return p_type; }
 
-<<<<<<< HEAD
 
 	void EnableEmit() { bEmitEnabled = true; }
 	void DisableEmit() { bEmitEnabled = false; }
 	bool IsEmitEnabled() const { return bEmitEnabled; }
-=======
->>>>>>> server_0628
 };

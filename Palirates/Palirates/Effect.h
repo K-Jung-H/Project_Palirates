@@ -68,11 +68,6 @@ public:
 
 class Aura_Object : public Sprite_Object
 {
-<<<<<<< HEAD
-=======
-protected:
-    shared_ptr<CGameObject> m_pTargetObject = nullptr;
->>>>>>> server_0628
 
 public:
     Aura_Object(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, float bottom_radius = 20.0f, float top_radius = 10.0f, float height = 5.0f);
@@ -80,12 +75,6 @@ public:
 
     virtual void Animate(float fTimeElapsed);
     virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera = NULL);
-<<<<<<< HEAD
-=======
-
-    void Set_Aura_Target(shared_ptr<CGameObject> target) { m_pTargetObject = target; }
-    shared_ptr<CGameObject> Get_Aura_Target() { return m_pTargetObject; }
->>>>>>> server_0628
 };
 
 

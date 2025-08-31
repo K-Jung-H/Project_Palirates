@@ -30,16 +30,11 @@ private:
     float hp = 100.0f;
 public:
     bool need_to_client_sync = false;
-<<<<<<< HEAD
     UINT mosaic_value = 0;
     bool BreathHit = false;
     int Client_ID = -1;
     bool bCanControll = true;
     XMFLOAT3 CommandSetLook = XMFLOAT3(0.0f, 0.0f, 0.0f);
-=======
-    bool motion_blur = false;
-    bool BreathHit = false;
->>>>>>> server_0628
     Player(int model_index);
     virtual ~Player() {}
 
@@ -66,10 +61,7 @@ public:
     float GetHP() { return hp; }
     void SetHP(float setHP) { hp = setHP; }
     void HitDamage(float damage);
-<<<<<<< HEAD
 
     virtual int PlayAnimation(State state);
     void SetRunDirectionTrack(int track);
-=======
->>>>>>> server_0628
 };

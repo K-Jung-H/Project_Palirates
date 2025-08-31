@@ -662,11 +662,7 @@ void Particle_Manager::Build_Particle_Mesh(ID3D12Device* pd3dDevice, ID3D12Graph
 	particle_mesh_map["tetrahedron"] = make_shared<Tetrahedron_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["sphere"] = make_shared<Sphere_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f); 
 	particle_mesh_map["chip"] = make_shared<Cube_Chip_Shape_Mesh>(pd3dDevice, pd3dCommandList, 2.0f);
-<<<<<<< HEAD
 	particle_mesh_map["cross"] = make_shared<Cross_Shape_Mesh>(pd3dDevice, pd3dCommandList, 9.0f);
-=======
-
->>>>>>> server_0628
 }
 
 
@@ -822,10 +818,6 @@ void Particle_Manager::AnimateObjects(ID3D12GraphicsCommandList* pd3dCommandList
 	ParticleShader::Set_ComputeRootSignature(pd3dCommandList);
 
 	Update_and_Extract_Instance_Particles(pd3dCommandList, fTimeElapsed);
-	
-	int a = particle_object_list_map[Particle_Shader_Type::interval].size();
-	//cout << a << endl;
-
 }
 
 void Particle_Manager::Animate_Particles(ID3D12GraphicsCommandList* pd3dCommandList, float fTimeElapsed)
@@ -1174,7 +1166,6 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.main_direction = data.main_direction;
 			format.init_velocity_value = 150;
 			format.acceleration = XMFLOAT3(0, -10.0f, 0);
-<<<<<<< HEAD
 			format.color = data.color;
 			format.size = 1.0f;
 			mesh = particle_mesh_map["chip"];
@@ -1194,12 +1185,6 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			format.size = 1.0f;
 			mesh = particle_mesh_map["cube_dust"];
 			break;
-=======
-			format.color = XMFLOAT3(1.0f, 0.5f, 0.0f);
-			format.size = 1.0f;
-			mesh = particle_mesh_map["chip"];
-			break;
->>>>>>> server_0628
 
 		default:
 			createQueue.pop(); // skip unknown type
@@ -1226,12 +1211,8 @@ void Particle_Manager::Create_Particles_From_Queue(ID3D12Device* device, ID3D12G
 			obj->SetPosition(data.obj_pos);
 			obj->Set_Main_Direction(data.obj_look);
 			obj->Set_Name(std::to_string(data.particle_ID));
-<<<<<<< HEAD
 			obj->Set_Focus_Strength(50.0f);
 	
-=======
-
->>>>>>> server_0628
 			if (format.particle_type == Particle_Type::sand)
 			{
 				obj->Set_BaseTexture(device, cmdList, L"Terrain/dust_particle.dds");
