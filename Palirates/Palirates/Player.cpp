@@ -318,6 +318,9 @@ void CPlayer::SetupWeaponCollider()
 	model->Set_Collider(obb);
 	model->bUpdateOBBOff();
 	//Weapon_ptr = model;
+	if (model_num == 2) {
+		model->bNoRander = true;
+	}
 	Weapon_ptr.push_back(model);
 
 	// Sub Weapon
@@ -346,6 +349,9 @@ void CPlayer::SetupWeaponCollider()
 		model->Set_Collider(obb);
 		model->bUpdateOBBOff();
 		//Weapon_ptr = model;
+		if (model_num == 2) {
+			model->bNoRander = true;
+		}
 		Weapon_ptr.push_back(model);
 	}
 }

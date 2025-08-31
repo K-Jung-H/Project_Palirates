@@ -616,6 +616,8 @@ public:
 
     std::vector<std::shared_ptr<CMaterial>>  Material_list;
 
+    bool bNoRander = false;
+
 
 public:
     std::shared_ptr<CAnimationController> m_pSkinnedAnimationController = NULL;

@@ -504,6 +504,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!w->CanCollide()) continue;
             w->UpdateWorldOBB();
             auto worldWeaponOBB = w->Get_Collider_OBB();
+            cout << "worldWeaponOBB : " << worldWeaponOBB ->Center.x << ", " << worldWeaponOBB->Center.y << ", " << worldWeaponOBB->Center.z << "\n";
             for (std::shared_ptr<Player> player_ptr : player_list) {
                 if (!player_ptr) continue;
 
@@ -829,6 +830,13 @@ void Stage_Scene::Add_Player(int id)
 
     player_list[id]->SetPosition(player_pos);
     player_list[id]->SetupWeaponCollider();
+    if (player_list[id]->Get_Model_ID() == 2) {
+        auto weapon = player_list[id]->Weapon_ptr;
+
+        for (auto w : weapon) {
+            w->CustomOBBScale = XMFLOAT3(0.2f, 0.2f, 0.3f);
+        }
+    }
     player_list[id]->UpdateTransform();
     player_list[id]->m_pOwnerScene = this;
     player_list[id]->Client_ID = id;
@@ -880,7 +888,7 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
-    return;
+    //return;
 
     int index{}, m_id{};
     std::shared_ptr<Monster> moster_ptr = NULL;

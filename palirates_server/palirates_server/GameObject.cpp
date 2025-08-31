@@ -811,7 +811,8 @@ void GameObject::Obj_Info(int depth)
 
 void GameObject::UpdateWorldOBB()
 {
-	if (!m_pMesh) return;
+	if (!m_pMesh)
+		return;
 
 	std::shared_ptr<CSkinnedMesh> skinnedMesh = std::dynamic_pointer_cast<CSkinnedMesh>(m_pMesh);
 
@@ -855,7 +856,11 @@ void GameObject::UpdateWorldOBB()
 		}
 		worldMatrix = WeaponCustomRotation * worldMatrix;
 		auto obb = std::make_shared<DirectX::BoundingOrientedBox>(centerLocal, extentsLocal, XMFLOAT4(0, 0, 0, 1));
-
+		if (CustomOBBScale.x != 1.0f || CustomOBBScale.y != 1.0f || CustomOBBScale.z != 1.0f) {
+			obb->Extents.x *= CustomOBBScale.x;
+			obb->Extents.y *= CustomOBBScale.y;
+			obb->Extents.z *= CustomOBBScale.z;
+		}
 		obb->Transform(*obb, worldMatrix);
 		XMVECTOR scaleVec, rotQuat, transVec;
 		XMMatrixDecompose(&scaleVec, &rotQuat, &transVec, XMLoadFloat4x4(&m_xmf4x4World));
@@ -981,8 +986,10 @@ void Skinned_GameObject::SetupWeaponCollider()
 	std::shared_ptr<GameObject> model = FindFrame(WeaponName);
 
 	if (!model || !model->m_pMesh) {
-		std::cout << "weapon set fail" << std::endl;
-		return;
+		{
+			std::cout << "weapon set fail" << std::endl;
+			return;
+		}
 	}
 
 	model->SetType(Object_Type::weapon);
@@ -1006,6 +1013,7 @@ void Skinned_GameObject::SetupWeaponCollider()
 			quaternion
 		)
 	);
+	//cout << model->m_pMesh->m_xmf3AABBCenter.y << "\n";
 	model->Set_Collider_OBB(obb);
 	model->SetCanCollide(false); 
 	//model->bUpdateOBBOff();
@@ -1022,6 +1030,9 @@ void Skinned_GameObject::SetupWeaponCollider()
 			XMConvertToRadians(0.0f));
 	}
 
+	if (WeaponName == "Hand_R_4") {
+		model->CustomOBBScale = XMFLOAT3(0.2f, 0.2f, 0.3f);
+	}
 	//Weapon_ptr = model;
 	Weapon_ptr.push_back(model);
 
@@ -1054,6 +1065,38 @@ void Skinned_GameObject::SetupWeaponCollider()
 		);
 		model->Set_Collider_OBB(obb);
 		model->SetCanCollide(false);
+		Weapon_ptr.push_back(model);
+	}
+
+	if (WeaponName == "Hand_R_4") {
+		std::shared_ptr<GameObject> model = FindFrame("Hand_L_4");
+
+		if (!model || !model->m_pMesh) {
+			std::cout << "sub weapon set fail" << std::endl;
+			return;
+		}
+		model->SetType(Object_Type::weapon);
+		model->SetScale(10.0f, 10.0f, 10.0f, true);
+		XMFLOAT4X4 worldMatrixFloat = model->m_xmf4x4World;
+		XMVECTOR scale, rotationQuat, translation;
+		XMFLOAT4 quaternion;
+		XMMATRIX worldMatrix = XMLoadFloat4x4(&worldMatrixFloat);
+
+		if (XMMatrixDecompose(&scale, &rotationQuat, &translation, worldMatrix))
+			XMStoreFloat4(&quaternion, rotationQuat);
+		else
+			quaternion = XMFLOAT4(0, 0, 0, 1);
+
+		std::shared_ptr<BoundingOrientedBox> obb = std::shared_ptr<BoundingOrientedBox>(
+			new BoundingOrientedBox(
+				model->m_pMesh->m_xmf3AABBCenter,
+				model->m_pMesh->m_xmf3AABBExtents,
+				quaternion
+			)
+		);
+		model->Set_Collider_OBB(obb);
+		model->SetCanCollide(false);
+		model->CustomOBBScale = XMFLOAT3(0.2f, 0.2f, 0.3f);
 		Weapon_ptr.push_back(model);
 	}
 	//std::cout << "weapon set, Center  : " << model->m_pMesh->m_xmf3AABBCenter.x << ", " << model->m_pMesh->m_xmf3AABBCenter.y << ", " << model->m_pMesh->m_xmf3AABBCenter.z << std::endl;
