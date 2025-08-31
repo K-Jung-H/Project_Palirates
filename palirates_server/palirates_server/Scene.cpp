@@ -504,7 +504,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
             if (!w->CanCollide()) continue;
             w->UpdateWorldOBB();
             auto worldWeaponOBB = w->Get_Collider_OBB();
-            cout << "worldWeaponOBB : " << worldWeaponOBB ->Center.x << ", " << worldWeaponOBB->Center.y << ", " << worldWeaponOBB->Center.z << "\n";
+            //cout << "worldWeaponOBB : " << worldWeaponOBB ->Center.x << ", " << worldWeaponOBB->Center.y << ", " << worldWeaponOBB->Center.z << "\n";
             for (std::shared_ptr<Player> player_ptr : player_list) {
                 if (!player_ptr) continue;
 
@@ -544,6 +544,13 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                     {
                         damage = 10.0f;
                         player_ptr->BreathHit = true;
+                        
+                        if (m->GetType() == Monster_Type::Gargoyle) {
+                            player_ptr->mosaic_value += 3;
+                            player_ptr->currTimeStore = totalTime;
+                            player_ptr->lastTimeStore = totalTime;
+                            cout << player_ptr->mosaic_value << "\n";
+                        }
                     }
                     else // Normal Hit
                     {

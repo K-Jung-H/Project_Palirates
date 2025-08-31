@@ -685,7 +685,6 @@ void CTerrainPlayer::ApplySyncData(const ServerSyncData& syncData)
 	}
 	controller->ApplyCurrentAnimationPose(this);*/
 }
-//º¸·ù
 
 //==================================================================
 
