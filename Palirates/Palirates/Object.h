@@ -51,8 +51,11 @@ struct ServerSyncData
     int changedStateNum = -1;
     float hp;
     bool bBreathHit;
+<<<<<<< HEAD
     int stateEnum;
     AnimUpdateMode animMode = AnimUpdateMode::Full;
+=======
+>>>>>>> server_0628
 };
 
 class CTexture
@@ -1166,9 +1169,12 @@ protected:
 public:
     int test_num{ 0 };
     int Hit_Track_idx = -1;
+<<<<<<< HEAD
     AnimUpdateMode animMode = AnimUpdateMode::Full;
     int            poseSkipCounter = 0;
 
+=======
+>>>>>>> server_0628
     CMonsterObject() {};
     virtual ~CMonsterObject();
 

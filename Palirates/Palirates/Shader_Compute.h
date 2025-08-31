@@ -167,7 +167,10 @@ struct MosaicBlurInfo_CB
 	int mosaic_value = 1;
 };
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> server_0628
 enum class Post_Effect_Type
 {
 	Motion_Blur,
@@ -179,6 +182,7 @@ enum class Post_Effect_Type
 
 struct Effect_Sync_Data
 {
+<<<<<<< HEAD
 	bool zoom_blur_active;
 	XMFLOAT3 zoom_w_position;
 
@@ -191,6 +195,15 @@ struct Effect_Sync_Data
 	float fogEnd;
 	float fogDensity;
 };
+=======
+	bool motion_blur_active;
+	std::array<bool, MaxPlayer> motion_blur_apply;
+	
+	bool zoom_blur_active;
+	XMFLOAT3 zoom_w_position;
+};
+
+>>>>>>> server_0628
 
 struct Resource_Bind_Set
 {

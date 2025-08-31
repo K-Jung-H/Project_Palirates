@@ -192,6 +192,7 @@ float3 ConeEmitDirection(uint id, float3 baseDir, float coneAngle)
     );
 }
 
+<<<<<<< HEAD
 float Hash11(uint n)
 {
     n = (n << 13u) ^ n;
@@ -262,6 +263,8 @@ float3 MakeOrbitNormal(uint index)
 
 
 
+=======
+>>>>>>> server_0628
 static const float3 PARTY_COLORS[6] =
 {
     float3(1.0f, 0.0f, 0.0f), // Red
@@ -354,7 +357,11 @@ void Emit_Party(inout Particle_Info p, uint index)
     float t = saturate(angle_from_center / coneAngle);
     float speedMultiplier = lerp(1.5f, 0.7f, t); 
 
+<<<<<<< HEAD
     p.Velocity = normalize(dir) * Velocity_Value * speedMultiplier;
+=======
+    p.Velocity = normalize(dir) * Init_Velocity_Value * speedMultiplier;
+>>>>>>> server_0628
 
     p.Color = GetPartyColorByIndex(index);
 
@@ -362,6 +369,7 @@ void Emit_Party(inout Particle_Info p, uint index)
     p.Rotate_Value = frac(sin(index * 73.37f) * 43758.5453f);
 }
 
+<<<<<<< HEAD
 void Emit_Heal(inout Particle_Info p, uint index)
 {
     float3 center = (EmitRegionMin + EmitRegionMax) * 0.5f;
@@ -424,6 +432,8 @@ void Emit_RadialDiffuse(inout Particle_Info p, uint index)
     
 }
 
+=======
+>>>>>>> server_0628
 
 //===============================================================
 // Interval
@@ -439,6 +449,23 @@ void Emit_Bleeding(inout Particle_Info p, uint index)
 
 //===============================================================
 
+<<<<<<< HEAD
+=======
+
+
+#define PARTICLE_TYPE_SNOW     0
+#define PARTICLE_TYPE_SPLASH    1
+#define PARTICLE_TYPE_DRAGON_FIRE 2
+#define PARTICLE_TYPE_PARTY      3
+
+#define PARTICLE_TYPE_SAND      4
+#define PARTICLE_TYPE_SAND_STORM 5
+
+#define PARTICLE_TYPE_INTERVAL_BLEEDING 10
+
+//===============================================================
+
+>>>>>>> server_0628
 void ApplyDelayByType(inout Particle_Info p, uint index)
 {
     float seed = frac(sin(index * 97.13f + ElapsedTime * 33.33f) * 31415.9265f);
@@ -516,6 +543,7 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
         Emit_DragonFire(p, index);
     else if (p.Type == PARTICLE_TYPE_PARTY)
         Emit_Party(p, index);
+<<<<<<< HEAD
     else if (p.Type == PARTICLE_TYPE_HEAL)
         Emit_Heal(p, index);
     else if (p.Type == PARTICLE_TYPE_ORBIT)
@@ -525,6 +553,8 @@ void EmitCS(uint3 DTid : SV_DispatchThreadID)
     else if (p.Type == PARTICLE_TYPE_DIFFUSE_Continuous)
         Emit_RadialDiffuse(p, index);   
         
+=======
+>>>>>>> server_0628
 
     else if (p.Type == PARTICLE_TYPE_INTERVAL_BLEEDING)
     {

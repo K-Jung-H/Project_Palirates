@@ -46,8 +46,12 @@ Player::Player(int playerId) : Skinned_GameObject()
         TRACK_ATTACK3,
         TRACK_KNOCK_DOWN,
         TRACK_GET_UP,
+<<<<<<< HEAD
 		TRACK_GET_HIT_F2,
         TRACK_DIVEROLL_FORWARD
+=======
+		TRACK_GET_HIT_F2
+>>>>>>> server_0628
     };
 
     for (int i = 0; i < n_Animation; ++i) {
@@ -56,6 +60,7 @@ Player::Player(int playerId) : Skinned_GameObject()
         }
     }
 
+<<<<<<< HEAD
     char* modelPaths[] = {
         //"Model/Captain_v17.bin",
         "Model/2HandedMan.bin",
@@ -75,6 +80,9 @@ Player::Player(int playerId) : Skinned_GameObject()
         model_index = 0;
     //InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
     InitAnimationController(modelPaths[model_index], 18, 2, OnceType);
+=======
+    InitAnimationController("Model/Captain_v17.bin", 17, 2, OnceType);
+>>>>>>> server_0628
    
     m_StateMachine = std::make_unique<PlayerStateMachine>(this);
     InitStateMachine();
@@ -136,6 +144,7 @@ static const DirectX::XMFLOAT3 kDirVecByRunDir[8] = {
 
 void Player::key_input(uint32_t keyState)
 {
+<<<<<<< HEAD
    // cout << keyState << "\n";
     constexpr uint32_t MOVE_MASK = (INPUT_W | INPUT_A | INPUT_S | INPUT_D);
 
@@ -143,10 +152,13 @@ void Player::key_input(uint32_t keyState)
 
     static bool F2_Mode = false;
 
+=======
+>>>>>>> server_0628
     if (keyState & INPUT_Q)
     {
         motion_blur = !motion_blur;
     }
+<<<<<<< HEAD
 
     if (keyState & INPUT_F2)
     {
@@ -256,6 +268,8 @@ void Player::key_input(uint32_t keyState)
     else {
         GetStateMachine()->lastMoveMask = 0; 
     }
+=======
+>>>>>>> server_0628
 }
 
 void Player::animate(float Elapsedtime)
@@ -359,6 +373,7 @@ void Player::HitDamage(float damage) {
     if (hp - damage < 0.0f)
         hp = 0.0f;
     else hp -= damage;
+<<<<<<< HEAD
 }
 
 int Player::PlayAnimation(State state) {
@@ -395,4 +410,6 @@ void Player::SetRunDirectionTrack(int track)
     }
     currStateTrackIdx = track;
     cout << track << "\n";
+=======
+>>>>>>> server_0628
 }

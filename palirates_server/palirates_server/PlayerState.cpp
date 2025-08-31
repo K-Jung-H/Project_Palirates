@@ -47,6 +47,7 @@ void PlayerNormalState::Exit(Player* player) {
 	//player->motion_blur = false;
 }
 
+<<<<<<< HEAD
 /////////////////////////// run ///////////////////////////////
 
 void PlayerRunState::Enter(Player* player, PlayerStateMachine* sm) {
@@ -57,10 +58,20 @@ void PlayerRunState::Enter(Player* player, PlayerStateMachine* sm) {
 void PlayerRunState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
 	/*if (player->GetAnimationSyncData().changedStateNum == int(State::Dive)) {
 		player->motion_blur = true;
+=======
+/////////////////////////// attack1 ///////////////////////////////
+
+void PlayerAttack1State::Enter(Player* player, PlayerStateMachine* sm) {
+	player->Weapon_ptr->SetCanCollide(true);
+	//std::cout << "PlayerAttack1State Enter" << std::endl;
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+>>>>>>> server_0628
 	}
 	else player->motion_blur = false;*/
 }
 
+<<<<<<< HEAD
 void PlayerRunState::Exit(Player* player) {
 	//std::cout << "PlayerNormalState Exit" << std::endl;
 	//player->motion_blur = false;
@@ -77,6 +88,8 @@ void PlayerAttack1State::Enter(Player* player, PlayerStateMachine* sm) {
 	PrepareForStateEnter(State::Attack1, player, sm);
 }
 
+=======
+>>>>>>> server_0628
 void PlayerAttack1State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
 	if (sm->animController->m_pAnimationTracks[TRACK_ATTACK1].m_bFinished) {
 		sm->animController->m_pAnimationTracks[TRACK_ATTACK1].m_bFinished = false;
@@ -86,22 +99,36 @@ void PlayerAttack1State::Update(Player* player, float deltaTime, PlayerStateMach
 }
 
 void PlayerAttack1State::Exit(Player* player) {
+<<<<<<< HEAD
 	//player->Weapon_ptr->SetCanCollide(false);
 	for (auto& w : player->Weapon_ptr) {
 		w->SetCanCollide(false);
 	}
+=======
+	player->Weapon_ptr->SetCanCollide(false);
+>>>>>>> server_0628
 	//std::cout << "PlayerAttack1State Exit" << std::endl;
 }
 
 /////////////////////////// attack2 ///////////////////////////////
 
 void PlayerAttack2State::Enter(Player* player, PlayerStateMachine* sm) {
+<<<<<<< HEAD
 	//player->Weapon_ptr->SetCanCollide(true);
 	for (auto& w : player->Weapon_ptr) {
 		w->SetCanCollide(true);
 	}
 	//std::cout << "PlayerAttack2State Enter" << std::endl;
 	PrepareForStateEnter(State::Attack2, player, sm);
+=======
+	player->Weapon_ptr->SetCanCollide(true);
+	//std::cout << "PlayerAttack2State Enter" << std::endl;
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+	sm->animController->SetTrackWeight(TRACK_ATTACK2, 1.0f);
+	sm->animController->m_pAnimationTracks[TRACK_ATTACK2].m_fPosition = 0.0f;
+>>>>>>> server_0628
 }
 
 void PlayerAttack2State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -113,16 +140,21 @@ void PlayerAttack2State::Update(Player* player, float deltaTime, PlayerStateMach
 }
 
 void PlayerAttack2State::Exit(Player* player) {
+<<<<<<< HEAD
 	//player->Weapon_ptr->SetCanCollide(false);
 	for (auto& w : player->Weapon_ptr) {
 		w->SetCanCollide(false);
 	}
+=======
+	player->Weapon_ptr->SetCanCollide(false);
+>>>>>>> server_0628
 	//std::cout << "PlayerAttack2State Exit" << std::endl;
 }
 
 /////////////////////////// attack3 ///////////////////////////////
 
 void PlayerAttack3State::Enter(Player* player, PlayerStateMachine* sm) {
+<<<<<<< HEAD
 	//player->Weapon_ptr->SetCanCollide(true);
 	for (auto& w : player->Weapon_ptr) {
 		w->SetCanCollide(true);
@@ -133,6 +165,18 @@ void PlayerAttack3State::Enter(Player* player, PlayerStateMachine* sm) {
 
 void PlayerAttack3State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
 	cout << sm->animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition << ", " << sm->animController->m_pAnimationTracks[TRACK_ATTACK3].m_fWeight << "\n";
+=======
+	player->Weapon_ptr->SetCanCollide(true);
+	//std::cout << "PlayerAttack3State Enter" << std::endl;
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+	sm->animController->SetTrackWeight(TRACK_ATTACK3, 1.0f);
+	sm->animController->m_pAnimationTracks[TRACK_ATTACK3].m_fPosition = 0.0f;
+}
+
+void PlayerAttack3State::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
+>>>>>>> server_0628
 	if (sm->animController->m_pAnimationTracks[TRACK_ATTACK3].m_bFinished) {
 		sm->animController->m_pAnimationTracks[TRACK_ATTACK3].m_bFinished = false;
 		//std::cout << "PlayerAttackState finished" << std::endl;
@@ -141,10 +185,14 @@ void PlayerAttack3State::Update(Player* player, float deltaTime, PlayerStateMach
 }
 
 void PlayerAttack3State::Exit(Player* player) {
+<<<<<<< HEAD
 	//player->Weapon_ptr->SetCanCollide(false);
 	for (auto& w : player->Weapon_ptr) {
 		w->SetCanCollide(false);
 	}
+=======
+	player->Weapon_ptr->SetCanCollide(false);
+>>>>>>> server_0628
 	//std::cout << "PlayerAttack3State Exit" << std::endl;
 }
 
@@ -155,7 +203,16 @@ void PlayerGetHitState::Enter(Player* player, PlayerStateMachine* sm) {
 	if (!player->BreathHit)
 		player->SetIsInvincible(true);
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
+<<<<<<< HEAD
 	PrepareForStateEnter(State::Get_Hit_F2, player, sm);
+=======
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+	sm->animController->SetTrackWeight(TRACK_GET_HIT_F2, 1.0f);
+	sm->animController->m_pAnimationTracks[TRACK_GET_HIT_F2].m_fPosition = 0.0f;
+	//std::cout << "PlayerGetHitState Enter" << std::endl;
+>>>>>>> server_0628
 }
 
 void PlayerGetHitState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -182,7 +239,16 @@ void PlayerDeadState::Enter(Player* player, PlayerStateMachine* sm) {
 	player->bDead = true;
 	player->SetHP(0.0f);
 	//std::cout << "PlayerGetHitState Enter" << std::endl;
+<<<<<<< HEAD
 	PrepareForStateEnter(State::Knock_Down, player, sm);
+=======
+	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
+		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
+	}
+	sm->animController->SetTrackWeight(TRACK_KNOCK_DOWN, 1.0f);
+	sm->animController->m_pAnimationTracks[TRACK_KNOCK_DOWN].m_fPosition = 0.0f;
+	//std::cout << "PlayerDeadState Enter" << std::endl;
+>>>>>>> server_0628
 }
 
 void PlayerDeadState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -207,7 +273,12 @@ void PlayerGetUpState::Enter(Player* player, PlayerStateMachine* sm) {
 	for (int i = 0; i < sm->animController->m_nAnimationTracks; ++i) {
 		sm->animController->m_pAnimationTracks[i].m_fWeight = 0.0f;
 	}
+<<<<<<< HEAD
 	PrepareForStateEnter(State::Get_Up, player, sm);
+=======
+	sm->animController->SetTrackWeight(TRACK_GET_UP, 1.0f);
+	sm->animController->m_pAnimationTracks[TRACK_GET_UP].m_fPosition = 0.0f;
+>>>>>>> server_0628
 }
 
 void PlayerGetUpState::Update(Player* player, float deltaTime, PlayerStateMachine* sm) {
@@ -223,6 +294,7 @@ void PlayerGetUpState::Exit(Player* player) {
 	player->SetHP(50.0f);
 	player->bDead = false;
 }
+<<<<<<< HEAD
 
 /////////////////////////// Dive ///////////////////////////////
 
@@ -305,3 +377,5 @@ void PlayerFastRunState::Update(Player* player, float deltaTime, PlayerStateMach
 void PlayerFastRunState::Exit(Player* player) {
 
 }
+=======
+>>>>>>> server_0628

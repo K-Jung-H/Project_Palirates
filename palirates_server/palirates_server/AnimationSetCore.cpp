@@ -285,9 +285,12 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, GameObject* pRootGame
 						if (j == RootIndex) {
 							if (!m_pAnimationTracks[k].m_bFinished && pRootGameObject->RootMotionTrackSet.find(k) != pRootGameObject->RootMotionTrackSet.end()) {
 								HipsPosition = XMFLOAT3(blendedTransform._41, blendedTransform._42, blendedTransform._43);
+<<<<<<< HEAD
 								/*if (pRootGameObject->GetType() == Object_Type::player) {
 									cout << HipsPosition.x << ", " << HipsPosition.y << ', ' << HipsPosition.z << "\n";
 								}*/
+=======
+>>>>>>> server_0628
 								bRootMotion = true;
 							}
 
@@ -340,11 +343,17 @@ void CAnimationController::ResetWeight()
 
 void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrackLooped, const std::vector<BoundingOrientedBox>* obblist)
 {
+<<<<<<< HEAD
 	Skinned_GameObject* monster = dynamic_cast<Skinned_GameObject*>(pRootGameObject);
+=======
+	if (pRootGameObject->GetType() != Object_Type::monster) return;
+	Monster* monster = dynamic_cast<Monster*>(pRootGameObject);
+>>>>>>> server_0628
 	if (!monster) return;
 	const float multiplier = pRootGameObject->m_fScale * 1;
 	XMFLOAT3 deltaMove;
 	float currWeight = m_pAnimationTracks[monster->currStateTrackIdx].m_fWeight;
+<<<<<<< HEAD
 	if (bTrackLooped || currWeight < 0.3f) {
 		//cout << "bTrackLooped : " << bTrackLooped << ", currWeight : " << currWeight << "\n";
 		deltaMove = XMFLOAT3(0.0f, 0.0f, 0.0f);
@@ -356,6 +365,14 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 		cout << "Player deltaMove : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
 	}*/
 	if ((deltaMove.x == 0.0f && deltaMove.y == 0.0f && deltaMove.z == 0.0f) /*|| Vector3::LengthSquared(deltaMove) > 1.0f*/) {
+=======
+	if (bTrackLooped || currWeight < 0.3f)
+		deltaMove = XMFLOAT3(0.0f, 0.0f, 0.0f);
+	else
+		deltaMove = Vector3::Subtract(HipsPosition, m_xmf3PrevHipsPosition);
+	deltaMove = XMFLOAT3(deltaMove.x * multiplier, deltaMove.y * multiplier, deltaMove.z * multiplier);
+	if ((deltaMove.x == 0.0f && deltaMove.y == 0.0f && deltaMove.z == 0.0f) || Vector3::LengthSquared(deltaMove) > 1.0f) {
+>>>>>>> server_0628
 		m_xmf3PrevHipsPosition = HipsPosition;
 		return;
 	}
@@ -450,6 +467,7 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 
 		if (!blocked) {
 			pos += deltaVec_full;
+<<<<<<< HEAD
 			if (monster->currStateTrackIdx == TRACK_DIVEROLL_FORWARD)
 				cout << "deltaMove Pos : " << deltaMove.x << ", " << deltaMove.y << ", " << deltaMove.z << "\n";
 			XMFLOAT3 newPos;
@@ -459,10 +477,16 @@ void CAnimationController::OnRootMotion(GameObject* pRootGameObject, bool bTrack
 				//cout << monster->currStateTrackIdx << "\n";
 				//cout << "Player newPos : " << newPos.x << ", " << newPos.y << ", " << newPos.z << "\n";
 			}
+=======
+			XMFLOAT3 newPos;
+			XMStoreFloat3(&newPos, pos);
+			pRootGameObject->SetPosition(newPos);
+>>>>>>> server_0628
 		}
 	}
 
 	m_xmf3PrevHipsPosition = HipsPosition; 
+<<<<<<< HEAD
 }
 
 void CAnimationController::AdvanceTime2(float fTimeElapsed, GameObject* pRootGameObject, const std::vector<BoundingOrientedBox>* obblist)
@@ -629,4 +653,6 @@ void CAnimationController::AdvanceTime2(float fTimeElapsed, GameObject* pRootGam
 
 	pRootGameObject->UpdateTransform(nullptr);
 	OnAnimationIK(pRootGameObject);
+=======
+>>>>>>> server_0628
 }

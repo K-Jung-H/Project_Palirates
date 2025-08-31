@@ -94,6 +94,7 @@ struct MonsterHitInfo
     bool hitCmd;
 };
 
+<<<<<<< HEAD
 struct StateChangeInfo
 {
     int ID;
@@ -108,6 +109,16 @@ struct Effect_Sync_Data
 
     std::array<UINT, MaxPlayer> mosaic_value;
 
+=======
+struct Effect_Sync_Data
+{
+    bool motion_blur_active;
+    std::array<bool, MaxPlayer> motion_blur_apply;
+
+    bool zoom_blur_active;
+    XMFLOAT3 zoom_w_position;
+
+>>>>>>> server_0628
     bool monster_x_ray;
 
     bool fog_trigger;

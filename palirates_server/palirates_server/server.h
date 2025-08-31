@@ -113,4 +113,7 @@ private:
     void HandleStagePacket(int clientId, const std::string& command, const std::vector<std::string>& tokens);
 
     void FlushSendQueues();
+
+    std::unordered_map<Scene_Type, bool> stageClearStatus;
+    bool AllStagesCleared();
 };

@@ -186,6 +186,9 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     }
     break;
 
+    case Stage_3:
+    case Stage_5:
+    case Stage_7:
     case Stage_1:
     case Stage_2:
     case Stage_3:
@@ -194,6 +197,7 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
     case Stage_6:
     case Stage_7:
     {
+<<<<<<< HEAD
         std::shared_ptr<Stage_Scene> in_stage_scene = NULL;
         std::shared_ptr<CTerrainPlayer> pPlayer = NULL;
 
@@ -209,6 +213,9 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             in_stage_scene = make_shared<Stage_2_Scene>();
         }
 
+=======
+        std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_1_Scene>();
+>>>>>>> server_0628
         in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
         in_stage_scene->scene_type = scene_type;
         Register_Scene(scene_name, in_stage_scene);
@@ -223,14 +230,23 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 
         pPlayer->SetupWeaponCollider();
 
+<<<<<<< HEAD
         std::vector<shared_ptr<CGameObject>> trail_target = pPlayer->Weapon_ptr;
         if (!trail_target.empty()) 
         {
+=======
+        shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
+        if (trail_target)
+        {
+            std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+
+>>>>>>> server_0628
             XMFLOAT3 player_color = GetColorById(Client_ID + 1);
 
             XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
             XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+<<<<<<< HEAD
             for (auto& t : trail_target) 
             {
                 std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
@@ -248,6 +264,19 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
             }
         }
         
+=======
+            trail_obj->Set_Main_Color(trail_main_color);
+            trail_obj->Set_SubColor(trail_sub_color);
+
+            trail_obj->Set_Trail_Target(trail_target, false);
+            trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+            in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+            pPlayer->SetTrailObj(trail_obj);
+            pPlayer->bTrailOff();
+            pPlayer->GetTrailObj()->Set_Active(false);
+        }
+
+>>>>>>> server_0628
         XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
         pPlayer->SetPosition(new_position);
 
@@ -262,9 +291,142 @@ void Scene_Manager::Build_Scene(Scene_Type scene_type, string scene_name, ID3D12
 #ifdef WRITE_TEXT_UI
         in_stage_scene->Build_Text_UI(text_ui_renderer.get());
 #endif
+<<<<<<< HEAD
 
+=======
     }
     break;
+
+    case Stage_6:
+    case Stage_4:
+    {
+        std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_2_Scene>();
+        in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
+        Register_Scene(scene_name, in_stage_scene);
+
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
+        pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetID(Client_ID);
+        pPlayer->SetOutlineColor(Client_ID + 1);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
+       XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
+       pPlayer->SetPosition(new_position);
+
+        
+       in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
+
+        pPlayer->SetupWeaponCollider();
+
+        shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
+        if (trail_target)
+        {
+            std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+
+            XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+
+            XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+            XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+            trail_obj->Set_Main_Color(trail_main_color);
+            trail_obj->Set_SubColor(trail_sub_color);
+
+            trail_obj->Set_Trail_Target(trail_target, false);
+            trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+            in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+            pPlayer->SetTrailObj(trail_obj);
+            pPlayer->bTrailOff();
+            pPlayer->GetTrailObj()->Set_Active(false);
+        }
+
+        in_stage_scene->Bind_Player_UI_Callback();
+        in_stage_scene->Bind_Player_UI_Updata_Callback();
+
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
+>>>>>>> server_0628
+    }
+    break;
+    case Stage_2:
+    {
+        std::shared_ptr<CScene> in_stage_scene = std::make_shared<Stage_2_Scene>();
+        in_stage_scene->BuildObjects(pd3dDevice, pd3dCommandList);
+        in_stage_scene->scene_type = scene_type;
+        Register_Scene(scene_name, in_stage_scene);
+
+        std::shared_ptr<CTerrainPlayer> pPlayer = std::make_shared<CTerrainPlayer>(pd3dDevice, pd3dCommandList, in_stage_scene->Get_MRT_GraphicsRootSignature(), in_stage_scene->m_pTerrain.get(), CScene::select_index);
+        pPlayer->Set_Child(pPlayer->m_pRootModel);
+        pPlayer->SetID(Client_ID);
+        pPlayer->SetOutlineColor(Client_ID + 1);
+        pPlayer->SetObject_Type_ID(MATERIAL_Object_Type_ID_Player);
+        XMFLOAT3 new_position = in_stage_scene->Get_Start_Position_List(Client_ID);
+        pPlayer->SetPosition(new_position);
+
+        in_stage_scene->obj_manager->Add_Object(pPlayer, Object_Type::skinned);
+        Set_Scene_Player(scene_name, pPlayer);
+
+        pPlayer->SetupWeaponCollider();
+
+        shared_ptr<CGameObject> trail_target = pPlayer->Weapon_ptr;
+        if (trail_target)
+        {
+            std::shared_ptr<Trail_Object> trail_obj = std::make_shared<Trail_Object>(pd3dDevice, pd3dCommandList);
+
+            XMFLOAT3 player_color = GetColorById(Client_ID + 1);
+
+            XMFLOAT4 trail_main_color = { player_color.x, player_color.y, player_color.z, 1.0f };
+            XMFLOAT4 trail_sub_color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+            trail_obj->Set_Main_Color(trail_main_color);
+            trail_obj->Set_SubColor(trail_sub_color);
+
+            trail_obj->Set_Trail_Target(trail_target, false);
+            trail_obj->Set_Trail_LocalOffset(XMFLOAT3(0.0f, 9.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 0.0f));
+            in_stage_scene->obj_manager->Add_Object(trail_obj, Object_Type::trail);
+            pPlayer->SetTrailObj(trail_obj);
+            pPlayer->bTrailOff();
+            pPlayer->GetTrailObj()->Set_Active(false);
+        }
+
+        in_stage_scene->Bind_Player_UI_Callback();
+        in_stage_scene->Bind_Player_UI_Updata_Callback();
+#ifdef WRITE_TEXT_UI
+        in_stage_scene->Build_Text_UI(text_ui_renderer.get());
+#endif
+    }
+    break;
+
+    //case Stage_3:
+    //{
+
+    //}
+    //break;
+
+    //case Stage_4:
+    //{
+
+    //}
+    //break;
+
+    //case Stage_5:
+    //{
+
+    //}
+    //break;
+
+    //case Stage_6:
+    //{
+
+    //}
+    //break;
+
+    //case Stage_7:
+    //{
+
+    //}
+    //break;
 
     case Test:
     {
@@ -699,3 +861,16 @@ bool Scene_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncDa
 
     return false;
 }
+<<<<<<< HEAD
+=======
+
+bool Scene_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
+{
+    if (activeScene)
+        return activeScene->Sync_Player_Blur(player_id, motion_blur_active);
+    else
+        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
+
+    return false;
+}
+>>>>>>> server_0628

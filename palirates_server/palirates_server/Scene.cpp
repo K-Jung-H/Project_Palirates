@@ -36,6 +36,11 @@ Effect_Sync_Data Scene::Get_Effect_Status()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
     Effect_Sync_Data effect_data{};
+<<<<<<< HEAD
+=======
+    effect_data.motion_blur_active = true;
+    effect_data.zoom_blur_active = true;
+>>>>>>> server_0628
     return effect_data;
 }
 
@@ -157,11 +162,14 @@ void Board_Scene::Init()
 
     if(pirate_ship)
         pirate_ship->SetPosition(0.0f, 0.0f, 0.0f);
+<<<<<<< HEAD
 
 #ifdef TEST_MODE
     if (pirate_ship)
         pirate_ship->SetPosition(0.0f, 0.0f, 1400.0f);
 #endif
+=======
+>>>>>>> server_0628
 
     for (int i = 0; i < MaxPlayer; i++)
     {
@@ -324,7 +332,10 @@ XMFLOAT3 Board_Scene::Get_PirateShip_Look() const
 
 Stage_Scene::Stage_Scene(Scene_Type scene_type) : Scene (scene_type)
 {
+<<<<<<< HEAD
     game_world = make_shared<GameWorld>(scene_type);
+=======
+>>>>>>> server_0628
 }
 
 
@@ -350,7 +361,11 @@ void Stage_Scene::Init()
 
     monster_init_spawn_frame_list.clear();
     player_init_spawn_frame_list.clear();
+<<<<<<< HEAD
     game_world->Set_Boss_Moster(NULL);
+=======
+    game_world.Set_Boss_Moster(NULL);
+>>>>>>> server_0628
 
     GameObject::FlattenGameObjectHierarchy(monster_hierarchy_list, monster_init_spawn_frame_list);
     GameObject::FlattenGameObjectHierarchy(player_hierarchy_list, player_init_spawn_frame_list);
@@ -365,16 +380,25 @@ void Stage_Scene::Update_Scene(float elapsedTime)
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
 
+<<<<<<< HEAD
     if (game_world->Get_Boss_Monster() == NULL && Boss_Monster != NULL)
         game_world->Set_Boss_Moster(Boss_Monster);
+=======
+    if (game_world.Get_Boss_Monster() == NULL && Boss_Monster != NULL)
+        game_world.Set_Boss_Moster(Boss_Monster);
+>>>>>>> server_0628
 
 
     for (shared_ptr<Player> player_ptr : player_list)
     {
         if (player_ptr)
         {
+<<<<<<< HEAD
             auto obbList = game_world->Get_Cell_OBBs(player_ptr->GetPosition());
             //game_world.Update_Collision(player_ptr);
+=======
+            game_world.Update_Collision(player_ptr);
+>>>>>>> server_0628
             player_ptr->update(elapsedTime);
             player_ptr->update_collision(elapsedTime, obbList);
 
@@ -476,6 +500,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
                         data.hitCmd = true;
                     }
                     QueueDamageCommand(data);
+<<<<<<< HEAD
                 }
             }*/
         }
@@ -580,6 +605,52 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();*/
         //for (std::shared_ptr<Player> player_ptr : player_list) {
         //    if (!player_ptr) continue;
+=======
+                }
+            }
+        }
+    }
+    // Collision detection between monster weapons and players
+    for (auto m : Monster_List) {
+        if (!m) continue;
+        auto obbList = game_world.Get_Cell_OBBs(m->GetPosition());
+        m->update(elapsedTime);
+        m->update_collision(elapsedTime, obbList);
+       
+        if (m->bDead) {
+            DespawnMonster(m->GetID());
+            continue;
+        }
+        if (m->bHittingCmd) {
+            MonsterHitInfo data;
+            data.monsterID = m->GetID();
+            data.hitCmd = false;
+            QueueDamageCommand(data);
+            m->bHittingCmd = false;
+        }
+        if (!m->Weapon_ptr) continue;
+        if (!m->Weapon_ptr->CanCollide()) continue;
+        m->UpdateTransform();
+        m->Weapon_ptr->UpdateWorldOBB();
+        auto worldWeaponOBB = *m->Weapon_ptr->Get_Collider_OBB();
+        for (std::shared_ptr<Player> player_ptr : player_list) {
+            if (!player_ptr) continue;
+
+            if (player_ptr->bDead) continue;
+            if (!player_ptr->CanCollide()) continue;
+            if (player_ptr->IsInvincible()) continue;
+
+            if (m->Weapon_ptr->BreathObject) {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 200.0f) {
+                    continue;
+                }
+            }
+            else {
+                if (Vector3::Distance(player_ptr->GetPosition(), m->GetPosition()) > 50.0f) {
+                    continue;
+                }
+            }
+>>>>>>> server_0628
 
         //    if (player_ptr->bDead) continue;
         //    if (!player_ptr->CanCollide()) continue;
@@ -596,6 +667,7 @@ void Stage_Scene::Update_Scene(float elapsedTime)
         //        }
         //    }
 
+<<<<<<< HEAD
         //    player_ptr->UpdateTransform();
         //    auto playerOBB = player_ptr->Get_Collider_OBB();
         //    if (!playerOBB) continue;
@@ -645,21 +717,73 @@ void Stage_Scene::Update_Scene(float elapsedTime)
     }
     for (auto m : Monster_List) 
     {
+=======
+            if (worldWeaponOBB.Intersects(worldPlayerOBB)) {
+                std::cout << "Collision detected! Monster Weapon and Player ID " << player_ptr->GetID() << "\n";
+
+                float damage;
+
+                if (m->Weapon_ptr->BreathObject)
+                {
+                    damage = 10.0f;
+                    player_ptr->BreathHit = true;
+                }
+                else // Normal Hit
+                {
+                    damage = 30.0f;
+
+                    XMVECTOR weaponCenter = XMLoadFloat3(&worldWeaponOBB.Center);
+                    XMVECTOR playerCenter = XMLoadFloat3(&worldPlayerOBB.Center);
+
+                    XMVECTOR direction = XMVector3Normalize(playerCenter - weaponCenter);
+
+                    XMFLOAT3 contactPos;
+                    XMStoreFloat3(&contactPos, XMVectorLerp(weaponCenter, playerCenter, 0.5f));
+
+                    XMFLOAT3 contactDir;
+                    XMStoreFloat3(&contactDir, direction);
+
+                    game_world.Add_Bleeding_Particle(contactPos, contactDir);
+                }
+
+                player_ptr->HitDamage(damage);
+
+                float hp = player_ptr->GetHP();
+
+                if (hp <= 0.0f)
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerDeadState>());
+                else
+                    player_ptr->GetStateMachine()->ChangeState(std::make_unique<PlayerGetHitState>());
+
+            }
+        }
+    }
+    for (auto m : Monster_List) {
+>>>>>>> server_0628
         XMFLOAT3 pos = m->GetPosition();
         pos.x = std::clamp(pos.x, 0.0f, g_mapSize.x);
         pos.z = std::clamp(pos.z, 0.0f, g_mapSize.y);
         m->SetPosition(pos);
     }
+<<<<<<< HEAD
 
 
     game_world->Update_World(elapsedTime);
     game_world->Update_Particle(elapsedTime);
+=======
+    game_world.Boss_Update(Boss_Monster);
+    game_world.Update_Particle(elapsedTime);
+>>>>>>> server_0628
 
     if (Monster_List.size() == 0)
         bStageClear = true;
 
     if (bStageClear)
+<<<<<<< HEAD
         game_world->Stage_Clear_Particle_Update(player_list);
+=======
+        game_world.Stage_Clear_Particle_Update(player_list);
+>>>>>>> server_0628
 
 }
 
@@ -717,20 +841,37 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
     Effect_Sync_Data effect_data;
     
+<<<<<<< HEAD
+=======
+    effect_data.motion_blur_active = false;
+>>>>>>> server_0628
 
     int Player_ID = 0;
     for (std::shared_ptr<Player> player_ptr : player_list)
     {
+<<<<<<< HEAD
         if (player_ptr)
         {
             effect_data.mosaic_value[Player_ID] = player_ptr->mosaic_value;
+=======
+        effect_data.motion_blur_apply[Player_ID] = false;
+
+        if (player_ptr)
+        {
+            effect_data.motion_blur_apply[Player_ID] = player_ptr->motion_blur;
+            effect_data.motion_blur_active = true;
+>>>>>>> server_0628
         }
 
         ++Player_ID;
     }
 
 
+<<<<<<< HEAD
     zoomObject = game_world->Get_ZoomObject();
+=======
+    zoomObject = game_world.Get_ZoomObject();
+>>>>>>> server_0628
     if (zoomObject != NULL)
     {
         effect_data.zoom_blur_active = true;
@@ -749,8 +890,13 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     int defeated_monsters = normal_monster_count - alive_monster_count;
 
     int clear_value_1 = 50;
+<<<<<<< HEAD
     if (game_world->Get_Boss_Monster())
         clear_value_1 = 50 * (1 - game_world->Get_Boss_Monster()->Get_Active());
+=======
+    if (game_world.Get_Boss_Monster())
+        clear_value_1 = 50 * (1 - game_world.Get_Boss_Monster()->Get_Active());
+>>>>>>> server_0628
 
     int clear_value_2 = 50 * defeated_monsters / normal_monster_count;
 
@@ -793,8 +939,11 @@ Effect_Sync_Data Stage_Scene::Get_Effect_Status()
     if (bFog_State || bStageClear)
         effect_data.fog_trigger = false;
 
+<<<<<<< HEAD
     effect_data.fog_trigger = false;
 
+=======
+>>>>>>> server_0628
     return effect_data;
 }
 
@@ -825,6 +974,10 @@ void Stage_Scene::Add_Player(int id)
     
     player_list[id] = make_shared<Player>(player_model_list[id]);
     player_list[id]->Set_Child(player_list[id]->m_pRootModel);
+<<<<<<< HEAD
+=======
+
+>>>>>>> server_0628
     XMFLOAT3 player_pos = player_init_spawn_frame_list[id + 1]->GetPosition();
 
     player_list[id]->SetPosition(player_pos);
@@ -876,7 +1029,10 @@ void Stage_Scene::update_player_State(int clientId, uint32_t inputFlags, const X
     player_list[clientId]->SetLook(lookDirection);
     
     player_list[clientId]->key_input(inputFlags);
+<<<<<<< HEAD
 }
+=======
+>>>>>>> server_0628
 
 void Stage_Scene::SpawnMonster_By_Scene_Data()
 {
@@ -887,6 +1043,7 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
 
     for (std::shared_ptr<GameObject>monster_frame : monster_init_spawn_frame_list)
     {
+<<<<<<< HEAD
 
         string name = monster_frame->Get_Name();
         XMFLOAT3 pos = monster_frame->GetPosition();
@@ -920,6 +1077,76 @@ void Stage_Scene::SpawnMonster_By_Scene_Data()
     }
 }
 
+=======
+        player_list[clientId]->SetTrackInfoList(tracks);
+        player_list[clientId]->SetStateChanged(stateChanged);
+        if (player_list[clientId]->GetStateMachine()->GetCurrentStateAsInt() != stateNum) {
+            if (stateNum == int(State::Attack1)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack1State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Attack2)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack2State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Attack3)) {
+                player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+            else if (stateNum == int(State::Dive)) {
+                //player_list[clientId]->GetStateMachine()->ChangeState(std::make_unique<PlayerAttack3State>());
+                player_list[clientId]->SetStateChangeNum(stateNum);
+            }
+        }
+        if (stateNum == int(State::Dive)) {
+			player_list[clientId]->motion_blur = true; 
+        }
+        else player_list[clientId]->motion_blur = false;
+    }
+}
+
+void Stage_Scene::SpawnMonster_By_Scene_Data()
+{
+    //return;
+
+    int index{}, m_id{};
+    std::shared_ptr<Monster> moster_ptr = NULL;
+
+    for (std::shared_ptr<GameObject>monster_frame : monster_init_spawn_frame_list)
+    {
+
+        string name = monster_frame->Get_Name();
+        XMFLOAT3 pos = monster_frame->GetPosition();
+        pos.y = 0;
+        if (name.find("Fishman") != string::npos)
+        {
+            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Fishman), index++);
+            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+        }
+        else if (name.find("Anubis") != string::npos)
+        {
+//            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), index++);
+//            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+
+//            if (!Boss_Monster)
+//                Boss_Monster = moster_ptr;
+        }
+        else if (name.find("Dragon") != string::npos)
+        {
+//            m_id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Dragon), index++);
+//            moster_ptr = SpawnMonster(m_id, XMFLOAT3(pos), 100);
+
+//            if (!Boss_Monster)
+//                Boss_Monster = moster_ptr;
+        }
+        else if (name.find("Monster") != string::npos)
+            continue;
+        else
+            continue;
+    }
+}
+
+>>>>>>> server_0628
 std::shared_ptr<Monster> Stage_Scene::SpawnMonster(int id, const XMFLOAT3& pos, int hp)
 {
     if (id2idx.find(id) != id2idx.end())
@@ -1012,6 +1239,7 @@ std::vector<MonsterHitInfo> Stage_Scene::FlushDamageQueue()
     return temp;
 }
 
+<<<<<<< HEAD
 std::vector<StateChangeInfo> Stage_Scene::FlushStateChangeQueue()
 {
     std::vector<StateChangeInfo> temp = player_state_change_queue;
@@ -1019,6 +1247,8 @@ std::vector<StateChangeInfo> Stage_Scene::FlushStateChangeQueue()
     return temp;
 }
 
+=======
+>>>>>>> server_0628
 void Stage_Scene::server_DespawnMonster()
 {
     std::lock_guard<std::recursive_mutex> lock(sceneMutex);
@@ -1058,6 +1288,7 @@ void Stage_Scene::server_bleeding()
     XMFLOAT3 pos = player_list[0]->GetPosition();
     pos.y += 30.0f;
     XMFLOAT3 dir = player_list[0]->GetLook();
+<<<<<<< HEAD
     game_world->Add_Bleeding_Particle(pos, dir);
 }
 
@@ -1077,6 +1308,12 @@ void Stage_Scene::server_Mosaic_Control()
         }
     }
 }
+=======
+    game_world.Add_Bleeding_Particle(pos, dir);
+}
+
+
+>>>>>>> server_0628
 //=========================================================
 
 
@@ -1089,7 +1326,11 @@ Stage_1_Scene::Stage_1_Scene() : Stage_Scene(Stage_1)
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
     Init();
 }
@@ -1116,7 +1357,11 @@ Stage_2_Scene::Stage_2_Scene() : Stage_Scene(Stage_2)
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
     Init();
 }
@@ -1139,12 +1384,20 @@ Stage_3_Scene::Stage_3_Scene() : Stage_Scene(Stage_3)
 {
 
     scene_obj = std::make_shared<GameObject>();
+<<<<<<< HEAD
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+=======
+    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map3.bin");
+>>>>>>> server_0628
     g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
 
     Init();
@@ -1168,12 +1421,20 @@ Stage_4_Scene::Stage_4_Scene() : Stage_Scene(Stage_4)
 {
 
     scene_obj = std::make_shared<GameObject>();
+<<<<<<< HEAD
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map2.bin");
+=======
+    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map4.bin");
+>>>>>>> server_0628
     g_mapSize = XMFLOAT2(3072.0f, 4352.0f);
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
     Init();
 }
@@ -1185,8 +1446,12 @@ void Stage_4_Scene::Init()
 
     if (!bStageClear)
     {
+<<<<<<< HEAD
         //int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
         int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Gargoyle), 1);
+=======
+        int id = ENCODE_MONSTER_ID(static_cast<int>(Monster_Type::Anubis), 1);
+>>>>>>> server_0628
         Boss_Monster = SpawnMonster(id, XMFLOAT3(1864.0f, 0.0f, 1990.0f), 100);
     }
 
@@ -1207,7 +1472,11 @@ Stage_5_Scene::Stage_5_Scene() : Stage_Scene(Stage_5)
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
     Init();
 }
@@ -1235,7 +1504,11 @@ Stage_6_Scene::Stage_6_Scene() : Stage_Scene(Stage_6)
     scene_obj->SetPosition(2000.0f, 35.0f, 2000.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
     Init();
 }
@@ -1257,12 +1530,20 @@ void Stage_6_Scene::Init()
 Stage_7_Scene::Stage_7_Scene() : Stage_Scene(Stage_7)
 {
     scene_obj = std::make_shared<GameObject>();
+<<<<<<< HEAD
     scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map1.bin");
+=======
+    scene_obj = GameObject::Load_Scene("Scene/Scene_File_7/map3.bin");
+>>>>>>> server_0628
     g_mapSize = XMFLOAT2(3840.0f, 2816.0f);
     scene_obj->SetPosition(1250.0f, -35.0f, -1200.0f);
     scene_obj->SetScale(10, 10, 10, true);
     scene_obj->UpdateTransform(NULL);
+<<<<<<< HEAD
     game_world->Load_Scene_Data(scene_obj);
+=======
+    game_world.Load_Scene_Data(scene_obj);
+>>>>>>> server_0628
 
     Init();
 }

@@ -561,7 +561,10 @@ Post_Effect_Manager::Post_Effect_Manager(ID3D12Device* pd3dDevice)
 	m_EffectMap[Post_Effect_Type::Motion_Blur] = motion_blur_shader;
 	m_EffectMap[Post_Effect_Type::Outline] = edge_detect_shader;
 	m_EffectMap[Post_Effect_Type::Zoom] = zoom_shader;
+<<<<<<< HEAD
 	m_EffectMap[Post_Effect_Type::Mosaic] = mosaic_shader;	
+=======
+>>>>>>> server_0628
 	m_EffectMap[Post_Effect_Type::etc] = NULL;
 
 

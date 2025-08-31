@@ -26,8 +26,11 @@ void PlayerStateMachine::ChangeState(std::unique_ptr<PlayerState> newState)
 
     if (currentState)
         currentState->Enter(m_pOwner, this);
+<<<<<<< HEAD
 
     if (m_pOwner->m_pOwnerScene) {
         //m_pOwnerScene
     }
+=======
+>>>>>>> server_0628
 }

@@ -65,7 +65,11 @@ ServerSyncData Monster::MakeSyncData() {
     data.lookVector = GetLook();
     /*if (m_pSkinnedAnimationController) {
         data.track_info_list = m_pSkinnedAnimationController->MakeSyncData();
+<<<<<<< HEAD
     }*/
+=======
+    }
+>>>>>>> server_0628
     data.hp = GetHP();
     return data;
 }
@@ -268,6 +272,7 @@ Dragon::Dragon(int id) : Monster(id) {
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 1.0f, -1.6f),
         XMFLOAT3(0.8f, 1.0f, 2.8f),
+<<<<<<< HEAD
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
     );
     Set_Collider_OBB(body);
@@ -346,6 +351,8 @@ Creature1::Creature1(int id) : Monster(id) {
     auto body = std::make_shared<BoundingOrientedBox>(
         XMFLOAT3(0.0f, 0.8f, 0.0f),
         XMFLOAT3(0.4f, 0.8f, 0.4f),
+=======
+>>>>>>> server_0628
         XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f)
     );
     Set_Collider_OBB(body);

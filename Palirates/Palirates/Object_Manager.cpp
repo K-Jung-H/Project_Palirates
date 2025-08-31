@@ -1102,6 +1102,16 @@ void Object_Manager::Animate_Objects(Object_Type type, float fTimeElapsed)
 	}
 	break;
 
+	case Object_Type::aura:
+	{
+		for (std::shared_ptr<CGameObject>& obj_ptr : aura_obj_list)
+		{
+			if (obj_ptr->Get_Active())
+				obj_ptr->Animate(fTimeElapsed);
+		}
+	}
+	break;
+
 	case Object_Type::fixed:
 	case Object_Type::etc:
 	default:
@@ -1479,11 +1489,18 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 			float zView = XMVectorGetZ(viewSpacePos);
 			if (zView > 0.0f)
 			{
+<<<<<<< HEAD
 				//player_map[player_id]->ApplySyncData(syncData);
 				player_map[player_id]->SetLookDirection(syncData.lookVector);
 				player_map[player_id]->SetPosition(syncData.position);
 
 				/*if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
+=======
+				player_map[player_id]->ApplySyncData(syncData);
+
+
+				if (syncData.changedStateNum == int(State::Attack1) || syncData.changedStateNum == int(State::Attack2) || syncData.changedStateNum == int(State::Attack3)) {
+>>>>>>> server_0628
 					std::cout << "Attack State" << "\n";
 					player_map[player_id]->bTrailOn();
 					if (player_map[player_id]->GetTrailStart())
@@ -1503,7 +1520,11 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 				else {
 					player_map[player_id]->bTrailOff();
 					player_map[player_id]->GetTrailObj()->Set_Active(false);
+<<<<<<< HEAD
 				}*/
+=======
+				}
+>>>>>>> server_0628
 			}
 		}
 
@@ -1513,6 +1534,20 @@ bool Object_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncD
 		return false;
 
 	return true;
+<<<<<<< HEAD
+=======
+}
+
+bool Object_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
+{
+	if (player_map[player_id])
+	{
+		player_map[player_id]->SetBlurMask(motion_blur_active);
+		return true;
+	}
+	else
+		return false;
+>>>>>>> server_0628
 }
 
 void Object_Manager::Post_Update_All()
