@@ -105,13 +105,15 @@ void Server::Start()
                 {
                     if (GetAsyncKeyState(VK_OEM_1) & 0x8000)  // ; key
                         stage_scene->server_DespawnMonster();
+                        //stage_scene->server_Mosaic_Control();
+
                     else if (GetAsyncKeyState(VK_OEM_7) & 0x8000)  // ' key
                         stage_scene->server_DespawnMonster_For_Clear();
                     else if (GetAsyncKeyState(VK_OEM_PERIOD) & 0x8000)  // . key
                         stage_scene->server_Fog_Control();
                     else if (GetAsyncKeyState(VK_OEM_2) & 0x8000)  // / key
-                        stage_scene->server_Sand_Control();
-                        //stage_scene->server_X_Ray_Control();
+                        stage_scene->server_X_Ray_Control();
+                        //stage_scene->server_Sand_Control();
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -760,27 +762,25 @@ std::string Server::Build_Stage_Scene_Packet(const std::shared_ptr<Stage_Scene>&
         const auto& effect_status = stage->Get_Effect_Status();
 
         std::ostringstream temp_effect_status_data;
-        temp_effect_status_data << "POST_EFFECT," << to_string(static_cast<int>(effect_status.motion_blur_active)) << ",";
-
-        for (bool blur_active : effect_status.motion_blur_apply)
-        {
-            if (blur_active)
-                temp_effect_status_data << "1" << ",";
-            else
-                temp_effect_status_data << "0" << ",";
-        }
+        temp_effect_status_data << "POST_EFFECT,";
 
         temp_effect_status_data << std::to_string(static_cast<int>(effect_status.zoom_blur_active)) << ",";
         temp_effect_status_data << std::to_string(effect_status.zoom_w_position.x) << ",";
         temp_effect_status_data << std::to_string(effect_status.zoom_w_position.y) << ",";
         temp_effect_status_data << std::to_string(effect_status.zoom_w_position.z) << ",";
+
+        for (UINT i = 0; i < MaxPlayer; ++i)
+        {
+            temp_effect_status_data << std::to_string(effect_status.mosaic_value[i]) << ",";
+        }
+
         temp_effect_status_data << std::to_string(static_cast<int>(effect_status.monster_x_ray)) << ",";
         temp_effect_status_data << std::to_string(static_cast<int>(effect_status.fog_trigger)) << ",";
         temp_effect_status_data << std::to_string(effect_status.fogStart) << ",";
         temp_effect_status_data << std::to_string(effect_status.fogEnd) << ",";
         temp_effect_status_data << std::to_string(effect_status.fogDensity);
-        std::string line = temp_effect_status_data.str();
 
+        std::string line = temp_effect_status_data.str();
         oss << line << "\n";
     }
 

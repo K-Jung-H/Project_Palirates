@@ -2307,8 +2307,6 @@ Change_Signal CScene::Get_Change_Signal()
 void CScene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, shared_ptr<CPlayer> new_player_ptr)
 {
 	obj_manager->Add_Player(new_player_ptr);
-	new_player_ptr->SetBlurMask(true);
-
 }
 
 void CScene::Remove_Multi_Player(int player_id)
@@ -2320,11 +2318,6 @@ void CScene::Remove_Multi_Player(int player_id)
 bool CScene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	return obj_manager->Sync_Player_Data(player_id, syncData, main_Camera.get());
-}
-
-bool CScene::Sync_Player_Blur(int player_id, bool motion_blur_active)
-{
-	return obj_manager->Sync_Player_Blur(player_id, motion_blur_active); 
 }
 
 XMFLOAT3 CScene::Get_Start_Position_List(int player_id)
@@ -4123,7 +4116,6 @@ void Stage_Scene::Add_Multi_Player(ID3D12Device* pd3dDevice, ID3D12GraphicsComma
 {
 	Set_Weapon_Particle(pd3dDevice, pd3dCommandList, new_player_ptr);
 	Set_Heal_Effect(pd3dDevice, pd3dCommandList, new_player_ptr);
-	new_player_ptr->SetBlurMask(true);
 
 	obj_manager->Add_Player(new_player_ptr);
 }
@@ -4308,6 +4300,7 @@ void Stage_Scene::Remove_Multi_Player(int player_id)
 {
 	obj_manager->Remove_Player(player_id);
 }
+
 void Stage_Scene::Sync_Player_Data(int player_id, const ServerSyncData& syncData)
 {
 	obj_manager->Sync_Player_Data(player_id, syncData);

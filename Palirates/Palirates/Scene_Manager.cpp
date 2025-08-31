@@ -699,13 +699,3 @@ bool Scene_Manager::Sync_Player_Data(int player_id, const ServerSyncData& syncDa
 
     return false;
 }
-
-bool Scene_Manager::Sync_Player_Blur(int player_id, bool motion_blur_active)
-{
-    if (activeScene)
-        return activeScene->Sync_Player_Blur(player_id, motion_blur_active);
-    else
-        DebugOutput("[Scene_Manager] ERROR:  Active Scene is not exist");
-
-    return false;
-}

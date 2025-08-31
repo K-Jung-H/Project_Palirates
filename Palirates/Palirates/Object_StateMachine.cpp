@@ -259,8 +259,8 @@ bool StateMachine::IsInState(std::initializer_list<State> states)
     return false;
 }
 
-PlayerStateMachine::PlayerStateMachine(CPlayer* owner)
-    : StateMachine(State::Idle), m_pOwner(owner) {
+PlayerStateMachine::PlayerStateMachine(CPlayer* owner)    : StateMachine(State::Idle), m_pOwner(owner) 
+{
 }
 
 void PlayerStateMachine::update(float Elapsed_time)
@@ -537,6 +537,9 @@ void PlayerStateMachine::enterState(State state, Key_Value key_event)
         }
     }
 
+    if (IsInState({ State::Dive }))
+        m_pOwner->SetBlurMask(true);
+
     switch (state)
     {
     case State::Idle:
@@ -614,6 +617,10 @@ void PlayerStateMachine::exitState(State state, Key_Value key_event)
         shared_ptr<CGameObject> heal_effect = m_pOwner->Get_Heal_Effect();
         heal_effect->Set_Active(false);
     }
+
+    if (IsInState({ State::Dive }))
+        m_pOwner->SetBlurMask(false);
+
 
     switch (state)
     {
