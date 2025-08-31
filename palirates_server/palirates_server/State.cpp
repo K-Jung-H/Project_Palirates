@@ -436,7 +436,7 @@ void GargoyleSkillState::Enter(Monster* monster, MonsterStateMachine* sm) {
     monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);*/
     for (auto& w : monster->Weapon_ptr) {
         w->BreathObject = true;
-        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);
+        //w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);
         //w->SetCanCollide(true);
     }
 }
@@ -449,6 +449,8 @@ void GargoyleSkillState::Update(Monster* monster, float deltaTime, MonsterStateM
             sm->animController->m_pAnimationTracks[currentTrackIdx].m_bFinished = false;
             for (auto& w : monster->Weapon_ptr) {
                 w->SetCanCollide(true);
+                float scale = 1.5f;
+                w->CustomOBBScale = XMFLOAT3(0.4f * scale, 1.0f * scale, 4.0f * scale);
             }
             currentTrackIdx = TRACK_GARGOYLE_SKILL_2;
             monster->currStateTrackIdx = TRACK_GARGOYLE_SKILL_2;
@@ -493,7 +495,7 @@ void GargoyleSkillState::Exit(Monster* monster) {
     for (auto& w : monster->Weapon_ptr) {
         w->SetCanCollide(false);
         w->BreathObject = false;
-        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 1.0f);
+        w->CustomOBBScale = XMFLOAT3(0.4f, 1.0f, 4.0f);
     }
     monster->attackPhase = -1;
     /*if (monster->Weapon_ptr)

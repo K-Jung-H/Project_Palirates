@@ -1029,6 +1029,10 @@ void Skinned_GameObject::SetupWeaponCollider()
 			XMConvertToRadians(30.0f),
 			XMConvertToRadians(0.0f));
 	}
+	
+	if (WeaponName == "Wings_LP") {
+		model->CustomOBBScale = XMFLOAT3(0.4f, 1.0f, 4.0f);
+	}
 
 	if (WeaponName == "Hand_R_4") {
 		model->CustomOBBScale = XMFLOAT3(0.2f, 0.2f, 0.3f);
