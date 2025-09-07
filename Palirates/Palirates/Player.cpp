@@ -392,12 +392,13 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	"Model/swordman_test.bin",
 	//"Model/Seaman_v17.bin",
 	"Model/spear_test.bin",
+	"Model/2HandedMan.bin",
 	//"Model/Skeleton_v17.bin"
 	};
 
-	const int modelCount = sizeof(modelPaths) / sizeof(modelPaths[0]);
+	/*const int modelCount = sizeof(modelPaths) / sizeof(modelPaths[0]);
 	if (ModelNum < 0 || ModelNum >= modelCount)
-		ModelNum = 0; 
+		ModelNum = 0; */
 	CLoadedModelInfo* pAngrybotModel = CGameObject::LoadGeometryAndAnimationFromFile(
 		pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, modelPaths[ModelNum], NULL);
 	m_pRootModel = pAngrybotModel->m_pModelRootObject;

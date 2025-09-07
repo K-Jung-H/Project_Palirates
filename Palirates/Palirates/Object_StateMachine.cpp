@@ -1231,13 +1231,56 @@ void DragonStateMachine::update(float Elapsed_time)
         RootMotionMove(10.0f);
 
         break;
-    case State::Attack2:
-        if (!m_pOwner->Test_Mode)
+    case State::Attack2: {
+        static bool first_enter = true;
+        if (m_pOwner->GetPosition().y <= 57.0f) {
+            std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+            m_pOwner->targetWeights[TRACK_DRAGON_FLY_IDLE] = 1.0f;
+            first_enter = true;
+        }
+        else {
+            if (first_enter) {
+                animController->m_pAnimationTracks[TRACK_DRAGON_FLY_BREATHE].m_bFinished = false;
+                animController->m_pAnimationTracks[TRACK_DRAGON_FLY_BREATHE].m_fPosition = 0.0f;
+                std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+                m_pOwner->targetWeights[TRACK_DRAGON_FLY_BREATHE] = 1.0f;
+                first_enter = false;
+            }
+
+            if (animController->m_pAnimationTracks[TRACK_DRAGON_FLY_BREATHE].m_bFinished) {
+                std::fill(m_pOwner->targetWeights.begin(), m_pOwner->targetWeights.end(), 0.0f);
+                m_pOwner->targetWeights[TRACK_DRAGON_FLY_IDLE] = 1.0f;
+            }
+        }
+        /*if (!m_pOwner->Test_Mode)
             RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 150.0f);
-        m_pOwner->targetWeights[TRACK_DRAGON_BREATHE] = 1.0f;
-        RootMotionMove(0.0f);
+        m_pOwner->targetWeights[TRACK_DRAGON_FLY_BREATHE] = 1.0f;*/
+        //RootMotionMove(0.0f);
+    }
         break;
     case State::Attack3:
+        if (!m_pOwner->Test_Mode)
+            RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 150.0f);
+        m_pOwner->targetWeights[TRACK_DRAGON_FLY_BREATHE] = 1.0f;
+        RootMotionMove(0.0f);
+        break;
+    case State::Jump:
+        static bool first_enter = true;
+        if (m_pOwner->GetPosition().y <= 60.0f) {
+            m_pOwner->targetWeights[TRACK_DRAGON_FLY_IDLE] = 1.0f;
+        }
+        else {
+            if (first_enter) {
+                animController->m_pAnimationTracks[TRACK_DRAGON_FLY_BREATHE].m_bFinished = false;
+                animController->m_pAnimationTracks[TRACK_DRAGON_FLY_BREATHE].m_fPosition = 0.0f;
+                m_pOwner->targetWeights[TRACK_DRAGON_FLY_BREATHE] = 1.0f;
+                first_enter = false;
+            }
+
+            if (animController->m_pAnimationTracks[TRACK_DRAGON_FLY_BREATHE].m_bFinished) {
+                m_pOwner->targetWeights[TRACK_DRAGON_FLY_IDLE] = 1.0f;
+            }
+        }
         if (!m_pOwner->Test_Mode)
             RotateLookToTarget(m_TargetPosition, Elapsed_time, 3.0f, 150.0f);
         m_pOwner->targetWeights[TRACK_DRAGON_FLY_BREATHE] = 1.0f;

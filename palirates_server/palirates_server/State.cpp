@@ -383,8 +383,8 @@ void AnubisSkillState::Enter(Monster* monster, MonsterStateMachine* sm) {
     monster->Weapon_ptr->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);*/
     for (auto& w : monster->Weapon_ptr) {
         w->BreathObject = true;
-        w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);
-        w->SetCanCollide(true);
+        //w->CustomOBBScale = XMFLOAT3(1.0f, 1.0f, 50.0f);
+        //w->SetCanCollide(true);
     }
 }
 
