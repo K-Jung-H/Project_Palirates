@@ -685,6 +685,8 @@ public:
     float maxHP{ 100.0f };
     float currentHP{ 100.0f };
 
+    bool bCanIK{ false };
+
 public:
     CGameObject(const std::string_view& name = "No_name");
     CGameObject(int nMaterials, const std::string_view& name = "No_name");

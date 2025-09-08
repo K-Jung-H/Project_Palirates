@@ -1242,6 +1242,10 @@ inline DirectX::XMVECTOR QFromEulerDeg(float pitchX, float yawY, float rollZ) {
 		XMConvertToRadians(rollZ));
 }
 
+inline float acosSafe(float c) {
+	return acosf(std::clamp(c, -1.0f, 1.0f));
+}
+
 void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGameObject)
 {
 	m_fTime += fTimeElapsed;
@@ -1323,17 +1327,6 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		XMVECTOR q = XMQuaternionNormalize(accQ[j]);
 
-		const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
-		if (boneName && std::strcmp(boneName, "Shoulder_L") == 0) {
-			cout << "Shoulder_L idx : " << j << "\n";
-		}
-		else if (boneName && std::strcmp(boneName, "Elbow_L") == 0) {
-			cout << "Elbow_L idx : " << j << "\n";
-		}
-		else if (boneName && std::strcmp(boneName, "Hand_L") == 0) {
-			cout << "Hand_L idx : " << j << "\n";
-		}
-
 		/*const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
 		if (boneName && std::strcmp(boneName, "Shoulder_R") == 0)
 		{
@@ -1407,6 +1400,129 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 	OnRootMotion(pRootGameObject);
 	OnAnimationIK(pRootGameObject);
+
+	// Left Hand IK
+	if (pRootGameObject->bCanIK) {
+		//cout << "check bCanIK, Model NUM : " << ((CPlayer*)pRootGameObject)->Get_Model_Num() << "\n";
+
+		constexpr int iS = 11;
+		constexpr int iE = 12;
+		constexpr int iW = 13;
+
+		XMFLOAT4X4 WS = m_pAnimationSets->m_ppBoneFrameCaches[iS]->m_xmf4x4World;
+		XMFLOAT4X4 WE = m_pAnimationSets->m_ppBoneFrameCaches[iE]->m_xmf4x4World;
+		XMFLOAT4X4 WW = m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World;
+
+		XMVECTOR S = XMVectorSet(WS._41, WS._42, WS._43, 1);
+		XMVECTOR E0 = XMVectorSet(WE._41, WE._42, WE._43, 1);
+		XMVECTOR W0 = XMVectorSet(WW._41, WW._42, WW._43, 1);
+
+		//if (!pRootGameObject->Weapon_ptr[0]) return;
+		//XMFLOAT4X4 WWeapon = pRootGameObject->Weapon_ptr[0]->m_xmf4x4World;
+		//XMFLOAT3 targetPos = { WWeapon._41,  WWeapon._42, WWeapon._43 };
+
+		// Hand_R idx = 28
+		XMFLOAT4X4 WHand_R = m_pAnimationSets->m_ppBoneFrameCaches[28]->m_xmf4x4World;
+		XMFLOAT3 targetPos = { WHand_R._41,  WHand_R._42, WHand_R._43 };
+
+		XMFLOAT3 right = pRootGameObject->GetRight();
+		XMFLOAT3 poleDir = XMFLOAT3(-right.x, -right.y, -right.z);
+
+		XMVECTOR T = XMLoadFloat3(&targetPos);
+		XMVECTOR P = XMVector3Normalize(XMLoadFloat3(&poleDir));
+
+		static bool s_lenCached = false;
+		static float s_L1 = 0.0f, s_L2 = 0.0f;
+		if (!s_lenCached) {
+			s_L1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(E0, S)));
+			s_L2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(W0, E0)));
+			// 혹시 0/NaN 방지
+			s_L1 = (s_L1 > 1e-6f) ? s_L1 : 1e-3f;
+			s_L2 = (s_L2 > 1e-6f) ? s_L2 : 1e-3f;
+			s_lenCached = true;
+		}
+
+		auto AimQuat = [](XMVECTOR fromDir, XMVECTOR toDir)->XMVECTOR {
+			XMVECTOR a = XMVector3Normalize(fromDir);
+			XMVECTOR b = XMVector3Normalize(toDir);
+			float c = XMVectorGetX(XMVector3Dot(a, b));
+			if (c > 0.999999f) return XMQuaternionIdentity();
+			if (c < -0.999999f) {
+				// 180도: 임의 축
+				XMVECTOR axis = XMVector3Cross(a, XMVectorSet(0, 1, 0, 0));
+				if (XMVectorGetX(XMVector3LengthSq(axis)) < 1e-8f)
+					axis = XMVector3Cross(a, XMVectorSet(1, 0, 0, 0));
+				axis = XMVector3Normalize(axis);
+				return XMQuaternionRotationAxis(axis, XM_PI);
+			}
+			XMVECTOR axis = XMVector3Normalize(XMVector3Cross(a, b));
+			float ang = acosSafe(c);
+			return XMQuaternionRotationAxis(axis, ang);
+			};
+
+		auto MulRotToLocal = [](XMFLOAT4X4& L, XMVECTOR qFix) {
+			XMVECTOR Scl, Rot, Trn;
+			XMMatrixDecompose(&Scl, &Rot, &Trn, XMLoadFloat4x4(&L));
+			Rot = XMQuaternionNormalize(XMQuaternionMultiply(Rot, qFix));
+			XMMATRIX M = XMMatrixScalingFromVector(Scl)
+				* XMMatrixRotationQuaternion(Rot)
+				* XMMatrixTranslationFromVector(Trn);
+			XMStoreFloat4x4(&L, M);
+			};
+
+		// 3) 두-본 IK
+		float L1 = s_L1, L2 = s_L2;
+
+		// 목표 벡터/거리
+		XMVECTOR D = XMVectorSubtract(T, S);
+		float d = XMVectorGetX(XMVector3Length(D));
+
+		float Rmax = L1 + L2;
+		float Rmin = fabsf(L1 - L2);
+		float r = std::clamp(d, Rmin + 1e-4f, Rmax - 1e-4f); // 도달 불가/과근접 클램프
+
+		// 평면 기저
+		XMVECTOR X = XMVector3Normalize(D);
+		XMVECTOR N = XMVector3Normalize(XMVector3Cross(D, P));
+		if (XMVectorGetX(XMVector3LengthSq(N)) < 1e-6f) {
+			// 목표와 pole이 거의 평행이면 보조 업벡터로 안정화
+			N = XMVector3Normalize(XMVector3Cross(D, XMVectorSet(0, 1, 0, 0)));
+		}
+		XMVECTOR Y = XMVector3Normalize(XMVector3Cross(N, X));
+
+		// 각도
+		float cosE = (L1 * L1 + L2 * L2 - r * r) / (2.f * L1 * L2);
+		float thElbow = XM_PI - acosSafe(cosE);
+		float cosS = (r * r + L1 * L1 - L2 * L2) / (2.f * r * L1);
+		float thShoulder = acosSafe(cosS);
+
+		// 목표 팔꿈치 위치
+		XMVECTOR E = XMVectorAdd(
+			S,
+			XMVectorAdd(
+				XMVectorScale(X, L1 * cosf(thShoulder)),
+				XMVectorScale(Y, L1 * sinf(thShoulder))
+			)
+		);
+
+		// 기존 방향(월드) -> 목표 방향(월드) 조준 회전
+		XMVECTOR qUpper = AimQuat(XMVectorSubtract(E0, S), XMVectorSubtract(E, S));
+		XMVECTOR qFore = AimQuat(XMVectorSubtract(W0, E0), XMVectorSubtract(T, E));
+
+		// (선택) 손목 회전: 무기 그립 회전이 필요하면 사용
+		// XMVECTOR qWrist = XMLoadFloat4(&someTargetWristQuat);
+
+		// 4) 로컬행렬에 회전만 곱해서 보정
+		auto& LS = m_pAnimationSets->m_ppBoneFrameCaches[iS]->m_xmf4x4Parent;
+		auto& LE = m_pAnimationSets->m_ppBoneFrameCaches[iE]->m_xmf4x4Parent;
+		// auto& LW = m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4Parent;
+
+		MulRotToLocal(LS, qUpper);
+		MulRotToLocal(LE, qFore);
+		// MulRotToLocal(LW, qWrist); // 손목 회전이 필요할 때만
+
+		pRootGameObject->UpdateTransform(nullptr);
+	}
 }
 
 void CAnimationController::ApplyCurrentAnimationPose(CGameObject* pRootGameObject)

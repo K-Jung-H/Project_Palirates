@@ -379,6 +379,10 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 	type = EObjectType::MainPlayer;
 	model_num = ModelNum;
 
+	if (ModelNum == 0 || ModelNum == 1) {
+		bCanIK = true;
+	}
+
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
 	char* modelPaths[] = {
 	//"Model/Captain_v17.bin",
