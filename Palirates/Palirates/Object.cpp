@@ -1323,6 +1323,17 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		XMVECTOR q = XMQuaternionNormalize(accQ[j]);
 
+		const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
+		if (boneName && std::strcmp(boneName, "Shoulder_L") == 0) {
+			cout << "Shoulder_L idx : " << j << "\n";
+		}
+		else if (boneName && std::strcmp(boneName, "Elbow_L") == 0) {
+			cout << "Elbow_L idx : " << j << "\n";
+		}
+		else if (boneName && std::strcmp(boneName, "Hand_L") == 0) {
+			cout << "Hand_L idx : " << j << "\n";
+		}
+
 		/*const char* boneName = m_pAnimationSets->m_ppBoneFrameCaches[j]->m_pstrFrameName;
 		if (boneName && std::strcmp(boneName, "Shoulder_R") == 0)
 		{
