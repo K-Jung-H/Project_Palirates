@@ -1417,14 +1417,15 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		XMVECTOR E0 = XMVectorSet(WE._41, WE._42, WE._43, 1);
 		XMVECTOR W0 = XMVectorSet(WW._41, WW._42, WW._43, 1);
 
-		//if (!pRootGameObject->Weapon_ptr[0]) return;
-		//XMFLOAT4X4 WWeapon = pRootGameObject->Weapon_ptr[0]->m_xmf4x4World;
-		//XMFLOAT3 targetPos = { WWeapon._41,  WWeapon._42, WWeapon._43 };
+		if (!pRootGameObject->Weapon_ptr[0]) return;
+		XMFLOAT4X4 WWeapon = pRootGameObject->Weapon_ptr[0]->m_xmf4x4World;
+		XMFLOAT3 targetPos = { WWeapon._41,  WWeapon._42, WWeapon._43 };
 
 		// Hand_R idx = 28
-		XMFLOAT4X4 WHand_R = m_pAnimationSets->m_ppBoneFrameCaches[28]->m_xmf4x4World;
-		XMFLOAT3 targetPos = { WHand_R._41,  WHand_R._42, WHand_R._43 };
-
+		/*XMFLOAT4X4 WHand_R = m_pAnimationSets->m_ppBoneFrameCaches[28]->m_xmf4x4World;
+		XMFLOAT3 targetPos = { WHand_R._41,  WHand_R._42, WHand_R._43 };*/
+		cout << "Hand     : " << m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World._41 << ", " << m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World._42 << ", " << m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World._43 << "\n";
+		cout << "Target   : " <<targetPos.x << ", " << targetPos.y << ", " << targetPos.z << "\n";
 		XMFLOAT3 right = pRootGameObject->GetRight();
 		XMFLOAT3 poleDir = XMFLOAT3(-right.x, -right.y, -right.z);
 
@@ -1520,8 +1521,9 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		MulRotToLocal(LS, qUpper);
 		MulRotToLocal(LE, qFore);
 		// MulRotToLocal(LW, qWrist); // 손목 회전이 필요할 때만
-
 		pRootGameObject->UpdateTransform(nullptr);
+		cout << "Set Hand : " << m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World._41 << ", " << m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World._42 << ", " << m_pAnimationSets->m_ppBoneFrameCaches[iW]->m_xmf4x4World._43 << "\n";
+
 	}
 }
 
