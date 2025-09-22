@@ -1480,10 +1480,10 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		// (필요 시) 왼손 그립 소켓 적용: MgripWorld = MsocketLocal * MweaponWorld
 		// 테스트 오프셋(원하면 조절)
 		 XMMATRIX Msocket = XMMatrixRotationQuaternion(XMQuaternionIdentity())
-		                  * XMMatrixTranslation(0.0f, -0.02f, 0.10f);
+		                  * XMMatrixTranslation(-0.18f, 0.0f, -0.2f);
 		 XMMATRIX MgripWorld = Msocket * XMLoadFloat4x4(&WWeapon);
 		 XMVECTOR T = XMVector3TransformCoord(XMVectorZero(), MgripWorld);
-
+		 cout << "Target : " << XMVectorGetX(T) << ", " << XMVectorGetY(T) << ", " << XMVectorGetZ(T) << endl;
 		// 소켓 없이 무기 원점만:
 		//XMVECTOR T = XMVectorSet(WWeapon._41, WWeapon._42, WWeapon._43, 1);
 
@@ -1540,7 +1540,7 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 		// D와 거의 평행하면 업벡터로 대체(안정화)
 		if (XMVectorGetX(XMVector3LengthSq(XMVector3Cross(D, P))) < 1e-8f)
 			P = XMVectorSet(0, 1, 0, 0);
-
+		//cout << "P : " << XMVectorGetX(P) << ", " << XMVectorGetY(P) << ", " << XMVectorGetZ(P) << endl;
 		// ---- 길이 (월드 기준) ----
 		float L1 = XMVectorGetX(XMVector3Length(XMVectorSubtract(E0, S)));
 		float L2 = XMVectorGetX(XMVector3Length(XMVectorSubtract(W0, E0)));
@@ -1594,7 +1594,10 @@ void CAnimationController::AdvanceTime(float fTimeElapsed, CGameObject* pRootGam
 
 		// 최종 월드 갱신
 		pRootGameObject->UpdateTransform(nullptr);
-
+		cout << "Hand_L : " << m_pAnimationSets->m_ppBoneFrameCaches[13]->m_xmf4x4World._41 << ", " << 
+			m_pAnimationSets->m_ppBoneFrameCaches[13]->m_xmf4x4World._42 << ", " << 
+			m_pAnimationSets->m_ppBoneFrameCaches[13]->m_xmf4x4World._43 << endl;
+			
 	IK_DONE:;
 	}
 

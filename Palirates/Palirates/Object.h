@@ -686,6 +686,7 @@ public:
     float currentHP{ 100.0f };
 
     bool bCanIK{ false };
+    bool bIKObject{ false };
 
 public:
     CGameObject(const std::string_view& name = "No_name");

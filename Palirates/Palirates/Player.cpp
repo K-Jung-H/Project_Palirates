@@ -381,6 +381,7 @@ CTerrainPlayer::CTerrainPlayer(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandLi
 
 	if (ModelNum == 0 || ModelNum == 1) {
 		bCanIK = true;
+		bIKObject = true;
 	}
 
 	m_pCamera = ChangeCamera(THIRD_PERSON_CAMERA, 0.0f);
